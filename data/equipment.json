@@ -1,0 +1,62 @@
+[
+  {
+    "equipmentId": "EQ-001",
+    "equipmentName": "Pompa Air Utama A",
+    "functionalLocation": "Basement Lantai B1",
+    "category": "Mekanik"
+  },
+  {
+    "equipmentId": "EQ-002",
+    "equipmentName": "Pompa Air Utama B",
+    "functionalLocation": "Basement Lantai B1",
+    "category": "Mekanik"
+  },
+  {
+    "equipmentId": "EQ-003",
+    "equipmentName": "Pompa Booster Lantai 5",
+    "functionalLocation": "Ruang Pompa Lantai 5",
+    "category": "Mekanik"
+  },
+  {
+    "equipmentId": "EQ-004",
+    "equipmentName": "Kompresor Udara Gedung",
+    "functionalLocation": "Ruang Utilitas B2",
+    "category": "Mekanik"
+  },
+  {
+    "equipmentId": "EQ-005",
+    "equipmentName": "Panel Listrik Utama",
+    "functionalLocation": "Ruang Panel Lantai 1",
+    "category": "Listrik"
+  },
+  {
+    "equipmentId": "EQ-006",
+    "equipmentName": "Panel Distribusi Lantai 3",
+    "functionalLocation": "Ruang Panel Lantai 3",
+    "category": "Listrik"
+  },
+  {
+    "equipmentId": "EQ-007",
+    "equipmentName": "Genset Cadangan 200 kVA",
+    "functionalLocation": "Area Genset Basement",
+    "category": "Listrik"
+  },
+  {
+    "equipmentId": "EQ-008",
+    "equipmentName": "Bak Penampungan Utama",
+    "functionalLocation": "Area Luar Gedung",
+    "category": "Sipil"
+  },
+  {
+    "equipmentId": "EQ-009",
+    "equipmentName": "Saluran Drainase Utara",
+    "functionalLocation": "Area Drainase Utara",
+    "category": "Sipil"
+  },
+  {
+    "equipmentId": "EQ-010",
+    "equipmentName": "Sensor Level Air Tank 1",
+    "functionalLocation": "Rooftop Area",
+    "category": "Otomasi"
+  }
+]

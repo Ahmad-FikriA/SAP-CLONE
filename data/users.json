@@ -1,0 +1,42 @@
+[
+  {
+    "id": "USR-001",
+    "username": "teknisi_01",
+    "password": "password123",
+    "name": "Budi Santoso",
+    "role": "teknisi",
+    "email": "budi@kti-water.co.id"
+  },
+  {
+    "id": "USR-002",
+    "username": "planner_01",
+    "password": "password123",
+    "name": "Siti Rahayu",
+    "role": "planner",
+    "email": "siti@kti-water.co.id"
+  },
+  {
+    "id": "USR-003",
+    "username": "supervisor_01",
+    "password": "password123",
+    "name": "Ahmad Fauzi",
+    "role": "supervisor",
+    "email": "ahmad@kti-water.co.id"
+  },
+  {
+    "id": "USR-004",
+    "username": "manager_01",
+    "password": "password123",
+    "name": "Dewi Kusuma",
+    "role": "manager",
+    "email": "dewi@kti-water.co.id"
+  },
+  {
+    "id": "USR-005",
+    "username": "admin_01",
+    "password": "password123",
+    "name": "Admin KTI",
+    "role": "admin",
+    "email": "admin@kti-water.co.id"
+  }
+]

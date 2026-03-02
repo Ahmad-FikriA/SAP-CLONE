@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — KTI SmartCare Admin</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- ── Shell Bar ─────────────────────────────────────────── -->
+<header class="shell-bar">
+  <button class="shell-bar__menu-btn" id="sidebarToggle" title="Toggle menu">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <a href="/" class="shell-bar__brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+  </a>
+  <div class="shell-bar__separator"></div>
+  <span class="shell-bar__title">KTI SmartCare Mock</span>
+  <div class="shell-bar__search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" placeholder="Search..." id="globalSearch" />
+  </div>
+  <div class="shell-bar__actions">
+    <button class="shell-bar__icon-btn" title="Notifications">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </button>
+    <div class="shell-bar__avatar" title="Admin KTI">AD</div>
+  </div>
+</header>
+
+<!-- ── Sidebar ───────────────────────────────────────────── -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar__nav">
+    <a href="/" class="nav-item active">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="/pages/spk.html" class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="9" x2="11" y2="9"/></svg>
+      <span>SPK</span>
+    </a>
+    <a href="/pages/lembar-kerja.html" class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Lembar Kerja</span>
+    </a>
+    <div class="sidebar__divider"></div>
+    <a href="/pages/equipment.html" class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+      <span>Equipment</span>
+    </a>
+    <a href="/pages/users.html" class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Users</span>
+    </a>
+    <div class="sidebar__divider"></div>
+    <a href="/pages/submissions.html" class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Submissions</span>
+    </a>
+  </div>
+</nav>
+
+<!-- ── Message Strip ──────────────────────────────────────── -->
+<div class="message-strip" id="messageStrip">
+  <span id="messageText"></span>
+  <span class="message-strip__close" onclick="hideMessage()">✕</span>
+</div>
+
+<!-- ── Main Content ───────────────────────────────────────── -->
+<div class="layout" id="layout">
+  <main class="page">
+    <div class="page__header">
+      <div>
+        <div class="page__title">Dashboard</div>
+        <div class="page__subtitle">Selamat datang di KTI SmartCare Admin UI</div>
+      </div>
+      <button class="btn btn-secondary" onclick="refreshAll()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- Tile Grid -->
+    <div class="tile-grid" id="tileGrid">
+      <a class="tile" href="/pages/spk.html">
+        <div class="tile__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="tile__count" id="countSpk">—</div>
+        <div class="tile__label">Total SPK</div>
+      </a>
+      <a class="tile" href="/pages/lembar-kerja.html">
+        <div class="tile__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="tile__count" id="countLk">—</div>
+        <div class="tile__label">Total Lembar Kerja</div>
+      </a>
+      <a class="tile" href="/pages/equipment.html">
+        <div class="tile__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        </div>
+        <div class="tile__count" id="countEquip">—</div>
+        <div class="tile__label">Total Equipment</div>
+      </a>
+      <a class="tile" href="/pages/users.html">
+        <div class="tile__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <div class="tile__count" id="countUsers">—</div>
+        <div class="tile__label">Total Users</div>
+      </a>
+      <a class="tile" href="/pages/submissions.html">
+        <div class="tile__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="tile__count" id="countSubs">—</div>
+        <div class="tile__label">Total Submissions</div>
+      </a>
+    </div>
+
+    <!-- Recent Submissions -->
+    <div class="card">
+      <div class="card__header">
+        <span class="card__title">Submissions Terbaru</span>
+        <a href="/pages/submissions.html" class="btn btn-ghost btn-sm">Lihat Semua →</a>
+      </div>
+      <div class="table-wrapper" style="box-shadow:none">
+        <table id="recentTable">
+          <thead>
+            <tr>
+              <th>SPK Number</th>
+              <th>Submitted At</th>
+              <th>Duration</th>
+              <th>Evaluasi</th>
+              <th>Photos</th>
+            </tr>
+          </thead>
+          <tbody id="recentBody">
+            <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+  async function loadDashboard() {
+    try {
+      const [spk, lk, eq, users, subs] = await Promise.all([
+        apiGet('/spk'),
+        apiGet('/lk'),
+        apiGet('/equipment'),
+        apiGet('/users'),
+        apiGet('/submissions')
+      ]);
+      document.getElementById('countSpk').textContent   = spk.length;
+      document.getElementById('countLk').textContent    = lk.length;
+      document.getElementById('countEquip').textContent = eq.length;
+      document.getElementById('countUsers').textContent = users.length;
+      document.getElementById('countSubs').textContent  = subs.length;
+
+      const recent = subs.slice(-5).reverse();
+      const tbody = document.getElementById('recentBody');
+      if (!recent.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">Belum ada submission</td></tr>';
+        return;
+      }
+      tbody.innerHTML = recent.map(s => `
+        <tr>
+          <td><strong>${escHtml(s.spkNumber)}</strong></td>
+          <td>${formatDate(s.submittedAt)}</td>
+          <td>${s.durationActual ?? '—'} jam</td>
+          <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(s.evaluasi || '—')}</td>
+          <td>${(s.photoPaths||[]).length}</td>
+        </tr>
+      `).join('');
+    } catch(e) {
+      console.error('[dashboard]', e);
+    }
+  }
+
+  function refreshAll() { loadDashboard(); }
+  refreshAll();
+</script>
+</body>
+</html>

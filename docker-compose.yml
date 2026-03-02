@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  sap-mock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kti-sap-mock
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-kti-mock-secret-dev}
+    volumes:
+      # Persist JSON data files across container restarts
+      - ./data:/app/data
+      # Persist uploaded photos across container restarts
+      - ./uploads:/app/uploads
+    networks:
+      - kti-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/spk",
+             "--header", "Authorization: Bearer invalid"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  kti-net:
+    driver: bridge

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "SUB-001",
+    "spkNumber": "SPK-2026-004",
+    "durationActual": 4.5,
+    "evaluasi": "Semua aktivitas overhaul kompresor selesai dengan normal. Kondisi kompresor setelah servis sangat baik.",
+    "latitude": -6.1751,
+    "longitude": 106.865,
+    "submittedAt": "2026-02-15T10:30:00.000Z",
+    "photoPaths": [],
+    "activityResultsModel": [
+      {
+        "activityNumber": "ACT-001",
+        "resultComment": "Filter lama sudah cukup kotor, sudah diganti baru",
+        "isNormal": true,
+        "isVerified": true
+      },
+      {
+        "activityNumber": "ACT-002",
+        "resultComment": "Oli warna gelap, sudah diganti dengan SAE 30",
+        "isNormal": true,
+        "isVerified": true
+      },
+      {
+        "activityNumber": "ACT-003",
+        "resultComment": "Semua baut dalam kondisi baik",
+        "isNormal": true,
+        "isVerified": true
+      },
+      {
+        "activityNumber": "ACT-004",
+        "resultComment": "Tekanan 8 bar, tidak ada kebocoran",
+        "isNormal": true,
+        "isVerified": true
+      }
+    ]
+  },
+  {
+    "id": "SUB-002",
+    "spkNumber": "SPK-2026-007",
+    "durationActual": 3,
+    "evaluasi": "Servis genset berjalan lancar. Semua komponen dalam kondisi baik pasca servis.",
+    "latitude": -6.1755,
+    "longitude": 106.8645,
+    "submittedAt": "2026-02-20T14:00:00.000Z",
+    "photoPaths": [],
+    "activityResultsModel": [
+      {
+        "activityNumber": "ACT-001",
+        "resultComment": "Oli diganti dengan Pertamina Fastron 15W40",
+        "isNormal": true,
+        "isVerified": true
+      },
+      {
+        "activityNumber": "ACT-002",
+        "resultComment": "Kedua filter sudah diganti baru",
+        "isNormal": true,
+        "isVerified": true
+      },
+      {
+        "activityNumber": "ACT-003",
+        "resultComment": "Tegangan aki 13.2V, kondisi baik",
+        "isNormal": true,
+        "isVerified": true
+      },
+      {
+        "activityNumber": "ACT-004",
+        "resultComment": "Genset beroperasi normal, output 200V/50Hz",
+        "isNormal": true,
+        "isVerified": true
+      }
+    ]
+  }
+]
