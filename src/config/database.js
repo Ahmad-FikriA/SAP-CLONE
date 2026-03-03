@@ -10,7 +10,7 @@ if (!process.env.URI) {
 
 const sequelize = new Sequelize(process.env.URI, {
   dialect: 'mysql',
-  logging: false, // Set to console.log to debug SQL queries
+  logging: false,
 });
 
 module.exports = sequelize;
