@@ -10,7 +10,14 @@ RUN npm ci --omit=dev
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Non-root user for security
+# Install openssh-server, git, generate host keys, and configure sshd
+RUN apk add --no-cache openssh-server git openrc && \
+  ssh-keygen -A && \
+  sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/g' /etc/ssh/sshd_config && \
+  sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ssh/sshd_config && \
+  echo 'root:admin' | chpasswd
+
+# Non-root user for the node application (ssh still uses root or configured user)
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Copy deps and source
@@ -20,14 +27,17 @@ COPY . .
 # Ensure persistent volume directories exist and are writable
 RUN mkdir -p data uploads && chown -R appuser:appgroup /app
 
-USER appuser
-
-EXPOSE 3000
+# Expose Node.js and SSH ports
+EXPOSE 3000 22
 
 # Health-check: verify the login endpoint responds
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://localhost:3000/api/auth/login \
-        --post-data='{"username":"admin_01","password":"wrong"}' \
-        --header='Content-Type: application/json' || exit 1
+  --post-data='{"username":"admin_01","password":"wrong"}' \
+  --header='Content-Type: application/json' || exit 1
 
-CMD ["node", "src/server.js"]
+# Make start script executable
+RUN chmod +x start.sh
+
+# Start both sshd and Node.js
+CMD ["./start.sh"]

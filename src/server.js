@@ -58,6 +58,18 @@ app.get(/^(?!\/api).*$/, (req, res) => {
 // ── Error Handler ────────────────────────────────────────────────────────────
 app.use(errorHandler);
 
+// ── Database Connection Test ─────────────────────────────────────────────────
+const sequelize = require('./config/database');
+
+sequelize.authenticate()
+  .then(() => {
+    console.log('Connection to Supabase has been established successfully.');
+  })
+  .catch((err) => {
+    console.error('Unable to connect to the Supabase database:', err);
+  });
+
+// ── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`\n  KTI SmartCare SAP Mock Server`);
   console.log(`  ───────────────────────────────`);

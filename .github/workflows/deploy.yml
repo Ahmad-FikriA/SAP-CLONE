@@ -1,0 +1,29 @@
+name: Deploy Backend to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy by pulling code and updating dependencies
+        run: |
+          # 1. Pull the latest code (checkout does this, but we also want to ensure the code in the mounted folder is up to date if we are just running this on the host)
+          git pull origin main
+          
+          # 2. Ensure the container is running and volumes are mounted
+          docker compose up -d
+          
+          # 3. Inside the running container, install dependencies
+          docker exec kti-sap-mock npm install
+
+          # Note: Because the container runs `npm run dev` (nodemon) via start.sh
+          # and the current folder is mounted as a volume (- .:/app), 
+          # nodemon will automatically restart the Node.js server upon detecting these file changes!
