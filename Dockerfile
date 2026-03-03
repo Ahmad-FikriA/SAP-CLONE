@@ -42,5 +42,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 # Make start script executable
 RUN chmod +x start.sh
 
-# Start both sshd and Node.js
-CMD ["./start.sh"]
+# Start both sshd and Node.js (with an on-the-fly dos2unix fix for Windows CRLF issues)
+CMD ["/bin/sh", "-c", "dos2unix start.sh && chmod +x start.sh && ./start.sh"]

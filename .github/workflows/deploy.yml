@@ -21,11 +21,9 @@ jobs:
           # 1. Pull the latest code directly on the host machine
           git pull origin main
           
-          # 2. Ensure the container is running and volumes are mounted
-          docker compose up -d
-          
-          # 3. Inside the running container, install dependencies
-          docker exec kti-sap-mock npm install
+          # 2. Ensure the container is rebuilt/restarted with the latest changes
+          docker compose up -d --build
+          docker compose restart sap-mock
 
           # Note: Because the container runs `npm run dev` (nodemon) via start.sh
           # and the current folder is mounted as a volume (- .:/app), 
