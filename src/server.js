@@ -73,7 +73,7 @@ sequelize.authenticate()
 
 // ── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n  KTI SmartCare SAP Mock Server`);
+  console.log(`\n  KTI SAP Mock Server`);
   console.log(`  ───────────────────────────────`);
   console.log(`  API:      http://localhost:${PORT}/api`);
   console.log(`  Admin UI: http://localhost:${PORT}\n`);
