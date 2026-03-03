@@ -35,3 +35,6 @@ README.md
 Dockerfile
 docker-compose*.yml
 .dockerignore
+
+# Database data
+mysql-data/

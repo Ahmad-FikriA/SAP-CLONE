@@ -3,8 +3,8 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package*.json ./
-# Install only production dependencies
-RUN npm ci --omit=dev
+# Install ALL dependencies (including dev tools like nodemon since we are mounting code and editing live)
+RUN npm install
 
 # ── Stage 2: runner ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
@@ -23,6 +23,9 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 # Copy deps and source
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Install nodemon globally so it's always in PATH regardless of volume mounts
+RUN npm install -g nodemon
 
 # Ensure persistent volume directories exist and are writable
 RUN mkdir -p data uploads && chown -R appuser:appgroup /app
