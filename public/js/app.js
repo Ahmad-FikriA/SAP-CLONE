@@ -12,8 +12,7 @@ function setToken(t) {
   localStorage.setItem('admin_token', t);
 }
 
-async function ensureToken() {
-  if (getToken()) return;
+async function fetchFreshToken() {
   try {
     const res = await fetch(`${window.API_BASE}/auth/login`, {
       method: 'POST',
@@ -22,14 +21,18 @@ async function ensureToken() {
     });
     const data = await res.json();
     if (data.token) setToken(data.token);
-  } catch (e) { console.error('[ensureToken]', e); }
+  } catch (e) { console.error('[fetchFreshToken]', e); }
+}
+
+async function ensureToken() {
+  if (!getToken()) await fetchFreshToken();
 }
 
 // ══════════════════════════════════════════════════
 // HTTP HELPERS
 // ══════════════════════════════════════════════════
 
-async function apiFetch(path, options = {}) {
+async function apiFetch(path, options = {}, _retry = true) {
   await ensureToken();
   const res = await fetch(`${window.API_BASE}${path}`, {
     ...options,
@@ -39,6 +42,14 @@ async function apiFetch(path, options = {}) {
       ...(options.headers || {})
     }
   });
+
+  // Token expired — clear it, get a fresh one, retry once
+  if (res.status === 401 && _retry) {
+    localStorage.removeItem('admin_token');
+    await fetchFreshToken();
+    return apiFetch(path, options, false);
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || `HTTP ${res.status}`);

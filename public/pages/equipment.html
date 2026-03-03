@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Equipment — KTI SmartCare Admin</title>
   <link rel="stylesheet" href="/css/style.css"/>
+  <!-- Leaflet.js -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
 <body>
 <header class="shell-bar">
@@ -52,7 +55,7 @@
     <div class="page__header">
       <div>
         <div class="page__title">Equipment</div>
-        <div class="page__subtitle">Kelola data peralatan</div>
+        <div class="page__subtitle">Kelola data peralatan — PT Krakatau Tirta Industri</div>
       </div>
       <button class="btn btn-primary" onclick="openCreate()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -60,6 +63,33 @@
       </button>
     </div>
 
+    <!-- ── Map Section ─────────────────────────────────── -->
+    <div class="card map-card">
+      <div class="card__header">
+        <span class="card__title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          Peta Lokasi Equipment
+        </span>
+        <div class="map-controls">
+          <select id="plantSelector" class="map-plant-select" onchange="switchPlant()">
+            <option value="">Loading plants...</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="fitMapToMarkers()" title="Lihat semua equipment">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            Fit All
+          </button>
+        </div>
+      </div>
+      <div id="equipmentMap" class="map-container"></div>
+      <div class="map-legend">
+        <span class="map-legend__item"><span class="map-legend__dot" style="background:#0070D2"></span>Mekanik</span>
+        <span class="map-legend__item"><span class="map-legend__dot" style="background:#E67E22"></span>Listrik</span>
+        <span class="map-legend__item"><span class="map-legend__dot" style="background:#27AE60"></span>Sipil</span>
+        <span class="map-legend__item"><span class="map-legend__dot" style="background:#8E44AD"></span>Otomasi</span>
+      </div>
+    </div>
+
+    <!-- ── Equipment Table ──────────────────────────────── -->
     <div class="toolbar">
       <select id="filterCategory" onchange="loadEquipment()">
         <option value="">Semua Kategori</option>
@@ -75,10 +105,10 @@
     <div class="table-wrapper">
       <table>
         <thead>
-          <tr><th>Equipment ID</th><th>Nama Equipment</th><th>Lokasi Fungsi</th><th>Kategori</th><th>Aksi</th></tr>
+          <tr><th>Equipment ID</th><th>Nama Equipment</th><th>Lokasi Fungsi</th><th>Kategori</th><th>Plant</th><th>Aksi</th></tr>
         </thead>
         <tbody id="equipBody">
-          <tr class="loading-row"><td colspan="5"><div class="spinner"></div></td></tr>
+          <tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>
         </tbody>
       </table>
     </div>

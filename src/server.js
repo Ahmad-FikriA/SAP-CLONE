@@ -12,6 +12,7 @@ const spkRoutes = require('./routes/spk');
 const equipmentRoutes = require('./routes/equipment');
 const usersRoutes = require('./routes/users');
 const submissionsRoutes = require('./routes/submissions');
+const mapsRoutes = require('./routes/maps');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -49,6 +50,7 @@ app.use('/api/spk', spkRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/submissions', submissionsRoutes);
+app.use('/api/maps', mapsRoutes);
 
 // ── SPA fallback: serve index.html for any non-API GET ───────────────────────
 app.get(/^(?!\/api).*$/, (req, res) => {

@@ -27,16 +27,16 @@ const users = [
 // EQUIPMENT  (10 total: Mekanik×4, Listrik×3, Sipil×2, Otomasi×1)
 // ────────────────────────────────────────────────────────────────────────────
 const equipment = [
-  { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A',          functionalLocation: 'Basement Lantai B1',        category: 'Mekanik'  },
-  { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B',          functionalLocation: 'Basement Lantai B1',        category: 'Mekanik'  },
-  { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5',     functionalLocation: 'Ruang Pompa Lantai 5',      category: 'Mekanik'  },
-  { equipmentId: 'EQ-004', equipmentName: 'Kompresor Udara Gedung',     functionalLocation: 'Ruang Utilitas B2',         category: 'Mekanik'  },
-  { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama',        functionalLocation: 'Ruang Panel Lantai 1',      category: 'Listrik'  },
-  { equipmentId: 'EQ-006', equipmentName: 'Panel Distribusi Lantai 3',  functionalLocation: 'Ruang Panel Lantai 3',      category: 'Listrik'  },
-  { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA',   functionalLocation: 'Area Genset Basement',      category: 'Listrik'  },
-  { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama',      functionalLocation: 'Area Luar Gedung',          category: 'Sipil'    },
-  { equipmentId: 'EQ-009', equipmentName: 'Saluran Drainase Utara',     functionalLocation: 'Area Drainase Utara',       category: 'Sipil'    },
-  { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1',    functionalLocation: 'Rooftop Area',              category: 'Otomasi'  }
+  { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A',          functionalLocation: 'Basement Lantai B1',        category: 'Mekanik', latitude: -6.21682, longitude: 106.81333 },
+  { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B',          functionalLocation: 'Basement Lantai B1',        category: 'Mekanik', latitude: -6.21688, longitude: 106.81345 },
+  { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5',     functionalLocation: 'Ruang Pompa Lantai 5',      category: 'Mekanik', latitude: -6.21658, longitude: 106.81340 },
+  { equipmentId: 'EQ-004', equipmentName: 'Kompresor Udara Gedung',     functionalLocation: 'Ruang Utilitas B2',         category: 'Mekanik', latitude: -6.21698, longitude: 106.81328 },
+  { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama',        functionalLocation: 'Ruang Panel Lantai 1',      category: 'Listrik', latitude: -6.21671, longitude: 106.81318 },
+  { equipmentId: 'EQ-006', equipmentName: 'Panel Distribusi Lantai 3',  functionalLocation: 'Ruang Panel Lantai 3',      category: 'Listrik', latitude: -6.21654, longitude: 106.81325 },
+  { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA',   functionalLocation: 'Area Genset Basement',      category: 'Listrik', latitude: -6.21702, longitude: 106.81352 },
+  { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama',      functionalLocation: 'Area Luar Gedung',          category: 'Sipil',   latitude: -6.21663, longitude: 106.81298 },
+  { equipmentId: 'EQ-009', equipmentName: 'Saluran Drainase Utara',     functionalLocation: 'Area Drainase Utara',       category: 'Sipil',   latitude: -6.21638, longitude: 106.81315 },
+  { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1',    functionalLocation: 'Rooftop Area',              category: 'Otomasi', latitude: -6.21645, longitude: 106.81338 }
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -244,6 +244,32 @@ const spk = [
       { activityNumber: 'ACT-002', operationText: 'Update software SCADA ke versi terbaru', resultComment: 'Update ke v2.4.1 berhasil', durationPlan: 2.0, durationActual: 2.5, isVerified: true },
       { activityNumber: 'ACT-003', operationText: 'Kalibrasi semua sensor yang terhubung SCADA', resultComment: 'Kalibrasi 8 sensor, semua dalam batas normal', durationPlan: 1.5, durationActual: 1.5, isVerified: true }
     ]
+  },
+
+  // ── MULTI-EQUIPMENT: Pompa Air Utama A & B (Mekanik, pending) ──────────
+  // Demonstrates the per-equipment activity grouping feature.
+  // 3 specific activities for each pump — different QR scans, different locations.
+  {
+    spkNumber: 'SPK-2026-013',
+    description: 'Perawatan Bulanan Pompa Air Utama A & B',
+    interval: '1 Bulan',
+    category: 'Mekanik',
+    status: 'pending',
+    durationActual: null,
+    equipmentModels: [
+      { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1 — Sisi Kiri' },
+      { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B', functionalLocation: 'Basement Lantai B1 — Sisi Kanan' }
+    ],
+    activitiesModel: [
+      // ── EQ-001: Pompa Air Utama A ──
+      { activityNumber: 'ACT-001', equipmentId: 'EQ-001', operationText: 'Periksa tekanan output Pompa A (target: 3–5 bar)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', equipmentId: 'EQ-001', operationText: 'Cek kebocoran seal, packing, dan fitting Pompa A', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', equipmentId: 'EQ-001', operationText: 'Pelumasan bearing dan cek vibrasi motor Pompa A', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+      // ── EQ-002: Pompa Air Utama B ──
+      { activityNumber: 'ACT-004', equipmentId: 'EQ-002', operationText: 'Periksa tekanan output Pompa B (target: 3–5 bar)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-005', equipmentId: 'EQ-002', operationText: 'Cek kebocoran seal, packing, dan fitting Pompa B', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-006', equipmentId: 'EQ-002', operationText: 'Pelumasan bearing dan cek vibrasi motor Pompa B', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false }
+    ]
   }
 ];
 
@@ -260,7 +286,7 @@ const lembarKerja = [
     lembarKe: 1,
     totalLembar: 2,
     evaluasi: null,
-    spkModels: ['SPK-2026-001', 'SPK-2026-002', 'SPK-2026-003']
+    spkModels: ['SPK-2026-001', 'SPK-2026-002', 'SPK-2026-003', 'SPK-2026-013']
   },
   {
     lkNumber: 'LK-2026-002',
@@ -334,6 +360,23 @@ const submissions = [
     ]
   }
 ];
+
+// ────────────────────────────────────────────────────────────────────────────
+// ASSIGN equipmentId TO EACH ACTIVITY
+// Activities are distributed across equipmentModels round-robin so that
+// each equipment gets its own activity group in the mobile UI.
+// ────────────────────────────────────────────────────────────────────────────
+spk.forEach(s => {
+  const equips = s.equipmentModels;
+  s.activitiesModel.forEach((act, i) => {
+    // Only assign if not already explicitly set in the activity definition
+    if (!act.equipmentId) {
+      act.equipmentId = equips.length > 0
+        ? equips[i % equips.length].equipmentId
+        : null;
+    }
+  });
+});
 
 // ────────────────────────────────────────────────────────────────────────────
 // WRITE ALL FILES

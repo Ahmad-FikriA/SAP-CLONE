@@ -2,61 +2,101 @@
   {
     "equipmentId": "EQ-001",
     "equipmentName": "Pompa Air Utama A",
-    "functionalLocation": "Basement Lantai B1",
-    "category": "Mekanik"
+    "functionalLocation": "Intake Area",
+    "category": "Mekanik",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01235,
+    "longitude": 106.02185
   },
   {
     "equipmentId": "EQ-002",
     "equipmentName": "Pompa Air Utama B",
-    "functionalLocation": "Basement Lantai B1",
-    "category": "Mekanik"
+    "functionalLocation": "Intake Area",
+    "category": "Mekanik",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01245,
+    "longitude": 106.02210
   },
   {
     "equipmentId": "EQ-003",
-    "equipmentName": "Pompa Booster Lantai 5",
-    "functionalLocation": "Ruang Pompa Lantai 5",
-    "category": "Mekanik"
+    "equipmentName": "Pompa Booster WTP",
+    "functionalLocation": "Water Treatment Plant",
+    "category": "Mekanik",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01310,
+    "longitude": 106.02240
   },
   {
     "equipmentId": "EQ-004",
     "equipmentName": "Kompresor Udara Gedung",
-    "functionalLocation": "Ruang Utilitas B2",
-    "category": "Mekanik"
+    "functionalLocation": "Utility Building",
+    "category": "Mekanik",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01380,
+    "longitude": 106.02150
   },
   {
     "equipmentId": "EQ-005",
     "equipmentName": "Panel Listrik Utama",
-    "functionalLocation": "Ruang Panel Lantai 1",
-    "category": "Listrik"
+    "functionalLocation": "Control Room",
+    "category": "Listrik",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01350,
+    "longitude": 106.02190
   },
   {
     "equipmentId": "EQ-006",
-    "equipmentName": "Panel Distribusi Lantai 3",
-    "functionalLocation": "Ruang Panel Lantai 3",
-    "category": "Listrik"
+    "equipmentName": "Panel Distribusi Area Clarifier",
+    "functionalLocation": "Clarifier Area",
+    "category": "Listrik",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01420,
+    "longitude": 106.02220
   },
   {
     "equipmentId": "EQ-007",
     "equipmentName": "Genset Cadangan 200 kVA",
-    "functionalLocation": "Area Genset Basement",
-    "category": "Listrik"
+    "functionalLocation": "Genset Building",
+    "category": "Listrik",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01480,
+    "longitude": 106.02160
   },
   {
     "equipmentId": "EQ-008",
     "equipmentName": "Bak Penampungan Utama",
-    "functionalLocation": "Area Luar Gedung",
-    "category": "Sipil"
+    "functionalLocation": "Reservoir Area",
+    "category": "Sipil",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01290,
+    "longitude": 106.02130
   },
   {
     "equipmentId": "EQ-009",
     "equipmentName": "Saluran Drainase Utara",
-    "functionalLocation": "Area Drainase Utara",
-    "category": "Sipil"
+    "functionalLocation": "North Drainage",
+    "category": "Sipil",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01180,
+    "longitude": 106.02200
   },
   {
     "equipmentId": "EQ-010",
     "equipmentName": "Sensor Level Air Tank 1",
-    "functionalLocation": "Rooftop Area",
-    "category": "Otomasi"
+    "functionalLocation": "Tank Farm",
+    "category": "Otomasi",
+    "plantId": "KTI-01",
+    "plantName": "PT Krakatau Tirta Industri",
+    "latitude": -6.01530,
+    "longitude": 106.02250
   }
 ]

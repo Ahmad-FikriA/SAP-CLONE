@@ -692,6 +692,121 @@ tbody tr:last-child { border-bottom: none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   MAP (Equipment Page — Leaflet)
+═══════════════════════════════════════════════════════════════ */
+.map-card { margin-bottom: 20px; }
+.map-card .card__header { margin-bottom: 12px; }
+.map-container {
+  height: 420px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  z-index: 0;
+}
+.map-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.map-plant-select {
+  height: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--text-base);
+  background: #fff;
+  outline: none;
+  max-width: 280px;
+  transition: border-color var(--transition);
+}
+.map-plant-select:focus { border-color: var(--primary); }
+
+/* Equipment marker dots */
+.eq-marker {
+  background: transparent !important;
+  border: none !important;
+}
+.eq-marker__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  transition: transform .15s ease;
+  cursor: pointer;
+}
+.eq-marker:hover .eq-marker__dot {
+  transform: scale(1.4);
+}
+
+/* Popup card */
+.eq-popup { font-family: 'Source Sans 3', Arial, sans-serif; min-width: 180px; }
+.eq-popup__id { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.eq-popup__name { font-size: 14px; font-weight: 600; color: var(--text-base); margin-bottom: 6px; }
+.eq-popup__meta { margin-bottom: 4px; }
+.eq-popup__badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.eq-popup__loc { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+/* OSM feature tooltips */
+.osm-tooltip {
+  background: rgba(52, 73, 94, 0.88) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2) !important;
+}
+.osm-tooltip::before { border-top-color: rgba(52, 73, 94, 0.88) !important; }
+
+/* Legend */
+.map-legend {
+  display: flex;
+  gap: 16px;
+  padding: 10px 4px 0;
+  flex-wrap: wrap;
+}
+.map-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.map-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.15);
+  flex-shrink: 0;
+}
+
+/* Leaflet overrides for tighter UI fit */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18) !important;
+}
+.leaflet-popup-content { margin: 10px 14px !important; }
+.leaflet-popup-tip { box-shadow: 0 3px 8px rgba(0,0,0,.12) !important; }
+
+@media (max-width: 600px) {
+  .map-container { height: 280px; }
+  .map-controls { flex-wrap: wrap; }
+  .map-plant-select { max-width: 100%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    UTILITY
 ═══════════════════════════════════════════════════════════════ */
 .text-muted { color: var(--text-muted); }
