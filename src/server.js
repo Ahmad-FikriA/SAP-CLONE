@@ -65,10 +65,10 @@ const sequelize = require('./config/database');
 
 sequelize.authenticate()
   .then(() => {
-    console.log('Connection to Supabase has been established successfully.');
+    console.log('Connection to database has been established successfully.');
   })
   .catch((err) => {
-    console.error('Unable to connect to the Supabase database:', err);
+    console.error('Unable to connect to the database:', err);
   });
 
 // ── Start Server ─────────────────────────────────────────────────────────────
