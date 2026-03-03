@@ -15,7 +15,10 @@ jobs:
 
       - name: Deploy by pulling code and updating dependencies
         run: |
-          # 1. Pull the latest code (checkout does this, but we also want to ensure the code in the mounted folder is up to date if we are just running this on the host)
+          # Go to the actual folder on the Windows Server where the Docker compose is running
+          cd "C:\Project\PPHSE KTI Backend"
+
+          # 1. Pull the latest code directly on the host machine
           git pull origin main
           
           # 2. Ensure the container is running and volumes are mounted
