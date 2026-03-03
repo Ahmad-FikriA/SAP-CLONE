@@ -59,6 +59,17 @@ router.put('/:spkNumber', verifyToken, (req, res) => {
   res.json(data[idx]);
 });
 
+// POST /api/spk/bulk-delete — delete multiple SPKs
+router.post('/bulk-delete', verifyToken, (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
+  let data = readJSON('spk.json');
+  const before = data.length;
+  data = data.filter(s => !ids.includes(s.spkNumber));
+  writeJSON('spk.json', data);
+  res.json({ message: `Deleted ${before - data.length} SPK(s)` });
+});
+
 // DELETE /api/spk/:spkNumber
 router.delete('/:spkNumber', verifyToken, (req, res) => {
   let data = readJSON('spk.json');

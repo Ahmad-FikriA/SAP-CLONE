@@ -64,6 +64,17 @@ router.put('/:lkNumber', verifyToken, (req, res) => {
   res.json(resolveSpkModels(data[idx]));
 });
 
+// POST /api/lk/bulk-delete
+router.post('/bulk-delete', verifyToken, (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
+  let data = readJSON('lembar_kerja.json');
+  const before = data.length;
+  data = data.filter(l => !ids.includes(l.lkNumber));
+  writeJSON('lembar_kerja.json', data);
+  res.json({ message: `Deleted ${before - data.length} LK(s)` });
+});
+
 // DELETE /api/lk/:lkNumber
 router.delete('/:lkNumber', verifyToken, (req, res) => {
   let data = readJSON('lembar_kerja.json');

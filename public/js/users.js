@@ -19,11 +19,12 @@ async function loadUsers() {
 function renderUsers() {
   const tbody = document.getElementById('usersBody');
   if (!allUsers.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
     return;
   }
   tbody.innerHTML = allUsers.map(u => `
     <tr>
+      <td class="col-check"><input type="checkbox" name="bulk" value="${escHtml(u.id)}" onchange="updateBulkBar()"></td>
       <td><strong>${escHtml(u.username)}</strong></td>
       <td>${escHtml(u.name)}</td>
       <td>${roleBadge(u.role)}</td>
@@ -37,10 +38,12 @@ function renderUsers() {
       <td>
         <div class="table-actions">
           <button class="btn btn-secondary btn-sm" onclick="openEdit('${escHtml(u.id)}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteUser('${escHtml(u.id)}', '${escHtml(u.username)}')">Hapus</button>
         </div>
       </td>
     </tr>
   `).join('');
+  updateBulkBar();
 }
 
 // ── Panel ──────────────────────────────────────────────────────────────────
@@ -107,11 +110,11 @@ function renderForm(u) {
 
 // ── Save ────────────────────────────────────────────────────────────────────
 async function saveUser() {
-  const id       = document.getElementById('f_userId').value.trim();
+  const id = document.getElementById('f_userId').value.trim();
   const username = document.getElementById('f_username').value.trim();
-  const name     = document.getElementById('f_name').value.trim();
-  const role     = document.getElementById('f_role').value;
-  const email    = document.getElementById('f_email').value.trim();
+  const name = document.getElementById('f_name').value.trim();
+  const role = document.getElementById('f_role').value;
+  const email = document.getElementById('f_email').value.trim();
 
   if (!id || !username || !name) { alert('ID, Username, dan Nama wajib diisi.'); return; }
 
@@ -140,6 +143,28 @@ async function resetPassword(id, username) {
   try {
     await apiPut(`/users/${id}`, { password: 'password123' });
     showMessage(`Password ${username} direset ke password123`);
+  } catch (e) { showMessage(e.message, 'error'); }
+}
+
+// ── Delete user ─────────────────────────────────────────────────────────────
+async function deleteUser(id, username) {
+  if (!window.confirm('Hapus user ' + username + '?')) return;
+  try {
+    await apiDelete('/users/' + id);
+    showMessage('User ' + username + ' dihapus');
+    loadUsers();
+  } catch (e) { showMessage(e.message, 'error'); }
+}
+
+// ── Bulk Delete users ───────────────────────────────────────────────────────
+async function bulkDeleteUsers() {
+  var ids = getCheckedIds();
+  if (!ids.length) return;
+  if (!window.confirm('Hapus ' + ids.length + ' user terpilih?')) return;
+  try {
+    await apiPost('/users/bulk-delete', { ids: ids });
+    showMessage(ids.length + ' user berhasil dihapus');
+    loadUsers();
   } catch (e) { showMessage(e.message, 'error'); }
 }
 

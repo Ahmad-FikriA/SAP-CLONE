@@ -38,4 +38,25 @@ router.put('/:id', verifyToken, (req, res) => {
   res.json(safe);
 });
 
+// POST /api/users/bulk-delete
+router.post('/bulk-delete', verifyToken, (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
+  let data = readJSON('users.json');
+  const before = data.length;
+  data = data.filter(u => !ids.includes(u.id));
+  writeJSON('users.json', data);
+  res.json({ message: `Deleted ${before - data.length} user(s)` });
+});
+
+// DELETE /api/users/:id
+router.delete('/:id', verifyToken, (req, res) => {
+  let data = readJSON('users.json');
+  const before = data.length;
+  data = data.filter(u => u.id !== req.params.id);
+  if (data.length === before) return res.status(404).json({ error: 'User not found' });
+  writeJSON('users.json', data);
+  res.json({ message: 'Deleted' });
+});
+
 module.exports = router;

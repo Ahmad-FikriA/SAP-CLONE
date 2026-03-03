@@ -44,6 +44,17 @@ router.put('/:equipmentId', verifyToken, (req, res) => {
   res.json(data[idx]);
 });
 
+// POST /api/equipment/bulk-delete
+router.post('/bulk-delete', verifyToken, (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
+  let data = readJSON('equipment.json');
+  const before = data.length;
+  data = data.filter(e => !ids.includes(e.equipmentId));
+  writeJSON('equipment.json', data);
+  res.json({ message: `Deleted ${before - data.length} equipment(s)` });
+});
+
 // DELETE /api/equipment/:equipmentId
 router.delete('/:equipmentId', verifyToken, (req, res) => {
   let data = readJSON('equipment.json');

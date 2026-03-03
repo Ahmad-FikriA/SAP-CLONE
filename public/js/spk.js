@@ -23,12 +23,13 @@ function renderSpk() {
   const tbody = document.getElementById('spkBody');
 
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
     return;
   }
 
   tbody.innerHTML = data.map(s => `
     <tr>
+      <td class="col-check"><input type="checkbox" name="bulk" value="${escHtml(s.spkNumber)}" onchange="updateBulkBar()"></td>
       <td><strong>${escHtml(s.spkNumber)}</strong></td>
       <td>${escHtml(s.description)}</td>
       <td>${escHtml(s.category || '\u2014')}</td>
@@ -40,12 +41,13 @@ function renderSpk() {
           <button class="btn btn-secondary btn-sm" onclick="openEdit('${escHtml(s.spkNumber)}')">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="deleteSpk('${escHtml(s.spkNumber)}')">Hapus</button>
           ${s.status === 'completed'
-            ? `<button class="btn btn-ghost btn-sm" onclick="resetSpk('${escHtml(s.spkNumber)}')">Reset</button>`
-            : ''}
+      ? `<button class="btn btn-ghost btn-sm" onclick="resetSpk('${escHtml(s.spkNumber)}')">Reset</button>`
+      : ''}
         </div>
       </td>
     </tr>
   `).join('');
+  updateBulkBar();
 }
 
 // ── Open create panel ─────────────────────────────────────────────────────
@@ -77,8 +79,8 @@ async function loadEquipmentList() {
 function renderPanelForm(spk) {
   const isEdit = !!spk;
   const categories = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
-  const intervals  = ['1 Minggu', '2 Minggu', '1 Bulan', '3 Bulan', '6 Bulan', '1 Tahun'];
-  const statuses   = ['pending', 'in_progress', 'completed'];
+  const intervals = ['1 Minggu', '2 Minggu', '1 Bulan', '3 Bulan', '6 Bulan', '1 Tahun'];
+  const statuses = ['pending', 'in_progress', 'completed'];
 
   // Equipment checkboxes — onchange triggers per-equipment activity sections
   const eqHtml = availableEquipment.map(eq => {
@@ -179,12 +181,12 @@ function renderActivitySections(existingActs) {
 // Snapshot activities typed in DOM sections (called before re-render on checkbox toggle)
 function _readActivitiesFromDom() {
   const acts = [];
-  document.querySelectorAll('#activitySections .dynamic-list').forEach(function(section) {
+  document.querySelectorAll('#activitySections .dynamic-list').forEach(function (section) {
     const eqId = section.id.replace('actsList_', '');
-    section.querySelectorAll('.dynamic-item').forEach(function(row) {
-      const opInput  = row.querySelector('input[id^="act_op_"]');
+    section.querySelectorAll('.dynamic-item').forEach(function (row) {
+      const opInput = row.querySelector('input[id^="act_op_"]');
       const durInput = row.querySelector('input[id^="act_dur_"]');
-      const opText   = opInput ? opInput.value.trim() : '';
+      const opText = opInput ? opInput.value.trim() : '';
       if (!opText) return;
       acts.push({
         equipmentId: eqId,
@@ -201,7 +203,7 @@ function _readActivitiesFromDom() {
 
 function activityRow(idx, act) {
   act = act || {};
-  const opVal  = escHtml(act.operationText || '');
+  const opVal = escHtml(act.operationText || '');
   const durVal = act.durationPlan != null ? act.durationPlan : '';
   return '<div class="dynamic-item" id="actRow_' + idx + '">' +
     '<div class="flex-1"><input class="w-full" placeholder="Teks operasi / deskripsi aktivitas"' +
@@ -229,7 +231,7 @@ function removeRow(id) {
 
 function suggestSpkNumber() {
   const year = new Date().getFullYear();
-  const max = allSpk.reduce(function(m, s) {
+  const max = allSpk.reduce(function (m, s) {
     const match = s.spkNumber.match(/SPK-\d+-(\d+)/);
     return match ? Math.max(m, parseInt(match[1])) : m;
   }, 0);
@@ -238,32 +240,32 @@ function suggestSpkNumber() {
 
 // ── Save SPK ────────────────────────────────────────────────────────────
 async function saveSpk() {
-  const spkNumber   = document.getElementById('f_spkNumber').value.trim();
+  const spkNumber = document.getElementById('f_spkNumber').value.trim();
   const description = document.getElementById('f_description').value.trim();
-  const interval    = document.getElementById('f_interval').value;
-  const category    = document.getElementById('f_category').value;
-  const status      = document.getElementById('f_status').value;
+  const interval = document.getElementById('f_interval').value;
+  const category = document.getElementById('f_category').value;
+  const status = document.getElementById('f_status').value;
 
   if (!spkNumber || !description) { alert('SPK Number dan Deskripsi wajib diisi.'); return; }
 
   // Collect selected equipment
-  const checkedEq = Array.from(document.querySelectorAll('input[name="equipment"]:checked')).map(function(cb) {
-    const eq = availableEquipment.find(function(e) { return e.equipmentId === cb.value; });
+  const checkedEq = Array.from(document.querySelectorAll('input[name="equipment"]:checked')).map(function (cb) {
+    const eq = availableEquipment.find(function (e) { return e.equipmentId === cb.value; });
     return { equipmentId: eq.equipmentId, equipmentName: eq.equipmentName, functionalLocation: eq.functionalLocation };
   });
 
   // Collect activities per equipment section — each activity carries its equipment's id
   const activitiesModel = [];
   let actCounter = 1;
-  const checkedEqIds = Array.from(document.querySelectorAll('input[name="equipment"]:checked')).map(function(cb) { return cb.value; });
+  const checkedEqIds = Array.from(document.querySelectorAll('input[name="equipment"]:checked')).map(function (cb) { return cb.value; });
 
-  checkedEqIds.forEach(function(eqId) {
+  checkedEqIds.forEach(function (eqId) {
     const section = document.getElementById('actsList_' + eqId);
     if (!section) return;
-    section.querySelectorAll('.dynamic-item').forEach(function(row) {
-      const opInput  = row.querySelector('input[id^="act_op_"]');
+    section.querySelectorAll('.dynamic-item').forEach(function (row) {
+      const opInput = row.querySelector('input[id^="act_op_"]');
       const durInput = row.querySelector('input[id^="act_dur_"]');
-      const opText   = opInput ? opInput.value.trim() : '';
+      const opText = opInput ? opInput.value.trim() : '';
       if (!opText) return;
       activitiesModel.push({
         activityNumber: 'ACT-' + String(actCounter++).padStart(3, '0'),
@@ -277,8 +279,10 @@ async function saveSpk() {
     });
   });
 
-  const body = { spkNumber, description, interval, category, status,
-    durationActual: null, equipmentModels: checkedEq, activitiesModel };
+  const body = {
+    spkNumber, description, interval, category, status,
+    durationActual: null, equipmentModels: checkedEq, activitiesModel
+  };
 
   try {
     if (editingSpkNumber) {
@@ -306,11 +310,23 @@ async function deleteSpk(spkNumber) {
 }
 
 // ── Reset SPK ──────────────────────────────────────────────────────────
+// ── Bulk Delete SPK ────────────────────────────────────────────────────────
+async function bulkDeleteSpk() {
+  var ids = getCheckedIds();
+  if (!ids.length) return;
+  if (!window.confirm('Hapus ' + ids.length + ' SPK terpilih? Tindakan ini tidak dapat dibatalkan.')) return;
+  try {
+    await apiPost('/spk/bulk-delete', { ids: ids });
+    showMessage(ids.length + ' SPK berhasil dihapus');
+    loadSpk();
+  } catch (e) { showMessage(e.message, 'error'); }
+}
+
 async function resetSpk(spkNumber) {
   if (!window.confirm('Reset SPK ' + spkNumber + ' ke status pending?')) return;
   try {
-    const spk = allSpk.find(function(s) { return s.spkNumber === spkNumber; });
-    const resetActs = (spk.activitiesModel || []).map(function(a) {
+    const spk = allSpk.find(function (s) { return s.spkNumber === spkNumber; });
+    const resetActs = (spk.activitiesModel || []).map(function (a) {
       return Object.assign({}, a, { resultComment: null, durationActual: null, isVerified: false });
     });
     await apiPut('/spk/' + spkNumber, { status: 'pending', durationActual: null, activitiesModel: resetActs });

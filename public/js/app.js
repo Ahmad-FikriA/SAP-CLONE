@@ -78,9 +78,9 @@ function apiDelete(path) {
 // ══════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   const toggleBtn = document.getElementById('sidebarToggle');
-  const sidebar   = document.getElementById('sidebar');
-  const layout    = document.getElementById('layout');
-  const msgStrip  = document.getElementById('messageStrip');
+  const sidebar = document.getElementById('sidebar');
+  const layout = document.getElementById('layout');
+  const msgStrip = document.getElementById('messageStrip');
 
   const COLLAPSED_KEY = 'sidebar_collapsed';
   if (localStorage.getItem(COLLAPSED_KEY) === '1') {
@@ -141,7 +141,7 @@ function formatDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-       + ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    + ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatPeriod(start, end) {
@@ -154,10 +154,10 @@ function formatPeriod(start, end) {
 
 function statusBadge(status) {
   const map = {
-    pending:     'badge-pending',
+    pending: 'badge-pending',
     in_progress: 'badge-in_progress',
-    completed:   'badge-completed',
-    error:       'badge-error'
+    completed: 'badge-completed',
+    error: 'badge-error'
   };
   const label = { pending: 'Pending', in_progress: 'In Progress', completed: 'Completed', error: 'Error' };
   return `<span class="badge ${map[status] || 'badge-pending'}">${label[status] || status}</span>`;
@@ -178,6 +178,56 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-function confirm(message) {
-  return window.confirm(message);
+// NOTE: Do NOT define a custom `confirm()` here — it shadows
+// the native window.confirm and causes infinite recursion.
+
+// ══════════════════════════════════════════════════
+// BULK SELECT HELPERS
+// ══════════════════════════════════════════════════
+
+/**
+ * Get IDs of all checked rows.
+ * @param {string} name – checkbox name attribute (default 'bulk')
+ */
+function getCheckedIds(name) {
+  name = name || 'bulk';
+  return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked'))
+    .map(function (cb) { return cb.value; });
 }
+
+/**
+ * "Select All" checkbox handler — toggles all row checkboxes.
+ */
+function toggleSelectAll(source, name) {
+  name = name || 'bulk';
+  var cbs = document.querySelectorAll('input[name="' + name + '"]');
+  cbs.forEach(function (cb) { cb.checked = source.checked; });
+  updateBulkBar(name);
+}
+
+/**
+ * Show / hide the floating bulk-action bar.
+ * barId defaults to 'bulkBar'. Call after any checkbox changes.
+ */
+function updateBulkBar(name, barId) {
+  name = name || 'bulk';
+  barId = barId || 'bulkBar';
+  var ids = getCheckedIds(name);
+  var bar = document.getElementById(barId);
+  if (!bar) return;
+  var countEl = bar.querySelector('.bulk-bar__count');
+  if (countEl) countEl.textContent = ids.length + ' dipilih';
+  if (ids.length > 0) {
+    bar.classList.add('show');
+  } else {
+    bar.classList.remove('show');
+  }
+  // Update "select all" checkbox state
+  var all = document.querySelectorAll('input[name="' + name + '"]');
+  var selectAll = document.getElementById('selectAll');
+  if (selectAll && all.length) {
+    selectAll.checked = ids.length === all.length;
+    selectAll.indeterminate = ids.length > 0 && ids.length < all.length;
+  }
+}
+
