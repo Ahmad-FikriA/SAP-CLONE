@@ -38,5 +38,37 @@
     "name": "Admin KTI",
     "role": "admin",
     "email": "admin@kti-water.co.id"
+  },
+  {
+    "id": "USR-006",
+    "username": "mekanik_01",
+    "password": "password123",
+    "name": "Riko Prasetyo",
+    "role": "teknisi_mekanik",
+    "email": "riko@kti-water.co.id"
+  },
+  {
+    "id": "USR-007",
+    "username": "listrik_01",
+    "password": "password123",
+    "name": "Hendra Gunawan",
+    "role": "teknisi_listrik",
+    "email": "hendra@kti-water.co.id"
+  },
+  {
+    "id": "USR-008",
+    "username": "sipil_01",
+    "password": "password123",
+    "name": "Agus Wijaya",
+    "role": "teknisi_sipil",
+    "email": "agus@kti-water.co.id"
+  },
+  {
+    "id": "USR-009",
+    "username": "otomasi_01",
+    "password": "password123",
+    "name": "Dian Permana",
+    "role": "teknisi_otomasi",
+    "email": "dian@kti-water.co.id"
   }
 ]

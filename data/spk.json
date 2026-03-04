@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "spkNumber": "SPK-2026-001",
+    "description": "Tugas",
+    "interval": "1 Minggu",
+    "category": "Mekanik",
+    "status": "completed",
+    "durationActual": 1,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-001",
+        "equipmentName": "Pompa Air Utama A",
+        "functionalLocation": "Intake Area"
+      },
+      {
+        "equipmentId": "EQ-002",
+        "equipmentName": "Pompa Air Utama B",
+        "functionalLocation": "Intake Area"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "equipmentId": "EQ-001",
+        "operationText": "Test",
+        "resultComment": "",
+        "durationPlan": 2,
+        "durationActual": null,
+        "isVerified": false
+      },
+      {
+        "activityNumber": "ACT-002",
+        "equipmentId": "EQ-002",
+        "operationText": "Test",
+        "resultComment": "",
+        "durationPlan": 2,
+        "durationActual": null,
+        "isVerified": false
+      }
+    ]
+  }
+]

@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "lkNumber": "LK-2026-001",
+    "category": "Mekanik",
+    "periodeStart": "2026-03-04T00:00:00.000Z",
+    "periodeEnd": "2026-03-30T16:59:59.000Z",
+    "lembarKe": 1,
+    "totalLembar": 1,
+    "status": "completed",
+    "evaluasi": null,
+    "spkModels": [
+      "SPK-2026-001"
+    ],
+    "approvalStatus": "approved",
+    "supervisorApprovedBy": "USR-003",
+    "supervisorApprovedAt": "2026-03-04T03:14:53.688Z",
+    "managerApprovedBy": "USR-004",
+    "managerApprovedAt": "2026-03-04T03:16:17.049Z"
+  }
+]

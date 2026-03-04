@@ -93,10 +93,87 @@ router.post('/:lkNumber/submit', verifyToken, (req, res) => {
 
   const { evaluasi } = req.body;
   data[idx].status = 'completed';
+  data[idx].approvalStatus = 'awaiting_kasie';
   if (evaluasi !== undefined) data[idx].evaluasi = evaluasi;
   writeJSON('lembar_kerja.json', data);
 
   res.json({ message: 'Lembar kerja submitted', lkNumber: req.params.lkNumber });
+});
+
+const _PENDING_STATES = ['awaiting_kasie', 'awaiting_ap', 'awaiting_kadis_pusat', 'awaiting_kadis_keamanan'];
+
+// POST /api/lk/:lkNumber/approve — sequential 4-step approval
+router.post('/:lkNumber/approve', verifyToken, (req, res) => {
+  const { role, userId } = req.user;
+
+  if (role !== 'supervisor' && role !== 'manager') {
+    return res.status(403).json({ error: 'Forbidden: only supervisor or manager can approve' });
+  }
+
+  const data = readJSON('lembar_kerja.json');
+  const idx = data.findIndex(l => l.lkNumber === req.params.lkNumber);
+  if (idx === -1) return res.status(404).json({ error: 'LembarKerja not found' });
+
+  const lk = data[idx];
+
+  if (lk.approvalStatus === 'approved' || lk.approvalStatus === 'rejected') {
+    return res.status(400).json({ error: `LK is already ${lk.approvalStatus}` });
+  }
+
+  if (role === 'supervisor') {
+    if (lk.approvalStatus !== 'awaiting_kasie') {
+      return res.status(400).json({ error: 'LK is not awaiting Kasie Elektrik approval' });
+    }
+    lk.approvalStatus = 'awaiting_ap';
+    lk.kasieApprovedBy = userId;
+    lk.kasieApprovedAt = new Date().toISOString();
+  } else if (role === 'manager') {
+    if (lk.approvalStatus === 'awaiting_ap') {
+      lk.approvalStatus = 'awaiting_kadis_pusat';
+      lk.apApprovedBy = userId;
+      lk.apApprovedAt = new Date().toISOString();
+    } else if (lk.approvalStatus === 'awaiting_kadis_pusat') {
+      lk.approvalStatus = 'awaiting_kadis_keamanan';
+      lk.kadisPusatApprovedBy = userId;
+      lk.kadisPusatApprovedAt = new Date().toISOString();
+    } else if (lk.approvalStatus === 'awaiting_kadis_keamanan') {
+      lk.approvalStatus = 'approved';
+      lk.kadisKeamananApprovedBy = userId;
+      lk.kadisKeamananApprovedAt = new Date().toISOString();
+    } else {
+      return res.status(400).json({ error: 'LK is not awaiting manager approval' });
+    }
+  }
+
+  writeJSON('lembar_kerja.json', data);
+  res.json(resolveSpkModels(lk));
+});
+
+// POST /api/lk/:lkNumber/reject — reject at any pending approval step
+router.post('/:lkNumber/reject', verifyToken, (req, res) => {
+  const { role, userId } = req.user;
+
+  if (role !== 'supervisor' && role !== 'manager') {
+    return res.status(403).json({ error: 'Forbidden: only supervisor or manager can reject' });
+  }
+
+  const data = readJSON('lembar_kerja.json');
+  const idx = data.findIndex(l => l.lkNumber === req.params.lkNumber);
+  if (idx === -1) return res.status(404).json({ error: 'LembarKerja not found' });
+
+  const lk = data[idx];
+
+  if (!_PENDING_STATES.includes(lk.approvalStatus)) {
+    return res.status(400).json({ error: 'LK is not in a rejectable state' });
+  }
+
+  lk.approvalStatus = 'rejected';
+  lk.rejectedBy = userId;
+  lk.rejectedAt = new Date().toISOString();
+  lk.rejectionNotes = req.body.notes || null;
+
+  writeJSON('lembar_kerja.json', data);
+  res.json(resolveSpkModels(lk));
 });
 
 module.exports = router;
