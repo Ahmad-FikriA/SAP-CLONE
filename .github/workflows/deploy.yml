@@ -19,7 +19,8 @@ jobs:
           cd "C:\Project\PPHSE KTI Backend"
 
           # 1. Pull the latest code directly on the host machine
-          git pull origin main
+          git fetch origin main
+          git reset --hard origin/main
           
           # 2. Ensure the container is rebuilt/restarted with the latest changes
           docker compose up -d --build
