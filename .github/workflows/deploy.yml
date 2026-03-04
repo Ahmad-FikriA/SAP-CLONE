@@ -18,8 +18,9 @@ jobs:
           # Go to the actual folder on the Windows Server where the Docker compose is running
           cd "C:\Project\PPHSE KTI Backend"
 
-          # 1. Pull the latest code directly on the host machine
-          git pull origin main
+          # 1. Pull the latest code directly on the host machine using hard reset to avoid merge conflicts
+          git fetch origin main
+          git reset --hard origin/main
           
           # 2. Ensure the container is rebuilt/restarted with the latest changes
           docker compose up -d --build
