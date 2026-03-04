@@ -1,7 +1,7 @@
 'use strict';
 
 const { DataTypes } = require('sequelize');
-const sequelize = require('../../config/database');
+const sequelize = require('../config/database');
 
 // ── Lembar Kerja ─────────────────────────────────────────────────────────────
 const LembarKerja = sequelize.define('LembarKerja', {

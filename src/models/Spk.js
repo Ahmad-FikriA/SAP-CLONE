@@ -1,7 +1,7 @@
 'use strict';
 
 const { DataTypes } = require('sequelize');
-const sequelize = require('../../config/database');
+const sequelize = require('../config/database');
 
 // ── SPK (Surat Perintah Kerja) ────────────────────────────────────────────────
 const Spk = sequelize.define('Spk', {
