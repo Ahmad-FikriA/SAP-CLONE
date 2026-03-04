@@ -16,5 +16,28 @@
     "supervisorApprovedAt": "2026-03-04T03:14:53.688Z",
     "managerApprovedBy": "USR-004",
     "managerApprovedAt": "2026-03-04T03:16:17.049Z"
+  },
+  {
+    "lkNumber": "LK-2026-002",
+    "category": "Otomasi",
+    "periodeStart": "2026-03-04T00:00:00.000Z",
+    "periodeEnd": "2026-03-30T16:59:59.000Z",
+    "lembarKe": 1,
+    "totalLembar": 1,
+    "status": "completed",
+    "evaluasi": null,
+    "spkModels": [
+      "SPK-2026-002",
+      "SPK-2026-003"
+    ],
+    "approvalStatus": "approved",
+    "kasieApprovedBy": "USR-003",
+    "kasieApprovedAt": "2026-03-04T04:14:34.724Z",
+    "apApprovedBy": "USR-004",
+    "apApprovedAt": "2026-03-04T04:15:11.861Z",
+    "kadisPusatApprovedBy": "USR-004",
+    "kadisPusatApprovedAt": "2026-03-04T04:15:47.161Z",
+    "kadisKeamananApprovedBy": "USR-004",
+    "kadisKeamananApprovedAt": "2026-03-04T04:15:49.694Z"
   }
 ]

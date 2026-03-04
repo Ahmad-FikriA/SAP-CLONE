@@ -79,7 +79,7 @@ async function loadEquipmentList() {
 function renderPanelForm(spk) {
   const isEdit = !!spk;
   const categories = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
-  const intervals = ['1 Minggu', '2 Minggu', '1 Bulan', '3 Bulan', '6 Bulan', '1 Tahun'];
+  const intervals = ['1 Minggu', '2 Minggu', '4 Minggu', '1 Bulan', '3 Bulan', '6 Bulan', '1 Tahun'];
   const statuses = ['pending', 'in_progress', 'completed'];
 
   // Equipment checkboxes — onchange triggers per-equipment activity sections

@@ -38,5 +38,99 @@
         "isVerified": false
       }
     ]
+  },
+  {
+    "spkNumber": "SPK-2026-002",
+    "description": "Otomasikan",
+    "interval": "4 Minggu",
+    "category": "Otomasi",
+    "status": "completed",
+    "durationActual": 1,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-003",
+        "equipmentName": "Pompa Booster WTP",
+        "functionalLocation": "Water Treatment Plant"
+      },
+      {
+        "equipmentId": "EQ-004",
+        "equipmentName": "Kompresor Udara Gedung",
+        "functionalLocation": "Utility Building"
+      },
+      {
+        "equipmentId": "EQ-005",
+        "equipmentName": "Panel Listrik Utama",
+        "functionalLocation": "Control Room"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "equipmentId": "EQ-003",
+        "operationText": "sdfsad",
+        "resultComment": "",
+        "durationPlan": 2,
+        "durationActual": null,
+        "isVerified": false
+      },
+      {
+        "activityNumber": "ACT-002",
+        "equipmentId": "EQ-004",
+        "operationText": "asdasd",
+        "resultComment": "",
+        "durationPlan": 0,
+        "durationActual": null,
+        "isVerified": false
+      },
+      {
+        "activityNumber": "ACT-003",
+        "equipmentId": "EQ-005",
+        "operationText": "asdasd",
+        "resultComment": "",
+        "durationPlan": 0,
+        "durationActual": null,
+        "isVerified": false
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-003",
+    "description": "YUHUUU",
+    "interval": "1 Minggu",
+    "category": "Otomasi",
+    "status": "completed",
+    "durationActual": 1,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-009",
+        "equipmentName": "Saluran Drainase Utara",
+        "functionalLocation": "North Drainage"
+      },
+      {
+        "equipmentId": "EQ-010",
+        "equipmentName": "Sensor Level Air Tank 1",
+        "functionalLocation": "Tank Farm"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "equipmentId": "EQ-009",
+        "operationText": "asda",
+        "resultComment": "",
+        "durationPlan": 0,
+        "durationActual": null,
+        "isVerified": false
+      },
+      {
+        "activityNumber": "ACT-002",
+        "equipmentId": "EQ-010",
+        "operationText": "adasd",
+        "resultComment": "",
+        "durationPlan": 0,
+        "durationActual": null,
+        "isVerified": false
+      }
+    ]
   }
 ]
