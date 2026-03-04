@@ -70,5 +70,13 @@
     "name": "Dian Permana",
     "role": "teknisi_otomasi",
     "email": "dian@kti-water.co.id"
+  },
+  {
+    "id": "USR-010",
+    "username": "user_01",
+    "password": "password123",
+    "name": "Rina Marlina",
+    "role": "user",
+    "email": "rina@kti-water.co.id"
   }
 ]
