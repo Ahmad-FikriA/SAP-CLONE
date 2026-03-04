@@ -25,8 +25,8 @@ jobs:
           docker compose up -d --build
           docker compose restart sap-mock
 
-          # 3. Run seed inside the running container (insert-if-not-exists — safe to run every deploy)
-          docker compose exec -T sap-mock node src/seed.js
+          # 3. Seed the newly added data immediately
+          docker exec kti-sap-mock node src/seed.js
 
           # Note: Because the container runs `npm run dev` (nodemon) via start.sh
           # and the current folder is mounted as a volume (- .:/app), 
