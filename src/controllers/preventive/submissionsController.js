@@ -1,41 +1,55 @@
 'use strict';
 
-const { readJSON, writeJSON } = require('../../services/fileStore');
+const { Op } = require('sequelize');
+const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('../../models/Submission');
+
+const INCLUDE_FULL = [
+  { model: SubmissionPhoto,           as: 'photos',          attributes: ['photoPath'] },
+  { model: SubmissionActivityResult,  as: 'activityResults', attributes: ['activityNumber','resultComment','isNormal','isVerified'] },
+];
+
+function fmt(sub) {
+  const j = sub.toJSON();
+  return {
+    id:                   j.id,
+    spkNumber:            j.spkNumber,
+    durationActual:       j.durationActual,
+    evaluasi:             j.evaluasi,
+    latitude:             j.latitude,
+    longitude:            j.longitude,
+    submittedAt:          j.submittedAt,
+    photoPaths:           (j.photos || []).map(p => p.photoPath),
+    activityResultsModel: j.activityResults || [],
+  };
+}
 
 // GET /api/submissions
-const getAll = (req, res) => {
-  const data = readJSON('submissions.json');
-  res.json(data);
+const getAll = async (req, res) => {
+  const data = await Submission.findAll({ include: INCLUDE_FULL, order: [['submittedAt','DESC']] });
+  res.json(data.map(fmt));
 };
 
 // GET /api/submissions/:id
-const getOne = (req, res) => {
-  const data = readJSON('submissions.json');
-  const sub = data.find(s => s.id === req.params.id);
+const getOne = async (req, res) => {
+  const sub = await Submission.findByPk(req.params.id, { include: INCLUDE_FULL });
   if (!sub) return res.status(404).json({ error: 'Submission not found' });
-  res.json(sub);
+  res.json(fmt(sub));
 };
 
 // POST /api/submissions/bulk-delete
-const bulkDelete = (req, res) => {
+const bulkDelete = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ error: 'ids array required' });
   }
-  let data = readJSON('submissions.json');
-  const before = data.length;
-  data = data.filter(s => !ids.includes(s.id));
-  writeJSON('submissions.json', data);
-  res.json({ message: `Deleted ${before - data.length} submission(s)` });
+  const count = await Submission.destroy({ where: { id: { [Op.in]: ids } } });
+  res.json({ message: `Deleted ${count} submission(s)` });
 };
 
 // DELETE /api/submissions/:id
-const remove = (req, res) => {
-  let data = readJSON('submissions.json');
-  const before = data.length;
-  data = data.filter(s => s.id !== req.params.id);
-  if (data.length === before) return res.status(404).json({ error: 'Submission not found' });
-  writeJSON('submissions.json', data);
+const remove = async (req, res) => {
+  const count = await Submission.destroy({ where: { id: req.params.id } });
+  if (!count) return res.status(404).json({ error: 'Submission not found' });
   res.json({ message: 'Deleted' });
 };
 

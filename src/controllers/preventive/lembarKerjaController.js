@@ -1,177 +1,164 @@
 'use strict';
 
-const { readJSON, writeJSON } = require('../../services/fileStore');
+const { Op }  = require('sequelize');
+const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
+const { LembarKerja, LembarKerjaSpk }    = require('../../models/LembarKerja');
 
-// Helper: resolve spkModels (array of spkNumber strings) to full SPK objects
-function resolveSpkModels(lk) {
-  const allSpk = readJSON('spk.json');
+const _PENDING_STATES = ['awaiting_kasie','awaiting_ap','awaiting_kadis_pusat','awaiting_kadis_keamanan'];
+
+// ── Eager-load config ─────────────────────────────────────────────────────────
+const SPK_INCLUDE = [
+  { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId','equipmentName','functionalLocation'] },
+  { model: SpkActivity,  as: 'activitiesModel', attributes: ['activityNumber','equipmentId','operationText','resultComment','durationPlan','durationActual','isVerified'] },
+];
+const LK_INCLUDE = [{
+  model: LembarKerjaSpk, as: 'spkLinks', attributes: ['spkNumber'],
+  include: [{ model: Spk, as: 'spk', include: SPK_INCLUDE }],
+}];
+
+function fmt(lk) {
+  const j = lk.toJSON();
   return {
-    ...lk,
-    spkModels: (lk.spkModels || []).map(ref => {
-      const found = allSpk.find(s => s.spkNumber === ref);
-      return found || ref;
+    lkNumber:     j.lkNumber,
+    periodeStart: j.periodeStart,
+    periodeEnd:   j.periodeEnd,
+    category:     j.category,
+    status:       j.status,
+    lembarKe:     j.lembarKe,
+    totalLembar:  j.totalLembar,
+    evaluasi:     j.evaluasi,
+    approvalStatus:            j.approvalStatus,
+    kasieApprovedBy:           j.kasieApprovedBy,
+    kasieApprovedAt:           j.kasieApprovedAt,
+    apApprovedBy:              j.apApprovedBy,
+    apApprovedAt:              j.apApprovedAt,
+    kadisPusatApprovedBy:      j.kadisPusatApprovedBy,
+    kadisPusatApprovedAt:      j.kadisPusatApprovedAt,
+    kadisKeamananApprovedBy:   j.kadisKeamananApprovedBy,
+    kadisKeamananApprovedAt:   j.kadisKeamananApprovedAt,
+    rejectedBy:                j.rejectedBy,
+    rejectedAt:                j.rejectedAt,
+    rejectionNotes:            j.rejectionNotes,
+    spkModels: (j.spkLinks || []).map(link => {
+      const s = link.spk;
+      if (!s) return link.spkNumber;
+      return {
+        spkNumber: s.spkNumber, description: s.description, interval: s.intervalPeriod,
+        category: s.category, status: s.status, durationActual: s.durationActual,
+        equipmentModels: s.equipmentModels || [], activitiesModel: s.activitiesModel || [],
+      };
     }),
   };
 }
 
-const _PENDING_STATES = ['awaiting_kasie', 'awaiting_ap', 'awaiting_kadis_pusat', 'awaiting_kadis_keamanan'];
-
 // GET /api/lk
-const getAll = (req, res) => {
-  let data = readJSON('lembar_kerja.json');
-  const { category } = req.query;
-  if (category) {
-    data = data.filter(lk => lk.category === category);
-  }
-  res.json(data.map(resolveSpkModels));
+const getAll = async (req, res) => {
+  const where = req.query.category ? { category: req.query.category } : {};
+  const data  = await LembarKerja.findAll({ where, include: LK_INCLUDE });
+  res.json(data.map(fmt));
 };
 
 // GET /api/lk/:lkNumber
-const getOne = (req, res) => {
-  const data = readJSON('lembar_kerja.json');
-  const lk = data.find(l => l.lkNumber === req.params.lkNumber);
+const getOne = async (req, res) => {
+  const lk = await LembarKerja.findByPk(req.params.lkNumber, { include: LK_INCLUDE });
   if (!lk) return res.status(404).json({ error: 'LembarKerja not found' });
-  res.json(resolveSpkModels(lk));
+  res.json(fmt(lk));
 };
 
 // POST /api/lk
-const create = (req, res) => {
-  const data = readJSON('lembar_kerja.json');
-  const newLk = { ...req.body };
+const create = async (req, res) => {
+  const { lkNumber, spkModels = [], ...rest } = req.body;
+  if (!lkNumber) return res.status(400).json({ error: 'lkNumber is required' });
+  const exists = await LembarKerja.findByPk(lkNumber);
+  if (exists) return res.status(409).json({ error: 'lkNumber already exists' });
 
-  if (!newLk.lkNumber) {
-    return res.status(400).json({ error: 'lkNumber is required' });
-  }
-  if (data.find(l => l.lkNumber === newLk.lkNumber)) {
-    return res.status(409).json({ error: 'lkNumber already exists' });
-  }
-
-  data.push(newLk);
-  writeJSON('lembar_kerja.json', data);
-  res.status(201).json(resolveSpkModels(newLk));
+  const lk = await LembarKerja.create({ lkNumber, ...rest });
+  for (const spkNum of spkModels) await LembarKerjaSpk.create({ lkNumber, spkNumber: spkNum });
+  const fresh = await LembarKerja.findByPk(lkNumber, { include: LK_INCLUDE });
+  res.status(201).json(fmt(fresh));
 };
 
 // PUT /api/lk/:lkNumber
-const update = (req, res) => {
-  const data = readJSON('lembar_kerja.json');
-  const idx = data.findIndex(l => l.lkNumber === req.params.lkNumber);
-  if (idx === -1) return res.status(404).json({ error: 'LembarKerja not found' });
-
-  data[idx] = { ...data[idx], ...req.body, lkNumber: data[idx].lkNumber };
-  writeJSON('lembar_kerja.json', data);
-  res.json(resolveSpkModels(data[idx]));
+const update = async (req, res) => {
+  const lk = await LembarKerja.findByPk(req.params.lkNumber);
+  if (!lk) return res.status(404).json({ error: 'LembarKerja not found' });
+  const { spkModels, ...rest } = req.body;
+  await lk.update({ ...rest, lkNumber: lk.lkNumber });
+  const fresh = await LembarKerja.findByPk(lk.lkNumber, { include: LK_INCLUDE });
+  res.json(fmt(fresh));
 };
 
 // POST /api/lk/bulk-delete
-const bulkDelete = (req, res) => {
+const bulkDelete = async (req, res) => {
   const { ids } = req.body;
-  if (!Array.isArray(ids) || !ids.length) {
-    return res.status(400).json({ error: 'ids array required' });
-  }
-  let data = readJSON('lembar_kerja.json');
-  const before = data.length;
-  data = data.filter(l => !ids.includes(l.lkNumber));
-  writeJSON('lembar_kerja.json', data);
-  res.json({ message: `Deleted ${before - data.length} LK(s)` });
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
+  const count = await LembarKerja.destroy({ where: { lkNumber: { [Op.in]: ids } } });
+  res.json({ message: `Deleted ${count} LK(s)` });
 };
 
 // DELETE /api/lk/:lkNumber
-const remove = (req, res) => {
-  let data = readJSON('lembar_kerja.json');
-  const before = data.length;
-  data = data.filter(l => l.lkNumber !== req.params.lkNumber);
-  if (data.length === before) return res.status(404).json({ error: 'LembarKerja not found' });
-  writeJSON('lembar_kerja.json', data);
+const remove = async (req, res) => {
+  const count = await LembarKerja.destroy({ where: { lkNumber: req.params.lkNumber } });
+  if (!count) return res.status(404).json({ error: 'LembarKerja not found' });
   res.json({ message: 'Deleted' });
 };
 
 // POST /api/lk/:lkNumber/submit
-const submit = (req, res) => {
-  const data = readJSON('lembar_kerja.json');
-  const idx = data.findIndex(l => l.lkNumber === req.params.lkNumber);
-  if (idx === -1) return res.status(404).json({ error: 'LembarKerja not found' });
-
+const submit = async (req, res) => {
+  const lk = await LembarKerja.findByPk(req.params.lkNumber);
+  if (!lk) return res.status(404).json({ error: 'LembarKerja not found' });
   const { evaluasi } = req.body;
-  data[idx].status = 'completed';
-  data[idx].approvalStatus = 'awaiting_kasie';
-  if (evaluasi !== undefined) data[idx].evaluasi = evaluasi;
-  writeJSON('lembar_kerja.json', data);
-
-  res.json({ message: 'Lembar kerja submitted', lkNumber: req.params.lkNumber });
+  await lk.update({ status: 'completed', approvalStatus: 'awaiting_kasie', ...(evaluasi !== undefined && { evaluasi }) });
+  res.json({ message: 'Lembar kerja submitted', lkNumber: lk.lkNumber });
 };
 
 // POST /api/lk/:lkNumber/approve
-const approve = (req, res) => {
+const approve = async (req, res) => {
   const { role, userId } = req.user;
-
   if (role !== 'supervisor' && role !== 'manager') {
     return res.status(403).json({ error: 'Forbidden: only supervisor or manager can approve' });
   }
 
-  const data = readJSON('lembar_kerja.json');
-  const idx = data.findIndex(l => l.lkNumber === req.params.lkNumber);
-  if (idx === -1) return res.status(404).json({ error: 'LembarKerja not found' });
-
-  const lk = data[idx];
-
+  const lk = await LembarKerja.findByPk(req.params.lkNumber, { include: LK_INCLUDE });
+  if (!lk) return res.status(404).json({ error: 'LembarKerja not found' });
   if (lk.approvalStatus === 'approved' || lk.approvalStatus === 'rejected') {
     return res.status(400).json({ error: `LK is already ${lk.approvalStatus}` });
   }
 
+  const now = new Date().toISOString();
+  const updates = {};
+
   if (role === 'supervisor') {
-    if (lk.approvalStatus !== 'awaiting_kasie') {
-      return res.status(400).json({ error: 'LK is not awaiting Kasie Elektrik approval' });
-    }
-    lk.approvalStatus = 'awaiting_ap';
-    lk.kasieApprovedBy = userId;
-    lk.kasieApprovedAt = new Date().toISOString();
-  } else if (role === 'manager') {
-    if (lk.approvalStatus === 'awaiting_ap') {
-      lk.approvalStatus = 'awaiting_kadis_pusat';
-      lk.apApprovedBy = userId;
-      lk.apApprovedAt = new Date().toISOString();
-    } else if (lk.approvalStatus === 'awaiting_kadis_pusat') {
-      lk.approvalStatus = 'awaiting_kadis_keamanan';
-      lk.kadisPusatApprovedBy = userId;
-      lk.kadisPusatApprovedAt = new Date().toISOString();
-    } else if (lk.approvalStatus === 'awaiting_kadis_keamanan') {
-      lk.approvalStatus = 'approved';
-      lk.kadisKeamananApprovedBy = userId;
-      lk.kadisKeamananApprovedAt = new Date().toISOString();
-    } else {
-      return res.status(400).json({ error: 'LK is not awaiting manager approval' });
-    }
+    if (lk.approvalStatus !== 'awaiting_kasie') return res.status(400).json({ error: 'LK is not awaiting Kasie approval' });
+    Object.assign(updates, { approvalStatus: 'awaiting_ap', kasieApprovedBy: userId, kasieApprovedAt: now });
+  } else {
+    if      (lk.approvalStatus === 'awaiting_ap')             Object.assign(updates, { approvalStatus: 'awaiting_kadis_pusat',    apApprovedBy: userId,         apApprovedAt: now });
+    else if (lk.approvalStatus === 'awaiting_kadis_pusat')    Object.assign(updates, { approvalStatus: 'awaiting_kadis_keamanan', kadisPusatApprovedBy: userId,  kadisPusatApprovedAt: now });
+    else if (lk.approvalStatus === 'awaiting_kadis_keamanan') Object.assign(updates, { approvalStatus: 'approved',                kadisKeamananApprovedBy: userId, kadisKeamananApprovedAt: now });
+    else return res.status(400).json({ error: 'LK is not awaiting manager approval' });
   }
 
-  writeJSON('lembar_kerja.json', data);
-  res.json(resolveSpkModels(lk));
+  await lk.update(updates);
+  const fresh = await LembarKerja.findByPk(lk.lkNumber, { include: LK_INCLUDE });
+  res.json(fmt(fresh));
 };
 
 // POST /api/lk/:lkNumber/reject
-const reject = (req, res) => {
+const reject = async (req, res) => {
   const { role, userId } = req.user;
-
   if (role !== 'supervisor' && role !== 'manager') {
     return res.status(403).json({ error: 'Forbidden: only supervisor or manager can reject' });
   }
 
-  const data = readJSON('lembar_kerja.json');
-  const idx = data.findIndex(l => l.lkNumber === req.params.lkNumber);
-  if (idx === -1) return res.status(404).json({ error: 'LembarKerja not found' });
-
-  const lk = data[idx];
-
+  const lk = await LembarKerja.findByPk(req.params.lkNumber, { include: LK_INCLUDE });
+  if (!lk) return res.status(404).json({ error: 'LembarKerja not found' });
   if (!_PENDING_STATES.includes(lk.approvalStatus)) {
     return res.status(400).json({ error: 'LK is not in a rejectable state' });
   }
 
-  lk.approvalStatus = 'rejected';
-  lk.rejectedBy = userId;
-  lk.rejectedAt = new Date().toISOString();
-  lk.rejectionNotes = req.body.notes || null;
-
-  writeJSON('lembar_kerja.json', data);
-  res.json(resolveSpkModels(lk));
+  await lk.update({ approvalStatus: 'rejected', rejectedBy: userId, rejectedAt: new Date().toISOString(), rejectionNotes: req.body.notes || null });
+  const fresh = await LembarKerja.findByPk(lk.lkNumber, { include: LK_INCLUDE });
+  res.json(fmt(fresh));
 };
 
 module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, approve, reject };

@@ -1,65 +1,50 @@
 'use strict';
 
-const { readJSON, writeJSON } = require('../../services/fileStore');
+const { Op } = require('sequelize');
+const Equipment = require('../../models/Equipment');
 
 // GET /api/equipment
-const getAll = (req, res) => {
-  let data = readJSON('equipment.json');
-  const { category } = req.query;
-  if (category) {
-    data = data.filter(e => e.category === category);
-  }
+const getAll = async (req, res) => {
+  const where = req.query.category ? { category: req.query.category } : {};
+  const data = await Equipment.findAll({ where });
   res.json(data);
 };
 
 // POST /api/equipment
-const create = (req, res) => {
-  const data = readJSON('equipment.json');
-  const newEq = { ...req.body };
-
-  if (!newEq.equipmentId || !newEq.equipmentName) {
+const create = async (req, res) => {
+  const { equipmentId, equipmentName } = req.body;
+  if (!equipmentId || !equipmentName) {
     return res.status(400).json({ error: 'equipmentId and equipmentName are required' });
   }
-  if (data.find(e => e.equipmentId === newEq.equipmentId)) {
-    return res.status(409).json({ error: 'equipmentId already exists' });
-  }
+  const exists = await Equipment.findByPk(equipmentId);
+  if (exists) return res.status(409).json({ error: 'equipmentId already exists' });
 
-  data.push(newEq);
-  writeJSON('equipment.json', data);
-  res.status(201).json(newEq);
+  const eq = await Equipment.create(req.body);
+  res.status(201).json(eq);
 };
 
 // PUT /api/equipment/:equipmentId
-const update = (req, res) => {
-  const data = readJSON('equipment.json');
-  const idx = data.findIndex(e => e.equipmentId === req.params.equipmentId);
-  if (idx === -1) return res.status(404).json({ error: 'Equipment not found' });
-
-  data[idx] = { ...data[idx], ...req.body, equipmentId: data[idx].equipmentId };
-  writeJSON('equipment.json', data);
-  res.json(data[idx]);
+const update = async (req, res) => {
+  const eq = await Equipment.findByPk(req.params.equipmentId);
+  if (!eq) return res.status(404).json({ error: 'Equipment not found' });
+  await eq.update({ ...req.body, equipmentId: eq.equipmentId });
+  res.json(eq);
 };
 
 // POST /api/equipment/bulk-delete
-const bulkDelete = (req, res) => {
+const bulkDelete = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ error: 'ids array required' });
   }
-  let data = readJSON('equipment.json');
-  const before = data.length;
-  data = data.filter(e => !ids.includes(e.equipmentId));
-  writeJSON('equipment.json', data);
-  res.json({ message: `Deleted ${before - data.length} equipment(s)` });
+  const count = await Equipment.destroy({ where: { equipmentId: { [Op.in]: ids } } });
+  res.json({ message: `Deleted ${count} equipment(s)` });
 };
 
 // DELETE /api/equipment/:equipmentId
-const remove = (req, res) => {
-  let data = readJSON('equipment.json');
-  const before = data.length;
-  data = data.filter(e => e.equipmentId !== req.params.equipmentId);
-  if (data.length === before) return res.status(404).json({ error: 'Equipment not found' });
-  writeJSON('equipment.json', data);
+const remove = async (req, res) => {
+  const count = await Equipment.destroy({ where: { equipmentId: req.params.equipmentId } });
+  if (!count) return res.status(404).json({ error: 'Equipment not found' });
   res.json({ message: 'Deleted' });
 };
 
