@@ -7,12 +7,14 @@ const path = require('path');
 const multer = require('multer');
 
 const authRoutes = require('./routes/auth');
-const lkRoutes = require('./routes/lembarKerja');
-const spkRoutes = require('./routes/spk');
-const equipmentRoutes = require('./routes/equipment');
 const usersRoutes = require('./routes/users');
-const submissionsRoutes = require('./routes/submissions');
-const mapsRoutes = require('./routes/maps');
+const {
+  spkRouter,
+  lkRouter,
+  equipmentRouter,
+  mapsRouter,
+  submissionsRouter,
+} = require('./routes/preventive');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -58,12 +60,12 @@ app.post('/api/upload/photo', verifyToken, upload.single('photo'), (req, res) =>
 
 // ── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
-app.use('/api/lk', lkRoutes);
-app.use('/api/spk', spkRoutes);
-app.use('/api/equipment', equipmentRoutes);
 app.use('/api/users', usersRoutes);
-app.use('/api/submissions', submissionsRoutes);
-app.use('/api/maps', mapsRoutes);
+app.use('/api/spk', spkRouter);
+app.use('/api/lk', lkRouter);
+app.use('/api/equipment', equipmentRouter);
+app.use('/api/maps', mapsRouter);
+app.use('/api/submissions', submissionsRouter);
 
 // ── SPA fallback: serve index.html for any non-API GET ───────────────────────
 app.get(/^(?!\/api).*$/, (req, res) => {
