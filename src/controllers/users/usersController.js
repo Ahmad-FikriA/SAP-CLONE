@@ -1,63 +1,54 @@
 'use strict';
 
-const { readJSON, writeJSON } = require('../../services/fileStore');
+const { Op } = require('sequelize');
+const User = require('../../models/User');
+
+const SAFE = { attributes: { exclude: ['password'] } };
 
 // GET /api/users
-const getAll = (req, res) => {
-  const data = readJSON('users.json');
-  const roleFilter = req.query.role;
-  const users = roleFilter ? data.filter(u => u.role === roleFilter) : data;
-  res.json(users.map(({ password, ...u }) => u));
+const getAll = async (req, res) => {
+  const where = req.query.role ? { role: req.query.role } : {};
+  const users = await User.findAll({ where, ...SAFE });
+  res.json(users);
 };
 
 // POST /api/users
-const create = (req, res) => {
-  const data = readJSON('users.json');
-  const user = { ...req.body };
-  if (!user.id || !user.username) {
+const create = async (req, res) => {
+  const { id, username, password, name, role, email } = req.body;
+  if (!id || !username) {
     return res.status(400).json({ error: 'id and username are required' });
   }
-  if (data.find(u => u.username === user.username)) {
-    return res.status(409).json({ error: 'Username already exists' });
-  }
-  user.password = user.password || 'password123';
-  data.push(user);
-  writeJSON('users.json', data);
-  const { password, ...safe } = user;
+  const exists = await User.findOne({ where: { username } });
+  if (exists) return res.status(409).json({ error: 'Username already exists' });
+
+  const user = await User.create({ id, username, password: password || 'password123', name, role, email });
+  const { password: _, ...safe } = user.toJSON();
   res.status(201).json(safe);
 };
 
 // PUT /api/users/:id
-const update = (req, res) => {
-  const data = readJSON('users.json');
-  const idx = data.findIndex(u => u.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'User not found' });
-  data[idx] = { ...data[idx], ...req.body, id: data[idx].id };
-  writeJSON('users.json', data);
-  const { password, ...safe } = data[idx];
+const update = async (req, res) => {
+  const user = await User.findByPk(req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  await user.update({ ...req.body, id: user.id });
+  const { password: _, ...safe } = user.toJSON();
   res.json(safe);
 };
 
 // POST /api/users/bulk-delete
-const bulkDelete = (req, res) => {
+const bulkDelete = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ error: 'ids array required' });
   }
-  let data = readJSON('users.json');
-  const before = data.length;
-  data = data.filter(u => !ids.includes(u.id));
-  writeJSON('users.json', data);
-  res.json({ message: `Deleted ${before - data.length} user(s)` });
+  const count = await User.destroy({ where: { id: { [Op.in]: ids } } });
+  res.json({ message: `Deleted ${count} user(s)` });
 };
 
 // DELETE /api/users/:id
-const remove = (req, res) => {
-  let data = readJSON('users.json');
-  const before = data.length;
-  data = data.filter(u => u.id !== req.params.id);
-  if (data.length === before) return res.status(404).json({ error: 'User not found' });
-  writeJSON('users.json', data);
+const remove = async (req, res) => {
+  const count = await User.destroy({ where: { id: req.params.id } });
+  if (!count) return res.status(404).json({ error: 'User not found' });
   res.json({ message: 'Deleted' });
 };
 

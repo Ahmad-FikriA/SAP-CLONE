@@ -17,6 +17,10 @@ const {
 } = require('./routes/preventive');
 const errorHandler = require('./middleware/errorHandler');
 
+// Register all Sequelize model associations (must run before any query)
+require('./models/associations');
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 

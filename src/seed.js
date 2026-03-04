@@ -1,16 +1,13 @@
 'use strict';
 
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-
-const DATA_DIR = path.join(__dirname, '..', 'data');
-
-function write(filename, data) {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(path.join(DATA_DIR, filename), JSON.stringify(data, null, 2), 'utf8');
-  console.log(`  ✓  data/${filename}  (${data.length} records)`);
-}
+const sequelize  = require('./config/database');
+const User       = require('./models/User');
+const Plant      = require('./models/Plant');
+const Equipment  = require('./models/Equipment');
+const { Spk, SpkEquipment, SpkActivity }               = require('./models/Spk');
+const { LembarKerja, LembarKerjaSpk }                  = require('./models/LembarKerja');
+const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./models/Submission');
 
 // ────────────────────────────────────────────────────────────────────────────
 // USERS
@@ -367,29 +364,129 @@ const submissions = [
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// ASSIGN equipmentId TO EACH ACTIVITY
-// Activities are distributed across equipmentModels round-robin so that
-// each equipment gets its own activity group in the mobile UI.
+// ASSIGN equipmentId TO EACH ACTIVITY (round-robin per equipmentModels)
 // ────────────────────────────────────────────────────────────────────────────
 spk.forEach(s => {
   const equips = s.equipmentModels;
   s.activitiesModel.forEach((act, i) => {
-    // Only assign if not already explicitly set in the activity definition
     if (!act.equipmentId) {
-      act.equipmentId = equips.length > 0
-        ? equips[i % equips.length].equipmentId
-        : null;
+      act.equipmentId = equips.length > 0 ? equips[i % equips.length].equipmentId : null;
     }
   });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// WRITE ALL FILES
+// PLANTS seed data
 // ────────────────────────────────────────────────────────────────────────────
-console.log('\n  KTI SmartCare — Seeding data/\n');
-write('users.json', users);
-write('equipment.json', equipment);
-write('spk.json', spk);
-write('lembar_kerja.json', lembarKerja);
-write('submissions.json', submissions);
-console.log('\n  Seed complete!\n');
+const plants = [
+  { plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', shortName: 'KTI WTP-1', city: 'Cilegon', centerLat: -6.0135, centerLon: 106.0219, zoom: 17 }
+];
+
+// ────────────────────────────────────────────────────────────────────────────
+// MAIN: sync schema → INSERT-IF-NOT-EXISTS (existing data is NEVER modified)
+// ────────────────────────────────────────────────────────────────────────────
+async function main() {
+  await sequelize.authenticate();
+  console.log('\n  KTI SmartCare — MySQL Seed (insert-if-not-exists)\n');
+
+  // Auto-create missing tables / add missing columns. Never drops anything.
+  await sequelize.sync({ alter: true });
+  console.log('  ✓  Tables synced');
+
+  let added, skipped;
+
+  // ── Users ──────────────────────────────────────────────────────────────────
+  added = 0; skipped = 0;
+  for (const u of users) {
+    const [, created] = await User.findOrCreate({ where: { id: u.id }, defaults: u });
+    created ? added++ : skipped++;
+  }
+  console.log(`  ✓  users        (+${added} added, ${skipped} already existed)`);
+
+  // ── Plants ─────────────────────────────────────────────────────────────────
+  added = 0; skipped = 0;
+  for (const p of plants) {
+    const [, created] = await Plant.findOrCreate({ where: { plantId: p.plantId }, defaults: p });
+    created ? added++ : skipped++;
+  }
+  console.log(`  ✓  plants       (+${added} added, ${skipped} already existed)`);
+
+  // ── Equipment ──────────────────────────────────────────────────────────────
+  added = 0; skipped = 0;
+  for (const e of equipment) {
+    const [, created] = await Equipment.findOrCreate({ where: { equipmentId: e.equipmentId }, defaults: e });
+    created ? added++ : skipped++;
+  }
+  console.log(`  ✓  equipment    (+${added} added, ${skipped} already existed)`);
+
+  // ── SPK ────────────────────────────────────────────────────────────────────
+  // SPK header: skip if already exists.
+  // Child rows (equipment links & activities): insert only if the natural key is missing.
+  added = 0; skipped = 0;
+  for (const s of spk) {
+    const [, spkCreated] = await Spk.findOrCreate({
+      where: { spkNumber: s.spkNumber },
+      defaults: {
+        spkNumber: s.spkNumber, description: s.description, intervalPeriod: s.interval,
+        category: s.category, status: s.status, durationActual: s.durationActual,
+      },
+    });
+    spkCreated ? added++ : skipped++;
+
+    for (const eq of s.equipmentModels) {
+      const exists = await SpkEquipment.findOne({ where: { spkNumber: s.spkNumber, equipmentId: eq.equipmentId } });
+      if (!exists) await SpkEquipment.create({ spkNumber: s.spkNumber, equipmentId: eq.equipmentId, equipmentName: eq.equipmentName, functionalLocation: eq.functionalLocation });
+    }
+    for (const act of s.activitiesModel) {
+      const exists = await SpkActivity.findOne({ where: { spkNumber: s.spkNumber, activityNumber: act.activityNumber } });
+      if (!exists) await SpkActivity.create({ spkNumber: s.spkNumber, activityNumber: act.activityNumber, equipmentId: act.equipmentId || null, operationText: act.operationText, resultComment: act.resultComment || null, durationPlan: act.durationPlan, durationActual: act.durationActual || null, isVerified: act.isVerified || false });
+    }
+  }
+  console.log(`  ✓  spk          (+${added} added, ${skipped} already existed)`);
+
+  // ── Lembar Kerja ───────────────────────────────────────────────────────────
+  added = 0; skipped = 0;
+  for (const lk of lembarKerja) {
+    const [, lkCreated] = await LembarKerja.findOrCreate({
+      where: { lkNumber: lk.lkNumber },
+      defaults: { lkNumber: lk.lkNumber, periodeStart: lk.periodeStart, periodeEnd: lk.periodeEnd, category: lk.category, status: lk.status, lembarKe: lk.lembarKe, totalLembar: lk.totalLembar, evaluasi: lk.evaluasi || null },
+    });
+    lkCreated ? added++ : skipped++;
+
+    for (const spkNum of lk.spkModels) {
+      const exists = await LembarKerjaSpk.findOne({ where: { lkNumber: lk.lkNumber, spkNumber: spkNum } });
+      if (!exists) await LembarKerjaSpk.create({ lkNumber: lk.lkNumber, spkNumber: spkNum });
+    }
+  }
+  console.log(`  ✓  lembar_kerja (+${added} added, ${skipped} already existed)`);
+
+  // ── Submissions ────────────────────────────────────────────────────────────
+  // Only the 2 seed-defined submissions (SUB-001, SUB-002) are managed here.
+  // App-generated submissions (random IDs) are completely untouched.
+  added = 0; skipped = 0;
+  for (const sub of submissions) {
+    const [, subCreated] = await Submission.findOrCreate({
+      where: { id: sub.id },
+      defaults: { id: sub.id, spkNumber: sub.spkNumber, durationActual: sub.durationActual, evaluasi: sub.evaluasi || null, latitude: sub.latitude, longitude: sub.longitude, submittedAt: sub.submittedAt },
+    });
+    subCreated ? added++ : skipped++;
+
+    for (const p of (sub.photoPaths || [])) {
+      const exists = await SubmissionPhoto.findOne({ where: { submissionId: sub.id, photoPath: p } });
+      if (!exists) await SubmissionPhoto.create({ submissionId: sub.id, photoPath: p });
+    }
+    for (const r of (sub.activityResultsModel || [])) {
+      const exists = await SubmissionActivityResult.findOne({ where: { submissionId: sub.id, activityNumber: r.activityNumber } });
+      if (!exists) await SubmissionActivityResult.create({ submissionId: sub.id, activityNumber: r.activityNumber, resultComment: r.resultComment || null, isNormal: r.isNormal ?? true, isVerified: r.isVerified ?? false });
+    }
+  }
+  console.log(`  ✓  submissions  (+${added} added, ${skipped} already existed)`);
+
+  console.log('\n  Seed complete! (no existing data was modified)\n');
+  await sequelize.close();
+}
+
+main().catch(err => {
+  console.error('  ✗  Seed failed:', err.message);
+  process.exit(1);
+});
