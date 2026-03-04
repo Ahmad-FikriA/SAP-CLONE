@@ -16,27 +16,32 @@ function write(filename, data) {
 // USERS
 // ────────────────────────────────────────────────────────────────────────────
 const users = [
-  { id: 'USR-001', username: 'teknisi_01',   password: 'password123', name: 'Budi Santoso',   role: 'teknisi',    email: 'budi@kti-water.co.id'  },
-  { id: 'USR-002', username: 'planner_01',   password: 'password123', name: 'Siti Rahayu',    role: 'planner',    email: 'siti@kti-water.co.id'  },
-  { id: 'USR-003', username: 'supervisor_01',password: 'password123', name: 'Ahmad Fauzi',    role: 'supervisor', email: 'ahmad@kti-water.co.id' },
-  { id: 'USR-004', username: 'manager_01',   password: 'password123', name: 'Dewi Kusuma',    role: 'manager',    email: 'dewi@kti-water.co.id'  },
-  { id: 'USR-005', username: 'admin_01',     password: 'password123', name: 'Admin KTI',      role: 'admin',      email: 'admin@kti-water.co.id' }
+  { id: 'USR-001', username: 'teknisi_01', password: 'password123', name: 'Budi Santoso', role: 'teknisi', email: 'budi@kti-water.co.id' },
+  { id: 'USR-002', username: 'planner_01', password: 'password123', name: 'Siti Rahayu', role: 'planner', email: 'siti@kti-water.co.id' },
+  { id: 'USR-003', username: 'supervisor_01', password: 'password123', name: 'Ahmad Fauzi', role: 'supervisor', email: 'ahmad@kti-water.co.id' },
+  { id: 'USR-004', username: 'manager_01', password: 'password123', name: 'Dewi Kusuma', role: 'manager', email: 'dewi@kti-water.co.id' },
+  { id: 'USR-005', username: 'admin_01', password: 'password123', name: 'Admin KTI', role: 'admin', email: 'admin@kti-water.co.id' },
+  { id: 'USR-006', username: 'mekanik_01', password: 'password123', name: 'Riko Prasetyo', role: 'teknisi_mekanik', email: 'riko@kti-water.co.id' },
+  { id: 'USR-007', username: 'listrik_01', password: 'password123', name: 'Hendra Gunawan', role: 'teknisi_listrik', email: 'hendra@kti-water.co.id' },
+  { id: 'USR-008', username: 'sipil_01', password: 'password123', name: 'Agus Wijaya', role: 'teknisi_sipil', email: 'agus@kti-water.co.id' },
+  { id: 'USR-009', username: 'otomasi_01', password: 'password123', name: 'Dian Permana', role: 'teknisi_otomasi', email: 'dian@kti-water.co.id' },
+  { id: 'USR-010', username: 'user_01', password: 'password123', name: 'Rina Marlina', role: 'user', email: 'rina@kti-water.co.id' }
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
 // EQUIPMENT  (10 total: Mekanik×4, Listrik×3, Sipil×2, Otomasi×1)
 // ────────────────────────────────────────────────────────────────────────────
 const equipment = [
-  { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A',          functionalLocation: 'Basement Lantai B1',        category: 'Mekanik', latitude: -6.21682, longitude: 106.81333 },
-  { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B',          functionalLocation: 'Basement Lantai B1',        category: 'Mekanik', latitude: -6.21688, longitude: 106.81345 },
-  { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5',     functionalLocation: 'Ruang Pompa Lantai 5',      category: 'Mekanik', latitude: -6.21658, longitude: 106.81340 },
-  { equipmentId: 'EQ-004', equipmentName: 'Kompresor Udara Gedung',     functionalLocation: 'Ruang Utilitas B2',         category: 'Mekanik', latitude: -6.21698, longitude: 106.81328 },
-  { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama',        functionalLocation: 'Ruang Panel Lantai 1',      category: 'Listrik', latitude: -6.21671, longitude: 106.81318 },
-  { equipmentId: 'EQ-006', equipmentName: 'Panel Distribusi Lantai 3',  functionalLocation: 'Ruang Panel Lantai 3',      category: 'Listrik', latitude: -6.21654, longitude: 106.81325 },
-  { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA',   functionalLocation: 'Area Genset Basement',      category: 'Listrik', latitude: -6.21702, longitude: 106.81352 },
-  { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama',      functionalLocation: 'Area Luar Gedung',          category: 'Sipil',   latitude: -6.21663, longitude: 106.81298 },
-  { equipmentId: 'EQ-009', equipmentName: 'Saluran Drainase Utara',     functionalLocation: 'Area Drainase Utara',       category: 'Sipil',   latitude: -6.21638, longitude: 106.81315 },
-  { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1',    functionalLocation: 'Rooftop Area',              category: 'Otomasi', latitude: -6.21645, longitude: 106.81338 }
+  { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1', category: 'Mekanik', latitude: -6.21682, longitude: 106.81333 },
+  { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B', functionalLocation: 'Basement Lantai B1', category: 'Mekanik', latitude: -6.21688, longitude: 106.81345 },
+  { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5', category: 'Mekanik', latitude: -6.21658, longitude: 106.81340 },
+  { equipmentId: 'EQ-004', equipmentName: 'Kompresor Udara Gedung', functionalLocation: 'Ruang Utilitas B2', category: 'Mekanik', latitude: -6.21698, longitude: 106.81328 },
+  { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1', category: 'Listrik', latitude: -6.21671, longitude: 106.81318 },
+  { equipmentId: 'EQ-006', equipmentName: 'Panel Distribusi Lantai 3', functionalLocation: 'Ruang Panel Lantai 3', category: 'Listrik', latitude: -6.21654, longitude: 106.81325 },
+  { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA', functionalLocation: 'Area Genset Basement', category: 'Listrik', latitude: -6.21702, longitude: 106.81352 },
+  { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama', functionalLocation: 'Area Luar Gedung', category: 'Sipil', latitude: -6.21663, longitude: 106.81298 },
+  { equipmentId: 'EQ-009', equipmentName: 'Saluran Drainase Utara', functionalLocation: 'Area Drainase Utara', category: 'Sipil', latitude: -6.21638, longitude: 106.81315 },
+  { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1', functionalLocation: 'Rooftop Area', category: 'Otomasi', latitude: -6.21645, longitude: 106.81338 }
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -337,10 +342,10 @@ const submissions = [
     submittedAt: '2026-02-15T10:30:00.000Z',
     photoPaths: [],
     activityResultsModel: [
-      { activityNumber: 'ACT-001', resultComment: 'Filter lama sudah cukup kotor, sudah diganti baru',             isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-002', resultComment: 'Oli warna gelap, sudah diganti dengan SAE 30',                   isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-003', resultComment: 'Semua baut dalam kondisi baik',                                  isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-004', resultComment: 'Tekanan 8 bar, tidak ada kebocoran',                             isNormal: true, isVerified: true }
+      { activityNumber: 'ACT-001', resultComment: 'Filter lama sudah cukup kotor, sudah diganti baru', isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-002', resultComment: 'Oli warna gelap, sudah diganti dengan SAE 30', isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-003', resultComment: 'Semua baut dalam kondisi baik', isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-004', resultComment: 'Tekanan 8 bar, tidak ada kebocoran', isNormal: true, isVerified: true }
     ]
   },
   {
@@ -353,10 +358,10 @@ const submissions = [
     submittedAt: '2026-02-20T14:00:00.000Z',
     photoPaths: [],
     activityResultsModel: [
-      { activityNumber: 'ACT-001', resultComment: 'Oli diganti dengan Pertamina Fastron 15W40',                    isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-002', resultComment: 'Kedua filter sudah diganti baru',                               isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-003', resultComment: 'Tegangan aki 13.2V, kondisi baik',                              isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-004', resultComment: 'Genset beroperasi normal, output 200V/50Hz',                    isNormal: true, isVerified: true }
+      { activityNumber: 'ACT-001', resultComment: 'Oli diganti dengan Pertamina Fastron 15W40', isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-002', resultComment: 'Kedua filter sudah diganti baru', isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-003', resultComment: 'Tegangan aki 13.2V, kondisi baik', isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-004', resultComment: 'Genset beroperasi normal, output 200V/50Hz', isNormal: true, isVerified: true }
     ]
   }
 ];
@@ -382,9 +387,9 @@ spk.forEach(s => {
 // WRITE ALL FILES
 // ────────────────────────────────────────────────────────────────────────────
 console.log('\n  KTI SmartCare — Seeding data/\n');
-write('users.json',       users);
-write('equipment.json',   equipment);
-write('spk.json',         spk);
-write('lembar_kerja.json',lembarKerja);
+write('users.json', users);
+write('equipment.json', equipment);
+write('spk.json', spk);
+write('lembar_kerja.json', lembarKerja);
 write('submissions.json', submissions);
 console.log('\n  Seed complete!\n');

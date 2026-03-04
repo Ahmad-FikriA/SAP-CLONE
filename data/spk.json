@@ -1,39 +1,630 @@
 [
   {
     "spkNumber": "SPK-2026-001",
-    "description": "Tugas",
-    "interval": "1 Minggu",
+    "description": "Perawatan Rutin Pompa Air Utama A — Bulanan",
+    "interval": "1 Bulan",
     "category": "Mekanik",
-    "status": "completed",
-    "durationActual": 1,
+    "status": "pending",
+    "durationActual": null,
     "equipmentModels": [
       {
         "equipmentId": "EQ-001",
         "equipmentName": "Pompa Air Utama A",
-        "functionalLocation": "Intake Area"
+        "functionalLocation": "Basement Lantai B1"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Periksa tekanan pompa (bar)",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-001"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Cek kebocoran pipa dan fitting",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-001"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Pelumasan bearing motor pompa",
+        "resultComment": null,
+        "durationPlan": 0.25,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-001"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-002",
+    "description": "Perawatan Rutin Pompa Air Utama B — Bulanan",
+    "interval": "1 Bulan",
+    "category": "Mekanik",
+    "status": "pending",
+    "durationActual": null,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-002",
+        "equipmentName": "Pompa Air Utama B",
+        "functionalLocation": "Basement Lantai B1"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Periksa tekanan dan debit air keluar",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-002"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Bersihkan strainer / saringan pompa",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-002"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Cek vibrasi dan suara abnormal",
+        "resultComment": null,
+        "durationPlan": 0.25,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-002"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-003",
+    "description": "Servis Pompa Booster Lantai 5 — 3 Bulanan",
+    "interval": "3 Bulan",
+    "category": "Mekanik",
+    "status": "in_progress",
+    "durationActual": null,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-003",
+        "equipmentName": "Pompa Booster Lantai 5",
+        "functionalLocation": "Ruang Pompa Lantai 5"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Periksa impeller — cek keausan",
+        "resultComment": null,
+        "durationPlan": 1,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-003"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Ganti mechanical seal jika diperlukan",
+        "resultComment": null,
+        "durationPlan": 1.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-003"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Kalibrasi pressure switch",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-003"
+      },
+      {
+        "activityNumber": "ACT-004",
+        "operationText": "Uji coba operasi pompa selama 30 menit",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-003"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-004",
+    "description": "Overhaul Kompresor Udara Gedung — 6 Bulanan",
+    "interval": "6 Bulan",
+    "category": "Mekanik",
+    "status": "completed",
+    "durationActual": 4.5,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-004",
+        "equipmentName": "Kompresor Udara Gedung",
+        "functionalLocation": "Ruang Utilitas B2"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Ganti filter udara masuk",
+        "resultComment": "Filter lama sudah cukup kotor, sudah diganti baru",
+        "durationPlan": 0.5,
+        "durationActual": 0.5,
+        "isVerified": true,
+        "equipmentId": "EQ-004"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Periksa dan ganti oli kompresor",
+        "resultComment": "Oli warna gelap, sudah diganti dengan SAE 30",
+        "durationPlan": 1,
+        "durationActual": 1,
+        "isVerified": true,
+        "equipmentId": "EQ-004"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Kencangkan semua baut dan koneksi listrik",
+        "resultComment": "Semua baut dalam kondisi baik",
+        "durationPlan": 0.5,
+        "durationActual": 0.5,
+        "isVerified": true,
+        "equipmentId": "EQ-004"
+      },
+      {
+        "activityNumber": "ACT-004",
+        "operationText": "Uji tekanan dan kebocoran sistem",
+        "resultComment": "Tekanan 8 bar, tidak ada kebocoran",
+        "durationPlan": 1,
+        "durationActual": 1.5,
+        "isVerified": true,
+        "equipmentId": "EQ-004"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-005",
+    "description": "Inspeksi Panel Listrik Utama — Bulanan",
+    "interval": "1 Bulan",
+    "category": "Listrik",
+    "status": "pending",
+    "durationActual": null,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-005",
+        "equipmentName": "Panel Listrik Utama",
+        "functionalLocation": "Ruang Panel Lantai 1"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Periksa tegangan input dan output (VAC)",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-005"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Cek kondisi MCB dan MCCB",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-005"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Bersihkan debu pada busbar dan terminal",
+        "resultComment": null,
+        "durationPlan": 1,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-005"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-006",
+    "description": "Pemeriksaan Panel Distribusi Lantai 3 — 3 Bulanan",
+    "interval": "3 Bulan",
+    "category": "Listrik",
+    "status": "pending",
+    "durationActual": null,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-006",
+        "equipmentName": "Panel Distribusi Lantai 3",
+        "functionalLocation": "Ruang Panel Lantai 3"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Thermografi panel untuk deteksi hot spot",
+        "resultComment": null,
+        "durationPlan": 1,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-006"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Uji insulation resistance kabel feeder",
+        "resultComment": null,
+        "durationPlan": 1,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-006"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Kencangkan semua terminal kabel",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-006"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-007",
+    "description": "Servis Rutin Genset Cadangan 200 kVA — 6 Bulanan",
+    "interval": "6 Bulan",
+    "category": "Listrik",
+    "status": "completed",
+    "durationActual": 3,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-007",
+        "equipmentName": "Genset Cadangan 200 kVA",
+        "functionalLocation": "Area Genset Basement"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Ganti oli mesin genset",
+        "resultComment": "Oli diganti dengan Pertamina Fastron 15W40",
+        "durationPlan": 0.5,
+        "durationActual": 0.5,
+        "isVerified": true,
+        "equipmentId": "EQ-007"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Ganti filter oli dan filter bahan bakar",
+        "resultComment": "Kedua filter sudah diganti baru",
+        "durationPlan": 0.5,
+        "durationActual": 0.75,
+        "isVerified": true,
+        "equipmentId": "EQ-007"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Cek battery charger dan kondisi aki",
+        "resultComment": "Tegangan aki 13.2V, kondisi baik",
+        "durationPlan": 0.5,
+        "durationActual": 0.5,
+        "isVerified": true,
+        "equipmentId": "EQ-007"
+      },
+      {
+        "activityNumber": "ACT-004",
+        "operationText": "Uji coba operasi beban penuh 30 menit",
+        "resultComment": "Genset beroperasi normal, output 200V/50Hz",
+        "durationPlan": 1,
+        "durationActual": 1.25,
+        "isVerified": true,
+        "equipmentId": "EQ-007"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-008",
+    "description": "Pemeriksaan Bak Penampungan Utama — 3 Bulanan",
+    "interval": "3 Bulan",
+    "category": "Sipil",
+    "status": "pending",
+    "durationActual": null,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-008",
+        "equipmentName": "Bak Penampungan Utama",
+        "functionalLocation": "Area Luar Gedung"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Periksa kebocoran dinding dan lantai bak",
+        "resultComment": null,
+        "durationPlan": 1,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-008"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Bersihkan sedimen dan lumpur dasar bak",
+        "resultComment": null,
+        "durationPlan": 2,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-008"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Periksa dan uji pengapuran/chlorinasi",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-008"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-009",
+    "description": "Pembersihan Saluran Drainase Utara — 1 Tahun",
+    "interval": "1 Tahun",
+    "category": "Sipil",
+    "status": "pending",
+    "durationActual": null,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-009",
+        "equipmentName": "Saluran Drainase Utara",
+        "functionalLocation": "Area Drainase Utara"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Pembersihan saluran dari sampah dan lumpur",
+        "resultComment": null,
+        "durationPlan": 3,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-009"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Periksa kondisi tutup got / manhole cover",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-009"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-010",
+    "description": "Kalibrasi Sensor Level Air Tank 1 — 3 Bulanan",
+    "interval": "3 Bulan",
+    "category": "Otomasi",
+    "status": "pending",
+    "durationActual": null,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-010",
+        "equipmentName": "Sensor Level Air Tank 1",
+        "functionalLocation": "Rooftop Area"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Cek sinyal output sensor (4–20 mA)",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-010"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Kalibrasi titik 0% dan 100% level",
+        "resultComment": null,
+        "durationPlan": 1,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-010"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Periksa kabel sinyal dan koneksi terminal",
+        "resultComment": null,
+        "durationPlan": 0.25,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-010"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-011",
+    "description": "Upgrade Firmware PLC Water Treatment — 6 Bulanan",
+    "interval": "6 Bulan",
+    "category": "Otomasi",
+    "status": "in_progress",
+    "durationActual": null,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-010",
+        "equipmentName": "Sensor Level Air Tank 1",
+        "functionalLocation": "Rooftop Area"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Backup program PLC existing ke laptop",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-010"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Upload firmware versi terbaru ke PLC",
+        "resultComment": null,
+        "durationPlan": 1,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-010"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Verifikasi semua I/O setelah upgrade",
+        "resultComment": null,
+        "durationPlan": 1,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-010"
+      },
+      {
+        "activityNumber": "ACT-004",
+        "operationText": "Dokumentasi dan simpan backup program baru",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false,
+        "equipmentId": "EQ-010"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-012",
+    "description": "Overhaul Panel SCADA Monitoring — 1 Tahun",
+    "interval": "1 Tahun",
+    "category": "Otomasi",
+    "status": "completed",
+    "durationActual": 5,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-010",
+        "equipmentName": "Sensor Level Air Tank 1",
+        "functionalLocation": "Rooftop Area"
+      }
+    ],
+    "activitiesModel": [
+      {
+        "activityNumber": "ACT-001",
+        "operationText": "Bersihkan dan cek koneksi kabel SCADA",
+        "resultComment": "Semua koneksi kabel dalam kondisi baik",
+        "durationPlan": 1,
+        "durationActual": 1,
+        "isVerified": true,
+        "equipmentId": "EQ-010"
+      },
+      {
+        "activityNumber": "ACT-002",
+        "operationText": "Update software SCADA ke versi terbaru",
+        "resultComment": "Update ke v2.4.1 berhasil",
+        "durationPlan": 2,
+        "durationActual": 2.5,
+        "isVerified": true,
+        "equipmentId": "EQ-010"
+      },
+      {
+        "activityNumber": "ACT-003",
+        "operationText": "Kalibrasi semua sensor yang terhubung SCADA",
+        "resultComment": "Kalibrasi 8 sensor, semua dalam batas normal",
+        "durationPlan": 1.5,
+        "durationActual": 1.5,
+        "isVerified": true,
+        "equipmentId": "EQ-010"
+      }
+    ]
+  },
+  {
+    "spkNumber": "SPK-2026-013",
+    "description": "Perawatan Bulanan Pompa Air Utama A & B",
+    "interval": "1 Bulan",
+    "category": "Mekanik",
+    "status": "pending",
+    "durationActual": null,
+    "equipmentModels": [
+      {
+        "equipmentId": "EQ-001",
+        "equipmentName": "Pompa Air Utama A",
+        "functionalLocation": "Basement Lantai B1 — Sisi Kiri"
       },
       {
         "equipmentId": "EQ-002",
         "equipmentName": "Pompa Air Utama B",
-        "functionalLocation": "Intake Area"
+        "functionalLocation": "Basement Lantai B1 — Sisi Kanan"
       }
     ],
     "activitiesModel": [
       {
         "activityNumber": "ACT-001",
         "equipmentId": "EQ-001",
-        "operationText": "Test",
-        "resultComment": "",
-        "durationPlan": 2,
+        "operationText": "Periksa tekanan output Pompa A (target: 3–5 bar)",
+        "resultComment": null,
+        "durationPlan": 0.5,
         "durationActual": null,
         "isVerified": false
       },
       {
         "activityNumber": "ACT-002",
+        "equipmentId": "EQ-001",
+        "operationText": "Cek kebocoran seal, packing, dan fitting Pompa A",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false
+      },
+      {
+        "activityNumber": "ACT-003",
+        "equipmentId": "EQ-001",
+        "operationText": "Pelumasan bearing dan cek vibrasi motor Pompa A",
+        "resultComment": null,
+        "durationPlan": 0.25,
+        "durationActual": null,
+        "isVerified": false
+      },
+      {
+        "activityNumber": "ACT-004",
         "equipmentId": "EQ-002",
-        "operationText": "Test",
-        "resultComment": "",
-        "durationPlan": 2,
+        "operationText": "Periksa tekanan output Pompa B (target: 3–5 bar)",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false
+      },
+      {
+        "activityNumber": "ACT-005",
+        "equipmentId": "EQ-002",
+        "operationText": "Cek kebocoran seal, packing, dan fitting Pompa B",
+        "resultComment": null,
+        "durationPlan": 0.5,
+        "durationActual": null,
+        "isVerified": false
+      },
+      {
+        "activityNumber": "ACT-006",
+        "equipmentId": "EQ-002",
+        "operationText": "Pelumasan bearing dan cek vibrasi motor Pompa B",
+        "resultComment": null,
+        "durationPlan": 0.25,
         "durationActual": null,
         "isVerified": false
       }

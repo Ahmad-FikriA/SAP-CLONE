@@ -1,20 +1,60 @@
 [
   {
     "lkNumber": "LK-2026-001",
+    "periodeStart": "2026-03-01T00:00:00.000Z",
+    "periodeEnd": "2026-03-31T23:59:59.000Z",
     "category": "Mekanik",
-    "periodeStart": "2026-03-04T00:00:00.000Z",
-    "periodeEnd": "2026-03-30T16:59:59.000Z",
+    "status": "in_progress",
     "lembarKe": 1,
-    "totalLembar": 1,
-    "status": "completed",
+    "totalLembar": 2,
     "evaluasi": null,
     "spkModels": [
-      "SPK-2026-001"
-    ],
-    "approvalStatus": "approved",
-    "supervisorApprovedBy": "USR-003",
-    "supervisorApprovedAt": "2026-03-04T03:14:53.688Z",
-    "managerApprovedBy": "USR-004",
-    "managerApprovedAt": "2026-03-04T03:16:17.049Z"
+      "SPK-2026-001",
+      "SPK-2026-002",
+      "SPK-2026-003",
+      "SPK-2026-013"
+    ]
+  },
+  {
+    "lkNumber": "LK-2026-002",
+    "periodeStart": "2026-03-01T00:00:00.000Z",
+    "periodeEnd": "2026-03-31T23:59:59.000Z",
+    "category": "Listrik",
+    "status": "in_progress",
+    "lembarKe": 1,
+    "totalLembar": 1,
+    "evaluasi": null,
+    "spkModels": [
+      "SPK-2026-005",
+      "SPK-2026-006"
+    ]
+  },
+  {
+    "lkNumber": "LK-2026-003",
+    "periodeStart": "2026-03-01T00:00:00.000Z",
+    "periodeEnd": "2026-03-31T23:59:59.000Z",
+    "category": "Sipil",
+    "status": "pending",
+    "lembarKe": 1,
+    "totalLembar": 1,
+    "evaluasi": null,
+    "spkModels": [
+      "SPK-2026-008",
+      "SPK-2026-009"
+    ]
+  },
+  {
+    "lkNumber": "LK-2026-004",
+    "periodeStart": "2026-03-01T00:00:00.000Z",
+    "periodeEnd": "2026-03-31T23:59:59.000Z",
+    "category": "Otomasi",
+    "status": "in_progress",
+    "lembarKe": 1,
+    "totalLembar": 1,
+    "evaluasi": null,
+    "spkModels": [
+      "SPK-2026-010",
+      "SPK-2026-011"
+    ]
   }
 ]
