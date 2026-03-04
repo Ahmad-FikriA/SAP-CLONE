@@ -1,7 +1,7 @@
 'use strict';
 
 const { DataTypes } = require('sequelize');
-const sequelize = require('../../config/database');
+const sequelize = require('../config/database');
 
 const Equipment = sequelize.define('Equipment', {
   equipmentId:       { type: DataTypes.STRING(20),  primaryKey: true,  field: 'equipment_id' },
