@@ -15,6 +15,7 @@ const {
   mapsRouter,
   submissionsRouter,
 } = require('./routes/preventive');
+const correctiveRoutes = require('./routes/corrective');
 const errorHandler = require('./middleware/errorHandler');
 
 // Register all Sequelize model associations (must run before any query)
@@ -45,6 +46,7 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
   }
 }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use('/storage', express.static(path.join(__dirname, '..', 'storage')));
 
 // ── Photo Upload ─────────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
@@ -70,6 +72,7 @@ app.use('/api/lk', lkRouter);
 app.use('/api/equipment', equipmentRouter);
 app.use('/api/maps', mapsRouter);
 app.use('/api/submissions', submissionsRouter);
+app.use('/api/corrective', correctiveRoutes);
 
 // ── SPA fallback: serve index.html for any non-API GET ───────────────────────
 app.get(/^(?!\/api).*$/, (req, res) => {
