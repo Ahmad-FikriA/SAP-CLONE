@@ -9,8 +9,16 @@ const Submission = sequelize.define('Submission', {
   spkNumber:      { type: DataTypes.STRING(30),   allowNull: false, field: 'spk_number' },
   durationActual: { type: DataTypes.DECIMAL(6,2), allowNull: true,  field: 'duration_actual' },
   evaluasi:       { type: DataTypes.TEXT,          allowNull: true },
-  latitude:       { type: DataTypes.DECIMAL(10,7), allowNull: true },
-  longitude:      { type: DataTypes.DECIMAL(10,7), allowNull: true },
+  latitude:       { 
+    type: DataTypes.DECIMAL(10,7), 
+    allowNull: true,
+    validate: { min: -90, max: 90 } 
+  },
+  longitude:      { 
+    type: DataTypes.DECIMAL(10,7), 
+    allowNull: true,
+    validate: { min: -180, max: 180 } 
+  },
   submittedAt:    { type: DataTypes.DATE,           allowNull: false, field: 'submitted_at' },
 }, {
   tableName: 'submissions',
