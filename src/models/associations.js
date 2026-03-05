@@ -11,6 +11,7 @@ const Equipment   = require('./Equipment');
 const { Spk, SpkEquipment, SpkActivity }               = require('./Spk');
 const { LembarKerja, LembarKerjaSpk }                  = require('./LembarKerja');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./Submission');
+const { CorrectiveRequest, CorrectiveRequestImage } = require('./CorrectiveRequest');
 
 // ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
 Plant.hasMany(Equipment, { foreignKey: 'plantId', as: 'equipment' });
@@ -40,4 +41,8 @@ SubmissionPhoto.belongsTo(Submission, { foreignKey: 'submissionId', as: 'submiss
 Submission.hasMany(SubmissionActivityResult, { foreignKey: 'submissionId', as: 'activityResults', onDelete: 'CASCADE' });
 SubmissionActivityResult.belongsTo(Submission, { foreignKey: 'submissionId', as: 'submission' });
 
-module.exports = { User, Plant, Equipment, Spk, SpkEquipment, SpkActivity, LembarKerja, LembarKerjaSpk, Submission, SubmissionPhoto, SubmissionActivityResult };
+// ── CorrectiveRequest ↔ CorrectiveRequestImage ───────────────────────────────
+CorrectiveRequest.hasMany(CorrectiveRequestImage, { foreignKey: 'requestId', as: 'images', onDelete: 'CASCADE' });
+CorrectiveRequestImage.belongsTo(CorrectiveRequest, { foreignKey: 'requestId', as: 'request' });
+
+module.exports = { User, Plant, Equipment, Spk, SpkEquipment, SpkActivity, LembarKerja, LembarKerjaSpk, Submission, SubmissionPhoto, SubmissionActivityResult, CorrectiveRequest, CorrectiveRequestImage };
