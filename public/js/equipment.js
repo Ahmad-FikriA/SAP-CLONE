@@ -143,6 +143,7 @@ function updateMapMarkers() {
     const marker = L.marker([eq.latitude, eq.longitude], {
       icon: createCircleIcon(color)
     });
+    const qrContainerId = `qr-${eq.equipmentId.replace(/[^a-zA-Z0-9]/g, '_')}`;
     marker.bindPopup(`
       <div class="eq-popup">
         <div class="eq-popup__id">${escHtml(eq.equipmentId)}</div>
@@ -151,8 +152,27 @@ function updateMapMarkers() {
           <span class="eq-popup__badge" style="background:${color}22;color:${color}">${escHtml(eq.category)}</span>
         </div>
         <div class="eq-popup__loc">📍 ${escHtml(eq.functionalLocation)}</div>
+        <div class="eq-popup__qr" style="margin-top:8px;text-align:center;">
+          <div style="font-size:11px;color:#666;margin-bottom:4px;">Scan QR Code</div>
+          <div id="${qrContainerId}" style="display:inline-block;"></div>
+        </div>
       </div>
-    `, { maxWidth: 260 });
+    `, { maxWidth: 280, minWidth: 180 });
+    marker.on('popupopen', () => {
+      setTimeout(() => {
+        const container = document.getElementById(qrContainerId);
+        if (container && !container.hasChildNodes()) {
+          new QRCode(container, {
+            text: eq.equipmentId,
+            width: 96,
+            height: 96,
+            colorDark: '#1a1a2e',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        }
+      }, 50);
+    });
     marker.addTo(markersLayer);
   });
 }
