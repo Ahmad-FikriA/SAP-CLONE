@@ -297,8 +297,20 @@ function renderForm(eq) {
   if (map) {
     map.off('click', onMapClickForCoords);
     map.on('click', onMapClickForCoords);
+
+    if (tempMarker) {
+      map.removeLayer(tempMarker);
+      tempMarker = null;
+    }
+
+    // Show marker if equipment already has coordinates
+    if (eq && eq.latitude && eq.longitude) {
+      tempMarker = L.marker([eq.latitude, eq.longitude]).addTo(map);
+    }
   }
 }
+
+let tempMarker = null;
 
 function onMapClickForCoords(e) {
   const latInput = document.getElementById('f_lat');
@@ -307,8 +319,23 @@ function onMapClickForCoords(e) {
   if (latInput && lonInput && document.getElementById('panel').classList.contains('show')) {
     latInput.value = e.latlng.lat.toFixed(7);
     lonInput.value = e.latlng.lng.toFixed(7);
+
+    if (tempMarker) {
+      map.removeLayer(tempMarker);
+    }
+    tempMarker = L.marker(e.latlng).addTo(map);
   }
 }
+
+// Override global closePanel to clean up marker
+const originalClosePanel = window.closePanel;
+window.closePanel = function () {
+  if (originalClosePanel) originalClosePanel();
+  if (tempMarker && map) {
+    map.removeLayer(tempMarker);
+    tempMarker = null;
+  }
+};
 
 // ── Save ────────────────────────────────────────────────────────────────────
 async function saveEquipment() {
