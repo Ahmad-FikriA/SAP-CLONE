@@ -72,6 +72,9 @@ async function initMap() {
     console.warn('[initMap] Could not load plants:', e);
     map.setView([-6.0135, 106.0219], 17);
   }
+
+  // Enable click-to-show-coordinates on map
+  map.on('click', onMapClickForCoords);
 }
 
 function renderPlantSelector() {
@@ -313,18 +316,29 @@ function renderForm(eq) {
 let tempMarker = null;
 
 function onMapClickForCoords(e) {
+  const lat = e.latlng.lat.toFixed(7);
+  const lon = e.latlng.lng.toFixed(7);
+
   const latInput = document.getElementById('f_lat');
   const lonInput = document.getElementById('f_lon');
-  // Only set if panel is open
-  if (latInput && lonInput && document.getElementById('panel').classList.contains('show')) {
-    latInput.value = e.latlng.lat.toFixed(7);
-    lonInput.value = e.latlng.lng.toFixed(7);
+  const panelOpen = document.getElementById('panel') && document.getElementById('panel').classList.contains('show');
+
+  // Fill form fields if panel is open
+  if (panelOpen && latInput && lonInput) {
+    latInput.value = lat;
+    lonInput.value = lon;
 
     if (tempMarker) {
       map.removeLayer(tempMarker);
     }
     tempMarker = L.marker(e.latlng).addTo(map);
   }
+
+  // Always show a coordinate popup on click
+  L.popup({ closeButton: true, className: 'coord-popup' })
+    .setLatLng(e.latlng)
+    .setContent(`<div style="font-size:12px;font-family:monospace;"><strong>📍 Koordinat</strong><br>Lat: ${lat}<br>Lng: ${lon}</div>`)
+    .openOn(map);
 }
 
 // Override global closePanel to clean up marker

@@ -1,12 +1,12 @@
 'use strict';
 
 require('dotenv').config();
-const sequelize  = require('./config/database');
-const User       = require('./models/User');
-const Plant      = require('./models/Plant');
-const Equipment  = require('./models/Equipment');
-const { Spk, SpkEquipment, SpkActivity }               = require('./models/Spk');
-const { LembarKerja, LembarKerjaSpk }                  = require('./models/LembarKerja');
+const sequelize = require('./config/database');
+const User = require('./models/User');
+const Plant = require('./models/Plant');
+const Equipment = require('./models/Equipment');
+const { Spk, SpkEquipment, SpkActivity } = require('./models/Spk');
+const { LembarKerja, LembarKerjaSpk } = require('./models/LembarKerja');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./models/Submission');
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -29,16 +29,16 @@ const users = [
 // EQUIPMENT  (10 total: Mekanik×4, Listrik×3, Sipil×2, Otomasi×1)
 // ────────────────────────────────────────────────────────────────────────────
 const equipment = [
-  { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1', category: 'Mekanik', latitude: -6.21682, longitude: 106.81333 },
-  { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B', functionalLocation: 'Basement Lantai B1', category: 'Mekanik', latitude: -6.21688, longitude: 106.81345 },
-  { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5', category: 'Mekanik', latitude: -6.21658, longitude: 106.81340 },
-  { equipmentId: 'EQ-004', equipmentName: 'Kompresor Udara Gedung', functionalLocation: 'Ruang Utilitas B2', category: 'Mekanik', latitude: -6.21698, longitude: 106.81328 },
-  { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1', category: 'Listrik', latitude: -6.21671, longitude: 106.81318 },
-  { equipmentId: 'EQ-006', equipmentName: 'Panel Distribusi Lantai 3', functionalLocation: 'Ruang Panel Lantai 3', category: 'Listrik', latitude: -6.21654, longitude: 106.81325 },
-  { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA', functionalLocation: 'Area Genset Basement', category: 'Listrik', latitude: -6.21702, longitude: 106.81352 },
-  { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama', functionalLocation: 'Area Luar Gedung', category: 'Sipil', latitude: -6.21663, longitude: 106.81298 },
-  { equipmentId: 'EQ-009', equipmentName: 'Saluran Drainase Utara', functionalLocation: 'Area Drainase Utara', category: 'Sipil', latitude: -6.21638, longitude: 106.81315 },
-  { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1', functionalLocation: 'Rooftop Area', category: 'Otomasi', latitude: -6.21645, longitude: 106.81338 }
+  { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0131, longitude: 106.0215 },
+  { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B', functionalLocation: 'Basement Lantai B1', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0133, longitude: 106.0218 },
+  { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0128, longitude: 106.0222 },
+  { equipmentId: 'EQ-004', equipmentName: 'Kompresor Udara Gedung', functionalLocation: 'Ruang Utilitas B2', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0139, longitude: 106.0212 },
+  { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1', category: 'Listrik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0136, longitude: 106.0224 },
+  { equipmentId: 'EQ-006', equipmentName: 'Panel Distribusi Lantai 3', functionalLocation: 'Ruang Panel Lantai 3', category: 'Listrik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0130, longitude: 106.0226 },
+  { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA', functionalLocation: 'Area Genset Basement', category: 'Listrik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0141, longitude: 106.0220 },
+  { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama', functionalLocation: 'Area Luar Gedung', category: 'Sipil', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0126, longitude: 106.0210 },
+  { equipmentId: 'EQ-009', equipmentName: 'Saluran Drainase Utara', functionalLocation: 'Area Drainase Utara', category: 'Sipil', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0124, longitude: 106.0217 },
+  { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1', functionalLocation: 'Rooftop Area', category: 'Otomasi', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0134, longitude: 106.0228 }
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
