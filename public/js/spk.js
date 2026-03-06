@@ -136,7 +136,23 @@ function renderPanelForm(spk) {
 
     <div class="form-section">
       <div class="form-section__title">Equipment</div>
-      <div class="multi-select-list">${eqHtml || '<p style="padding:12px;color:var(--text-muted)">Tidak ada equipment</p>'}</div>
+      <div class="eq-search-toolbar">
+        <div class="eq-search-toolbar__input-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" id="eqSearch" placeholder="Cari equipment..." oninput="filterEquipmentList()" />
+        </div>
+        <select id="eqCategoryFilter" onchange="filterEquipmentList()">
+          <option value="">Semua Kategori</option>
+          <option>Mekanik</option>
+          <option>Listrik</option>
+          <option>Sipil</option>
+          <option>Otomasi</option>
+        </select>
+        <span id="eqCounter" class="eq-search-toolbar__counter"></span>
+      </div>
+      <div class="multi-select-list" id="eqMultiSelectList">${eqHtml || '<p style="padding:12px;color:var(--text-muted)">Tidak ada equipment</p>'}</div>
     </div>
 
     <div id="activitySections"></div>
@@ -144,6 +160,8 @@ function renderPanelForm(spk) {
 
   // Populate per-equipment activity sections
   renderActivitySections((spk && spk.activitiesModel) || []);
+  // Initialize the equipment counter
+  filterEquipmentList();
 }
 
 // ── Per-equipment activity sections ───────────────────────────────────────
@@ -334,6 +352,36 @@ async function resetSpk(spkNumber) {
     showMessage('SPK ' + spkNumber + ' direset');
     loadSpk();
   } catch (e) { showMessage(e.message, 'error'); }
+}
+
+// ── Filter equipment list inside create/edit panel ─────────────────────
+function filterEquipmentList() {
+  var searchInput = document.getElementById('eqSearch');
+  var catSelect = document.getElementById('eqCategoryFilter');
+  var counter = document.getElementById('eqCounter');
+  if (!searchInput) return;
+
+  var query = searchInput.value.toLowerCase().trim();
+  var cat = catSelect ? catSelect.value : '';
+  var items = document.querySelectorAll('#eqMultiSelectList .multi-select-item');
+  var shown = 0;
+
+  items.forEach(function (item) {
+    var label = item.querySelector('label');
+    var text = label ? label.textContent.toLowerCase() : '';
+    var matchesQuery = !query || text.indexOf(query) !== -1;
+    var matchesCat = !cat || text.indexOf(cat.toLowerCase()) !== -1;
+    if (matchesQuery && matchesCat) {
+      item.style.display = '';
+      shown++;
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  if (counter) {
+    counter.textContent = shown + ' dari ' + items.length + ' equipment';
+  }
 }
 
 // ── Init ────────────────────────────────────────────────────────────────
