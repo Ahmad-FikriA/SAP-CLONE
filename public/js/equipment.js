@@ -3,6 +3,11 @@
 let allEquipment = [];
 let editingEquipId = null;
 
+// ── Pagination state ────────────────────────────────────────────────────────
+let currentPage = 1;
+const PAGE_SIZE = 25;
+let totalEquipment = 0;
+
 // ── Leaflet Map ─────────────────────────────────────────────────────────────
 let map = null;
 let markersLayer = null;
@@ -149,9 +154,9 @@ function updateMapMarkers() {
         <div class="eq-popup__id">${escHtml(eq.equipmentId)}</div>
         <div class="eq-popup__name">${escHtml(eq.equipmentName)}</div>
         <div class="eq-popup__meta">
-          <span class="eq-popup__badge" style="background:${color}22;color:${color}">${escHtml(eq.category)}</span>
+          <span class="eq-popup__badge" style="background:${color}22;color:${color}">${escHtml(eq.category || '—')}</span>
         </div>
-        <div class="eq-popup__loc">📍 ${escHtml(eq.functionalLocation)}</div>
+        <div class="eq-popup__loc">📍 ${escHtml(eq.functionalLocation || '—')}</div>
         <div class="eq-popup__qr" style="margin-top:8px;text-align:center;">
           <div style="font-size:11px;color:#666;margin-bottom:4px;">Scan QR Code</div>
           <div id="${qrContainerId}" style="display:inline-block;"></div>
@@ -183,15 +188,42 @@ function fitMapToMarkers() {
   map.fitBounds(group.getBounds().pad(0.15));
 }
 
-// ── Load & render ──────────────────────────────────────────────────────────
+// ── Debounced search ────────────────────────────────────────────────────────
+let searchTimer = null;
+function debouncedSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    currentPage = 1;
+    loadEquipment();
+  }, 350);
+}
+
+// ── Load & render with server-side pagination ──────────────────────────────
 async function loadEquipment() {
   const tbody = document.getElementById('equipBody');
   tbody.innerHTML = '<tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>';
   try {
     const cat = document.getElementById('filterCategory').value;
-    const res = await apiGet('/equipment' + (cat ? `?category=${cat}` : '') + (cat ? '&' : '?') + 'limit=9999');
+    const search = document.getElementById('searchEquipment').value.trim();
+    const offset = (currentPage - 1) * PAGE_SIZE;
+
+    // Build query string
+    const params = new URLSearchParams();
+    if (cat) params.set('category', cat);
+    if (search) params.set('search', search);
+    params.set('limit', PAGE_SIZE);
+    params.set('offset', offset);
+
+    const res = await apiGet('/equipment?' + params.toString());
     allEquipment = res.data || res;
+    totalEquipment = res.total || allEquipment.length;
+
+    // Update count display
+    const countEl = document.getElementById('equipCount');
+    if (countEl) countEl.textContent = `${totalEquipment} equipment`;
+
     renderEquipment();
+    renderPagination();
     updateMapMarkers();
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">${e.message}</td></tr>`;
@@ -208,8 +240,8 @@ function renderEquipment() {
     <tr>
       <td><strong>${escHtml(eq.equipmentId)}</strong></td>
       <td>${escHtml(eq.equipmentName)}</td>
-      <td>${escHtml(eq.functionalLocation)}</td>
-      <td><span class="badge badge-in_progress" style="background:${CATEGORY_COLORS[eq.category] || '#6C757D'}22;color:${CATEGORY_COLORS[eq.category] || '#6C757D'}">${escHtml(eq.category)}</span></td>
+      <td>${escHtml(eq.functionalLocation || '—')}</td>
+      <td>${eq.category ? `<span class="badge badge-in_progress" style="background:${CATEGORY_COLORS[eq.category] || '#6C757D'}22;color:${CATEGORY_COLORS[eq.category] || '#6C757D'}">${escHtml(eq.category)}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
       <td class="text-small text-muted">${escHtml(eq.plantName || '—')}</td>
       <td>
         <div class="table-actions">
@@ -223,6 +255,56 @@ function renderEquipment() {
       </td>
     </tr>
   `).join('');
+}
+
+// ── Pagination controls ─────────────────────────────────────────────────────
+function renderPagination() {
+  const bar = document.getElementById('paginationBar');
+  if (!bar) return;
+  const totalPages = Math.ceil(totalEquipment / PAGE_SIZE);
+  if (totalPages <= 1) { bar.innerHTML = ''; return; }
+
+  const startItem = (currentPage - 1) * PAGE_SIZE + 1;
+  const endItem = Math.min(currentPage * PAGE_SIZE, totalEquipment);
+
+  let html = `<span style="color:var(--text-muted);margin-right:12px">${startItem}–${endItem} dari ${totalEquipment}</span>`;
+
+  // Prev button
+  html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹ Prev</button>`;
+
+  // Page numbers (show max 7 pages)
+  const maxVisible = 7;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+  if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
+
+  if (startPage > 1) html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(1)">1</button>`;
+  if (startPage > 2) html += `<span style="color:var(--text-muted)">…</span>`;
+
+  for (let i = startPage; i <= endPage; i++) {
+    if (i === currentPage) {
+      html += `<button class="btn btn-primary btn-sm" style="min-width:32px">${i}</button>`;
+    } else {
+      html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(${i})" style="min-width:32px">${i}</button>`;
+    }
+  }
+
+  if (endPage < totalPages - 1) html += `<span style="color:var(--text-muted)">…</span>`;
+  if (endPage < totalPages) html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+
+  // Next button
+  html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next ›</button>`;
+
+  bar.innerHTML = html;
+}
+
+function goToPage(page) {
+  const totalPages = Math.ceil(totalEquipment / PAGE_SIZE);
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  loadEquipment();
+  // Scroll table into view
+  document.querySelector('.table-wrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Focus equipment on map ──────────────────────────────────────────────────
@@ -263,6 +345,10 @@ function renderForm(eq) {
     `<option value="${escHtml(p.plantId)}" ${eq?.plantId === p.plantId ? 'selected' : ''}>${escHtml(p.plantName)}</option>`
   ).join('');
 
+  // Fix: use null-safe check for lat/lon so 0 doesn't get treated as empty
+  const latVal = (eq?.latitude != null && eq?.latitude !== '') ? eq.latitude : '';
+  const lonVal = (eq?.longitude != null && eq?.longitude !== '') ? eq.longitude : '';
+
   document.getElementById('panelBody').innerHTML = `
     <div class="form-section">
       <div class="form-section__title">Detail Equipment</div>
@@ -286,8 +372,9 @@ function renderForm(eq) {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Kategori *</label>
+          <label>Kategori</label>
           <select id="f_category">
+            <option value="">— Belum ditentukan —</option>
             ${cats.map(c => `<option ${eq?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
           </select>
         </div>
@@ -304,11 +391,11 @@ function renderForm(eq) {
       <div class="form-row">
         <div class="form-group">
           <label>Latitude</label>
-          <input id="f_lat" type="number" step="any" value="${eq?.latitude || ''}" placeholder="-6.0135" />
+          <input id="f_lat" type="number" step="any" value="${latVal}" placeholder="-6.0135" />
         </div>
         <div class="form-group">
           <label>Longitude</label>
-          <input id="f_lon" type="number" step="any" value="${eq?.longitude || ''}" placeholder="106.0219" />
+          <input id="f_lon" type="number" step="any" value="${lonVal}" placeholder="106.0219" />
         </div>
       </div>
       <div class="hint" style="font-size:11px;color:var(--text-muted);margin-top:4px">
@@ -328,7 +415,7 @@ function renderForm(eq) {
     }
 
     // Show marker if equipment already has coordinates
-    if (eq && eq.latitude && eq.longitude) {
+    if (eq && eq.latitude != null && eq.longitude != null) {
       tempMarker = L.marker([eq.latitude, eq.longitude]).addTo(map);
     }
   }
@@ -377,10 +464,12 @@ async function saveEquipment() {
   const equipmentId = document.getElementById('f_equipId').value.trim();
   const equipmentName = document.getElementById('f_equipName').value.trim();
   const functionalLocation = document.getElementById('f_location').value.trim();
-  const category = document.getElementById('f_category').value;
+  const category = document.getElementById('f_category').value || null;
   const plantId = document.getElementById('f_plantId').value;
-  const latitude = parseFloat(document.getElementById('f_lat').value) || null;
-  const longitude = parseFloat(document.getElementById('f_lon').value) || null;
+  const latRaw = document.getElementById('f_lat').value;
+  const lonRaw = document.getElementById('f_lon').value;
+  const latitude = latRaw !== '' ? parseFloat(latRaw) : null;
+  const longitude = lonRaw !== '' ? parseFloat(lonRaw) : null;
 
   if (!equipmentId || !equipmentName) { alert('ID dan Nama Equipment wajib diisi.'); return; }
 
