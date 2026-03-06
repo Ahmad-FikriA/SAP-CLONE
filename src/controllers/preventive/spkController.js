@@ -1,26 +1,28 @@
 'use strict';
 
-const { Op }        = require('sequelize');
-const { v4: uuid }  = require('uuid');
-const sequelize     = require('../../config/database');
+const { Op } = require('sequelize');
+const { v4: uuid } = require('uuid');
+const sequelize = require('../../config/database');
 const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('../../models/Submission');
+const Equipment = require('../../models/Equipment');
+const { GeneralTaskList, GeneralTaskListActivity } = require('../../models/GeneralTaskList');
 
 // ── Eager-load config ─────────────────────────────────────────────────────────
 const INCLUDE_FULL = [
-  { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId','equipmentName','functionalLocation'] },
-  { model: SpkActivity,  as: 'activitiesModel', attributes: ['activityNumber','equipmentId','operationText','resultComment','durationPlan','durationActual','isVerified'] },
+  { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId', 'equipmentName', 'functionalLocation'] },
+  { model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'equipmentId', 'operationText', 'resultComment', 'durationPlan', 'durationActual', 'isVerified'] },
 ];
 
 function fmt(spk) {
   const j = spk.toJSON();
   return {
-    spkNumber:       j.spkNumber,
-    description:     j.description,
-    interval:        j.intervalPeriod,
-    category:        j.category,
-    status:          j.status,
-    durationActual:  j.durationActual,
+    spkNumber: j.spkNumber,
+    description: j.description,
+    interval: j.intervalPeriod,
+    category: j.category,
+    status: j.status,
+    durationActual: j.durationActual,
     equipmentModels: j.equipmentModels || [],
     activitiesModel: j.activitiesModel || [],
   };
@@ -29,7 +31,7 @@ function fmt(spk) {
 // GET /api/spk
 const getAll = async (req, res) => {
   const where = req.query.category ? { category: req.query.category } : {};
-  const data  = await Spk.findAll({ where, include: INCLUDE_FULL });
+  const data = await Spk.findAll({ where, include: INCLUDE_FULL });
   res.json(data.map(fmt));
 };
 
@@ -133,4 +135,84 @@ const sync = async (req, res) => {
   res.json({ message: 'Synced to SAP (mock)', spkNumber: spk.spkNumber, syncedAt: new Date().toISOString() });
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync };
+/**
+ * POST /api/spk/generate-from-task-list
+ *
+ * Body:
+ *   spkNumber       - e.g. "SPK-2026-014"
+ *   description     - e.g. "Perawatan Pompa PS III - Bulanan"
+ *   interval        - e.g. "1 Bulan"
+ *   taskListId      - e.g. "KTI_0001" (a general task list to use as template)
+ *   equipmentIds    - e.g. ["2210000012", "2210000015"] (SAP equipment IDs)
+ *
+ * What it does:
+ *   1. Looks up the task list and its activities
+ *   2. Looks up each equipment by ID
+ *   3. Creates the SPK with the task list's category
+ *   4. Links all selected equipment
+ *   5. For each equipment × each task list activity → creates an SpkActivity
+ */
+const generateFromTaskList = async (req, res) => {
+  const { spkNumber, description, interval, taskListId, equipmentIds = [] } = req.body;
+
+  if (!spkNumber || !taskListId || !equipmentIds.length) {
+    return res.status(400).json({ error: 'spkNumber, taskListId, and equipmentIds[] are required' });
+  }
+
+  // 1. Fetch the task list template
+  const taskList = await GeneralTaskList.findByPk(taskListId, {
+    include: [{ model: GeneralTaskListActivity, as: 'activities', order: [['stepNumber', 'ASC']] }],
+  });
+  if (!taskList) return res.status(404).json({ error: `Task list ${taskListId} not found` });
+
+  // 2. Fetch equipment records
+  const equipmentRecords = await Equipment.findAll({ where: { equipmentId: { [Op.in]: equipmentIds } } });
+  if (!equipmentRecords.length) return res.status(404).json({ error: 'No valid equipment found' });
+
+  // 3. Check if SPK already exists
+  const exists = await Spk.findByPk(spkNumber);
+  if (exists) return res.status(409).json({ error: 'spkNumber already exists' });
+
+  const t = await sequelize.transaction();
+  try {
+    // 4. Create SPK header
+    await Spk.create({
+      spkNumber,
+      description: description || `${taskList.taskListName}`,
+      intervalPeriod: interval || null,
+      category: taskList.category,
+      status: 'pending',
+    }, { transaction: t });
+
+    // 5. Link equipment
+    for (const eq of equipmentRecords) {
+      await SpkEquipment.create({
+        spkNumber,
+        equipmentId: eq.equipmentId,
+        equipmentName: eq.equipmentName,
+        functionalLocation: eq.functionalLocation || null,
+      }, { transaction: t });
+    }
+
+    // 6. Generate activities: for each equipment × each task list step
+    let actNum = 1;
+    for (const eq of equipmentRecords) {
+      for (const step of (taskList.activities || [])) {
+        await SpkActivity.create({
+          spkNumber,
+          activityNumber: `ACT-${String(actNum++).padStart(3, '0')}`,
+          equipmentId: eq.equipmentId,
+          operationText: step.operationText,
+          durationPlan: 0.5,    // default plan duration
+        }, { transaction: t });
+      }
+    }
+
+    await t.commit();
+
+    const fresh = await Spk.findByPk(spkNumber, { include: INCLUDE_FULL });
+    res.status(201).json(fmt(fresh));
+  } catch (err) { await t.rollback(); throw err; }
+};
+
+module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync, generateFromTaskList };

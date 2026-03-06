@@ -5,13 +5,15 @@
  * All models must be imported here so Sequelize knows about their relationships.
  */
 
-const User        = require('./User');
-const Plant       = require('./Plant');
-const Equipment   = require('./Equipment');
-const { Spk, SpkEquipment, SpkActivity }               = require('./Spk');
-const { LembarKerja, LembarKerjaSpk }                  = require('./LembarKerja');
+const User = require('./User');
+const Plant = require('./Plant');
+const Equipment = require('./Equipment');
+const { Spk, SpkEquipment, SpkActivity } = require('./Spk');
+const { LembarKerja, LembarKerjaSpk } = require('./LembarKerja');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./Submission');
 const { CorrectiveRequest, CorrectiveRequestImage } = require('./CorrectiveRequest');
+const FunctionalLocation = require('./FunctionalLocation');
+const { GeneralTaskList, GeneralTaskListActivity } = require('./GeneralTaskList');
 
 // ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
 Plant.hasMany(Equipment, { foreignKey: 'plantId', as: 'equipment' });
@@ -45,4 +47,25 @@ SubmissionActivityResult.belongsTo(Submission, { foreignKey: 'submissionId', as:
 CorrectiveRequest.hasMany(CorrectiveRequestImage, { foreignKey: 'requestId', as: 'images', onDelete: 'CASCADE' });
 CorrectiveRequestImage.belongsTo(CorrectiveRequest, { foreignKey: 'requestId', as: 'request' });
 
-module.exports = { User, Plant, Equipment, Spk, SpkEquipment, SpkActivity, LembarKerja, LembarKerjaSpk, Submission, SubmissionPhoto, SubmissionActivityResult, CorrectiveRequest, CorrectiveRequestImage };
+// ── FunctionalLocation (self-referencing tree) ────────────────────────────────
+FunctionalLocation.hasMany(FunctionalLocation, { foreignKey: 'parentId', as: 'children' });
+FunctionalLocation.belongsTo(FunctionalLocation, { foreignKey: 'parentId', as: 'parent' });
+
+// ── Equipment ↔ FunctionalLocation ───────────────────────────────────────────
+FunctionalLocation.hasMany(Equipment, { foreignKey: 'funcLocId', as: 'equipment' });
+Equipment.belongsTo(FunctionalLocation, { foreignKey: 'funcLocId', as: 'funcLoc' });
+
+// ── GeneralTaskList ↔ GeneralTaskListActivity ────────────────────────────────
+GeneralTaskList.hasMany(GeneralTaskListActivity, { foreignKey: 'taskListId', as: 'activities', onDelete: 'CASCADE' });
+GeneralTaskListActivity.belongsTo(GeneralTaskList, { foreignKey: 'taskListId', as: 'taskList' });
+
+module.exports = {
+    User, Plant, Equipment,
+    Spk, SpkEquipment, SpkActivity,
+    LembarKerja, LembarKerjaSpk,
+    Submission, SubmissionPhoto, SubmissionActivityResult,
+    CorrectiveRequest, CorrectiveRequestImage,
+    FunctionalLocation,
+    GeneralTaskList, GeneralTaskListActivity,
+};
+

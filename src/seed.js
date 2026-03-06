@@ -1,6 +1,7 @@
 'use strict';
 
 require('dotenv').config();
+const path = require('path');
 const sequelize = require('./config/database');
 const User = require('./models/User');
 const Plant = require('./models/Plant');
@@ -8,6 +9,13 @@ const Equipment = require('./models/Equipment');
 const { Spk, SpkEquipment, SpkActivity } = require('./models/Spk');
 const { LembarKerja, LembarKerjaSpk } = require('./models/LembarKerja');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./models/Submission');
+const FunctionalLocation = require('./models/FunctionalLocation');
+const { GeneralTaskList, GeneralTaskListActivity } = require('./models/GeneralTaskList');
+
+// Load JSON data from converted Excel
+const funcLocData = require(path.join(__dirname, '..', 'data', 'functional_locations.json'));
+const sapEquipmentData = require(path.join(__dirname, '..', 'data', 'sap_equipment.json'));
+const taskListData = require(path.join(__dirname, '..', 'data', 'general_task_lists.json'));
 
 // ────────────────────────────────────────────────────────────────────────────
 // USERS
@@ -418,6 +426,64 @@ async function main() {
     created ? added++ : skipped++;
   }
   console.log(`  ✓  equipment    (+${added} added, ${skipped} already existed)`);
+
+  // ── Functional Locations ───────────────────────────────────────────────────
+  added = 0; skipped = 0;
+  // Insert in order of level to respect parent FK constraints
+  const sortedFuncLocs = [...funcLocData].sort((a, b) => a.level - b.level);
+  for (const fl of sortedFuncLocs) {
+    const [, created] = await FunctionalLocation.findOrCreate({
+      where: { funcLocId: fl.funcLocId },
+      defaults: fl,
+    });
+    created ? added++ : skipped++;
+  }
+  console.log(`  ✓  func_locs    (+${added} added, ${skipped} already existed)`);
+
+  // ── SAP Equipment ──────────────────────────────────────────────────────────
+  added = 0; skipped = 0;
+  for (const se of sapEquipmentData) {
+    const [, created] = await Equipment.findOrCreate({
+      where: { equipmentId: se.equipmentNumber },
+      defaults: {
+        equipmentId: se.equipmentNumber,
+        equipmentName: se.description,
+        plantId: 'KTI-01',
+        plantName: 'PT Krakatau Tirta Industri',
+      },
+    });
+    created ? added++ : skipped++;
+  }
+  console.log(`  ✓  sap_equip    (+${added} added, ${skipped} already existed)`);
+
+  // ── General Task Lists ─────────────────────────────────────────────────────
+  added = 0; skipped = 0;
+  for (const tl of taskListData) {
+    const [, tlCreated] = await GeneralTaskList.findOrCreate({
+      where: { taskListId: tl.taskListId },
+      defaults: {
+        taskListId: tl.taskListId,
+        taskListName: tl.taskListName,
+        category: tl.category,
+        workCenter: tl.workCenter,
+      },
+    });
+    tlCreated ? added++ : skipped++;
+
+    for (const act of tl.activities) {
+      const exists = await GeneralTaskListActivity.findOne({
+        where: { taskListId: tl.taskListId, stepNumber: act.stepNumber },
+      });
+      if (!exists) {
+        await GeneralTaskListActivity.create({
+          taskListId: tl.taskListId,
+          stepNumber: act.stepNumber,
+          operationText: act.operationText,
+        });
+      }
+    }
+  }
+  console.log(`  ✓  task_lists   (+${added} added, ${skipped} already existed)`);
 
   // ── SPK ────────────────────────────────────────────────────────────────────
   // SPK header: skip if already exists.
