@@ -71,7 +71,8 @@ async function openEdit(spkNumber) {
 
 async function loadEquipmentList() {
   try {
-    availableEquipment = await apiGet('/equipment');
+    const res = await apiGet('/equipment?limit=9999');
+    availableEquipment = res.data || res;
   } catch { availableEquipment = []; }
 }
 

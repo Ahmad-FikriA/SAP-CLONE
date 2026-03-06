@@ -189,7 +189,8 @@ async function loadEquipment() {
   tbody.innerHTML = '<tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>';
   try {
     const cat = document.getElementById('filterCategory').value;
-    allEquipment = await apiGet('/equipment' + (cat ? `?category=${cat}` : ''));
+    const res = await apiGet('/equipment' + (cat ? `?category=${cat}` : '') + (cat ? '&' : '?') + 'limit=9999');
+    allEquipment = res.data || res;
     renderEquipment();
     updateMapMarkers();
   } catch (e) {
