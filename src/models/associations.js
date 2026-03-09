@@ -19,6 +19,11 @@ const {
   CorrectiveRequest,
   CorrectiveRequestImage,
 } = require("./CorrectiveRequest");
+const FunctionalLocation = require("./FunctionalLocation");
+const {
+  GeneralTaskList,
+  GeneralTaskListActivity,
+} = require("./GeneralTaskList");
 
 // ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
 Plant.hasMany(Equipment, { foreignKey: "plantId", as: "equipment" });
@@ -129,6 +134,37 @@ InspectionFollowUp.belongsTo(InspectionReport, {
   as: "report",
 });
 
+// ── FunctionalLocation (self-referencing tree) ────────────────────────────────
+FunctionalLocation.hasMany(FunctionalLocation, {
+  foreignKey: "parentId",
+  as: "children",
+});
+FunctionalLocation.belongsTo(FunctionalLocation, {
+  foreignKey: "parentId",
+  as: "parent",
+});
+
+// ── Equipment ↔ FunctionalLocation ───────────────────────────────────────────
+FunctionalLocation.hasMany(Equipment, {
+  foreignKey: "funcLocId",
+  as: "equipment",
+});
+Equipment.belongsTo(FunctionalLocation, {
+  foreignKey: "funcLocId",
+  as: "funcLoc",
+});
+
+// ── GeneralTaskList ↔ GeneralTaskListActivity ────────────────────────────────
+GeneralTaskList.hasMany(GeneralTaskListActivity, {
+  foreignKey: "taskListId",
+  as: "activities",
+  onDelete: "CASCADE",
+});
+GeneralTaskListActivity.belongsTo(GeneralTaskList, {
+  foreignKey: "taskListId",
+  as: "taskList",
+});
+
 module.exports = {
   User,
   Plant,
@@ -147,4 +183,7 @@ module.exports = {
   InspectionReport,
   InspectionReportPhoto,
   InspectionFollowUp,
+  FunctionalLocation,
+  GeneralTaskList,
+  GeneralTaskListActivity,
 };
