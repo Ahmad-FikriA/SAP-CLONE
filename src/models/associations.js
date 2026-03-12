@@ -164,6 +164,15 @@ InspectionFollowUp.belongsTo(InspectionReport, {
   as: "report",
 });
 
+// InspectionRequest (User → Planner)
+const InspectionRequest = require("./InspectionRequest");
+
+InspectionRequest.belongsTo(InspectionSchedule, {
+  foreignKey: "scheduleId",
+  as: "schedule",
+  constraints: false,
+});
+
 // InspectionFollowUp ↔ SuratPelanggaran
 const SuratPelanggaran = require("./SuratPelanggaran");
 

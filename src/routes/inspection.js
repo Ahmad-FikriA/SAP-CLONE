@@ -36,6 +36,14 @@ const {
   checkOverdueFollowUps,
 } = require("../controllers/inspection/suratPelanggaranController");
 
+const {
+  listRequests,
+  getRequest,
+  createRequest,
+  approveRequest,
+  rejectRequest,
+} = require("../controllers/inspection/inspectionRequestController");
+
 // All inspection routes require authentication
 router.use(verifyToken);
 
@@ -66,5 +74,12 @@ router.get("/surat-pelanggaran/:id", getSuratPelanggaran);
 router.post("/surat-pelanggaran", createSuratPelanggaran);
 router.put("/surat-pelanggaran/:id", updateSuratPelanggaran);
 router.post("/surat-pelanggaran/check-overdue", checkOverdueFollowUps);
+
+// ── Inspection Requests (User → Planner) ─────────────────────────────────────
+router.get("/requests", listRequests);
+router.get("/requests/:id", getRequest);
+router.post("/requests", createRequest);
+router.put("/requests/:id/approve", approveRequest);
+router.put("/requests/:id/reject", rejectRequest);
 
 module.exports = router;
