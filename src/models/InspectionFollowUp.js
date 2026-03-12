@@ -44,7 +44,13 @@ const InspectionFollowUp = sequelize.define(
       comment: "Deadline penyelesaian",
     },
     status: {
-      type: DataTypes.ENUM("pending", "in_progress", "completed"),
+      type: DataTypes.ENUM(
+        "pending",
+        "in_progress",
+        "waiting_approval",
+        "approved",
+        "rejected",
+      ),
       allowNull: false,
       defaultValue: "pending",
     },
@@ -53,14 +59,40 @@ const InspectionFollowUp = sequelize.define(
       allowNull: true,
       comment: "Feedback dari Teknisi setelah selesai",
     },
+    beforePhotos: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: "Array path foto sebelum perbaikan",
+    },
+    afterPhotos: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: "Array path foto sesudah perbaikan",
+    },
     completedDate: {
       type: DataTypes.DATE,
       allowNull: true,
+    },
+    approvalNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Catatan dari Kepala Dinas saat approve/reject hasil perbaikan",
     },
     assignedBy: {
       type: DataTypes.STRING(100),
       allowNull: true,
       comment: "Siapa yang assign (Kepala Dinas)",
+    },
+    kategoriK3: {
+      type: DataTypes.ENUM("manusia", "bangunan"),
+      allowNull: true,
+      comment:
+        "Kategori K3: manusia → ditangani HSE, bangunan → ditangani teknisi",
+    },
+    suratPelanggaranId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "FK → SuratPelanggaran (jika deadline terlewat)",
     },
   },
   {

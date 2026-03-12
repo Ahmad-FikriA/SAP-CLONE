@@ -69,7 +69,19 @@ const InspectionReport = sequelize.define(
     kriteria: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      comment: "Kriteria K3 (khusus flow K3)",
+      comment:
+        "Kriteria K3: Kondisi Tidak Aman / Tindakan Tidak Aman / Near Miss / Cedera Ringan / Cedera Serius / Fatality",
+    },
+    kategoriK3: {
+      type: DataTypes.ENUM("manusia", "bangunan"),
+      allowNull: true,
+      comment:
+        "Kategori K3: manusia (perilaku/APD) atau bangunan (struktur/fasilitas)",
+    },
+    signaturePath: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      comment: "Path file tanda tangan digital inspector",
     },
     status: {
       type: DataTypes.ENUM("draft", "submitted", "approved", "rejected"),

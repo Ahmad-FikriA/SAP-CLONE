@@ -24,7 +24,17 @@ const {
   getFollowUp,
   createFollowUp,
   updateFollowUp,
+  approveFollowUp,
+  rejectFollowUp,
 } = require("../controllers/inspection/followUpController");
+
+const {
+  listSuratPelanggaran,
+  getSuratPelanggaran,
+  createSuratPelanggaran,
+  updateSuratPelanggaran,
+  checkOverdueFollowUps,
+} = require("../controllers/inspection/suratPelanggaranController");
 
 // All inspection routes require authentication
 router.use(verifyToken);
@@ -47,5 +57,14 @@ router.get("/follow-ups", listFollowUps);
 router.get("/follow-ups/:id", getFollowUp);
 router.post("/follow-ups", createFollowUp);
 router.put("/follow-ups/:id", updateFollowUp);
+router.put("/follow-ups/:id/approve", approveFollowUp);
+router.put("/follow-ups/:id/reject", rejectFollowUp);
+
+// ── Surat Pelanggaran ────────────────────────────────────────────────────────
+router.get("/surat-pelanggaran", listSuratPelanggaran);
+router.get("/surat-pelanggaran/:id", getSuratPelanggaran);
+router.post("/surat-pelanggaran", createSuratPelanggaran);
+router.put("/surat-pelanggaran/:id", updateSuratPelanggaran);
+router.post("/surat-pelanggaran/check-overdue", checkOverdueFollowUps);
 
 module.exports = router;

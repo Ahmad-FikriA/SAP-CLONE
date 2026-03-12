@@ -62,11 +62,13 @@ async function createSchedule(req, res) {
       scheduledEndDate,
       assignedTo,
       kategoriTeknisi,
+      kategoriK3,
       triggerSource,
       vendorInfo,
       nomorPoJo,
       darurat,
       notes,
+      intervalPeriod,
     } = req.body;
 
     const schedule = await InspectionSchedule.create({
@@ -79,11 +81,13 @@ async function createSchedule(req, res) {
       createdBy: req.user.username,
       assignedTo,
       kategoriTeknisi,
+      kategoriK3: kategoriK3 || null,
       triggerSource: triggerSource || "self",
       vendorInfo,
       nomorPoJo,
       darurat: darurat || false,
       notes,
+      intervalPeriod,
     });
 
     res.status(201).json({

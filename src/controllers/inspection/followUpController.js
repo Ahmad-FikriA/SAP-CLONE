@@ -1,6 +1,7 @@
 "use strict";
 
 const InspectionFollowUp = require("../../models/InspectionFollowUp");
+const SuratPelanggaran = require("../../models/SuratPelanggaran");
 
 /**
  * FollowUp Controller — Teknisi tindak lanjut kerusakan.
@@ -65,6 +66,9 @@ async function getFollowUp(req, res) {
           association: "report",
           include: [{ association: "schedule" }, { association: "photos" }],
         },
+        {
+          association: "suratPelanggarans",
+        },
       ],
     });
 
@@ -91,6 +95,7 @@ async function createFollowUp(req, res) {
       reportId,
       assignedTechnician,
       kategoriTeknisi,
+      kategoriK3,
       description,
       deadline,
     } = req.body;
@@ -99,6 +104,7 @@ async function createFollowUp(req, res) {
       reportId,
       assignedTechnician,
       kategoriTeknisi,
+      kategoriK3: kategoriK3 || null,
       description,
       deadline,
       status: "pending",
@@ -129,7 +135,14 @@ async function updateFollowUp(req, res) {
     const updates = {};
     if (req.body.status) updates.status = req.body.status;
     if (req.body.feedback) updates.feedback = req.body.feedback;
-    if (req.body.status === "completed") updates.completedDate = new Date();
+    if (req.body.beforePhotos) updates.beforePhotos = req.body.beforePhotos;
+    if (req.body.afterPhotos) updates.afterPhotos = req.body.afterPhotos;
+    if (
+      req.body.status === "waiting_approval" ||
+      req.body.status === "completed"
+    ) {
+      updates.completedDate = new Date();
+    }
 
     await followUp.update(updates);
 
@@ -143,4 +156,63 @@ async function updateFollowUp(req, res) {
   }
 }
 
-module.exports = { listFollowUps, getFollowUp, createFollowUp, updateFollowUp };
+// PUT /api/inspection/follow-ups/:id/approve
+async function approveFollowUp(req, res) {
+  try {
+    const followUp = await InspectionFollowUp.findByPk(req.params.id);
+
+    if (!followUp) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Follow-up not found." });
+    }
+
+    await followUp.update({
+      status: "approved",
+      approvalNotes: req.body.notes || null,
+    });
+
+    res.json({
+      success: true,
+      message: "Follow-up approved.",
+      data: followUp,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+// PUT /api/inspection/follow-ups/:id/reject
+async function rejectFollowUp(req, res) {
+  try {
+    const followUp = await InspectionFollowUp.findByPk(req.params.id);
+
+    if (!followUp) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Follow-up not found." });
+    }
+
+    await followUp.update({
+      status: "rejected",
+      approvalNotes: req.body.notes || null,
+    });
+
+    res.json({
+      success: true,
+      message: "Follow-up rejected.",
+      data: followUp,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+module.exports = {
+  listFollowUps,
+  getFollowUp,
+  createFollowUp,
+  updateFollowUp,
+  approveFollowUp,
+  rejectFollowUp,
+};

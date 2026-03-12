@@ -91,6 +91,18 @@ const InspectionSchedule = sequelize.define(
       allowNull: true,
       comment: "Nomor PO/JO terkait",
     },
+    intervalPeriod: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment:
+        "Periode berulang inspeksi rutin, e.g. '2 Minggu', '1 Bulan', '3 Bulan'",
+    },
+    kategoriK3: {
+      type: DataTypes.ENUM("manusia", "bangunan"),
+      allowNull: true,
+      comment:
+        "Kategori inspeksi K3: manusia (perilaku/APD) atau bangunan (struktur/fasilitas)",
+    },
     darurat: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

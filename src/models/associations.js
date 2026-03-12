@@ -134,6 +134,19 @@ InspectionFollowUp.belongsTo(InspectionReport, {
   as: "report",
 });
 
+// InspectionFollowUp ↔ SuratPelanggaran
+const SuratPelanggaran = require("./SuratPelanggaran");
+
+InspectionFollowUp.hasMany(SuratPelanggaran, {
+  foreignKey: "followUpId",
+  as: "suratPelanggaran",
+  onDelete: "CASCADE",
+});
+SuratPelanggaran.belongsTo(InspectionFollowUp, {
+  foreignKey: "followUpId",
+  as: "followUp",
+});
+
 // ── FunctionalLocation (self-referencing tree) ────────────────────────────────
 FunctionalLocation.hasMany(FunctionalLocation, {
   foreignKey: "parentId",

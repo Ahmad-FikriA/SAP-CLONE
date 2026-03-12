@@ -79,6 +79,8 @@ async function createReport(req, res) {
       hasKerusakan,
       kerusakanDetail,
       kriteria,
+      kategoriK3,
+      signaturePath,
       photos,
     } = req.body;
 
@@ -104,6 +106,8 @@ async function createReport(req, res) {
         hasKerusakan: hasKerusakan || false,
         kerusakanDetail,
         kriteria,
+        kategoriK3: kategoriK3 || null,
+        signaturePath: signaturePath || null,
         status: "submitted",
         submittedBy: req.user.username,
         submittedAt: new Date(),
@@ -168,14 +172,21 @@ async function approveReport(req, res) {
       { transaction: t },
     );
 
-    // If kerusakan found → auto-create follow-up for Teknisi
+    // If kerusakan found → auto-create follow-up
+    // Branching: manusia → assign ke HSE tim, bangunan → assign ke teknisi via Kepala Dinas
     if (report.hasKerusakan) {
+      const kategori = report.kategoriK3 || req.body.kategoriK3;
+      const isManusia = kategori === "manusia";
+
       await InspectionFollowUp.create(
         {
           reportId: report.id,
-          assignedTechnician: req.body.assignedTechnician || "Unassigned",
+          assignedTechnician:
+            req.body.assignedTechnician ||
+            (isManusia ? "Tim Dinas HSE" : "Unassigned"),
           kategoriTeknisi:
             req.body.kategoriTeknisi || report.schedule?.kategoriTeknisi,
+          kategoriK3: kategori || null,
           description:
             report.kerusakanDetail ||
             report.findings ||
