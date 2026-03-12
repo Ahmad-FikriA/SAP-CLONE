@@ -1,144 +1,178 @@
 'use strict';
 
-const { Op }    = require('sequelize');
+const { Op } = require('sequelize');
 const { v4: uuid } = require('uuid');
-const { CorrectiveRequest, CorrectiveRequestImage } = require('../../models/CorrectiveRequest');
-
-const INCLUDE_IMAGES = [
-  { model: CorrectiveRequestImage, as: 'images', attributes: ['id', 'imagePath'] },
-];
-
-function fmt(cr) {
-  const j = cr.toJSON();
-  return {
-    ...j,
-    images: (j.images || []).map(i => i.imagePath),
-  };
-}
+const Notification = require('../../models/Notification');
+const { SpkCorrective } = require('../../models/associations');
+const { KADIS_ROLES } = require('../../middleware/correctiveAccess');
 
 // GET /api/corrective/requests
+// Rules: Kadis Pelapor (own), Planner (all), Kadis Pusat (all)
 const getAll = async (req, res) => {
+  const { userId, role } = req.user;
   const where = {};
+  
   if (req.query.status) where.status = req.query.status;
-  const data = await CorrectiveRequest.findAll({ where, include: INCLUDE_IMAGES, order: [['submittedAt', 'DESC']] });
-  res.json(data.map(fmt));
+  
+  // Kadis Pelapor can only see own notifications
+  if (KADIS_ROLES.includes(role)) {
+    where.kadisPelaporId = userId;
+  }
+  // Planner and Kadis Pusat can see all (no filter)
+  // Teknisi/Kasie cannot see notifications
+  
+  const data = await Notification.findAll({
+    where,
+    order: [['submittedAt', 'DESC']],
+  });
+  
+  res.json(data);
 };
 
 // GET /api/corrective/requests/:id
 const getOne = async (req, res) => {
-  const cr = await CorrectiveRequest.findByPk(req.params.id, { include: INCLUDE_IMAGES });
-  if (!cr) return res.status(404).json({ error: 'Corrective request not found' });
-  res.json(fmt(cr));
+  const notification = await Notification.findByPk(req.params.id, {
+    include: [{
+      model: SpkCorrective,
+      as: 'spkCorrective',
+    }],
+  });
+  
+  if (!notification) return res.status(404).json({ error: 'Notification not found' });
+  res.json(notification);
 };
 
 // POST /api/corrective/requests
-// Body: parsed Excel data + images array (paths from parse-excel endpoint)
+// Rules: Only Kadis can create
+// Requirements: 1-2 photos (max 2MB each)
 const create = async (req, res) => {
   const {
-    notificationDate, notificationType, description, functionalLocation,
-    equipment, requiredStart, requiredEnd, reportedBy, longText, images = [],
+    notificationDate,
+    notificationType,
+    description,
+    functionalLocation,
+    equipment,
+    equipmentId,
+    requiredStart,
+    requiredEnd,
+    reportedBy,
+    longText,
+    workCenter,
   } = req.body;
-
-  const id = `CR-${uuid().slice(0, 8).toUpperCase()}`;
-
-  const cr = await CorrectiveRequest.create({
-    id, notificationDate, notificationType, description, functionalLocation,
-    equipment, requiredStart, requiredEnd, reportedBy, longText,
-    submittedBy: req.user.userId,
+  
+  const { userId, role } = req.user;
+  
+  // Validate required photos (1-2 photos)
+  const photos = req.files || [];
+  if (photos.length < 1 || photos.length > 2) {
+    return res.status(400).json({
+      error: 'Notification requires 1-2 photos (max 2MB each)'
+    });
+  }
+  
+  // Generate photo paths
+  const photoPaths = photos.map(file => `uploads/corrective/${file.filename}`);
+  
+  const id = `NOTIF-${uuid().slice(0, 8).toUpperCase()}`;
+  
+  const notification = await Notification.create({
+    id,
+    notificationDate,
+    notificationType,
+    description,
+    functionalLocation,
+    equipment,
+    equipmentId,
+    requiredStart,
+    requiredEnd,
+    reportedBy,
+    longText,
+    photo1: photoPaths[0] || null,
+    photo2: photoPaths[1] || null,
+    kadisPelaporId: userId,
+    submittedBy: userId,
     submittedAt: new Date(),
     status: 'submitted',
-    approvalStatus: 'awaiting_supervisor',
+    workCenter: workCenter || null,
   });
-
-  for (const imgPath of images) {
-    await CorrectiveRequestImage.create({ requestId: id, imagePath: imgPath });
-  }
-
-  const fresh = await CorrectiveRequest.findByPk(id, { include: INCLUDE_IMAGES });
-  res.status(201).json(fmt(fresh));
+  
+  const fresh = await Notification.findByPk(id, {
+    include: [{
+      model: SpkCorrective,
+      as: 'spkCorrective',
+    }],
+  });
+  
+  res.status(201).json(fresh);
 };
 
 // PUT /api/corrective/requests/:id
+// Rules: Kadis Pelapor can update own; Planner cannot change notification fields directly
 const update = async (req, res) => {
-  const cr = await CorrectiveRequest.findByPk(req.params.id);
-  if (!cr) return res.status(404).json({ error: 'Corrective request not found' });
-  const { images, ...rest } = req.body;
-  await cr.update({ ...rest, id: cr.id });
-  const fresh = await CorrectiveRequest.findByPk(cr.id, { include: INCLUDE_IMAGES });
-  res.json(fmt(fresh));
+  const { userId, role } = req.user;
+  const notification = await Notification.findByPk(req.params.id);
+  
+  if (!notification) return res.status(404).json({ error: 'Notification not found' });
+  
+  // Planner cannot modify notification fields directly
+  if (role === 'planner') {
+    return res.status(403).json({
+      error: 'Planner cannot modify notification fields directly. Please create SPK instead.'
+    });
+  }
+  
+  // Kadis Pelapor can only update if status is draft or submitted
+  if (KADIS_ROLES.includes(role)) {
+    if (notification.status === 'spk_created' || notification.status === 'closed') {
+      return res.status(400).json({
+        error: 'Cannot modify notification after SPK is created or closed'
+      });
+    }
+  }
+  
+  await notification.update(req.body);
+  
+  const fresh = await Notification.findByPk(notification.id, {
+    include: [{
+      model: SpkCorrective,
+      as: 'spkCorrective',
+    }],
+  });
+  
+  res.json(fresh);
 };
 
 // DELETE /api/corrective/requests/:id
 const remove = async (req, res) => {
-  const count = await CorrectiveRequest.destroy({ where: { id: req.params.id } });
-  if (!count) return res.status(404).json({ error: 'Corrective request not found' });
-  res.json({ message: 'Deleted' });
+  const notification = await Notification.findByPk(req.params.id);
+  if (!notification) return res.status(404).json({ error: 'Notification not found' });
+  
+  // Cannot delete if SPK already created
+  if (notification.status === 'spk_created') {
+    return res.status(400).json({
+      error: 'Cannot delete notification after SPK is created'
+    });
+  }
+  
+  await notification.destroy();
+  res.json({ message: 'Notification deleted' });
 };
 
 // POST /api/corrective/requests/bulk-delete
 const bulkDelete = async (req, res) => {
   const { ids } = req.body;
-  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
-  const count = await CorrectiveRequest.destroy({ where: { id: { [Op.in]: ids } } });
-  res.json({ message: `Deleted ${count} request(s)` });
-};
-
-// POST /api/corrective/requests/:id/approve
-const approve = async (req, res) => {
-  const { role, userId } = req.user;
-
-  if (role !== 'supervisor' && role !== 'manager') {
-    return res.status(403).json({ error: 'Forbidden: only supervisor or manager can approve' });
+  if (!Array.isArray(ids) || !ids.length) {
+    return res.status(400).json({ error: 'ids array required' });
   }
-
-  const cr = await CorrectiveRequest.findByPk(req.params.id, { include: INCLUDE_IMAGES });
-  if (!cr) return res.status(404).json({ error: 'Corrective request not found' });
-
-  if (cr.approvalStatus === 'approved' || cr.approvalStatus === 'rejected') {
-    return res.status(400).json({ error: `Request is already ${cr.approvalStatus}` });
-  }
-
-  const now = new Date().toISOString();
-
-  if (role === 'supervisor') {
-    if (cr.approvalStatus !== 'awaiting_supervisor') {
-      return res.status(400).json({ error: 'Request is not awaiting supervisor approval' });
-    }
-    await cr.update({ approvalStatus: 'awaiting_manager' });
-  } else if (role === 'manager') {
-    if (cr.approvalStatus !== 'awaiting_manager') {
-      return res.status(400).json({ error: 'Request is not awaiting manager approval' });
-    }
-    await cr.update({ approvalStatus: 'approved', status: 'approved', approvedBy: userId, approvedAt: now });
-  }
-
-  const fresh = await CorrectiveRequest.findByPk(cr.id, { include: INCLUDE_IMAGES });
-  res.json(fmt(fresh));
-};
-
-// POST /api/corrective/requests/:id/reject
-const reject = async (req, res) => {
-  const { role, userId } = req.user;
-
-  if (role !== 'supervisor' && role !== 'manager') {
-    return res.status(403).json({ error: 'Forbidden: only supervisor or manager can reject' });
-  }
-
-  const cr = await CorrectiveRequest.findByPk(req.params.id, { include: INCLUDE_IMAGES });
-  if (!cr) return res.status(404).json({ error: 'Corrective request not found' });
-
-  if (cr.approvalStatus === 'approved' || cr.approvalStatus === 'rejected') {
-    return res.status(400).json({ error: `Request is already ${cr.approvalStatus}` });
-  }
-
-  await cr.update({
-    approvalStatus: 'rejected', status: 'rejected',
-    rejectedBy: userId, rejectedAt: new Date().toISOString(),
-    rejectionNotes: req.body.notes || null,
+  
+  const count = await Notification.destroy({
+    where: {
+      id: { [Op.in]: ids },
+      status: { [Op.ne]: 'spk_created' }, // Cannot delete if SPK created
+    },
   });
-
-  const fresh = await CorrectiveRequest.findByPk(cr.id, { include: INCLUDE_IMAGES });
-  res.json(fmt(fresh));
+  
+  res.json({ message: `Deleted ${count} notification(s)` });
 };
 
-module.exports = { getAll, getOne, create, update, remove, bulkDelete, approve, reject };
+module.exports = { getAll, getOne, create, update, remove, bulkDelete };

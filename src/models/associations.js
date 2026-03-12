@@ -12,6 +12,9 @@ const { Spk, SpkEquipment, SpkActivity }               = require('./Spk');
 const { LembarKerja, LembarKerjaSpk }                  = require('./LembarKerja');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./Submission');
 const { CorrectiveRequest, CorrectiveRequestImage } = require('./CorrectiveRequest');
+const Notification = require('./Notification');
+const SpkCorrective = require('./SpkCorrective');
+const { SpkCorrectiveItem, SpkCorrectivePhoto } = require('./SpkCorrectiveItem');
 
 // ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
 Plant.hasMany(Equipment, { foreignKey: 'plantId', as: 'equipment' });
@@ -45,4 +48,37 @@ SubmissionActivityResult.belongsTo(Submission, { foreignKey: 'submissionId', as:
 CorrectiveRequest.hasMany(CorrectiveRequestImage, { foreignKey: 'requestId', as: 'images', onDelete: 'CASCADE' });
 CorrectiveRequestImage.belongsTo(CorrectiveRequest, { foreignKey: 'requestId', as: 'request' });
 
-module.exports = { User, Plant, Equipment, Spk, SpkEquipment, SpkActivity, LembarKerja, LembarKerjaSpk, Submission, SubmissionPhoto, SubmissionActivityResult, CorrectiveRequest, CorrectiveRequestImage };
+// ── Notification (Corrective) Relations ─────────────────────────────────────
+// User ||--o{ Notification (submitted by)
+User.hasMany(Notification, { foreignKey: 'submittedBy', as: 'notificationsSubmitted' });
+Notification.belongsTo(User, { foreignKey: 'submittedBy', as: 'submitter' });
+
+// Kadis Pelapor ||--o{ Notification (Kadis yang melapor)
+User.hasMany(Notification, { foreignKey: 'kadisPelaporId', as: 'notificationsAsReporter' });
+Notification.belongsTo(User, { foreignKey: 'kadisPelaporId', as: 'kadisPelapor' });
+
+// Equipment ||--o{ Notification
+Equipment.hasMany(Notification, { foreignKey: 'equipmentId', as: 'notifications' });
+Notification.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });
+
+// ── SPK Corrective Relations ─────────────────────────────────────────────────
+// Notification ||--|| SpkCorrective (one-to-one)
+Notification.hasOne(SpkCorrective, { foreignKey: 'notificationId', as: 'spkCorrective', onDelete: 'CASCADE' });
+SpkCorrective.belongsTo(Notification, { foreignKey: 'notificationId', as: 'notification' });
+
+// SpkCorrective ||--o{ SpkCorrectiveItem
+SpkCorrective.hasMany(SpkCorrectiveItem, { foreignKey: 'spkId', as: 'items', onDelete: 'CASCADE' });
+SpkCorrectiveItem.belongsTo(SpkCorrective, { foreignKey: 'spkId', as: 'spk' });
+
+// SpkCorrective ||--o{ SpkCorrectivePhoto
+SpkCorrective.hasMany(SpkCorrectivePhoto, { foreignKey: 'spkId', as: 'photos', onDelete: 'CASCADE' });
+SpkCorrectivePhoto.belongsTo(SpkCorrective, { foreignKey: 'spkId', as: 'spk' });
+
+module.exports = {
+  User, Plant, Equipment,
+  Spk, SpkEquipment, SpkActivity,
+  LembarKerja, LembarKerjaSpk,
+  Submission, SubmissionPhoto, SubmissionActivityResult,
+  CorrectiveRequest, CorrectiveRequestImage,
+  Notification, SpkCorrective, SpkCorrectiveItem, SpkCorrectivePhoto,
+};

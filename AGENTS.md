@@ -27,7 +27,7 @@ Before writing or suggesting ANY Node.js/Express code:
 
 ### 🧱 Follow Layered Architecture Strictly
 
-This project uses **Layered Architecture** mirroring the frontend's Clean Architecture approach. See `ARCHITECTURE_backend.md` for the full guide.
+This project uses **Layered Architecture** mirroring the frontend's Clean Architecture approach. See `ARCHITECTURE.md` for the full guide.
 
 **Layer rules:**
 
@@ -51,7 +51,40 @@ npm start
 
 # Run database seeder
 node src/seed.js
+
+# Run API tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run specific test file
+npm test -- auth.test.js
 ```
+
+### Testing Guidelines
+
+**ALWAYS run tests after making changes:**
+```bash
+npm test
+```
+
+**Test coverage requirements:**
+- Minimum 50% coverage for branches, functions, lines, statements
+- All new endpoints MUST have corresponding tests
+- All model changes MUST have integration tests
+
+**Writing tests:**
+- Create test files in `tests/` folder
+- Name pattern: `[module].test.js`
+- Use utilities from `tests/setup.js`:
+  - `authRequest(method, path)` - Authenticated requests
+  - `expectSuccess(response, status)` - Success validation
+  - `expectArray(response, minLength)` - Array validation
+  - `expectObject(response, fields)` - Object validation
 
 ---
 
@@ -90,6 +123,7 @@ const { verifyToken } = require('../middleware/auth');
 - Classes, Models: `PascalCase` (`User`, `EquipmentModel`)
 - Files, Directories: `camelCase` or `kebab-case` consistently (`lembarKerja.js`, `auth-middleware.js`). Avoid arbitrary changes.
 - Constants: `UPPER_SNAKE_CASE` (`MAX_RETRIES`)
+- Database fields: `snake_case` with `underscored: true` in Sequelize
 
 ---
 
@@ -97,8 +131,9 @@ const { verifyToken } = require('../middleware/auth');
 
 ### Route Structure
 
-- Group routes logically by domain (`equipment.js`, `spk.js`).
+- Group routes logically by domain (`equipment.js`, `spk.js`, `corrective.js`).
 - Use Express routers (`express.Router()`).
+- Keep routes thin - business logic goes to controllers.
 
 ### Error Handling
 
@@ -122,6 +157,22 @@ router.get('/', async (req, res, next) => {
 
 - Never expose MySQL credentials, JWT secrets, or DB passwords in code. Use `.env`.
 - Implement rate limiting and validation (e.g., `express-validator` or `Joi`) on user inputs to prevent SQL Injection or XSS.
+- Always verify JWT tokens on protected routes using `verifyToken` middleware.
+
+### Database Operations
+
+- Use transactions when updating multiple related tables:
+```javascript
+const t = await sequelize.transaction();
+try {
+  await Model1.create({...}, { transaction: t });
+  await Model2.create({...}, { transaction: t });
+  await t.commit();
+} catch (err) {
+  await t.rollback();
+  throw err;
+}
+```
 
 ---
 
@@ -134,6 +185,8 @@ router.get('/', async (req, res, next) => {
 | Returning raw DB errors to client | Map errors to safe, generic messages in production |
 | Hardcoding connection strings | Use `process.env.DATABASE_URL` |
 | Duplicate validations in frontend/backend | Backend MUST always re-validate all inputs to be safe |
+| Missing tests for new features | Write tests BEFORE or WITH new code |
+| Not running tests after changes | ALWAYS run `npm test` before committing |
 
 ---
 
@@ -142,12 +195,161 @@ router.get('/', async (req, res, next) => {
 ```text
 /
 ├── src/
-│   ├── models/           # Sequelize Models (Data definition for MySQL)
-│   ├── middleware/       # Express middlewares (Auth, Upload, Error)
-│   ├── routes/           # API Endpoints (The "Receptionist")
-│   ├── services/         # Business Logic (The "Brain", corresponds to Domain UseCases)
-│   ├── seed.js           # Database seeder
-│   └── server.js         # Entry point
-├── data/                 # JSON Mock/Seed data
-└── uploads/              # Local file storage
+│   ├── config/             # Configuration files
+│   │   └── database.js     # MySQL/Sequelize config
+│   ├── models/             # Sequelize Models (Data definition for MySQL)
+│   │   ├── associations.js # Model relationships
+│   │   ├── CorrectiveRequest.js
+│   │   ├── Equipment.js
+│   │   ├── LembarKerja.js
+│   │   ├── Notification.js # Corrective notifications
+│   │   ├── Plant.js
+│   │   ├── Spk.js          # Preventive SPK
+│   │   ├── SpkCorrective.js # Corrective SPK
+│   │   ├── SpkCorrectiveItem.js
+│   │   ├── Submission.js
+│   │   └── User.js
+│   ├── controllers/        # Business logic controllers
+│   │   ├── auth/
+│   │   ├── corrective/     # Corrective maintenance
+│   │   ├── preventive/     # Preventive maintenance
+│   │   └── users/
+│   ├── middleware/         # Express middlewares (Auth, Upload, Error)
+│   │   ├── auth.js
+│   │   └── errorHandler.js
+│   ├── routes/             # API Endpoints (The "Receptionist")
+│   │   ├── auth.js
+│   │   ├── corrective.js
+│   │   ├── preventive.js
+│   │   └── users.js
+│   ├── services/           # Business Logic (The "Brain")
+│   │   └── fileStore.js
+│   ├── seed.js             # Database seeder
+│   └── server.js           # Entry point
+├── tests/                  # API Test suite
+│   ├── setup.js            # Test utilities
+│   ├── *.test.js           # Test files
+│   └── README.md           # Testing docs
+├── data/                   # JSON Mock/Seed data
+└── uploads/                # Local file storage
+```
+
+---
+
+## Model Guidelines
+
+### Creating New Models
+
+1. Define model in `src/models/[ModelName].js`
+2. Add associations to `src/models/associations.js`
+3. Create migration if needed (run `npm run seed` for dev)
+4. Write tests in `tests/[model].test.js`
+
+### Model Structure
+
+```javascript
+'use strict';
+
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
+
+const ModelName = sequelize.define('ModelName', {
+  // Primary key
+  id: {
+    type: DataTypes.STRING(30),
+    primaryKey: true,
+    field: 'id', // snake_case for DB
+  },
+  // Fields
+  fieldName: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: 'field_name',
+  },
+  // Enums
+  status: {
+    type: DataTypes.ENUM('active', 'inactive'),
+    defaultValue: 'active',
+  },
+  // Foreign keys
+  foreignId: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    field: 'foreign_id',
+  },
+}, {
+  tableName: 'table_names',  // snake_case, plural
+  underscored: true,         // Auto-convert camelCase to snake_case
+  timestamps: true,          // createdAt, updatedAt
+});
+
+module.exports = ModelName;
+```
+
+### Key Models Reference
+
+**Preventive Maintenance:**
+- `Spk` - Preventive work orders
+- `SpkEquipment` - SPK-Equipment junction
+- `SpkActivity` - SPK activities
+- `LembarKerja` - Work sheets
+- `Submission` - SPK submissions
+
+**Corrective Maintenance:**
+- `Notification` - Corrective notifications (created by Kadis Pelapor)
+- `CorrectiveRequest` - Legacy corrective requests
+- `SpkCorrective` - Corrective work orders (created from Notification)
+- `SpkCorrectiveItem` - Materials/services for corrective SPK
+- `SpkCorrectivePhoto` - Before/after/during photos
+
+**Core:**
+- `User` - User accounts
+- `Equipment` - Equipment inventory
+- `Plant` - Plant locations
+
+---
+
+## Pre-commit Checklist
+
+Before committing code:
+
+- [ ] Run `npm test` - All tests must pass
+- [ ] Check test coverage - Must be >= 50%
+- [ ] Run `npm run dev` - Server starts without errors
+- [ ] Check for console.log statements (remove or keep intentionally)
+- [ ] Verify no sensitive data in code (passwords, secrets)
+- [ ] Update documentation if API changes
+- [ ] Check `associations.js` if adding new models
+
+---
+
+## Troubleshooting
+
+### Tests Failing
+```bash
+# Clear Jest cache
+npm test -- --clearCache
+
+# Run with verbose output
+npm test -- --verbose
+
+# Run specific failing test
+npm test -- --testNamePattern="should login"
+```
+
+### Database Connection Issues
+```bash
+# Check .env file
+# Ensure MySQL is running
+# Run seeder to recreate tables
+npm run seed
+```
+
+### Port Already in Use
+```bash
+# Kill process on port 3000 (Linux/Mac)
+lsof -ti:3000 | xargs kill -9
+
+# Or change PORT in .env
+PORT=3001
 ```

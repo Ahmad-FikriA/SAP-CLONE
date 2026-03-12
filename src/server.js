@@ -48,20 +48,61 @@ app.use(express.static(path.join(__dirname, '..', 'public'), {
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use('/storage', express.static(path.join(__dirname, '..', 'storage')));
 
-// ── Photo Upload ─────────────────────────────────────────────────────────────
+// ── Photo Upload Configuration ───────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: path.join(__dirname, '..', 'uploads'),
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}_${file.originalname}`);
   }
 });
-const upload = multer({ storage });
+
+// 2MB file size limit for corrective maintenance photos
+const CORRECTIVE_PHOTO_MAX_SIZE = 2 * 1024 * 1024; // 2MB
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: CORRECTIVE_PHOTO_MAX_SIZE,
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'), false);
+    }
+    cb(null, true);
+  },
+});
+
+// Multiple photos upload (for corrective maintenance - max 2 photos, 2MB each)
+const uploadCorrectivePhotos = multer({
+  storage,
+  limits: {
+    fileSize: CORRECTIVE_PHOTO_MAX_SIZE,
+    files: 2, // Max 2 files per upload
+  },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'), false);
+    }
+    cb(null, true);
+  },
+});
 
 const { verifyToken } = require('./middleware/auth');
 
+// Generic photo upload endpoint
 app.post('/api/upload/photo', verifyToken, upload.single('photo'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   res.json({ path: `uploads/${req.file.filename}` });
+});
+
+// Multiple photos upload endpoint for corrective maintenance
+app.post('/api/upload/photos', verifyToken, uploadCorrectivePhotos.array('photos', 2), (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: 'No files uploaded' });
+  }
+  const paths = req.files.map(file => `uploads/${file.filename}`);
+  res.json({ paths });
 });
 
 // ── API Routes ───────────────────────────────────────────────────────────────
@@ -94,11 +135,14 @@ sequelize.authenticate()
   });
 
 // ── Start Server ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n  KTI SAP Mock Server`);
-  console.log(`  ───────────────────────────────`);
-  console.log(`  API:      http://localhost:${PORT}/api`);
-  console.log(`  Admin UI: http://localhost:${PORT}\n`);
-});
+// Only start server if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`\n  KTI SAP Mock Server`);
+    console.log(`  ───────────────────────────────`);
+    console.log(`  API:      http://localhost:${PORT}/api`);
+    console.log(`  Admin UI: http://localhost:${PORT}\n`);
+  });
+}
 
 module.exports = app;
