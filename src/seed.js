@@ -16,359 +16,487 @@ const { GeneralTaskList, GeneralTaskListActivity } = require('./models/GeneralTa
 const funcLocData = require(path.join(__dirname, '..', 'data', 'functional_locations.json'));
 const sapEquipmentData = require(path.join(__dirname, '..', 'data', 'sap_equipment.json'));
 const taskListData = require(path.join(__dirname, '..', 'data', 'general_task_lists.json'));
+const equipmentFileData = require(path.join(__dirname, '..', 'data', 'equipment.json'));
 
 // ────────────────────────────────────────────────────────────────────────────
 // USERS
 // ────────────────────────────────────────────────────────────────────────────
 const users = [
-  { id: 'USR-001', username: 'teknisi_01', password: 'password123', name: 'Budi Santoso', role: 'teknisi', email: 'budi@kti-water.co.id' },
-  { id: 'USR-002', username: 'planner_01', password: 'password123', name: 'Siti Rahayu', role: 'planner', email: 'siti@kti-water.co.id' },
-  { id: 'USR-003', username: 'supervisor_01', password: 'password123', name: 'Ahmad Fauzi', role: 'supervisor', email: 'ahmad@kti-water.co.id' },
-  { id: 'USR-004', username: 'manager_01', password: 'password123', name: 'Dewi Kusuma', role: 'manager', email: 'dewi@kti-water.co.id' },
-  { id: 'USR-005', username: 'admin_01', password: 'password123', name: 'Admin KTI', role: 'admin', email: 'admin@kti-water.co.id' },
-  { id: 'USR-006', username: 'mekanik_01', password: 'password123', name: 'Riko Prasetyo', role: 'teknisi_mekanik', email: 'riko@kti-water.co.id' },
-  { id: 'USR-007', username: 'listrik_01', password: 'password123', name: 'Hendra Gunawan', role: 'teknisi_listrik', email: 'hendra@kti-water.co.id' },
-  { id: 'USR-008', username: 'sipil_01', password: 'password123', name: 'Agus Wijaya', role: 'teknisi_sipil', email: 'agus@kti-water.co.id' },
-  { id: 'USR-009', username: 'otomasi_01', password: 'password123', name: 'Dian Permana', role: 'teknisi_otomasi', email: 'dian@kti-water.co.id' },
-  { id: 'USR-010', username: 'user_01', password: 'password123', name: 'Rina Marlina', role: 'user', email: 'rina@kti-water.co.id' }
+  { id: 'USR-001', username: 'teknisi_01',   password: 'password123', name: 'Budi Santoso',    role: 'teknisi',          email: 'budi@kti-water.co.id'  },
+  { id: 'USR-002', username: 'planner_01',   password: 'password123', name: 'Siti Rahayu',     role: 'planner',          email: 'siti@kti-water.co.id'  },
+  { id: 'USR-003', username: 'supervisor_01',password: 'password123', name: 'Ahmad Fauzi',     role: 'supervisor',       email: 'ahmad@kti-water.co.id' },
+  { id: 'USR-004', username: 'manager_01',   password: 'password123', name: 'Dewi Kusuma',     role: 'manager',          email: 'dewi@kti-water.co.id'  },
+  { id: 'USR-005', username: 'admin_01',     password: 'password123', name: 'Admin KTI',       role: 'admin',            email: 'admin@kti-water.co.id' },
+  { id: 'USR-006', username: 'mekanik_01',   password: 'password123', name: 'Riko Prasetyo',   role: 'teknisi_mekanik',  email: 'riko@kti-water.co.id'  },
+  { id: 'USR-007', username: 'listrik_01',   password: 'password123', name: 'Hendra Gunawan',  role: 'teknisi_listrik',  email: 'hendra@kti-water.co.id'},
+  { id: 'USR-008', username: 'sipil_01',     password: 'password123', name: 'Agus Wijaya',     role: 'teknisi_sipil',    email: 'agus@kti-water.co.id'  },
+  { id: 'USR-009', username: 'otomasi_01',   password: 'password123', name: 'Dian Permana',    role: 'teknisi_otomasi',  email: 'dian@kti-water.co.id'  },
+  { id: 'USR-010', username: 'user_01',      password: 'password123', name: 'Rina Marlina',    role: 'user',             email: 'rina@kti-water.co.id'  },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// EQUIPMENT  (10 total: Mekanik×4, Listrik×3, Sipil×2, Otomasi×1)
+// EQUIPMENT — loaded from data/equipment.json (single source of truth)
+//
+// Real IDs from data/equipment.json:
+//   EQ-001  Pompa Air Utama A         Basement Lantai B1      Mekanik
+//   EQ-002  Pompa Air Utama B         Basement Lantai B1      Mekanik
+//   EQ-003  Pompa Booster Lantai 5    Ruang Pompa Lantai 5    Mekanik
+//   EQ-004  Kompresor Udara Gedung    Ruang Utilitas B2       Mekanik
+//   EQ-005  Panel Listrik Utama       Ruang Panel Lantai 1    Listrik
+//   EQ-006  Panel Distribusi Lantai 3 Ruang Panel Lantai 3    Listrik
+//   EQ-007  Genset Cadangan 200 kVA   Area Genset Basement    Listrik
+//   EQ-008  Bak Penampungan Utama     Area Luar Gedung        Sipil
+//   EQ-009  Saluran Drainase Utara    Area Drainase Utara     Sipil
+//   EQ-010  Sensor Level Air Tank 1   Rooftop Area            Otomasi
 // ────────────────────────────────────────────────────────────────────────────
 const equipment = [
-  { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0131, longitude: 106.0215 },
-  { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B', functionalLocation: 'Basement Lantai B1', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0133, longitude: 106.0218 },
-  { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0128, longitude: 106.0222 },
-  { equipmentId: 'EQ-004', equipmentName: 'Kompresor Udara Gedung', functionalLocation: 'Ruang Utilitas B2', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0139, longitude: 106.0212 },
-  { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1', category: 'Listrik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0136, longitude: 106.0224 },
-  { equipmentId: 'EQ-006', equipmentName: 'Panel Distribusi Lantai 3', functionalLocation: 'Ruang Panel Lantai 3', category: 'Listrik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0130, longitude: 106.0226 },
-  { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA', functionalLocation: 'Area Genset Basement', category: 'Listrik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0141, longitude: 106.0220 },
-  { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama', functionalLocation: 'Area Luar Gedung', category: 'Sipil', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0126, longitude: 106.0210 },
-  { equipmentId: 'EQ-009', equipmentName: 'Saluran Drainase Utara', functionalLocation: 'Area Drainase Utara', category: 'Sipil', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0124, longitude: 106.0217 },
-  { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1', functionalLocation: 'Rooftop Area', category: 'Otomasi', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0134, longitude: 106.0228 }
+  ...equipmentFileData,
+
+  // ── TEST EQUIPMENT — QR Scanner GPS Demo Scenarios ────────────────────────
+  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam',      functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0135, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', functionalLocation: 'Area Timur Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0117, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik',       functionalLocation: 'Area Remote Jauh (Test)',  category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0600, longitude: 106.0219 },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// SPK  (12 total across 4 categories)
+// SPK
+//
+// Equipment IDs match data/equipment.json:
+//   EQ-001  Pompa Air Utama A      EQ-005  Panel Listrik Utama
+//   EQ-002  Pompa Air Utama B      EQ-006  Panel Distribusi Lantai 3
+//   EQ-003  Pompa Booster Lantai 5 EQ-007  Genset Cadangan 200 kVA
+//   EQ-004  Kompresor Udara Gedung EQ-008  Bak Penampungan Utama
+//                                  EQ-009  Saluran Drainase Utara
+//                                  EQ-010  Sensor Level Air Tank 1
+//
+// dueDate comes from the parent LK's periodeEnd (computed in spkController).
+// SPK-M-001 → LK-FEB-MEK (periodeEnd = 2026-02-28, PAST) → isOverdue = true.
 // ────────────────────────────────────────────────────────────────────────────
 const spk = [
-  // ── MEKANIK (4): 2 pending, 1 in_progress, 1 completed ──
+  // ── MEKANIK ──────────────────────────────────────────────────────────────
+
+  // ⚠️ OVERDUE: LK periodeEnd = 2026-02-28 (past). Status still pending.
   {
-    spkNumber: 'SPK-2026-001',
-    description: 'Perawatan Rutin Pompa Air Utama A — Bulanan',
+    spkNumber: 'SPK-M-001',
+    description: 'Perawatan Rutin Pompa Air Utama A — Bulanan (Februari)',
     interval: '1 Bulan',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1' }
+      { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan pompa (bar)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Cek kebocoran pipa dan fitting', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Pelumasan bearing motor pompa', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false }
-    ]
+      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan pompa (bar)',         resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Cek kebocoran pipa dan fitting',       resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Pelumasan bearing motor pompa',        resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+    ],
   },
+
   {
-    spkNumber: 'SPK-2026-002',
-    description: 'Perawatan Rutin Pompa Air Utama B — Bulanan',
+    spkNumber: 'SPK-M-002',
+    description: 'Perawatan Rutin Pompa Air Utama B — Bulanan (Maret)',
     interval: '1 Bulan',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B', functionalLocation: 'Basement Lantai B1' }
+      { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B', functionalLocation: 'Basement Lantai B1' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan dan debit air keluar', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Bersihkan strainer / saringan pompa', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Cek vibrasi dan suara abnormal', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false }
-    ]
+      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan dan debit air keluar', resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Bersihkan strainer / saringan pompa',  resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Cek vibrasi dan suara abnormal',       resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+    ],
   },
+
+  // ── LISTRIK ──────────────────────────────────────────────────────────────
+
   {
-    spkNumber: 'SPK-2026-003',
-    description: 'Servis Pompa Booster Lantai 5 — 3 Bulanan',
-    interval: '3 Bulan',
-    category: 'Mekanik',
+    spkNumber: 'SPK-L-001',
+    description: 'Inspeksi Panel Listrik Utama — Bulanan (Maret)',
+    interval: '1 Bulan',
+    category: 'Listrik',
     status: 'in_progress',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5' }
-    ],
-    activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa impeller — cek keausan', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Ganti mechanical seal jika diperlukan', resultComment: null, durationPlan: 1.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Kalibrasi pressure switch', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-004', operationText: 'Uji coba operasi pompa selama 30 menit', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false }
-    ]
-  },
-  {
-    spkNumber: 'SPK-2026-004',
-    description: 'Overhaul Kompresor Udara Gedung — 6 Bulanan',
-    interval: '6 Bulan',
-    category: 'Mekanik',
-    status: 'completed',
-    durationActual: 4.5,
-    equipmentModels: [
-      { equipmentId: 'EQ-004', equipmentName: 'Kompresor Udara Gedung', functionalLocation: 'Ruang Utilitas B2' }
-    ],
-    activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Ganti filter udara masuk', resultComment: 'Filter lama sudah cukup kotor, sudah diganti baru', durationPlan: 0.5, durationActual: 0.5, isVerified: true },
-      { activityNumber: 'ACT-002', operationText: 'Periksa dan ganti oli kompresor', resultComment: 'Oli warna gelap, sudah diganti dengan SAE 30', durationPlan: 1.0, durationActual: 1.0, isVerified: true },
-      { activityNumber: 'ACT-003', operationText: 'Kencangkan semua baut dan koneksi listrik', resultComment: 'Semua baut dalam kondisi baik', durationPlan: 0.5, durationActual: 0.5, isVerified: true },
-      { activityNumber: 'ACT-004', operationText: 'Uji tekanan dan kebocoran sistem', resultComment: 'Tekanan 8 bar, tidak ada kebocoran', durationPlan: 1.0, durationActual: 1.5, isVerified: true }
-    ]
-  },
-
-  // ── LISTRIK (3): 2 pending, 1 completed ──
-  {
-    spkNumber: 'SPK-2026-005',
-    description: 'Inspeksi Panel Listrik Utama — Bulanan',
-    interval: '1 Bulan',
-    category: 'Listrik',
-    status: 'pending',
-    durationActual: null,
-    equipmentModels: [
-      { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1' }
+      { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1' },
     ],
     activitiesModel: [
       { activityNumber: 'ACT-001', operationText: 'Periksa tegangan input dan output (VAC)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Cek kondisi MCB dan MCCB', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Bersihkan debu pada busbar dan terminal', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false }
-    ]
-  },
-  {
-    spkNumber: 'SPK-2026-006',
-    description: 'Pemeriksaan Panel Distribusi Lantai 3 — 3 Bulanan',
-    interval: '3 Bulan',
-    category: 'Listrik',
-    status: 'pending',
-    durationActual: null,
-    equipmentModels: [
-      { equipmentId: 'EQ-006', equipmentName: 'Panel Distribusi Lantai 3', functionalLocation: 'Ruang Panel Lantai 3' }
+      { activityNumber: 'ACT-002', operationText: 'Cek kondisi MCB dan MCCB',                resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Bersihkan debu pada busbar dan terminal', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
     ],
-    activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Thermografi panel untuk deteksi hot spot', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Uji insulation resistance kabel feeder', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Kencangkan semua terminal kabel', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false }
-    ]
   },
+
   {
-    spkNumber: 'SPK-2026-007',
+    spkNumber: 'SPK-L-002',
     description: 'Servis Rutin Genset Cadangan 200 kVA — 6 Bulanan',
     interval: '6 Bulan',
     category: 'Listrik',
     status: 'completed',
     durationActual: 3.0,
     equipmentModels: [
-      { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA', functionalLocation: 'Area Genset Basement' }
+      { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA', functionalLocation: 'Area Genset Basement' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Ganti oli mesin genset', resultComment: 'Oli diganti dengan Pertamina Fastron 15W40', durationPlan: 0.5, durationActual: 0.5, isVerified: true },
-      { activityNumber: 'ACT-002', operationText: 'Ganti filter oli dan filter bahan bakar', resultComment: 'Kedua filter sudah diganti baru', durationPlan: 0.5, durationActual: 0.75, isVerified: true },
-      { activityNumber: 'ACT-003', operationText: 'Cek battery charger dan kondisi aki', resultComment: 'Tegangan aki 13.2V, kondisi baik', durationPlan: 0.5, durationActual: 0.5, isVerified: true },
-      { activityNumber: 'ACT-004', operationText: 'Uji coba operasi beban penuh 30 menit', resultComment: 'Genset beroperasi normal, output 200V/50Hz', durationPlan: 1.0, durationActual: 1.25, isVerified: true }
-    ]
+      { activityNumber: 'ACT-001', operationText: 'Ganti oli mesin genset',                  resultComment: 'Oli diganti dengan Pertamina Fastron 15W40', durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Ganti filter oli dan filter bahan bakar',  resultComment: 'Kedua filter sudah diganti baru',             durationPlan: 0.5, durationActual: 0.75, isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Uji coba operasi beban penuh 30 menit',   resultComment: 'Genset beroperasi normal, output 200V/50Hz',  durationPlan: 1.0, durationActual: 1.25, isVerified: true },
+    ],
   },
 
-  // ── SIPIL (2): both pending ──
+  // ── SIPIL ─────────────────────────────────────────────────────────────────
+
   {
-    spkNumber: 'SPK-2026-008',
+    spkNumber: 'SPK-S-001',
     description: 'Pemeriksaan Bak Penampungan Utama — 3 Bulanan',
     interval: '3 Bulan',
     category: 'Sipil',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama', functionalLocation: 'Area Luar Gedung' }
+      { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama', functionalLocation: 'Area Luar Gedung' },
     ],
     activitiesModel: [
       { activityNumber: 'ACT-001', operationText: 'Periksa kebocoran dinding dan lantai bak', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Bersihkan sedimen dan lumpur dasar bak', resultComment: null, durationPlan: 2.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Periksa dan uji pengapuran/chlorinasi', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false }
-    ]
-  },
-  {
-    spkNumber: 'SPK-2026-009',
-    description: 'Pembersihan Saluran Drainase Utara — 1 Tahun',
-    interval: '1 Tahun',
-    category: 'Sipil',
-    status: 'pending',
-    durationActual: null,
-    equipmentModels: [
-      { equipmentId: 'EQ-009', equipmentName: 'Saluran Drainase Utara', functionalLocation: 'Area Drainase Utara' }
+      { activityNumber: 'ACT-002', operationText: 'Bersihkan sedimen dan lumpur dasar bak',   resultComment: null, durationPlan: 2.0, durationActual: null, isVerified: false },
     ],
-    activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Pembersihan saluran dari sampah dan lumpur', resultComment: null, durationPlan: 3.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Periksa kondisi tutup got / manhole cover', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false }
-    ]
   },
 
-  // ── OTOMASI (3): 1 pending, 1 in_progress, 1 completed ──
+  // ── OTOMASI ───────────────────────────────────────────────────────────────
+
   {
-    spkNumber: 'SPK-2026-010',
+    spkNumber: 'SPK-O-001',
     description: 'Kalibrasi Sensor Level Air Tank 1 — 3 Bulanan',
     interval: '3 Bulan',
     category: 'Otomasi',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1', functionalLocation: 'Rooftop Area' }
+      { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1', functionalLocation: 'Rooftop Area' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Cek sinyal output sensor (4–20 mA)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Kalibrasi titik 0% dan 100% level', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Periksa kabel sinyal dan koneksi terminal', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false }
-    ]
-  },
-  {
-    spkNumber: 'SPK-2026-011',
-    description: 'Upgrade Firmware PLC Water Treatment — 6 Bulanan',
-    interval: '6 Bulan',
-    category: 'Otomasi',
-    status: 'in_progress',
-    durationActual: null,
-    equipmentModels: [
-      { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1', functionalLocation: 'Rooftop Area' }
+      { activityNumber: 'ACT-001', operationText: 'Cek sinyal output sensor (4–20 mA)',       resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Kalibrasi titik 0% dan 100% level',        resultComment: null, durationPlan: 1.0,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Periksa kabel sinyal dan koneksi terminal', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
     ],
-    activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Backup program PLC existing ke laptop', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Upload firmware versi terbaru ke PLC', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Verifikasi semua I/O setelah upgrade', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-004', operationText: 'Dokumentasi dan simpan backup program baru', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false }
-    ]
-  },
-  {
-    spkNumber: 'SPK-2026-012',
-    description: 'Overhaul Panel SCADA Monitoring — 1 Tahun',
-    interval: '1 Tahun',
-    category: 'Otomasi',
-    status: 'completed',
-    durationActual: 5.0,
-    equipmentModels: [
-      { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1', functionalLocation: 'Rooftop Area' }
-    ],
-    activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Bersihkan dan cek koneksi kabel SCADA', resultComment: 'Semua koneksi kabel dalam kondisi baik', durationPlan: 1.0, durationActual: 1.0, isVerified: true },
-      { activityNumber: 'ACT-002', operationText: 'Update software SCADA ke versi terbaru', resultComment: 'Update ke v2.4.1 berhasil', durationPlan: 2.0, durationActual: 2.5, isVerified: true },
-      { activityNumber: 'ACT-003', operationText: 'Kalibrasi semua sensor yang terhubung SCADA', resultComment: 'Kalibrasi 8 sensor, semua dalam batas normal', durationPlan: 1.5, durationActual: 1.5, isVerified: true }
-    ]
   },
 
-  // ── MULTI-EQUIPMENT: Pompa Air Utama A & B (Mekanik, pending) ──────────
-  // Demonstrates the per-equipment activity grouping feature.
-  // 3 specific activities for each pump — different QR scans, different locations.
+  // ── EQ-001 Pompa Air Utama A — multi-month history (for EquipmentHistoryPage demo) ──
+
+  // EQ-001 Pompa Air Utama A — Jan + Feb completed (Feb is SPK-M-001, already OVERDUE above)
   {
-    spkNumber: 'SPK-2026-013',
-    description: 'Perawatan Bulanan Pompa Air Utama A & B',
+    spkNumber: 'SPK-M-PMP-A-JAN',
+    description: 'Perawatan Rutin Pompa Air Utama A — Bulanan (Januari)',
+    interval: '1 Bulan',
+    category: 'Mekanik',
+    status: 'completed',
+    durationActual: 1.5,
+    equipmentModels: [
+      { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan pompa (bar)',       resultComment: 'Tekanan normal: 4.2 bar',               durationPlan: 0.5,  durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Cek kebocoran pipa dan fitting',    resultComment: 'Tidak ada kebocoran',                   durationPlan: 0.5,  durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Pelumasan bearing motor pompa',    resultComment: 'Bearing dilumasi, kondisi baik',         durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+    ],
+  },
+
+  // ── EQ-003 Pompa Booster Lantai 5 — 3-month history ──────────────────────
+
+  {
+    spkNumber: 'SPK-M-BST-JAN',
+    description: 'Perawatan Pompa Booster Lantai 5 — Bulanan (Januari)',
+    interval: '1 Bulan',
+    category: 'Mekanik',
+    status: 'completed',
+    durationActual: 1.0,
+    equipmentModels: [
+      { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Cek tekanan output pompa booster', resultComment: 'Tekanan normal: 3.8 bar',               durationPlan: 0.5,  durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Inspeksi seal dan gasket',         resultComment: 'Seal dalam kondisi baik',               durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Cek arus motor (ampere)',          resultComment: 'Arus normal: 8.5 A',                   durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+    ],
+  },
+
+  {
+    spkNumber: 'SPK-M-BST-FEB',
+    description: 'Perawatan Pompa Booster Lantai 5 — Bulanan (Februari)',
+    interval: '1 Bulan',
+    category: 'Mekanik',
+    status: 'completed',
+    durationActual: 1.25,
+    equipmentModels: [
+      { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Cek tekanan output pompa booster', resultComment: 'Tekanan sedikit turun: 3.5 bar, disetel ulang', durationPlan: 0.5,  durationActual: 0.75, isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Inspeksi seal dan gasket',         resultComment: 'Seal mulai aus, dijadwalkan ganti bulan depan', durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Cek arus motor (ampere)',          resultComment: 'Arus normal: 8.7 A',                          durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+    ],
+  },
+
+  {
+    spkNumber: 'SPK-M-BST-MAR',
+    description: 'Perawatan Pompa Booster Lantai 5 — Bulanan (Maret)',
     interval: '1 Bulan',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1 — Sisi Kiri' },
-      { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B', functionalLocation: 'Basement Lantai B1 — Sisi Kanan' }
+      { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5' },
     ],
     activitiesModel: [
-      // ── EQ-001: Pompa Air Utama A ──
-      { activityNumber: 'ACT-001', equipmentId: 'EQ-001', operationText: 'Periksa tekanan output Pompa A (target: 3–5 bar)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', equipmentId: 'EQ-001', operationText: 'Cek kebocoran seal, packing, dan fitting Pompa A', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', equipmentId: 'EQ-001', operationText: 'Pelumasan bearing dan cek vibrasi motor Pompa A', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
-      // ── EQ-002: Pompa Air Utama B ──
-      { activityNumber: 'ACT-004', equipmentId: 'EQ-002', operationText: 'Periksa tekanan output Pompa B (target: 3–5 bar)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-005', equipmentId: 'EQ-002', operationText: 'Cek kebocoran seal, packing, dan fitting Pompa B', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-006', equipmentId: 'EQ-002', operationText: 'Pelumasan bearing dan cek vibrasi motor Pompa B', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false }
-    ]
-  }
+      { activityNumber: 'ACT-001', operationText: 'Cek tekanan output pompa booster', resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Ganti seal (tindak lanjut Feb)',   resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Cek arus motor (ampere)',          resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+    ],
+  },
+
+  // ── EQ-005 Panel Listrik Utama — 3-month history (Jan/Feb + SPK-L-001 Mar) ─
+
+  {
+    spkNumber: 'SPK-L-PNL-JAN',
+    description: 'Inspeksi Panel Listrik Utama — Bulanan (Januari)',
+    interval: '1 Bulan',
+    category: 'Listrik',
+    status: 'completed',
+    durationActual: 1.5,
+    equipmentModels: [
+      { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan input dan output (VAC)', resultComment: 'Tegangan normal 380V / 220V',              durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Cek kondisi MCB dan MCCB',                resultComment: 'Semua MCB berfungsi normal',              durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Bersihkan debu pada busbar dan terminal', resultComment: 'Busbar dibersihkan, tidak ada korosi',     durationPlan: 1.0, durationActual: 0.5,  isVerified: true },
+    ],
+  },
+
+  {
+    spkNumber: 'SPK-L-PNL-FEB',
+    description: 'Inspeksi Panel Listrik Utama — Bulanan (Februari)',
+    interval: '1 Bulan',
+    category: 'Listrik',
+    status: 'completed',
+    durationActual: 2.0,
+    equipmentModels: [
+      { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan input dan output (VAC)', resultComment: 'Tegangan normal 382V / 221V',              durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Cek kondisi MCB dan MCCB',                resultComment: '1 MCB perlu penggantian, sudah dilaporkan', durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Bersihkan debu pada busbar dan terminal', resultComment: 'Busbar bersih',                            durationPlan: 1.0, durationActual: 1.0,  isVerified: true },
+    ],
+  },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// LEMBAR KERJA  (4 — one per category, March 2026)
+// LEMBAR KERJA
+//
+// LK-FEB-MEK: Februari 2026 → periodeEnd 2026-02-28 (PAST).
+//   SPK-M-001 is linked here → dueDate = 2026-02-28 → isOverdue = true.
+//
+// All March LKs: periodeEnd 2026-03-31 (future) → no overdue.
 // ────────────────────────────────────────────────────────────────────────────
 const lembarKerja = [
+  // ── Januari 2026 — completed ──────────────────────────────────────────────
   {
-    lkNumber: 'LK-2026-001',
-    periodeStart: '2026-03-01T00:00:00.000Z',
-    periodeEnd: '2026-03-31T23:59:59.000Z',
+    lkNumber: 'LK-JAN-MEK',
+    periodeStart: '2026-01-01T00:00:00.000Z',
+    periodeEnd:   '2026-01-31T23:59:59.000Z',
+    category: 'Mekanik',
+    status: 'completed',
+    lembarKe: 1,
+    totalLembar: 1,
+    evaluasi: 'Perawatan Mekanik Januari selesai. Semua peralatan dalam kondisi baik.',
+    spkModels: ['SPK-M-PMP-A-JAN', 'SPK-M-BST-JAN'],
+  },
+  {
+    lkNumber: 'LK-JAN-LIS',
+    periodeStart: '2026-01-01T00:00:00.000Z',
+    periodeEnd:   '2026-01-31T23:59:59.000Z',
+    category: 'Listrik',
+    status: 'completed',
+    lembarKe: 1,
+    totalLembar: 1,
+    evaluasi: 'Inspeksi Listrik Januari selesai. Tidak ada temuan kritis.',
+    spkModels: ['SPK-L-PNL-JAN'],
+  },
+
+  // ── Februari 2026 — completed (LK-FEB-MEK PAST → SPK-M-001 OVERDUE) ──────
+  {
+    lkNumber: 'LK-FEB-MEK',
+    periodeStart: '2026-02-01T00:00:00.000Z',
+    periodeEnd:   '2026-02-28T23:59:59.000Z',   // ← PAST → SPK-M-001 becomes overdue
     category: 'Mekanik',
     status: 'in_progress',
     lembarKe: 1,
-    totalLembar: 2,
+    totalLembar: 1,
     evaluasi: null,
-    spkModels: ['SPK-2026-001', 'SPK-2026-002', 'SPK-2026-003', 'SPK-2026-013']
+    spkModels: ['SPK-M-001', 'SPK-M-BST-FEB'],
   },
   {
-    lkNumber: 'LK-2026-002',
+    lkNumber: 'LK-FEB-LIS',
+    periodeStart: '2026-02-01T00:00:00.000Z',
+    periodeEnd:   '2026-02-28T23:59:59.000Z',
+    category: 'Listrik',
+    status: 'completed',
+    lembarKe: 1,
+    totalLembar: 1,
+    evaluasi: 'Inspeksi Listrik Februari selesai. 1 MCB perlu penggantian, sudah dilaporkan.',
+    spkModels: ['SPK-L-PNL-FEB'],
+  },
+
+  // ── Maret 2026 — current month ───────────────────────────────────────────
+  {
+    lkNumber: 'LK-MAR-MEK',
     periodeStart: '2026-03-01T00:00:00.000Z',
-    periodeEnd: '2026-03-31T23:59:59.000Z',
+    periodeEnd:   '2026-03-31T23:59:59.000Z',
+    category: 'Mekanik',
+    status: 'in_progress',
+    lembarKe: 1,
+    totalLembar: 1,
+    evaluasi: null,
+    spkModels: ['SPK-M-002', 'SPK-M-BST-MAR'],
+  },
+  {
+    lkNumber: 'LK-MAR-LIS',
+    periodeStart: '2026-03-01T00:00:00.000Z',
+    periodeEnd:   '2026-03-31T23:59:59.000Z',
     category: 'Listrik',
     status: 'in_progress',
     lembarKe: 1,
     totalLembar: 1,
     evaluasi: null,
-    spkModels: ['SPK-2026-005', 'SPK-2026-006']
+    spkModels: ['SPK-L-001', 'SPK-L-002'],
   },
   {
-    lkNumber: 'LK-2026-003',
+    lkNumber: 'LK-MAR-SIP',
     periodeStart: '2026-03-01T00:00:00.000Z',
-    periodeEnd: '2026-03-31T23:59:59.000Z',
+    periodeEnd:   '2026-03-31T23:59:59.000Z',
     category: 'Sipil',
     status: 'pending',
     lembarKe: 1,
     totalLembar: 1,
     evaluasi: null,
-    spkModels: ['SPK-2026-008', 'SPK-2026-009']
+    spkModels: ['SPK-S-001'],
   },
   {
-    lkNumber: 'LK-2026-004',
+    lkNumber: 'LK-MAR-OTO',
     periodeStart: '2026-03-01T00:00:00.000Z',
-    periodeEnd: '2026-03-31T23:59:59.000Z',
+    periodeEnd:   '2026-03-31T23:59:59.000Z',
     category: 'Otomasi',
-    status: 'in_progress',
+    status: 'pending',
     lembarKe: 1,
     totalLembar: 1,
     evaluasi: null,
-    spkModels: ['SPK-2026-010', 'SPK-2026-011']
-  }
+    spkModels: ['SPK-O-001'],
+  },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// SUBMISSIONS  (2 — for SPK-2026-004 Mekanik & SPK-2026-007 Listrik)
+// SUBMISSIONS (for completed SPKs)
 // ────────────────────────────────────────────────────────────────────────────
 const submissions = [
+  // SPK-L-002: Genset 6-bulanan (EQ-007)
   {
     id: 'SUB-001',
-    spkNumber: 'SPK-2026-004',
-    durationActual: 4.5,
-    evaluasi: 'Semua aktivitas overhaul kompresor selesai dengan normal. Kondisi kompresor setelah servis sangat baik.',
-    latitude: -6.1751,
-    longitude: 106.8650,
-    submittedAt: '2026-02-15T10:30:00.000Z',
-    photoPaths: [],
-    activityResultsModel: [
-      { activityNumber: 'ACT-001', resultComment: 'Filter lama sudah cukup kotor, sudah diganti baru', isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-002', resultComment: 'Oli warna gelap, sudah diganti dengan SAE 30', isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-003', resultComment: 'Semua baut dalam kondisi baik', isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-004', resultComment: 'Tekanan 8 bar, tidak ada kebocoran', isNormal: true, isVerified: true }
-    ]
-  },
-  {
-    id: 'SUB-002',
-    spkNumber: 'SPK-2026-007',
+    spkNumber: 'SPK-L-002',
     durationActual: 3.0,
     evaluasi: 'Servis genset berjalan lancar. Semua komponen dalam kondisi baik pasca servis.',
-    latitude: -6.1755,
-    longitude: 106.8645,
+    latitude:  -6.0141,
+    longitude: 106.0220,
     submittedAt: '2026-02-20T14:00:00.000Z',
     photoPaths: [],
     activityResultsModel: [
       { activityNumber: 'ACT-001', resultComment: 'Oli diganti dengan Pertamina Fastron 15W40', isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-002', resultComment: 'Kedua filter sudah diganti baru', isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-003', resultComment: 'Tegangan aki 13.2V, kondisi baik', isNormal: true, isVerified: true },
-      { activityNumber: 'ACT-004', resultComment: 'Genset beroperasi normal, output 200V/50Hz', isNormal: true, isVerified: true }
-    ]
-  }
+      { activityNumber: 'ACT-002', resultComment: 'Kedua filter sudah diganti baru',            isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-003', resultComment: 'Genset beroperasi normal, output 200V/50Hz', isNormal: true, isVerified: true },
+    ],
+  },
+  // SPK-M-PMP-A-JAN: Pompa Air Utama A Januari (EQ-001)
+  {
+    id: 'SUB-002',
+    spkNumber: 'SPK-M-PMP-A-JAN',
+    durationActual: 1.5,
+    evaluasi: 'Perawatan Pompa A Januari selesai. Tidak ada temuan kritis.',
+    latitude:  -6.0131,
+    longitude: 106.0215,
+    submittedAt: '2026-01-22T09:30:00.000Z',
+    photoPaths: [],
+    activityResultsModel: [
+      { activityNumber: 'ACT-001', resultComment: 'Tekanan normal: 4.2 bar',            isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-002', resultComment: 'Tidak ada kebocoran',                isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-003', resultComment: 'Bearing dilumasi, kondisi baik',     isNormal: true, isVerified: true },
+    ],
+  },
+  // SPK-M-BST-JAN: Pompa Booster Januari (EQ-003)
+  {
+    id: 'SUB-003',
+    spkNumber: 'SPK-M-BST-JAN',
+    durationActual: 1.0,
+    evaluasi: 'Perawatan Pompa Booster Januari selesai. Semua normal.',
+    latitude:  -6.0128,
+    longitude: 106.0222,
+    submittedAt: '2026-01-23T11:00:00.000Z',
+    photoPaths: [],
+    activityResultsModel: [
+      { activityNumber: 'ACT-001', resultComment: 'Tekanan normal: 3.8 bar',            isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-002', resultComment: 'Seal dalam kondisi baik',            isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-003', resultComment: 'Arus normal: 8.5 A',               isNormal: true, isVerified: true },
+    ],
+  },
+  // SPK-L-PNL-JAN: Panel Listrik Utama Januari (EQ-005)
+  {
+    id: 'SUB-004',
+    spkNumber: 'SPK-L-PNL-JAN',
+    durationActual: 1.5,
+    evaluasi: 'Inspeksi Panel Listrik Januari selesai. Tidak ada temuan kritis.',
+    latitude:  -6.0136,
+    longitude: 106.0224,
+    submittedAt: '2026-01-20T14:00:00.000Z',
+    photoPaths: [],
+    activityResultsModel: [
+      { activityNumber: 'ACT-001', resultComment: 'Tegangan normal 380V / 220V',             isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-002', resultComment: 'Semua MCB berfungsi normal',              isNormal: true, isVerified: true },
+      { activityNumber: 'ACT-003', resultComment: 'Busbar dibersihkan, tidak ada korosi',    isNormal: true, isVerified: true },
+    ],
+  },
+  // SPK-M-BST-FEB: Pompa Booster Februari (EQ-003)
+  {
+    id: 'SUB-005',
+    spkNumber: 'SPK-M-BST-FEB',
+    durationActual: 1.25,
+    evaluasi: 'Perawatan Pompa Booster Februari selesai. Tekanan disetel ulang, seal dijadwalkan ganti bulan depan.',
+    latitude:  -6.0128,
+    longitude: 106.0222,
+    submittedAt: '2026-02-21T10:00:00.000Z',
+    photoPaths: [],
+    activityResultsModel: [
+      { activityNumber: 'ACT-001', resultComment: 'Tekanan sedikit turun: 3.5 bar, disetel ulang', isNormal: false, isVerified: true },
+      { activityNumber: 'ACT-002', resultComment: 'Seal mulai aus, dijadwalkan ganti bulan depan', isNormal: false, isVerified: true },
+      { activityNumber: 'ACT-003', resultComment: 'Arus normal: 8.7 A',                           isNormal: true,  isVerified: true },
+    ],
+  },
+  // SPK-L-PNL-FEB: Panel Listrik Utama Februari (EQ-005)
+  {
+    id: 'SUB-006',
+    spkNumber: 'SPK-L-PNL-FEB',
+    durationActual: 2.0,
+    evaluasi: 'Inspeksi Panel Listrik Februari selesai. 1 MCB perlu penggantian, sudah dilaporkan ke pengadaan.',
+    latitude:  -6.0136,
+    longitude: 106.0224,
+    submittedAt: '2026-02-19T13:00:00.000Z',
+    photoPaths: [],
+    activityResultsModel: [
+      { activityNumber: 'ACT-001', resultComment: 'Tegangan normal 382V / 221V',                   isNormal: true,  isVerified: true },
+      { activityNumber: 'ACT-002', resultComment: '1 MCB perlu penggantian, sudah dilaporkan',     isNormal: false, isVerified: true },
+      { activityNumber: 'ACT-003', resultComment: 'Busbar bersih',                                 isNormal: true,  isVerified: true },
+    ],
+  },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -384,26 +512,34 @@ spk.forEach(s => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// PLANTS seed data
+// PLANTS
+// All 7 SAP plant codes from the equipment list.
+// centerLat/centerLon left null — set them via the Maps UI once zones are drawn.
 // ────────────────────────────────────────────────────────────────────────────
 const plants = [
-  { plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', shortName: 'KTI WTP-1', city: 'Cilegon', centerLat: -6.0135, centerLon: 106.0219, zoom: 17 }
+  { plantId: 'KTI-01',   plantName: 'PT Krakatau Tirta Industri', shortName: 'KTI',             city: 'Cilegon',  centerLat: -6.0135, centerLon: 106.0219, zoom: 14 },
+  { plantId: 'I-22L001', plantName: 'PS I Cidanau',               shortName: 'PS I',            city: 'Cilegon',  centerLat: null,    centerLon: null,     zoom: 17 },
+  { plantId: 'P-22L006', plantName: 'WTP Cidanau',                shortName: 'WTP Cidanau',     city: 'Cilegon',  centerLat: null,    centerLon: null,     zoom: 17 },
+  { plantId: 'I-22L004', plantName: 'PS VII Cipasauran',          shortName: 'PS VII',          city: 'Serang',   centerLat: null,    centerLon: null,     zoom: 17 },
+  { plantId: 'D-22L010', plantName: 'PS V SEPS',                  shortName: 'PS V',            city: 'Cilegon',  centerLat: null,    centerLon: null,     zoom: 17 },
+  { plantId: 'I-22L003', plantName: 'PS II Waduk',                shortName: 'PS II',           city: 'Cilegon',  centerLat: null,    centerLon: null,     zoom: 17 },
+  { plantId: 'P-22L007', plantName: 'WTP Krenceng',               shortName: 'WTP Krenceng',    city: 'Cilegon',  centerLat: null,    centerLon: null,     zoom: 17 },
+  { plantId: 'I-22L002', plantName: 'DECANTER',                   shortName: 'Decanter',        city: 'Cilegon',  centerLat: null,    centerLon: null,     zoom: 17 },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// MAIN: sync schema → INSERT-IF-NOT-EXISTS (existing data is NEVER modified)
+// MAIN
 // ────────────────────────────────────────────────────────────────────────────
 async function main() {
   await sequelize.authenticate();
-  console.log('\n  KTI SmartCare — MySQL Seed (insert-if-not-exists)\n');
+  console.log('\n  KTI SmartCare — Seed\n');
 
-  // Auto-create missing tables / add missing columns. Never drops anything.
   await sequelize.sync({ alter: true });
   console.log('  ✓  Tables synced');
 
   let added, skipped;
 
-  // ── Users ──────────────────────────────────────────────────────────────────
+  // ── Users (insert-if-not-exists) ───────────────────────────────────────────
   added = 0; skipped = 0;
   for (const u of users) {
     const [, created] = await User.findOrCreate({ where: { id: u.id }, defaults: u });
@@ -411,7 +547,7 @@ async function main() {
   }
   console.log(`  ✓  users        (+${added} added, ${skipped} already existed)`);
 
-  // ── Plants ─────────────────────────────────────────────────────────────────
+  // ── Plants (insert-if-not-exists) ──────────────────────────────────────────
   added = 0; skipped = 0;
   for (const p of plants) {
     const [, created] = await Plant.findOrCreate({ where: { plantId: p.plantId }, defaults: p });
@@ -419,7 +555,7 @@ async function main() {
   }
   console.log(`  ✓  plants       (+${added} added, ${skipped} already existed)`);
 
-  // ── Equipment ──────────────────────────────────────────────────────────────
+  // ── Equipment (insert-if-not-exists) ───────────────────────────────────────
   added = 0; skipped = 0;
   for (const e of equipment) {
     const [, created] = await Equipment.findOrCreate({ where: { equipmentId: e.equipmentId }, defaults: e });
@@ -427,128 +563,135 @@ async function main() {
   }
   console.log(`  ✓  equipment    (+${added} added, ${skipped} already existed)`);
 
-  // ── Functional Locations ───────────────────────────────────────────────────
+  // ── Functional Locations (insert-if-not-exists) ────────────────────────────
   added = 0; skipped = 0;
-  // Insert in order of level to respect parent FK constraints
   const sortedFuncLocs = [...funcLocData].sort((a, b) => a.level - b.level);
   for (const fl of sortedFuncLocs) {
-    const [, created] = await FunctionalLocation.findOrCreate({
-      where: { funcLocId: fl.funcLocId },
-      defaults: fl,
-    });
+    const [, created] = await FunctionalLocation.findOrCreate({ where: { funcLocId: fl.funcLocId }, defaults: fl });
     created ? added++ : skipped++;
   }
   console.log(`  ✓  func_locs    (+${added} added, ${skipped} already existed)`);
 
-  // ── SAP Equipment ──────────────────────────────────────────────────────────
+  // ── SAP Equipment (upsert — update existing rows with full data) ───────────
   added = 0; skipped = 0;
+  const plantNameMap = Object.fromEntries(plants.map(p => [p.plantId, p.plantName]));
   for (const se of sapEquipmentData) {
-    const [, created] = await Equipment.findOrCreate({
-      where: { equipmentId: se.equipmentNumber },
-      defaults: {
-        equipmentId: se.equipmentNumber,
-        equipmentName: se.description,
-        plantId: 'KTI-01',
-        plantName: 'PT Krakatau Tirta Industri',
-      },
+    const defaults = {
+      equipmentId:        se.equipmentId,
+      equipmentName:      se.equipmentName,
+      plantId:            se.plantId,
+      plantName:          plantNameMap[se.plantId] || null,
+      funcLocId:          se.funcLocId   || null,
+      functionalLocation: se.functionalLocation || null,
+      category:           se.category    || null,
+      abcIndicator:       se.abcIndicator || null,
+    };
+    const [instance, created] = await Equipment.findOrCreate({
+      where: { equipmentId: se.equipmentId },
+      defaults,
     });
-    created ? added++ : skipped++;
+    if (!created) {
+      // Update fields that may have been missing from older sparse seed
+      await instance.update({
+        equipmentName:      defaults.equipmentName,
+        plantId:            defaults.plantId,
+        plantName:          defaults.plantName,
+        funcLocId:          defaults.funcLocId,
+        functionalLocation: defaults.functionalLocation,
+        category:           defaults.category,
+        abcIndicator:       defaults.abcIndicator,
+      });
+      skipped++;
+    } else {
+      added++;
+    }
   }
-  console.log(`  ✓  sap_equip    (+${added} added, ${skipped} already existed)`);
+  console.log(`  ✓  sap_equip    (+${added} added, ${skipped} updated)`);
 
-  // ── General Task Lists ─────────────────────────────────────────────────────
+  // ── General Task Lists (insert-if-not-exists) ─────────────────────────────
   added = 0; skipped = 0;
   for (const tl of taskListData) {
     const [, tlCreated] = await GeneralTaskList.findOrCreate({
       where: { taskListId: tl.taskListId },
-      defaults: {
-        taskListId: tl.taskListId,
-        taskListName: tl.taskListName,
-        category: tl.category,
-        workCenter: tl.workCenter,
-      },
+      defaults: { taskListId: tl.taskListId, taskListName: tl.taskListName, category: tl.category, workCenter: tl.workCenter },
     });
     tlCreated ? added++ : skipped++;
-
     for (const act of tl.activities) {
-      const exists = await GeneralTaskListActivity.findOne({
-        where: { taskListId: tl.taskListId, stepNumber: act.stepNumber },
-      });
-      if (!exists) {
-        await GeneralTaskListActivity.create({
-          taskListId: tl.taskListId,
-          stepNumber: act.stepNumber,
-          operationText: act.operationText,
-        });
-      }
+      const exists = await GeneralTaskListActivity.findOne({ where: { taskListId: tl.taskListId, stepNumber: act.stepNumber } });
+      if (!exists) await GeneralTaskListActivity.create({ taskListId: tl.taskListId, stepNumber: act.stepNumber, operationText: act.operationText });
     }
   }
   console.log(`  ✓  task_lists   (+${added} added, ${skipped} already existed)`);
 
-  // ── SPK ────────────────────────────────────────────────────────────────────
-  // SPK header: skip if already exists.
-  // Child rows (equipment links & activities): insert only if the natural key is missing.
-  added = 0; skipped = 0;
-  for (const s of spk) {
-    const [, spkCreated] = await Spk.findOrCreate({
-      where: { spkNumber: s.spkNumber },
-      defaults: {
-        spkNumber: s.spkNumber, description: s.description, intervalPeriod: s.interval,
-        category: s.category, status: s.status, durationActual: s.durationActual,
-      },
-    });
-    spkCreated ? added++ : skipped++;
+  // ── RESET SPK / LK / Submission tables ────────────────────────────────────
+  // Truncate in dependency order (children first), then re-insert clean data.
+  console.log('\n  Resetting SPK / LembarKerja / Submission tables...');
+  await SubmissionActivityResult.destroy({ where: {}, truncate: false });
+  await SubmissionPhoto.destroy({ where: {}, truncate: false });
+  await Submission.destroy({ where: {}, truncate: false });
+  await SpkActivity.destroy({ where: {}, truncate: false });
+  await SpkEquipment.destroy({ where: {}, truncate: false });
+  await LembarKerjaSpk.destroy({ where: {}, truncate: false });
+  await LembarKerja.destroy({ where: {}, truncate: false });
+  await Spk.destroy({ where: {}, truncate: false });
+  console.log('  ✓  Tables cleared');
 
+  // ── SPK ────────────────────────────────────────────────────────────────────
+  for (const s of spk) {
+    await Spk.create({
+      spkNumber: s.spkNumber, description: s.description, intervalPeriod: s.interval,
+      category: s.category, status: s.status, durationActual: s.durationActual,
+    });
     for (const eq of s.equipmentModels) {
-      const exists = await SpkEquipment.findOne({ where: { spkNumber: s.spkNumber, equipmentId: eq.equipmentId } });
-      if (!exists) await SpkEquipment.create({ spkNumber: s.spkNumber, equipmentId: eq.equipmentId, equipmentName: eq.equipmentName, functionalLocation: eq.functionalLocation });
+      await SpkEquipment.create({ spkNumber: s.spkNumber, equipmentId: eq.equipmentId, equipmentName: eq.equipmentName, functionalLocation: eq.functionalLocation });
     }
     for (const act of s.activitiesModel) {
-      const exists = await SpkActivity.findOne({ where: { spkNumber: s.spkNumber, activityNumber: act.activityNumber } });
-      if (!exists) await SpkActivity.create({ spkNumber: s.spkNumber, activityNumber: act.activityNumber, equipmentId: act.equipmentId || null, operationText: act.operationText, resultComment: act.resultComment || null, durationPlan: act.durationPlan, durationActual: act.durationActual || null, isVerified: act.isVerified || false });
+      await SpkActivity.create({ spkNumber: s.spkNumber, activityNumber: act.activityNumber, equipmentId: act.equipmentId || null, operationText: act.operationText, resultComment: act.resultComment || null, durationPlan: act.durationPlan, durationActual: act.durationActual || null, isVerified: act.isVerified || false });
     }
   }
-  console.log(`  ✓  spk          (+${added} added, ${skipped} already existed)`);
+  console.log(`  ✓  spk          (${spk.length} inserted)`);
 
   // ── Lembar Kerja ───────────────────────────────────────────────────────────
-  added = 0; skipped = 0;
   for (const lk of lembarKerja) {
-    const [, lkCreated] = await LembarKerja.findOrCreate({
-      where: { lkNumber: lk.lkNumber },
-      defaults: { lkNumber: lk.lkNumber, periodeStart: lk.periodeStart, periodeEnd: lk.periodeEnd, category: lk.category, status: lk.status, lembarKe: lk.lembarKe, totalLembar: lk.totalLembar, evaluasi: lk.evaluasi || null },
-    });
-    lkCreated ? added++ : skipped++;
-
+    await LembarKerja.create({ lkNumber: lk.lkNumber, periodeStart: lk.periodeStart, periodeEnd: lk.periodeEnd, category: lk.category, status: lk.status, lembarKe: lk.lembarKe, totalLembar: lk.totalLembar, evaluasi: lk.evaluasi || null });
     for (const spkNum of lk.spkModels) {
-      const exists = await LembarKerjaSpk.findOne({ where: { lkNumber: lk.lkNumber, spkNumber: spkNum } });
-      if (!exists) await LembarKerjaSpk.create({ lkNumber: lk.lkNumber, spkNumber: spkNum });
+      await LembarKerjaSpk.create({ lkNumber: lk.lkNumber, spkNumber: spkNum });
     }
   }
-  console.log(`  ✓  lembar_kerja (+${added} added, ${skipped} already existed)`);
+  console.log(`  ✓  lembar_kerja (${lembarKerja.length} inserted)`);
 
   // ── Submissions ────────────────────────────────────────────────────────────
-  // Only the 2 seed-defined submissions (SUB-001, SUB-002) are managed here.
-  // App-generated submissions (random IDs) are completely untouched.
-  added = 0; skipped = 0;
   for (const sub of submissions) {
-    const [, subCreated] = await Submission.findOrCreate({
-      where: { id: sub.id },
-      defaults: { id: sub.id, spkNumber: sub.spkNumber, durationActual: sub.durationActual, evaluasi: sub.evaluasi || null, latitude: sub.latitude, longitude: sub.longitude, submittedAt: sub.submittedAt },
-    });
-    subCreated ? added++ : skipped++;
-
+    await Submission.create({ id: sub.id, spkNumber: sub.spkNumber, durationActual: sub.durationActual, evaluasi: sub.evaluasi || null, latitude: sub.latitude, longitude: sub.longitude, submittedAt: sub.submittedAt });
     for (const p of (sub.photoPaths || [])) {
-      const exists = await SubmissionPhoto.findOne({ where: { submissionId: sub.id, photoPath: p } });
-      if (!exists) await SubmissionPhoto.create({ submissionId: sub.id, photoPath: p });
+      await SubmissionPhoto.create({ submissionId: sub.id, photoPath: p });
     }
     for (const r of (sub.activityResultsModel || [])) {
-      const exists = await SubmissionActivityResult.findOne({ where: { submissionId: sub.id, activityNumber: r.activityNumber } });
-      if (!exists) await SubmissionActivityResult.create({ submissionId: sub.id, activityNumber: r.activityNumber, resultComment: r.resultComment || null, isNormal: r.isNormal ?? true, isVerified: r.isVerified ?? false });
+      await SubmissionActivityResult.create({ submissionId: sub.id, activityNumber: r.activityNumber, resultComment: r.resultComment || null, isNormal: r.isNormal ?? true, isVerified: r.isVerified ?? false });
     }
   }
-  console.log(`  ✓  submissions  (+${added} added, ${skipped} already existed)`);
+  console.log(`  ✓  submissions  (${submissions.length} inserted)`);
 
-  console.log('\n  Seed complete! (no existing data was modified)\n');
+  console.log('\n  Seed complete!\n');
+  console.log('  SPK summary:');
+  console.log('    SPK-M-001        Mekanik  pending     ← OVERDUE  EQ-001 Pompa Air A (dueDate = 2026-02-28)');
+  console.log('    SPK-M-002        Mekanik  pending                EQ-002 Pompa Air B (dueDate = 2026-03-31)');
+  console.log('    SPK-L-001        Listrik  in_progress            EQ-005 Panel Listrik Utama');
+  console.log('    SPK-L-002        Listrik  completed              EQ-007 Genset Cadangan 200 kVA');
+  console.log('    SPK-S-001        Sipil    pending                EQ-008 Bak Penampungan Utama');
+  console.log('    SPK-O-001        Otomasi  pending                EQ-010 Sensor Level Air Tank 1');
+  console.log('    SPK-M-PMP-A-JAN  Mekanik  completed              EQ-001 Pompa Air A Januari');
+  console.log('    SPK-M-BST-JAN    Mekanik  completed              EQ-003 Pompa Booster Januari');
+  console.log('    SPK-M-BST-FEB    Mekanik  completed              EQ-003 Pompa Booster Februari');
+  console.log('    SPK-M-BST-MAR    Mekanik  pending                EQ-003 Pompa Booster Maret');
+  console.log('    SPK-L-PNL-JAN    Listrik  completed              EQ-005 Panel Listrik Januari');
+  console.log('    SPK-L-PNL-FEB    Listrik  completed              EQ-005 Panel Listrik Februari\n');
+  console.log('  Equipment with QR scan history (scan these IDs):');
+  console.log('    EQ-001  → 2 SPK (Jan completed, Feb OVERDUE)');
+  console.log('    EQ-003  → 3 SPK (Jan+Feb completed, Mar pending)');
+  console.log('    EQ-005  → 3 SPK (Jan+Feb completed, Mar in_progress)');
+  console.log('    EQ-007  → 1 SPK (6-bulanan completed)\n');
+
   await sequelize.close();
 }
 

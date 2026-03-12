@@ -1,15 +1,21 @@
 'use strict';
 
 const { Op }  = require('sequelize');
+const sequelize = require('../../config/database');
 const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
 const { LembarKerja, LembarKerjaSpk }    = require('../../models/LembarKerja');
+const Equipment = require('../../models/Equipment');
 
 const _PENDING_STATES = ['awaiting_kasie','awaiting_ap','awaiting_kadis_pusat','awaiting_kadis_keamanan'];
 
 // ── Eager-load config ─────────────────────────────────────────────────────────
 const SPK_INCLUDE = [
-  { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId','equipmentName','functionalLocation'] },
-  { model: SpkActivity,  as: 'activitiesModel', attributes: ['activityNumber','equipmentId','operationText','resultComment','durationPlan','durationActual','isVerified'] },
+  {
+    model: SpkEquipment, as: 'equipmentModels',
+    attributes: ['equipmentId', 'equipmentName', 'functionalLocation'],
+    include: [{ model: Equipment, as: 'equipmentDetails', attributes: ['latitude', 'longitude'] }],
+  },
+  { model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber','equipmentId','operationText','resultComment','durationPlan','durationActual','isVerified'] },
 ];
 const LK_INCLUDE = [{
   model: LembarKerjaSpk, as: 'spkLinks', attributes: ['spkNumber'],
@@ -41,19 +47,33 @@ function fmt(lk) {
     rejectionNotes:            j.rejectionNotes,
     spkModels: (j.spkLinks || []).map(link => {
       const s = link.spk;
-      if (!s) return link.spkNumber;
+      if (!s) return null; // orphaned link — skip instead of returning a bare string
       return {
         spkNumber: s.spkNumber, description: s.description, interval: s.intervalPeriod,
         category: s.category, status: s.status, durationActual: s.durationActual,
-        equipmentModels: s.equipmentModels || [], activitiesModel: s.activitiesModel || [],
+        equipmentModels: (s.equipmentModels || []).map(em => ({
+          equipmentId: em.equipmentId,
+          equipmentName: em.equipmentName,
+          functionalLocation: em.functionalLocation,
+          latitude: em.equipmentDetails?.latitude ?? null,
+          longitude: em.equipmentDetails?.longitude ?? null,
+        })),
+        activitiesModel: s.activitiesModel || [],
       };
-    }),
+    }).filter(Boolean), // remove any null entries from orphaned links
   };
 }
 
 // GET /api/lk
 const getAll = async (req, res) => {
-  const where = req.query.category ? { category: req.query.category } : {};
+  const where = {};
+  if (req.query.category) where.category = req.query.category;
+  // Overlap check: LK period overlaps the requested week when
+  //   periodeStart <= weekEnd  AND  periodeEnd >= weekStart
+  if (req.query.startDate && req.query.endDate) {
+    where.periodeStart = { [Op.lte]: new Date(req.query.endDate) };
+    where.periodeEnd   = { [Op.gte]: new Date(req.query.startDate) };
+  }
   const data  = await LembarKerja.findAll({ where, include: LK_INCLUDE });
   res.json(data.map(fmt));
 };
@@ -119,28 +139,32 @@ const approve = async (req, res) => {
     return res.status(403).json({ error: 'Forbidden: only supervisor or manager can approve' });
   }
 
-  const lk = await LembarKerja.findByPk(req.params.lkNumber, { include: LK_INCLUDE });
-  if (!lk) return res.status(404).json({ error: 'LembarKerja not found' });
-  if (lk.approvalStatus === 'approved' || lk.approvalStatus === 'rejected') {
-    return res.status(400).json({ error: `LK is already ${lk.approvalStatus}` });
-  }
+  const result = await sequelize.transaction(async (t) => {
+    const lk = await LembarKerja.findByPk(req.params.lkNumber, { include: LK_INCLUDE, transaction: t, lock: t.LOCK.UPDATE });
+    if (!lk) return { status: 404, body: { error: 'LembarKerja not found' } };
+    if (lk.approvalStatus === 'approved' || lk.approvalStatus === 'rejected') {
+      return { status: 400, body: { error: `LK is already ${lk.approvalStatus}` } };
+    }
 
-  const now = new Date().toISOString();
-  const updates = {};
+    const now = new Date().toISOString();
+    const updates = {};
 
-  if (role === 'supervisor') {
-    if (lk.approvalStatus !== 'awaiting_kasie') return res.status(400).json({ error: 'LK is not awaiting Kasie approval' });
-    Object.assign(updates, { approvalStatus: 'awaiting_ap', kasieApprovedBy: userId, kasieApprovedAt: now });
-  } else {
-    if      (lk.approvalStatus === 'awaiting_ap')             Object.assign(updates, { approvalStatus: 'awaiting_kadis_pusat',    apApprovedBy: userId,         apApprovedAt: now });
-    else if (lk.approvalStatus === 'awaiting_kadis_pusat')    Object.assign(updates, { approvalStatus: 'awaiting_kadis_keamanan', kadisPusatApprovedBy: userId,  kadisPusatApprovedAt: now });
-    else if (lk.approvalStatus === 'awaiting_kadis_keamanan') Object.assign(updates, { approvalStatus: 'approved',                kadisKeamananApprovedBy: userId, kadisKeamananApprovedAt: now });
-    else return res.status(400).json({ error: 'LK is not awaiting manager approval' });
-  }
+    if (role === 'supervisor') {
+      if (lk.approvalStatus !== 'awaiting_kasie') return { status: 400, body: { error: 'LK is not awaiting Kasie approval' } };
+      Object.assign(updates, { approvalStatus: 'awaiting_ap', kasieApprovedBy: userId, kasieApprovedAt: now });
+    } else {
+      if      (lk.approvalStatus === 'awaiting_ap')             Object.assign(updates, { approvalStatus: 'awaiting_kadis_pusat',    apApprovedBy: userId,         apApprovedAt: now });
+      else if (lk.approvalStatus === 'awaiting_kadis_pusat')    Object.assign(updates, { approvalStatus: 'awaiting_kadis_keamanan', kadisPusatApprovedBy: userId,  kadisPusatApprovedAt: now });
+      else if (lk.approvalStatus === 'awaiting_kadis_keamanan') Object.assign(updates, { approvalStatus: 'approved',                kadisKeamananApprovedBy: userId, kadisKeamananApprovedAt: now });
+      else return { status: 400, body: { error: 'LK is not awaiting manager approval' } };
+    }
 
-  await lk.update(updates);
-  const fresh = await LembarKerja.findByPk(lk.lkNumber, { include: LK_INCLUDE });
-  res.json(fmt(fresh));
+    await lk.update(updates, { transaction: t });
+    const fresh = await LembarKerja.findByPk(lk.lkNumber, { include: LK_INCLUDE, transaction: t });
+    return { status: 200, body: fmt(fresh) };
+  });
+
+  res.status(result.status).json(result.body);
 };
 
 // POST /api/lk/:lkNumber/reject

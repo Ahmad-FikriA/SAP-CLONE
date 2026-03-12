@@ -23,13 +23,17 @@ Equipment.belongsTo(Plant, { foreignKey: 'plantId', as: 'plant' });
 Spk.hasMany(SpkEquipment, { foreignKey: 'spkNumber', as: 'equipmentModels', onDelete: 'CASCADE' });
 SpkEquipment.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk' });
 
+// ── SpkEquipment ↔ Equipment ──────────────────────────────────────────────────
+SpkEquipment.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipmentDetails' });
+Equipment.hasMany(SpkEquipment, { foreignKey: 'equipmentId', as: 'spkEquipments' });
+
 // ── SPK ↔ SpkActivity ─────────────────────────────────────────────────────────
 Spk.hasMany(SpkActivity, { foreignKey: 'spkNumber', as: 'activitiesModel', onDelete: 'CASCADE' });
 SpkActivity.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk' });
 
 // ── LembarKerja ↔ LembarKerjaSpk ─────────────────────────────────────────────
 LembarKerja.hasMany(LembarKerjaSpk, { foreignKey: 'lkNumber', as: 'spkLinks', onDelete: 'CASCADE' });
-LembarKerjaSpk.belongsTo(LembarKerja, { foreignKey: 'lkNumber', as: 'lembarKerja' });
+LembarKerjaSpk.belongsTo(LembarKerja, { foreignKey: 'lkNumber', as: 'lk' });
 
 // ── LembarKerjaSpk ↔ Spk (resolve SPK details from junction) ──────────────────
 LembarKerjaSpk.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk' });

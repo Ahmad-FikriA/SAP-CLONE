@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import json; data=json.load\\(open\\('/c/Users/fik/Projects/SAP-CLONE/data/sap_equipment.json'\\)\\); print\\(len\\(data\\)\\); print\\(list\\(data[0].keys\\(\\)\\)\\)\")",
+      "Bash(node -e \"const d=require\\('./data/sap_equipment.json'\\); console.log\\(d.length, JSON.stringify\\(d[0]\\)\\)\" 2>/dev/null || node -e \"const d=require\\('./data/sap_equipment.json'\\); console.log\\(d.length, JSON.stringify\\(d[0]\\)\\)\")",
+      "Bash(node -e \"const d=require\\('./data/sap_equipment.json'\\); const plants=[...new Set\\(d.map\\(x=>x.planningPlant\\)\\)]; console.log\\('count:', d.length, 'plants:', plants\\)\")",
+      "Bash(ls \"C:/Users/fik/Projects/SAP-CLONE/src/Equipment List\"* 2>/dev/null || ls C:/Users/fik/Projects/SAP-CLONE/*.xlsx 2>/dev/null)",
+      "Bash(cd \"C:/Users/fik/Projects/SAP-CLONE\" && node scripts/inspect-excel.js)",
+      "Bash(cd \"C:/Users/fik/Projects/SAP-CLONE\" && node scripts/parse-equipment-excel.js)",
+      "Bash(cd \"C:/Users/fik/Projects/SAP-CLONE\" && node -e \"\nconst d = require\\('./data/sap_equipment.json'\\);\nconsole.log\\('count:', d.length\\);\nconsole.log\\('sample:', JSON.stringify\\(d[0], null, 2\\)\\);\nconsole.log\\('sample \\(no funcLoc\\):', JSON.stringify\\(d.find\\(x => !x.funcLocId\\), null, 2\\)\\);\n\")",
+      "Bash(cd \"C:/Users/fik/Projects/SAP-CLONE\" && node -e \"\nconst data = require\\('./data/sap_equipment.json'\\);\n// Verify fields seed.js now uses\nconst se = data[0];\nconsole.log\\('equipmentId:', se.equipmentId\\);\nconsole.log\\('equipmentName:', se.equipmentName\\);\nconsole.log\\('plantId:', se.plantId\\);\nconsole.log\\('funcLocId:', se.funcLocId\\);\nconsole.log\\('category:', se.category\\);\nconsole.log\\('abcIndicator:', se.abcIndicator\\);\n\n// Check unknown categories\nconst unknown = data.filter\\(x => !x.category\\);\nconsole.log\\('\\\\\\\\nNo category:', unknown.length\\);\nunknown.forEach\\(x => console.log\\(' ', x.equipmentId, x.equipmentName\\)\\);\n\")",
+      "Bash(cd \"C:/Users/fik/Projects/SAP-CLONE\" && npm run seed 2>&1)"
+    ]
+  }
+}

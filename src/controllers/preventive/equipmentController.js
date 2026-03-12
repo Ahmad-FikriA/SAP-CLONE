@@ -8,6 +8,7 @@ const Equipment = require('../../models/Equipment');
 const getAll = async (req, res) => {
   const where = {};
   if (req.query.category) where.category = req.query.category;
+  if (req.query.plantId) where.plantId = req.query.plantId;
   if (req.query.funcLocId) where.funcLocId = req.query.funcLocId;
   if (req.query.search) {
     where[Op.or] = [

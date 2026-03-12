@@ -48,6 +48,7 @@ equipmentRouter.delete('/:equipmentId', verifyToken, equipmentController.remove)
 const mapsRouter = express.Router();
 mapsRouter.get('/', verifyToken, mapsController.getAll);
 mapsRouter.get('/:plantId', verifyToken, mapsController.getOne);
+mapsRouter.put('/:plantId', verifyToken, mapsController.save);
 
 // ── Submissions ───────────────────────────────────────────────────────────────
 const submissionsRouter = express.Router();

@@ -68,7 +68,11 @@ async function initMap() {
     if (plants.length > 0) {
       currentPlantId = plants[0].plantId;
       const plant = plants[0];
-      map.setView([plant.centerLat, plant.centerLon], plant.zoom);
+      if (plant.centerLat != null && plant.centerLon != null) {
+        map.setView([plant.centerLat, plant.centerLon], plant.zoom || 17);
+      } else {
+        map.setView([-6.0135, 106.0219], 14);
+      }
       loadMapOverlay(plant.plantId);
     } else {
       map.setView([-6.0135, 106.0219], 17);
@@ -91,6 +95,18 @@ function renderPlantSelector() {
   sel.innerHTML = plants.map(p =>
     `<option value="${escHtml(p.plantId)}">${escHtml(p.plantName)} — ${escHtml(p.city || '')}</option>`
   ).join('');
+
+  // Populate the table filter dropdown using DOM methods (no innerHTML)
+  const filterSel = document.getElementById('filterPlant');
+  if (filterSel) {
+    while (filterSel.options.length > 1) filterSel.remove(1);
+    plants.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.plantId;
+      opt.textContent = p.plantName;
+      filterSel.appendChild(opt);
+    });
+  }
 }
 
 function switchPlant() {
@@ -100,9 +116,13 @@ function switchPlant() {
   if (!plant) return;
 
   currentPlantId = plantId;
-  map.setView([plant.centerLat, plant.centerLon], plant.zoom);
+  if (plant.centerLat != null && plant.centerLon != null) {
+    map.setView([plant.centerLat, plant.centerLon], plant.zoom || 17);
+  }
   loadMapOverlay(plantId);
   updateMapMarkers();
+  // If no coords set, fit to whatever markers exist for this plant
+  if (plant.centerLat == null) setTimeout(fitMapToMarkers, 300);
 }
 
 async function loadMapOverlay(plantId) {
@@ -204,12 +224,14 @@ async function loadEquipment() {
   tbody.innerHTML = '<tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>';
   try {
     const cat = document.getElementById('filterCategory').value;
+    const plantId = document.getElementById('filterPlant').value;
     const search = document.getElementById('searchEquipment').value.trim();
     const offset = (currentPage - 1) * PAGE_SIZE;
 
     // Build query string
     const params = new URLSearchParams();
     if (cat) params.set('category', cat);
+    if (plantId) params.set('plantId', plantId);
     if (search) params.set('search', search);
     params.set('limit', PAGE_SIZE);
     params.set('offset', offset);

@@ -7,15 +7,35 @@ const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('../../models/Submission');
 const Equipment = require('../../models/Equipment');
 const { GeneralTaskList, GeneralTaskListActivity } = require('../../models/GeneralTaskList');
+const { LembarKerja, LembarKerjaSpk } = require('../../models/LembarKerja');
 
 // ── Eager-load config ─────────────────────────────────────────────────────────
 const INCLUDE_FULL = [
-  { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId', 'equipmentName', 'functionalLocation'] },
-  { model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'equipmentId', 'operationText', 'resultComment', 'durationPlan', 'durationActual', 'isVerified'] },
+  {
+    model: SpkEquipment, as: 'equipmentModels',
+    attributes: ['equipmentId', 'equipmentName', 'functionalLocation'],
+    include: [{ model: Equipment, as: 'equipmentDetails', attributes: ['latitude', 'longitude'] }],
+  },
+  {
+    model: SpkActivity, as: 'activitiesModel',
+    attributes: ['activityNumber', 'equipmentId', 'operationText', 'resultComment', 'durationPlan', 'durationActual', 'isVerified'],
+  },
+  {
+    model: LembarKerjaSpk, as: 'lkLinks',
+    attributes: ['lkNumber'],   // FK needed for the nested LembarKerja join
+    include: [{ model: LembarKerja, as: 'lk', attributes: ['periodeEnd'] }],
+  },
 ];
 
 function fmt(spk) {
   const j = spk.toJSON();
+  const lkEnds = (j.lkLinks || [])
+    .map(link => link.lk?.periodeEnd)
+    .filter(Boolean)
+    .map(d => new Date(d));
+  const dueDate = lkEnds.length > 0
+    ? new Date(Math.min(...lkEnds))
+    : null;
   return {
     spkNumber: j.spkNumber,
     description: j.description,
@@ -23,15 +43,44 @@ function fmt(spk) {
     category: j.category,
     status: j.status,
     durationActual: j.durationActual,
-    equipmentModels: j.equipmentModels || [],
+    dueDate: dueDate ? dueDate.toISOString() : null,
+    equipmentModels: (j.equipmentModels || []).map(em => ({
+      equipmentId: em.equipmentId,
+      equipmentName: em.equipmentName,
+      functionalLocation: em.functionalLocation,
+      latitude: em.equipmentDetails?.latitude ?? null,
+      longitude: em.equipmentDetails?.longitude ?? null,
+    })),
     activitiesModel: j.activitiesModel || [],
   };
 }
 
+const VALID_CATEGORIES = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
+
 // GET /api/spk
 const getAll = async (req, res) => {
+  if (req.query.category && !VALID_CATEGORIES.includes(req.query.category)) {
+    return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
+  }
   const where = req.query.category ? { category: req.query.category } : {};
-  const data = await Spk.findAll({ where, include: INCLUDE_FULL });
+
+  // If equipmentId is given, replace the SpkEquipment include with a filtered one
+  // (INNER JOIN — only SPKs that have this equipment)
+  let include = INCLUDE_FULL;
+  if (req.query.equipmentId) {
+    include = [
+      {
+        model: SpkEquipment, as: 'equipmentModels',
+        where: { equipmentId: req.query.equipmentId },
+        required: true,
+        attributes: ['equipmentId', 'equipmentName', 'functionalLocation'],
+        include: [{ model: Equipment, as: 'equipmentDetails', attributes: ['latitude', 'longitude'] }],
+      },
+      ...INCLUDE_FULL.slice(1), // keep SpkActivity + LembarKerjaSpk includes unchanged
+    ];
+  }
+
+  const data = await Spk.findAll({ where, include });
   res.json(data.map(fmt));
 };
 
