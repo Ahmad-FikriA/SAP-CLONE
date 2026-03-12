@@ -9,8 +9,14 @@ const Equipment = require('./models/Equipment');
 const { Spk, SpkEquipment, SpkActivity } = require('./models/Spk');
 const { LembarKerja, LembarKerjaSpk } = require('./models/LembarKerja');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./models/Submission');
+const Notification = require('./models/Notification');
+const SpkCorrective = require('./models/SpkCorrective');
+const { SpkCorrectiveItem, SpkCorrectivePhoto } = require('./models/SpkCorrectiveItem');
 const FunctionalLocation = require('./models/FunctionalLocation');
 const { GeneralTaskList, GeneralTaskListActivity } = require('./models/GeneralTaskList');
+
+// Ensure all relationship and new models are loaded before syncing
+require('./models/associations');
 
 // Load JSON data from converted Excel
 const funcLocData = require(path.join(__dirname, '..', 'data', 'functional_locations.json'));
@@ -22,16 +28,26 @@ const equipmentFileData = require(path.join(__dirname, '..', 'data', 'equipment.
 // USERS
 // ────────────────────────────────────────────────────────────────────────────
 const users = [
-  { id: 'USR-001', username: 'teknisi_01',   password: 'password123', name: 'Budi Santoso',    role: 'teknisi',          email: 'budi@kti-water.co.id'  },
-  { id: 'USR-002', username: 'planner_01',   password: 'password123', name: 'Siti Rahayu',     role: 'planner',          email: 'siti@kti-water.co.id'  },
-  { id: 'USR-003', username: 'supervisor_01',password: 'password123', name: 'Ahmad Fauzi',     role: 'supervisor',       email: 'ahmad@kti-water.co.id' },
-  { id: 'USR-004', username: 'manager_01',   password: 'password123', name: 'Dewi Kusuma',     role: 'manager',          email: 'dewi@kti-water.co.id'  },
-  { id: 'USR-005', username: 'admin_01',     password: 'password123', name: 'Admin KTI',       role: 'admin',            email: 'admin@kti-water.co.id' },
-  { id: 'USR-006', username: 'mekanik_01',   password: 'password123', name: 'Riko Prasetyo',   role: 'teknisi_mekanik',  email: 'riko@kti-water.co.id'  },
-  { id: 'USR-007', username: 'listrik_01',   password: 'password123', name: 'Hendra Gunawan',  role: 'teknisi_listrik',  email: 'hendra@kti-water.co.id'},
-  { id: 'USR-008', username: 'sipil_01',     password: 'password123', name: 'Agus Wijaya',     role: 'teknisi_sipil',    email: 'agus@kti-water.co.id'  },
-  { id: 'USR-009', username: 'otomasi_01',   password: 'password123', name: 'Dian Permana',    role: 'teknisi_otomasi',  email: 'dian@kti-water.co.id'  },
-  { id: 'USR-010', username: 'user_01',      password: 'password123', name: 'Rina Marlina',    role: 'user',             email: 'rina@kti-water.co.id'  },
+  { id: 'USR-001', username: 'teknisi_01', password: 'password123', name: 'Budi Santoso', role: 'teknisi', email: 'budi@kti-water.co.id' },
+  { id: 'USR-002', username: 'planner_01', password: 'password123', name: 'Siti Rahayu', role: 'planner', email: 'siti@kti-water.co.id' },
+  { id: 'USR-003', username: 'supervisor_01', password: 'password123', name: 'Ahmad Fauzi', role: 'supervisor', email: 'ahmad@kti-water.co.id' },
+  { id: 'USR-004', username: 'manager_01', password: 'password123', name: 'Dewi Kusuma', role: 'manager', email: 'dewi@kti-water.co.id' },
+  { id: 'USR-005', username: 'admin_01', password: 'password123', name: 'Admin KTI', role: 'admin', email: 'admin@kti-water.co.id' },
+  { id: 'USR-006', username: 'mekanik_01', password: 'password123', name: 'Riko Prasetyo', role: 'teknisi_mekanik', email: 'riko@kti-water.co.id' },
+  { id: 'USR-007', username: 'listrik_01', password: 'password123', name: 'Hendra Gunawan', role: 'teknisi_listrik', email: 'hendra@kti-water.co.id' },
+  { id: 'USR-008', username: 'sipil_01', password: 'password123', name: 'Agus Wijaya', role: 'teknisi_sipil', email: 'agus@kti-water.co.id' },
+  { id: 'USR-009', username: 'otomasi_01', password: 'password123', name: 'Dian Permana', role: 'teknisi_otomasi', email: 'dian@kti-water.co.id' },
+  { id: 'USR-010', username: 'user_01', password: 'password123', name: 'Rina Marlina', role: 'user', email: 'rina@kti-water.co.id' },
+  // Corrective Maintenance Users
+  { id: 'USR-011', username: 'kadis_mekanik', password: 'password123', name: 'Kadis Mekanik', role: 'kadis_mekanik', email: 'kadis.mekanik@kti-water.co.id' },
+  { id: 'USR-012', username: 'kadis_listrik', password: 'password123', name: 'Kadis Listrik', role: 'kadis_listrik', email: 'kadis.listrik@kti-water.co.id' },
+  { id: 'USR-013', username: 'kadis_sipil', password: 'password123', name: 'Kadis Sipil', role: 'kadis_sipil', email: 'kadis.sipil@kti-water.co.id' },
+  { id: 'USR-014', username: 'kadis_otomasi', password: 'password123', name: 'Kadis Otomasi', role: 'kadis_otomasi', email: 'kadis.otomasi@kti-water.co.id' },
+  { id: 'USR-015', username: 'kadis_pusat', password: 'password123', name: 'Kadis Pusat Perawatan', role: 'kadis_pusat', email: 'kadis.pusat@kti-water.co.id' },
+  { id: 'USR-016', username: 'kasie_mekanik', password: 'password123', name: 'Kasie Mekanik', role: 'kasie_mekanik', email: 'kasie.mekanik@kti-water.co.id' },
+  { id: 'USR-017', username: 'kasie_listrik', password: 'password123', name: 'Kasie Listrik', role: 'kasie_listrik', email: 'kasie.listrik@kti-water.co.id' },
+  { id: 'USR-018', username: 'kasie_sipil', password: 'password123', name: 'Kasie Sipil', role: 'kasie_sipil', email: 'kasie.sipil@kti-water.co.id' },
+  { id: 'USR-019', username: 'kasie_otomasi', password: 'password123', name: 'Kasie Otomasi', role: 'kasie_otomasi', email: 'kasie.otomasi@kti-water.co.id' },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -692,6 +708,230 @@ async function main() {
   console.log('    EQ-005  → 3 SPK (Jan+Feb completed, Mar in_progress)');
   console.log('    EQ-007  → 1 SPK (6-bulanan completed)\n');
 
+  // ── Corrective Maintenance ──────────────────────────────────────────────────
+  // Notifications (Sample data for different work centers)
+  const notifications = [
+    {
+      notificationId: 'NOTIF-001',
+      notificationDate: '2026-03-10',
+      notificationType: 'Kerusakan',
+      description: 'Pompa Air Utama A tidak berfungsi',
+      functionalLocation: 'Basement Lantai B1',
+      equipment: 'Pompa Air Utama A',
+      equipmentId: 'EQ-001',
+      requiredStart: '2026-03-11',
+      requiredEnd: '2026-03-15',
+      reportedBy: 'Kadis Mekanik',
+      longText: 'Pompa tidak menyala saat tombol start ditekan. Terdapat suara aneh dari motor.',
+      photo1: null,
+      photo2: null,
+      status: 'submitted',
+      workCenter: 'mechanical',
+      kadisPelaporId: 'USR-011',
+      submittedBy: 'USR-011',
+      submittedAt: '2026-03-10T08:00:00.000Z',
+    },
+    {
+      notificationId: 'NOTIF-002',
+      notificationDate: '2026-03-11',
+      notificationType: 'Kerusakan',
+      description: 'Panel Listrik Utama sering trip',
+      functionalLocation: 'Ruang Panel Lantai 1',
+      equipment: 'Panel Listrik Utama',
+      equipmentId: 'EQ-005',
+      requiredStart: '2026-03-12',
+      requiredEnd: '2026-03-16',
+      reportedBy: 'Kadis Listrik',
+      longText: 'MCB sering trip tanpa beban berlebih. Perlu pemeriksaan menyeluruh.',
+      photo1: null,
+      photo2: null,
+      status: 'spk_created',
+      workCenter: 'electrical',
+      kadisPelaporId: 'USR-012',
+      submittedBy: 'USR-012',
+      submittedAt: '2026-03-11T09:30:00.000Z',
+    },
+    {
+      notificationId: 'NOTIF-003',
+      notificationDate: '2026-03-12',
+      notificationType: 'Kerusakan',
+      description: 'Bak Penampungan bocor',
+      functionalLocation: 'Area Luar Gedung',
+      equipment: 'Bak Penampungan Utama',
+      equipmentId: 'EQ-008',
+      requiredStart: '2026-03-13',
+      requiredEnd: '2026-03-18',
+      reportedBy: 'Kadis Sipil',
+      longText: 'Terdapat kebocoran pada sambungan pipa. Air merembes ke dinding.',
+      photo1: null,
+      photo2: null,
+      status: 'submitted',
+      workCenter: 'civil',
+      kadisPelaporId: 'USR-013',
+      submittedBy: 'USR-013',
+      submittedAt: '2026-03-12T10:15:00.000Z',
+    },
+    {
+      notificationId: 'NOTIF-004',
+      notificationDate: '2026-03-09',
+      notificationType: 'Kerusakan',
+      description: 'Sensor Level tidak akurat',
+      functionalLocation: 'Rooftop Area',
+      equipment: 'Sensor Level Air Tank 1',
+      equipmentId: 'EQ-010',
+      requiredStart: '2026-03-10',
+      requiredEnd: '2026-03-14',
+      reportedBy: 'Kadis Otomasi',
+      longText: 'Sensor menunjukkan level 80% padahal tanki hanya terisi 50%. Perlu kalibrasi ulang.',
+      photo1: null,
+      photo2: null,
+      status: 'spk_created',
+      workCenter: 'automation',
+      kadisPelaporId: 'USR-014',
+      submittedBy: 'USR-014',
+      submittedAt: '2026-03-09T14:20:00.000Z',
+    },
+    {
+      notificationId: 'NOTIF-005',
+      notificationDate: '2026-03-08',
+      notificationType: 'Kerusakan',
+      description: 'Genset tidak bisa start',
+      functionalLocation: 'Area Genset Basement',
+      equipment: 'Genset Cadangan 200 kVA',
+      equipmentId: 'EQ-007',
+      requiredStart: '2026-03-09',
+      requiredEnd: '2026-03-13',
+      reportedBy: 'Kadis Listrik',
+      longText: 'Genset tidak merespon saat tombol start ditekan. Baterai dalam kondisi baik.',
+      photo1: null,
+      photo2: null,
+      status: 'closed',
+      workCenter: 'electrical',
+      kadisPelaporId: 'USR-012',
+      submittedBy: 'USR-012',
+      submittedAt: '2026-03-08T11:00:00.000Z',
+    },
+  ];
+
+  added = 0; skipped = 0;
+  for (const n of notifications) {
+    const [, created] = await Notification.findOrCreate({ where: { notificationId: n.notificationId }, defaults: n });
+    created ? added++ : skipped++;
+  }
+  console.log(`  ✓  notifications (+${added} added, ${skipped} already existed)`);
+
+  // SPK Corrective (Sample data)
+  const spkCorrective = [
+    {
+      spkId: 'SPK-C-001',
+      notificationId: 'NOTIF-002',
+      spkNumber: 'SPK-C-2026-001',
+      orderNumber: 'ORD-2026-001',
+      createdDate: '2026-03-11',
+      priority: 'high',
+      equipmentId: 'EQ-005',
+      location: 'Ruang Panel Lantai 1',
+      requestedFinishDate: '2026-03-16',
+      actualStartDate: '2026-03-12',
+      damageClassification: 'Electrical Failure',
+      jobDescription: 'Pemeriksaan dan perbaikan panel listrik utama',
+      workCenter: 'electrical',
+      ctrlKey: 'PM01',
+      unit: 'Hours',
+      plannedWorker: 2,
+      plannedHourPerWorker: 4.0,
+      totalPlannedHour: 8.0,
+      actualWorker: 2,
+      actualHourPerWorker: 3.5,
+      totalActualHour: 7.0,
+      status: 'awaiting_kasie',
+      items: [
+        { itemType: 'material', itemName: 'MCB 32A', quantity: 2, uom: 'pcs' },
+        { itemType: 'material', itemName: 'Kabel NYM 4x2.5', quantity: 10, uom: 'm' },
+      ],
+    },
+    {
+      spkId: 'SPK-C-002',
+      notificationId: 'NOTIF-004',
+      spkNumber: 'SPK-C-2026-002',
+      orderNumber: 'ORD-2026-002',
+      createdDate: '2026-03-09',
+      priority: 'medium',
+      equipmentId: 'EQ-010',
+      location: 'Rooftop Area',
+      requestedFinishDate: '2026-03-14',
+      actualStartDate: null,
+      damageClassification: 'Sensor Calibration',
+      jobDescription: 'Kalibrasi ulang sensor level air',
+      workCenter: 'automation',
+      ctrlKey: 'PM02',
+      unit: 'Hours',
+      plannedWorker: 1,
+      plannedHourPerWorker: 3.0,
+      totalPlannedHour: 3.0,
+      actualWorker: null,
+      actualHourPerWorker: null,
+      totalActualHour: null,
+      status: 'draft',
+      items: [
+        { itemType: 'tool', itemName: 'Kalibrator', quantity: 1, uom: 'set' },
+      ],
+    },
+    {
+      spkId: 'SPK-C-003',
+      notificationId: 'NOTIF-005',
+      spkNumber: 'SPK-C-2026-003',
+      orderNumber: 'ORD-2026-003',
+      createdDate: '2026-03-08',
+      priority: 'urgent',
+      equipmentId: 'EQ-007',
+      location: 'Area Genset Basement',
+      requestedFinishDate: '2026-03-13',
+      actualStartDate: '2026-03-09',
+      damageClassification: 'Mechanical Failure',
+      jobDescription: 'Perbaikan sistem starter genset',
+      workCenter: 'electrical',
+      ctrlKey: 'PM01',
+      unit: 'Hours',
+      plannedWorker: 2,
+      plannedHourPerWorker: 5.0,
+      totalPlannedHour: 10.0,
+      actualWorker: 2,
+      actualHourPerWorker: 4.0,
+      totalActualHour: 8.0,
+      kasieApprovedBy: 'USR-017',
+      kasieApprovedAt: '2026-03-10T16:00:00.000Z',
+      kadisPusatApprovedBy: 'USR-015',
+      kadisPusatApprovedAt: '2026-03-11T10:00:00.000Z',
+      kadisPelaporApprovedBy: 'USR-012',
+      kadisPelaporApprovedAt: '2026-03-12T09:00:00.000Z',
+      status: 'completed',
+      items: [
+        { itemType: 'material', itemName: 'Starter Motor', quantity: 1, uom: 'pcs' },
+        { itemType: 'material', itemName: 'Relay 12V', quantity: 2, uom: 'pcs' },
+      ],
+    },
+  ];
+
+  added = 0; skipped = 0;
+  for (const s of spkCorrective) {
+    const { items, ...spkData } = s;
+    const [, created] = await SpkCorrective.findOrCreate({ where: { spkId: s.spkId }, defaults: spkData });
+    
+    if (created) {
+      added++;
+      // Create items
+      for (const item of items) {
+        const exists = await SpkCorrectiveItem.findOne({ where: { spkId: s.spkId, itemName: item.itemName } });
+        if (!exists) await SpkCorrectiveItem.create({ ...item, spkId: s.spkId });
+      }
+    } else {
+      skipped++;
+    }
+  }
+  console.log(`  ✓  spk_corrective (+${added} added, ${skipped} already existed)`);
+
+  console.log('\n  Seed complete! (no existing data was modified)\n');
   await sequelize.close();
 }
 

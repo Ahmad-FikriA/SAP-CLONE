@@ -24,6 +24,9 @@ const {
   GeneralTaskList,
   GeneralTaskListActivity,
 } = require("./GeneralTaskList");
+const Notification = require("./Notification");
+const SpkCorrective = require("./SpkCorrective");
+const { SpkCorrectiveItem, SpkCorrectivePhoto } = require("./SpkCorrectiveItem");
 
 // ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
 Plant.hasMany(Equipment, { foreignKey: "plantId", as: "equipment" });
@@ -92,6 +95,32 @@ CorrectiveRequestImage.belongsTo(CorrectiveRequest, {
   foreignKey: "requestId",
   as: "request",
 });
+
+// ── Notification (Corrective) Relations ─────────────────────────────────────
+// User ||--o{ Notification (submitted by)
+User.hasMany(Notification, { foreignKey: 'submittedBy', as: 'notificationsSubmitted' });
+Notification.belongsTo(User, { foreignKey: 'submittedBy', as: 'submitter' });
+
+// Kadis Pelapor ||--o{ Notification (Kadis yang melapor)
+User.hasMany(Notification, { foreignKey: 'kadisPelaporId', as: 'notificationsAsReporter' });
+Notification.belongsTo(User, { foreignKey: 'kadisPelaporId', as: 'kadisPelapor' });
+
+// Equipment ||--o{ Notification
+Equipment.hasMany(Notification, { foreignKey: 'equipmentId', as: 'notifications' });
+Notification.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });
+
+// ── SPK Corrective Relations ─────────────────────────────────────────────────
+// Notification ||--|| SpkCorrective (one-to-one)
+Notification.hasOne(SpkCorrective, { foreignKey: 'notificationId', as: 'spkCorrective', onDelete: 'CASCADE' });
+SpkCorrective.belongsTo(Notification, { foreignKey: 'notificationId', as: 'notification' });
+
+// SpkCorrective ||--o{ SpkCorrectiveItem
+SpkCorrective.hasMany(SpkCorrectiveItem, { foreignKey: 'spkId', as: 'items', onDelete: 'CASCADE' });
+SpkCorrectiveItem.belongsTo(SpkCorrective, { foreignKey: 'spkId', as: 'spk' });
+
+// SpkCorrective ||--o{ SpkCorrectivePhoto
+SpkCorrective.hasMany(SpkCorrectivePhoto, { foreignKey: 'spkId', as: 'photos', onDelete: 'CASCADE' });
+SpkCorrectivePhoto.belongsTo(SpkCorrective, { foreignKey: 'spkId', as: 'spk' });
 
 // ── Inspection Module ─────────────────────────────────────────────────────────
 const InspectionSchedule = require("./InspectionSchedule");
@@ -192,10 +221,15 @@ module.exports = {
   SubmissionActivityResult,
   CorrectiveRequest,
   CorrectiveRequestImage,
+  Notification,
+  SpkCorrective,
+  SpkCorrectiveItem,
+  SpkCorrectivePhoto,
   InspectionSchedule,
   InspectionReport,
   InspectionReportPhoto,
   InspectionFollowUp,
+  SuratPelanggaran,
   FunctionalLocation,
   GeneralTaskList,
   GeneralTaskListActivity,
