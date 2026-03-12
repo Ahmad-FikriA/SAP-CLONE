@@ -28,26 +28,34 @@ const equipmentFileData = require(path.join(__dirname, '..', 'data', 'equipment.
 // USERS
 // ────────────────────────────────────────────────────────────────────────────
 const users = [
-  { id: 'USR-001', username: 'teknisi_01', password: 'password123', name: 'Budi Santoso', role: 'teknisi', email: 'budi@kti-water.co.id' },
-  { id: 'USR-002', username: 'planner_01', password: 'password123', name: 'Siti Rahayu', role: 'planner', email: 'siti@kti-water.co.id' },
-  { id: 'USR-003', username: 'supervisor_01', password: 'password123', name: 'Ahmad Fauzi', role: 'supervisor', email: 'ahmad@kti-water.co.id' },
-  { id: 'USR-004', username: 'manager_01', password: 'password123', name: 'Dewi Kusuma', role: 'manager', email: 'dewi@kti-water.co.id' },
-  { id: 'USR-005', username: 'admin_01', password: 'password123', name: 'Admin KTI', role: 'admin', email: 'admin@kti-water.co.id' },
-  { id: 'USR-006', username: 'mekanik_01', password: 'password123', name: 'Riko Prasetyo', role: 'teknisi_mekanik', email: 'riko@kti-water.co.id' },
-  { id: 'USR-007', username: 'listrik_01', password: 'password123', name: 'Hendra Gunawan', role: 'teknisi_listrik', email: 'hendra@kti-water.co.id' },
-  { id: 'USR-008', username: 'sipil_01', password: 'password123', name: 'Agus Wijaya', role: 'teknisi_sipil', email: 'agus@kti-water.co.id' },
-  { id: 'USR-009', username: 'otomasi_01', password: 'password123', name: 'Dian Permana', role: 'teknisi_otomasi', email: 'dian@kti-water.co.id' },
-  { id: 'USR-010', username: 'user_01', password: 'password123', name: 'Rina Marlina', role: 'user', email: 'rina@kti-water.co.id' },
-  // Corrective Maintenance Users
-  { id: 'USR-011', username: 'kadis_mekanik', password: 'password123', name: 'Kadis Mekanik', role: 'kadis_mekanik', email: 'kadis.mekanik@kti-water.co.id' },
-  { id: 'USR-012', username: 'kadis_listrik', password: 'password123', name: 'Kadis Listrik', role: 'kadis_listrik', email: 'kadis.listrik@kti-water.co.id' },
-  { id: 'USR-013', username: 'kadis_sipil', password: 'password123', name: 'Kadis Sipil', role: 'kadis_sipil', email: 'kadis.sipil@kti-water.co.id' },
-  { id: 'USR-014', username: 'kadis_otomasi', password: 'password123', name: 'Kadis Otomasi', role: 'kadis_otomasi', email: 'kadis.otomasi@kti-water.co.id' },
-  { id: 'USR-015', username: 'kadis_pusat', password: 'password123', name: 'Kadis Pusat Perawatan', role: 'kadis_pusat', email: 'kadis.pusat@kti-water.co.id' },
-  { id: 'USR-016', username: 'kasie_mekanik', password: 'password123', name: 'Kasie Mekanik', role: 'kasie_mekanik', email: 'kasie.mekanik@kti-water.co.id' },
-  { id: 'USR-017', username: 'kasie_listrik', password: 'password123', name: 'Kasie Listrik', role: 'kasie_listrik', email: 'kasie.listrik@kti-water.co.id' },
-  { id: 'USR-018', username: 'kasie_sipil', password: 'password123', name: 'Kasie Sipil', role: 'kasie_sipil', email: 'kasie.sipil@kti-water.co.id' },
-  { id: 'USR-019', username: 'kasie_otomasi', password: 'password123', name: 'Kasie Otomasi', role: 'kasie_otomasi', email: 'kasie.otomasi@kti-water.co.id' },
+  // Admin & Management
+  { id: 'USR-001', username: 'teknisi_01', password: 'password123', name: 'Budi Santoso', role: 'teknisi', workCenter: null, department: 'Maintenance', email: 'budi@kti-water.co.id' },
+  { id: 'USR-002', username: 'planner_01', password: 'password123', name: 'Siti Rahayu', role: 'planner', workCenter: null, department: 'Planning', email: 'siti@kti-water.co.id' },
+  { id: 'USR-003', username: 'supervisor_01', password: 'password123', name: 'Ahmad Fauzi', role: 'supervisor', workCenter: null, department: 'Maintenance', email: 'ahmad@kti-water.co.id' },
+  { id: 'USR-004', username: 'manager_01', password: 'password123', name: 'Dewi Kusuma', role: 'manager', workCenter: null, department: 'Maintenance', email: 'dewi@kti-water.co.id' },
+  { id: 'USR-005', username: 'admin_01', password: 'password123', name: 'Admin KTI', role: 'admin', workCenter: null, department: 'IT', email: 'admin@kti-water.co.id' },
+  { id: 'USR-010', username: 'user_01', password: 'password123', name: 'Rina Marlina', role: 'user', workCenter: null, department: 'Operations', email: 'rina@kti-water.co.id' },
+  
+  // Teknisi by Work Center
+  { id: 'USR-006', username: 'mekanik_01', password: 'password123', name: 'Riko Prasetyo', role: 'teknisi', workCenter: 'mechanical', department: 'Maintenance', email: 'riko@kti-water.co.id' },
+  { id: 'USR-007', username: 'listrik_01', password: 'password123', name: 'Hendra Gunawan', role: 'teknisi', workCenter: 'electrical', department: 'Maintenance', email: 'hendra@kti-water.co.id' },
+  { id: 'USR-008', username: 'sipil_01', password: 'password123', name: 'Agus Wijaya', role: 'teknisi', workCenter: 'civil', department: 'Maintenance', email: 'agus@kti-water.co.id' },
+  { id: 'USR-009', username: 'otomasi_01', password: 'password123', name: 'Dian Permana', role: 'teknisi', workCenter: 'automation', department: 'Maintenance', email: 'dian@kti-water.co.id' },
+  
+  // Kadis by Work Center (Division Heads)
+  { id: 'USR-011', username: 'kadis_mekanik', password: 'password123', name: 'Kadis Mekanik', role: 'kadis', workCenter: 'mechanical', department: 'Mechanical', email: 'kadis.mekanik@kti-water.co.id' },
+  { id: 'USR-012', username: 'kadis_listrik', password: 'password123', name: 'Kadis Listrik', role: 'kadis', workCenter: 'electrical', department: 'Electrical', email: 'kadis.listrik@kti-water.co.id' },
+  { id: 'USR-013', username: 'kadis_sipil', password: 'password123', name: 'Kadis Sipil', role: 'kadis', workCenter: 'civil', department: 'Civil', email: 'kadis.sipil@kti-water.co.id' },
+  { id: 'USR-014', username: 'kadis_otomasi', password: 'password123', name: 'Kadis Otomasi', role: 'kadis', workCenter: 'automation', department: 'Automation', email: 'kadis.otomasi@kti-water.co.id' },
+  
+  // Kadis Pusat (Central)
+  { id: 'USR-015', username: 'kadis_pusat', password: 'password123', name: 'Kadis Pusat Perawatan', role: 'kadis_pusat', workCenter: null, department: 'Central Maintenance', email: 'kadis.pusat@kti-water.co.id' },
+  
+  // Kasie by Work Center (Section Heads)
+  { id: 'USR-016', username: 'kasie_mekanik', password: 'password123', name: 'Kasie Mekanik', role: 'kasie', workCenter: 'mechanical', department: 'Mechanical', email: 'kasie.mekanik@kti-water.co.id' },
+  { id: 'USR-017', username: 'kasie_listrik', password: 'password123', name: 'Kasie Listrik', role: 'kasie', workCenter: 'electrical', department: 'Electrical', email: 'kasie.listrik@kti-water.co.id' },
+  { id: 'USR-018', username: 'kasie_sipil', password: 'password123', name: 'Kasie Sipil', role: 'kasie', workCenter: 'civil', department: 'Civil', email: 'kasie.sipil@kti-water.co.id' },
+  { id: 'USR-019', username: 'kasie_otomasi', password: 'password123', name: 'Kasie Otomasi', role: 'kasie', workCenter: 'automation', department: 'Automation', email: 'kasie.otomasi@kti-water.co.id' },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────

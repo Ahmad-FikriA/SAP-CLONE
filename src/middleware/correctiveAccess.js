@@ -2,36 +2,28 @@
 
 /**
  * Role-Based Access Control Middleware for Corrective Maintenance
- * Enforces access rules based on user roles
+ * Enforces access rules based on user roles and work centers
  */
 
 const Notification = require('../models/Notification');
 const SpkCorrective = require('../models/SpkCorrective');
 
-// Allowed roles for creating notifications
-const KADIS_ROLES = ['kadis_electrical', 'kadis_civil', 'kadis_automation', 'kadis_mechanical', 'kadis'];
+// Allowed roles for creating notifications (Kadis with work center)
+const KADIS_ROLE = 'kadis';
+const KADIS_PUSAT_ROLE = 'kadis_pusat';
 
-// Work center mapping from role
-const ROLE_TO_WORKCENTER = {
-  'teknisi_listrik': 'electrical',
-  'teknisi_sipil': 'civil',
-  'teknisi_otomasi': 'automation',
-  'teknisi_mekanik': 'mechanical',
-  'kasie_listrik': 'electrical',
-  'kasie_sipil': 'civil',
-  'kasie_otomasi': 'automation',
-  'kasie_mekanik': 'mechanical',
-};
+// Roles that can work on SPK by work center
+const WORK_CENTER_ROLES = ['teknisi', 'kasie'];
 
 /**
- * Check if user can create notification (must be Kadis)
+ * Check if user can create notification (must be Kadis with work center)
  */
 const requireKadis = (req, res, next) => {
-  const { role } = req.user;
+  const { role, workCenter } = req.user;
   
-  if (!KADIS_ROLES.includes(role)) {
+  if (role !== KADIS_ROLE || !workCenter) {
     return res.status(403).json({
-      error: 'Access denied. Only Kadis can create corrective requests.'
+      error: 'Access denied. Only Kadis with work center can create corrective requests.'
     });
   }
   
@@ -51,12 +43,12 @@ const canViewNotification = async (req, res, next) => {
     const { id } = req.params;
     
     // Planner and Kadis Pusat can view all
-    if (role === 'planner' || role === 'kadis_pusat') {
+    if (role === 'planner' || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
     // Kadis Pelapor can only view own
-    if (KADIS_ROLES.includes(role)) {
+    if (role === KADIS_ROLE) {
       const notification = await Notification.findByPk(id);
       if (!notification) {
         return res.status(404).json({ error: 'Notification not found' });
@@ -104,11 +96,11 @@ const requirePlanner = (req, res, next) => {
  */
 const canViewSpkCorrective = async (req, res, next) => {
   try {
-    const { userId, role } = req.user;
+    const { userId, role, workCenter } = req.user;
     const { spkId } = req.params;
     
     // Planner and Kadis Pusat can view all
-    if (role === 'planner' || role === 'kadis_pusat') {
+    if (role === 'planner' || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
@@ -125,7 +117,7 @@ const canViewSpkCorrective = async (req, res, next) => {
     }
     
     // Kadis Pelapor - can view only their own
-    if (KADIS_ROLES.includes(role)) {
+    if (role === KADIS_ROLE) {
       if (spk.notification && spk.notification.kadisPelaporId === userId) {
         return next();
       }
@@ -135,9 +127,14 @@ const canViewSpkCorrective = async (req, res, next) => {
     }
     
     // Teknisi/Kasie - check work center
-    const userWorkCenter = ROLE_TO_WORKCENTER[role];
-    if (userWorkCenter) {
-      if (spk.workCenter === userWorkCenter) {
+    if (WORK_CENTER_ROLES.includes(role)) {
+      if (!workCenter) {
+        return res.status(403).json({
+          error: 'Access denied. User has no work center assigned.'
+        });
+      }
+      
+      if (spk.workCenter === workCenter) {
         return next();
       }
       return res.status(403).json({
@@ -213,6 +210,7 @@ module.exports = {
   KASIE_FIELDS,
   KADIS_PUSAT_FIELDS,
   KADIS_PELAPOR_FIELDS,
-  KADIS_ROLES,
-  ROLE_TO_WORKCENTER,
+  KADIS_ROLE,
+  KADIS_PUSAT_ROLE,
+  WORK_CENTER_ROLES,
 };
