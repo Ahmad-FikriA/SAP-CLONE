@@ -571,15 +571,8 @@ async function main() {
   }
   console.log(`  ✓  plants       (+${added} added, ${skipped} already existed)`);
 
-  // ── Equipment (insert-if-not-exists) ───────────────────────────────────────
-  added = 0; skipped = 0;
-  for (const e of equipment) {
-    const [, created] = await Equipment.findOrCreate({ where: { equipmentId: e.equipmentId }, defaults: e });
-    created ? added++ : skipped++;
-  }
-  console.log(`  ✓  equipment    (+${added} added, ${skipped} already existed)`);
-
   // ── Functional Locations (insert-if-not-exists) ────────────────────────────
+  // MUST seed BEFORE Equipment because Equipment has FK to FunctionalLocations
   added = 0; skipped = 0;
   const sortedFuncLocs = [...funcLocData].sort((a, b) => a.level - b.level);
   for (const fl of sortedFuncLocs) {
@@ -587,6 +580,14 @@ async function main() {
     created ? added++ : skipped++;
   }
   console.log(`  ✓  func_locs    (+${added} added, ${skipped} already existed)`);
+
+  // ── Equipment (insert-if-not-exists) ───────────────────────────────────────
+  added = 0; skipped = 0;
+  for (const e of equipment) {
+    const [, created] = await Equipment.findOrCreate({ where: { equipmentId: e.equipmentId }, defaults: e });
+    created ? added++ : skipped++;
+  }
+  console.log(`  ✓  equipment    (+${added} added, ${skipped} already existed)`);
 
   // ── SAP Equipment (upsert — update existing rows with full data) ───────────
   added = 0; skipped = 0;
