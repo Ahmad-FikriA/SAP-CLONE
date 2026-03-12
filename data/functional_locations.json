@@ -1,0 +1,1436 @@
+[
+  {
+    "funcLocId": "A",
+    "description": "PT KTI",
+    "parentId": null,
+    "level": 0
+  },
+  {
+    "funcLocId": "A-A1",
+    "description": "Intake",
+    "parentId": "A",
+    "level": 1
+  },
+  {
+    "funcLocId": "A-A1-01",
+    "description": "Bendung Cidanau",
+    "parentId": "A-A1",
+    "level": 2
+  },
+  {
+    "funcLocId": "A-A1-01-001",
+    "description": "Mercu Bendung",
+    "parentId": "A-A1-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-01-001-001",
+    "description": "Flushing Duct",
+    "parentId": "A-A1-01-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-001-002",
+    "description": "Gate Intake",
+    "parentId": "A-A1-01-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-002",
+    "description": "Sand Trap",
+    "parentId": "A-A1-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-01-002-001",
+    "description": "Sand Trap Line 1",
+    "parentId": "A-A1-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-002-002",
+    "description": "Sand Trap Line 2",
+    "parentId": "A-A1-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-003",
+    "description": "Sump Pump",
+    "parentId": "A-A1-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-01-003-001",
+    "description": "Sump Pump Kolam 1",
+    "parentId": "A-A1-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-003-002",
+    "description": "Sump Pump Kolam 2",
+    "parentId": "A-A1-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-004",
+    "description": "Area Trafo & Kapasitor",
+    "parentId": "A-A1-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-01-004-001",
+    "description": "Transformator 1",
+    "parentId": "A-A1-01-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-004-002",
+    "description": "Transformator 2",
+    "parentId": "A-A1-01-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-004-003",
+    "description": "Ruang Capasitor Bank",
+    "parentId": "A-A1-01-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-005",
+    "description": "Pump Station I",
+    "parentId": "A-A1-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-01-005-001",
+    "description": "MV Drive",
+    "parentId": "A-A1-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-005-002",
+    "description": "MCC PS I (Cubical)",
+    "parentId": "A-A1-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-005-003",
+    "description": "Control Room",
+    "parentId": "A-A1-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-005-004",
+    "description": "Area Pompa",
+    "parentId": "A-A1-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-005-005",
+    "description": "Sodium Hypoclorit",
+    "parentId": "A-A1-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-005-006",
+    "description": "Ruang Chlorinator",
+    "parentId": "A-A1-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-005-007",
+    "description": "WTP Mini Cidanau",
+    "parentId": "A-A1-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-006",
+    "description": "Bangunan Cidanau Lainnya",
+    "parentId": "A-A1-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-01-006-001",
+    "description": "Gedung Aula Cidanau",
+    "parentId": "A-A1-01-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-006-002",
+    "description": "Pos Keamanan Cidanau",
+    "parentId": "A-A1-01-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-006-003",
+    "description": "Pagar Beton Plant Cidanau",
+    "parentId": "A-A1-01-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-006-004",
+    "description": "Area Nursery Cidanau",
+    "parentId": "A-A1-01-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-006-005",
+    "description": "Pipe Bridge Cidanau-Krenceng",
+    "parentId": "A-A1-01-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-01-007",
+    "description": "Hilir Sungai Cidanau",
+    "parentId": "A-A1-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-02",
+    "description": "Bendung Cipasauran",
+    "parentId": "A-A1",
+    "level": 2
+  },
+  {
+    "funcLocId": "A-A1-02-001",
+    "description": "Mercu Bendung",
+    "parentId": "A-A1-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-02-001-001",
+    "description": "Flushing Duct",
+    "parentId": "A-A1-02-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-001-002",
+    "description": "Gate Intake",
+    "parentId": "A-A1-02-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-002",
+    "description": "Sand Trap",
+    "parentId": "A-A1-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-02-002-001",
+    "description": "Sand Trap Line 1",
+    "parentId": "A-A1-02-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-002-002",
+    "description": "Sand Trap Line 2",
+    "parentId": "A-A1-02-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-003",
+    "description": "Gedung PS VII Cipasauran",
+    "parentId": "A-A1-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-02-003-001",
+    "description": "Control Room Cipasauran",
+    "parentId": "A-A1-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-003-002",
+    "description": "Ruang Capasitor Bank 6 kV Cipasauran",
+    "parentId": "A-A1-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-003-003",
+    "description": "Ruang Transformator Cipasauran",
+    "parentId": "A-A1-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-003-004",
+    "description": "Ruang Genset Cipasauran",
+    "parentId": "A-A1-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-003-005",
+    "description": "Ruang Panel TM Cipasauran",
+    "parentId": "A-A1-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-003-006",
+    "description": "Ruang Capasitor Bank TR Cipasauran",
+    "parentId": "A-A1-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-003-007",
+    "description": "Ruang Chemical Cipasauran",
+    "parentId": "A-A1-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-003-008",
+    "description": "Ruang Genset 800 KVA",
+    "parentId": "A-A1-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-003-009",
+    "description": "Ruang Panel Listrik",
+    "parentId": "A-A1-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-004",
+    "description": "Rumah Pompa PS VII",
+    "parentId": "A-A1-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-02-005",
+    "description": "Sump Pump",
+    "parentId": "A-A1-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-02-006",
+    "description": "Bangunan Cipasauran Lainnya",
+    "parentId": "A-A1-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-02-006-001",
+    "description": "Pos Keamanan",
+    "parentId": "A-A1-02-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-006-002",
+    "description": "WTP Mini Cipasauran",
+    "parentId": "A-A1-02-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-006-003",
+    "description": "Pagar Beton Plant Cipasauran",
+    "parentId": "A-A1-02-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-02-006-004",
+    "description": "Inst. Air Baku CPS - WTP Cidanau",
+    "parentId": "A-A1-02-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-03",
+    "description": "Waduk Nadra Krenceng",
+    "parentId": "A-A1",
+    "level": 2
+  },
+  {
+    "funcLocId": "A-A1-03-001",
+    "description": "Area Waduk Nadra",
+    "parentId": "A-A1-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-03-001-001",
+    "description": "Bangunan Spillway",
+    "parentId": "A-A1-03-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-03-001-002",
+    "description": "Bangunan Bottom Outlet",
+    "parentId": "A-A1-03-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-03-002",
+    "description": "Pump Station II",
+    "parentId": "A-A1-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-03-003",
+    "description": "Area Distribution Structure",
+    "parentId": "A-A1-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-03-003-001",
+    "description": "Distribution Structure",
+    "parentId": "A-A1-03-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-03-003-002",
+    "description": "Bangunan Hypoclorit PS II",
+    "parentId": "A-A1-03-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-03-003-003",
+    "description": "Overflow Waduk",
+    "parentId": "A-A1-03-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-03-004",
+    "description": "Bangunan Waduk Lainnya",
+    "parentId": "A-A1-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A1-03-004-001",
+    "description": "Pos Keamanan 1",
+    "parentId": "A-A1-03-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-03-004-002",
+    "description": "Pos Keamanan 2",
+    "parentId": "A-A1-03-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A1-03-004-003",
+    "description": "Pagar Area Waduk",
+    "parentId": "A-A1-03-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2",
+    "description": "Process",
+    "parentId": "A",
+    "level": 1
+  },
+  {
+    "funcLocId": "A-A2-01",
+    "description": "WTP Krenceng",
+    "parentId": "A-A2",
+    "level": 2
+  },
+  {
+    "funcLocId": "A-A2-01-001",
+    "description": "Gedung Logistik",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-001-001",
+    "description": "Ruang Pipa Pesat",
+    "parentId": "A-A2-01-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-001-002",
+    "description": "Gudang Logistik",
+    "parentId": "A-A2-01-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-001-003",
+    "description": "Ruang Staff Div.keamanan",
+    "parentId": "A-A2-01-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-001-004",
+    "description": "Ruang Rapat Logistik",
+    "parentId": "A-A2-01-001",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002",
+    "description": "Gedung Produksi",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-002-001",
+    "description": "Control Room Krenceng",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-002",
+    "description": "Ruang Staff Produksi",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-003",
+    "description": "Laboratorium",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-004",
+    "description": "Ruang Panel Siemens",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-005",
+    "description": "Ruang Panel DST",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-006",
+    "description": "Ruang Trafo 1",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-007",
+    "description": "Ruang Trafo 2",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-008",
+    "description": "Ruang Trafo 3",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-009",
+    "description": "Ruang Trafo 4",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-010",
+    "description": "Ruang Kabel",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-011",
+    "description": "Gedung Genset 940 kVA",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-012",
+    "description": "Gedung Genset 2250 kVA",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-013",
+    "description": "Kanal Kabel & Pipa",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-014",
+    "description": "Gedung Panel MCC 2",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-015",
+    "description": "Ruang Kadiv Produksi II",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-016",
+    "description": "Ruang Kadiv Produksi I",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-002-017",
+    "description": "Ruang Rapat Produksi",
+    "parentId": "A-A2-01-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-003",
+    "description": "Gedung Bahan Kimia",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-003-001",
+    "description": "Ruang Dosing",
+    "parentId": "A-A2-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-003-002",
+    "description": "Gudang Bahan Kimia",
+    "parentId": "A-A2-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-003-003",
+    "description": "Bak Mixing Alum",
+    "parentId": "A-A2-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-003-004",
+    "description": "Bak Mixing Kapur",
+    "parentId": "A-A2-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-003-005",
+    "description": "Ruang Chlorinator",
+    "parentId": "A-A2-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-003-006",
+    "description": "Ruang Botol Chlorine",
+    "parentId": "A-A2-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-003-007",
+    "description": "Ruang Absorber",
+    "parentId": "A-A2-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-003-008",
+    "description": "Ruang Staff Gudang Bahan Kimia",
+    "parentId": "A-A2-01-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-004",
+    "description": "GLF",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-004-001",
+    "description": "GLF cell 1",
+    "parentId": "A-A2-01-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-004-002",
+    "description": "GLF cell 2",
+    "parentId": "A-A2-01-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-004-003",
+    "description": "GLF cell 3",
+    "parentId": "A-A2-01-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-004-004",
+    "description": "GLF cell 4",
+    "parentId": "A-A2-01-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-004-005",
+    "description": "GLF cell 5",
+    "parentId": "A-A2-01-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-004-006",
+    "description": "Kanal GLF to Reservoir",
+    "parentId": "A-A2-01-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-005",
+    "description": "Area Accelator & Dist. Chamber",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-005-001",
+    "description": "Accelator I",
+    "parentId": "A-A2-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-005-002",
+    "description": "Accelator II",
+    "parentId": "A-A2-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-005-003",
+    "description": "Accelator III",
+    "parentId": "A-A2-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-005-004",
+    "description": "Distribution Chamber",
+    "parentId": "A-A2-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-005-005",
+    "description": "Kanal Acc to GLF",
+    "parentId": "A-A2-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-005-006",
+    "description": "Area Kianchem",
+    "parentId": "A-A2-01-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-006",
+    "description": "Pump Station III",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-006-001",
+    "description": "Rumah Pompa PS III",
+    "parentId": "A-A2-01-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-006-002",
+    "description": "Reservoir PS III",
+    "parentId": "A-A2-01-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-007",
+    "description": "Pump Station IV",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-007-001",
+    "description": "Rumah Pompa PS IV",
+    "parentId": "A-A2-01-007",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-007-002",
+    "description": "Reservoir PS IV",
+    "parentId": "A-A2-01-007",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-008",
+    "description": "Pump Station VI",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-008-001",
+    "description": "Rumah Pompa PS VI",
+    "parentId": "A-A2-01-008",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-008-002",
+    "description": "Reservoir PS VI",
+    "parentId": "A-A2-01-008",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-009",
+    "description": "Area Sludge Field",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-009-001",
+    "description": "Sludge Field 1",
+    "parentId": "A-A2-01-009",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-009-002",
+    "description": "Sludge Field 2",
+    "parentId": "A-A2-01-009",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-009-003",
+    "description": "Sludge Field 3",
+    "parentId": "A-A2-01-009",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-009-004",
+    "description": "Recycle Backwash",
+    "parentId": "A-A2-01-009",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-010",
+    "description": "Area Decanter & Thickner",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-010-001",
+    "description": "Bangunan Decanter",
+    "parentId": "A-A2-01-010",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-010-002",
+    "description": "Bangunan Thickner 1",
+    "parentId": "A-A2-01-010",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-010-003",
+    "description": "Bangunan Thickner 2",
+    "parentId": "A-A2-01-010",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-010-004",
+    "description": "Kolam Ekualisasi",
+    "parentId": "A-A2-01-010",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-010-005",
+    "description": "Stilling Basin",
+    "parentId": "A-A2-01-010",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-011",
+    "description": "Area Tower",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-011-001",
+    "description": "Bangunan Tower",
+    "parentId": "A-A2-01-011",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-011-002",
+    "description": "Gedung Metering Box",
+    "parentId": "A-A2-01-011",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-011-003",
+    "description": "Bangunan Terra",
+    "parentId": "A-A2-01-011",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-011-004",
+    "description": "Gudang TPS B3",
+    "parentId": "A-A2-01-011",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-011-005",
+    "description": "Gudang Peralatan & Arsip",
+    "parentId": "A-A2-01-011",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-011-006",
+    "description": "Gudang Keamanan",
+    "parentId": "A-A2-01-011",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012",
+    "description": "Gedung PU",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-012-001",
+    "description": "Ruang Staff Div. PU",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-002",
+    "description": "Ruang Dinas Logistik",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-003",
+    "description": "Ruang Direktur PU",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-004",
+    "description": "Ruang Vice President PU",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-005",
+    "description": "Ruang Rapat PU",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-006",
+    "description": "Ruang Kadiv PU",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-007",
+    "description": "Ruang Dinas Kontrak & Pengadaan",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-008",
+    "description": "Ruang Dinas Kontrak & Penjualan",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-009",
+    "description": "Ruang Kadiv Komersial",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-010",
+    "description": "Ruang Kadiv PK",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-012-011",
+    "description": "Ruang Dinas PSI & PAU",
+    "parentId": "A-A2-01-012",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-013",
+    "description": "Bangunan Workshop",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-013-001",
+    "description": "Gedung Staff Div.PPHSE",
+    "parentId": "A-A2-01-013",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-013-002",
+    "description": "Gedung Staff Distribusi",
+    "parentId": "A-A2-01-013",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-013-003",
+    "description": "Workshop PPSHE",
+    "parentId": "A-A2-01-013",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-013-004",
+    "description": "Workshop Distribusi",
+    "parentId": "A-A2-01-013",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-013-005",
+    "description": "Gedung Staff Div.PK",
+    "parentId": "A-A2-01-013",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014",
+    "description": "Gedung Tirta Graha",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-014-001",
+    "description": "Ruang Staff Div. HC & Umum",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-002",
+    "description": "Ruang Staff Div. Keuangan",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-003",
+    "description": "Ruang Direktur Keu, Persero & Umum",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-004",
+    "description": "Ruang Staff Div. Legal",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-005",
+    "description": "Ruang Staff SEKPER",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-006",
+    "description": "Ruang Direktur Operasi",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-007",
+    "description": "Ruang Direktur Utama",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-008",
+    "description": "Ruang Arsip Basement",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-009",
+    "description": "Ruang SPI",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-010",
+    "description": "Ruang SIMK",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-011",
+    "description": "Ruang Dekom",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-014-012",
+    "description": "Ruang Kadiv Keamanan",
+    "parentId": "A-A2-01-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-015",
+    "description": "Area GIC & Mushola",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-015-001",
+    "description": "Gedung Innovation Center",
+    "parentId": "A-A2-01-015",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-015-002",
+    "description": "Masjid Al-Mutohar",
+    "parentId": "A-A2-01-015",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-016",
+    "description": "Gedung Excellent Center",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-016-001",
+    "description": "Ruang HSE & Klinik",
+    "parentId": "A-A2-01-016",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-016-002",
+    "description": "Ruang Sekretariat SAKTI",
+    "parentId": "A-A2-01-016",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-016-003",
+    "description": "Ruang Divisi Manajemen Konstruksi",
+    "parentId": "A-A2-01-016",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-016-004",
+    "description": "Kantin",
+    "parentId": "A-A2-01-016",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-017",
+    "description": "Bangunan Krenceng Lain",
+    "parentId": "A-A2-01",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-01-017-001",
+    "description": "Pos Keamanan 1",
+    "parentId": "A-A2-01-017",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-017-002",
+    "description": "Pos Keamanan 2",
+    "parentId": "A-A2-01-017",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-017-003",
+    "description": "Area Parkir",
+    "parentId": "A-A2-01-017",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-017-004",
+    "description": "Pagar Beton Plant Krenceng",
+    "parentId": "A-A2-01-017",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-017-005",
+    "description": "Gudang TPS (Logistik)",
+    "parentId": "A-A2-01-017",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-017-006",
+    "description": "Gedung Rapat Logistik",
+    "parentId": "A-A2-01-017",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-01-017-007",
+    "description": "Ruang Tunggu Tamu",
+    "parentId": "A-A2-01-017",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-02",
+    "description": "SEPS",
+    "parentId": "A-A2",
+    "level": 2
+  },
+  {
+    "funcLocId": "A-A2-02-001",
+    "description": "Area Reservoir 5000m3",
+    "parentId": "A-A2-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-02-002",
+    "description": "PS V (SEPS)",
+    "parentId": "A-A2-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-02-002-001",
+    "description": "Ruang Kendali",
+    "parentId": "A-A2-02-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-02-002-002",
+    "description": "Ruang Panel Cubical",
+    "parentId": "A-A2-02-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-02-002-003",
+    "description": "Rumah Pompa",
+    "parentId": "A-A2-02-002",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-02-003",
+    "description": "Bangunan Genset",
+    "parentId": "A-A2-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-02-003-001",
+    "description": "Ruang Genset 250kVA",
+    "parentId": "A-A2-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-02-003-002",
+    "description": "Pos Keamanan",
+    "parentId": "A-A2-02-003",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-02-004",
+    "description": "Bangunan Lainnya (SEPS)",
+    "parentId": "A-A2-02",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-02-004-002",
+    "description": "Pantry",
+    "parentId": "A-A2-02-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-02-004-003",
+    "description": "Pagar Beton Plant SEPS",
+    "parentId": "A-A2-02-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-02-004-004",
+    "description": "Reservoir Tower 400",
+    "parentId": "A-A2-02-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03",
+    "description": "WTP Cidanau",
+    "parentId": "A-A2",
+    "level": 2
+  },
+  {
+    "funcLocId": "A-A2-03-001",
+    "description": "Distribution Structure",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-002",
+    "description": "Distribution Chamber",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-003",
+    "description": "Flocculator",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-004",
+    "description": "Sediment",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-004-001",
+    "description": "Sediment 1",
+    "parentId": "A-A2-03-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-004-002",
+    "description": "Sediment 2",
+    "parentId": "A-A2-03-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-004-003",
+    "description": "Sediment 3",
+    "parentId": "A-A2-03-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-004-004",
+    "description": "Sediment 4",
+    "parentId": "A-A2-03-004",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-005",
+    "description": "DynaSand Filter",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-005-001",
+    "description": "DynaSand Filter 1",
+    "parentId": "A-A2-03-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-005-002",
+    "description": "DynaSand Filter 2",
+    "parentId": "A-A2-03-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-005-003",
+    "description": "DynaSand Filter 3",
+    "parentId": "A-A2-03-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-005-004",
+    "description": "DynaSand Filter 4",
+    "parentId": "A-A2-03-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-005-005",
+    "description": "DynaSand Filter 5",
+    "parentId": "A-A2-03-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-005-006",
+    "description": "DynaSand Filter 6",
+    "parentId": "A-A2-03-005",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-006",
+    "description": "Pump Station VIII",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-006-001",
+    "description": "Rumah Pompa PS VIII",
+    "parentId": "A-A2-03-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-006-002",
+    "description": "Reservoir PS VIII",
+    "parentId": "A-A2-03-006",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-007",
+    "description": "Ruang Control Room WCD",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-008",
+    "description": "Ruang Transformator",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-009",
+    "description": "Ruang Chemical",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-009-001",
+    "description": "Area Bak Alum & Kapur",
+    "parentId": "A-A2-03-009",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-009-002",
+    "description": "Area Polymer",
+    "parentId": "A-A2-03-009",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-010",
+    "description": "Ruang Dosing & Compressor",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-011",
+    "description": "Ruang Genset",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-012",
+    "description": "Sludge Basin",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-013",
+    "description": "Area Lagoon",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-014",
+    "description": "Bangunan WTP Lainnya",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-014-005",
+    "description": "Pos Keamanan WTP",
+    "parentId": "A-A2-03-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-014-010",
+    "description": "Pagar Beton Plant WTP",
+    "parentId": "A-A2-03-014",
+    "level": 4
+  },
+  {
+    "funcLocId": "A-A2-03-015",
+    "description": "Ruang Laboratorium WCD",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-016",
+    "description": "Ruang Listrik & Panel WTP Cidanau",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-03-017",
+    "description": "Sludge Thickner",
+    "parentId": "A-A2-03",
+    "level": 3
+  },
+  {
+    "funcLocId": "A-A2-04",
+    "description": "Desal Demin Water Plant (DDW)",
+    "parentId": "A-A2",
+    "level": 2
+  },
+  {
+    "funcLocId": "B",
+    "description": "OTHER COMPANY",
+    "parentId": null,
+    "level": 0
+  }
+]

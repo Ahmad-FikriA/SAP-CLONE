@@ -1,0 +1,4151 @@
+[
+  {
+    "equipmentId": "2210000238",
+    "equipmentName": "Crane PS I (C1)",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000239",
+    "equipmentName": "Crane Chlorine Cidanau (C2)",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-006",
+    "functionalLocation": "A-A1-01-005-006",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000434",
+    "equipmentName": "Motor Intake Cidanau 1M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000435",
+    "equipmentName": "Motor Intake Cidanau 2M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000436",
+    "equipmentName": "Motor Intake Cidanau 3M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000437",
+    "equipmentName": "Motor Intake Cidanau 4M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000438",
+    "equipmentName": "Pompa Intake Cidanau 1M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000439",
+    "equipmentName": "Pompa Intake Cidanau 2M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000440",
+    "equipmentName": "Pompa Intake Cidanau 3M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000441",
+    "equipmentName": "Pompa Intake Cidanau 4M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000442",
+    "equipmentName": "Instalasi Pompa Intake Cidanau 1M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000443",
+    "equipmentName": "Instalasi Pompa Intake Cidanau 2M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000444",
+    "equipmentName": "Instalasi Pompa Intake Cidanau 3M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000445",
+    "equipmentName": "Instalasi Pompa Intake Cidanau 4M1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000447",
+    "equipmentName": "Gate Sand Trap Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-002",
+    "functionalLocation": "A-A1-01-002",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000448",
+    "equipmentName": "Gate Sump Pump Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-003",
+    "functionalLocation": "A-A1-01-003",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000449",
+    "equipmentName": "Pompa Booster Clorine Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-006",
+    "functionalLocation": "A-A1-01-005-006",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000450",
+    "equipmentName": "Instalasi Clorine Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-006",
+    "functionalLocation": "A-A1-01-005-006",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000451",
+    "equipmentName": "Pompa Sump Pump Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000452",
+    "equipmentName": "WTP Mini Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-007",
+    "functionalLocation": "A-A1-01-005-007",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000453",
+    "equipmentName": "Instalasi Sodium Hypoclorite PS I",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-005",
+    "functionalLocation": "A-A1-01-005-005",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000605",
+    "equipmentName": "Sensor AWLR",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-001",
+    "functionalLocation": "A-A1-01-001",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000640",
+    "equipmentName": "Panel Katodik Cidanau I",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005",
+    "functionalLocation": "A-A1-01-005",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000644",
+    "equipmentName": "pH meter Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-003-001",
+    "functionalLocation": "A-A1-01-003-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000645",
+    "equipmentName": "Turbidity Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-003-001",
+    "functionalLocation": "A-A1-01-003-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000647",
+    "equipmentName": "Ext. Grounding PS I Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005",
+    "functionalLocation": "A-A1-01-005",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000648",
+    "equipmentName": "PLC Horner Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-003",
+    "functionalLocation": "A-A1-01-005-003",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000651",
+    "equipmentName": "Transformator BT 01",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-004-001",
+    "functionalLocation": "A-A1-01-004-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000652",
+    "equipmentName": "Transformator BT 02",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-004-002",
+    "functionalLocation": "A-A1-01-004-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000668",
+    "equipmentName": "Panel Katodik Cidanau II",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005",
+    "functionalLocation": "A-A1-01-005",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000669",
+    "equipmentName": "Panel Katodik Cigading",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A3-04-002-003",
+    "functionalLocation": "A-A3-04-002-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000705",
+    "equipmentName": "Motor DC Intake Cidanau 1",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000706",
+    "equipmentName": "Motor DC Intake Cidanau 2",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000707",
+    "equipmentName": "Motor DC Intake Cidanau 3",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002852",
+    "equipmentName": "Flowmeter Air Baku PS I Cidanau (FL 09)",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-004",
+    "functionalLocation": "A-A1-01-005-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002856",
+    "equipmentName": "Instalasi Penerangan Gd.Area Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005",
+    "functionalLocation": "A-A1-01-005",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002959",
+    "equipmentName": "Motor Hypochlorite PS I",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-005",
+    "functionalLocation": "A-A1-01-005-005",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002972",
+    "equipmentName": "MV-Main Control Cabinet",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-001",
+    "functionalLocation": "A-A1-01-005-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002987",
+    "equipmentName": "MV-Controller Cabinet",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-001",
+    "functionalLocation": "A-A1-01-005-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002988",
+    "equipmentName": "MV-CT Cabinet",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-001",
+    "functionalLocation": "A-A1-01-005-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002989",
+    "equipmentName": "MV-Incoming Section",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-001",
+    "functionalLocation": "A-A1-01-005-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002990",
+    "equipmentName": "MV-Outgoing Pump",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-001",
+    "functionalLocation": "A-A1-01-005-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002997",
+    "equipmentName": "SCADA PS I Cidanau",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-005-003",
+    "functionalLocation": "A-A1-01-005-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002999",
+    "equipmentName": "Flowmeter Sandtrap PS I",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-002",
+    "functionalLocation": "A-A1-01-002",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003080",
+    "equipmentName": "Panel Cap.Bank PS I",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-004-003",
+    "functionalLocation": "A-A1-01-004-003",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000649",
+    "equipmentName": "Transformator AX 01",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-004-001",
+    "functionalLocation": "A-A1-01-004-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000650",
+    "equipmentName": "Transformator AX 02",
+    "plantId": "I-22L001",
+    "funcLocId": "A-A1-01-004-002",
+    "functionalLocation": "A-A1-01-004-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000532",
+    "equipmentName": "Impellar Kapur 312M2",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000534",
+    "equipmentName": "Impellar Kapur 313M2",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000539",
+    "equipmentName": "Motor Mixing Polymer 314M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-002",
+    "functionalLocation": "A-A2-03-009-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000540",
+    "equipmentName": "Motor Mixing Polymer 315M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-002",
+    "functionalLocation": "A-A2-03-009-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000320",
+    "equipmentName": "Panel DCS WCD",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-007",
+    "functionalLocation": "A-A2-03-007",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000523",
+    "equipmentName": "Panel VSD Pompa 700M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000525",
+    "equipmentName": "Panel VSD Pompa 701M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000527",
+    "equipmentName": "Panel VSD Pompa 702M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000529",
+    "equipmentName": "Panel VSD Pompa 703M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000677",
+    "equipmentName": "Pompa Dossing 303M1 CaO (Kapur) WTP Cida",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000678",
+    "equipmentName": "Pompa Dossing 304M1 CaO (Kapur) WTP Cida",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000681",
+    "equipmentName": "Pompa Dossing 305M1 Hypochlorite WTP Cid",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000682",
+    "equipmentName": "Pompa Dossing 306M1 Hypochlorite WTP Cid",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000685",
+    "equipmentName": "Pompa Dossing Alumsulfat 300M1 WTP Cidan",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000686",
+    "equipmentName": "Pompa Dossing Alumsulfat 301M1 WTP Cidan",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000687",
+    "equipmentName": "Pompa Dossing Alumsulfat 302M1 WTP Cidan",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000691",
+    "equipmentName": "Pompa Polymer 316M1 WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-002",
+    "functionalLocation": "A-A2-03-009-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000692",
+    "equipmentName": "Pompa Polymer 317M1 WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-002",
+    "functionalLocation": "A-A2-03-009-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000316",
+    "equipmentName": "Genset Perkin 1250 kVA WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-011",
+    "functionalLocation": "A-A2-03-011",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000501",
+    "equipmentName": "Pompa Distribusi 700M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000502",
+    "equipmentName": "Pompa Distribusi 701M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000503",
+    "equipmentName": "Pompa Distribusi 702M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000504",
+    "equipmentName": "Pompa Distribusi 703M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002842",
+    "equipmentName": "SCM WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-015",
+    "functionalLocation": "A-A2-03-015",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000244",
+    "equipmentName": "Crane PS VIII (C12)",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000491",
+    "equipmentName": "Panel VSD Dosing WCD",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003088",
+    "equipmentName": "Sensor pH WCD",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-015",
+    "functionalLocation": "A-A2-03-015",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000674",
+    "equipmentName": "Kompressor 307M1 WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000675",
+    "equipmentName": "Kompressor 308M12 WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000676",
+    "equipmentName": "Kompressor 309M1 WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009",
+    "functionalLocation": "A-A2-03-009",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000531",
+    "equipmentName": "Motor Mixing Kapur 312M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000533",
+    "equipmentName": "Motor Mixing Kapur 313M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000339",
+    "equipmentName": "Aktuator Floc 400M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000340",
+    "equipmentName": "Aktuator Floc 401M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000341",
+    "equipmentName": "Aktuator Floc 402M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000342",
+    "equipmentName": "Aktuator Floc 403M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000343",
+    "equipmentName": "Aktuator Floc 404M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000339",
+    "equipmentName": "Aktuator Floc 405M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000347",
+    "equipmentName": "Aktuator Sediment 504M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-001",
+    "functionalLocation": "A-A2-03-004-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000348",
+    "equipmentName": "Aktuator Sediment 505M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-001",
+    "functionalLocation": "A-A2-03-004-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000349",
+    "equipmentName": "Aktuator Sediment 506M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-001",
+    "functionalLocation": "A-A2-03-004-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000350",
+    "equipmentName": "Aktuator Sediment 507M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-002",
+    "functionalLocation": "A-A2-03-004-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000351",
+    "equipmentName": "Aktuator Sediment 508M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-002",
+    "functionalLocation": "A-A2-03-004-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000352",
+    "equipmentName": "Aktuator Sediment 509M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-002",
+    "functionalLocation": "A-A2-03-004-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000353",
+    "equipmentName": "Aktuator Sediment 510M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-003",
+    "functionalLocation": "A-A2-03-004-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000354",
+    "equipmentName": "Aktuator Sediment 511M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-003",
+    "functionalLocation": "A-A2-03-004-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000355",
+    "equipmentName": "Aktuator Sediment 512M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-003",
+    "functionalLocation": "A-A2-03-004-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000356",
+    "equipmentName": "Aktuator Sediment 513M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-004",
+    "functionalLocation": "A-A2-03-004-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000357",
+    "equipmentName": "Aktuator Sediment 514M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-004",
+    "functionalLocation": "A-A2-03-004-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000358",
+    "equipmentName": "Aktuator Sediment 515M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-004",
+    "functionalLocation": "A-A2-03-004-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000497",
+    "equipmentName": "Motor Distribusi 700M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000498",
+    "equipmentName": "Motor Distribusi 701M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000499",
+    "equipmentName": "Motor Distribusi 702M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000500",
+    "equipmentName": "Motor Distribusi 703M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000314",
+    "equipmentName": "Transformer LV WCD",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-008",
+    "functionalLocation": "A-A2-03-008",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000315",
+    "equipmentName": "Panel Power PP-GR",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-011",
+    "functionalLocation": "A-A2-03-011",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000316",
+    "equipmentName": "Genset Perkin 1250 kVA WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-011",
+    "functionalLocation": "A-A2-03-011",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000317",
+    "equipmentName": "Tangki Solar 500",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-011",
+    "functionalLocation": "A-A2-03-011",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000318",
+    "equipmentName": "Tangki Solar 5000",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-011",
+    "functionalLocation": "A-A2-03-011",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000319",
+    "equipmentName": "Panel Pompa Solar",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-011",
+    "functionalLocation": "A-A2-03-011",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000321",
+    "equipmentName": "PC EWS WCD",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-007",
+    "functionalLocation": "A-A2-03-007",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000322",
+    "equipmentName": "PC PM WCD",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-007",
+    "functionalLocation": "A-A2-03-007",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000323",
+    "equipmentName": "PC Information",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-007",
+    "functionalLocation": "A-A2-03-007",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000324",
+    "equipmentName": "Slide Gate 1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-001",
+    "functionalLocation": "A-A2-03-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000325",
+    "equipmentName": "Slide Gate 2",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-001",
+    "functionalLocation": "A-A2-03-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000326",
+    "equipmentName": "Level Sensor SLD Basin",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-012",
+    "functionalLocation": "A-A2-03-012",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000327",
+    "equipmentName": "Manhole SLD Basin",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-012",
+    "functionalLocation": "A-A2-03-012",
+    "category": "Sipil",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000328",
+    "equipmentName": "Panel Pompa SLD Basin",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-012",
+    "functionalLocation": "A-A2-03-012",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000329",
+    "equipmentName": "Pompa SLD Basin 1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-012",
+    "functionalLocation": "A-A2-03-012",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000330",
+    "equipmentName": "Pompa SLD Basin 2",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-012",
+    "functionalLocation": "A-A2-03-012",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000359",
+    "equipmentName": "Panel Dyna Sand 1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-001",
+    "functionalLocation": "A-A2-03-005-001",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000360",
+    "equipmentName": "Panel Dyna Sand 2",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-002",
+    "functionalLocation": "A-A2-03-005-002",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000361",
+    "equipmentName": "Panel Dyna Sand 3",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-003",
+    "functionalLocation": "A-A2-03-005-003",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000362",
+    "equipmentName": "Panel Dyna Sand 4",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-004",
+    "functionalLocation": "A-A2-03-005-004",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000363",
+    "equipmentName": "Panel Dyna Sand 5",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-005",
+    "functionalLocation": "A-A2-03-005-005",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000364",
+    "equipmentName": "Panel Dyna Sand 6",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-006",
+    "functionalLocation": "A-A2-03-005-006",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000468",
+    "equipmentName": "Aktuator Filter 600M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-001",
+    "functionalLocation": "A-A2-03-005-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000469",
+    "equipmentName": "Aktuator Filter 601M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-002",
+    "functionalLocation": "A-A2-03-005-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000470",
+    "equipmentName": "Aktuator Filter 602M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-003",
+    "functionalLocation": "A-A2-03-005-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000471",
+    "equipmentName": "Aktuator Filter 603M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-004",
+    "functionalLocation": "A-A2-03-005-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000472",
+    "equipmentName": "Aktuator Filter 604M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-005",
+    "functionalLocation": "A-A2-03-005-005",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000473",
+    "equipmentName": "Aktuator Filter 605M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-005-006",
+    "functionalLocation": "A-A2-03-005-006",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000481",
+    "equipmentName": "Motor Kompresor 307M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000482",
+    "equipmentName": "Motor Kompresor 308M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000483",
+    "equipmentName": "Motor Kompresor 309M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000484",
+    "equipmentName": "Motor Hypo 305M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000485",
+    "equipmentName": "Motor Hypo 306M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000486",
+    "equipmentName": "Motor Kapur 303M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000487",
+    "equipmentName": "Motor Kapur 304M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000488",
+    "equipmentName": "Motor Alum 300M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000489",
+    "equipmentName": "Motor Alum 301M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000490",
+    "equipmentName": "Motor Alum 302M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-010",
+    "functionalLocation": "A-A2-03-010",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000494",
+    "equipmentName": "Flowmeter PS VIII (FL 07)",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006",
+    "functionalLocation": "A-A2-03-006",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000496",
+    "equipmentName": "Chlorine Analyzer WCD",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-001",
+    "functionalLocation": "A-A2-03-006-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000506",
+    "equipmentName": "Sensor Level Reservoir PS VIII",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-006-002",
+    "functionalLocation": "A-A2-03-006-002",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000511",
+    "equipmentName": "Panel Capacitor 12 x 50kVar",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000512",
+    "equipmentName": "Panel Kontrol Genset",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000513",
+    "equipmentName": "Panel Rectifier 110 WCD",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000514",
+    "equipmentName": "Panel Incoming",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000515",
+    "equipmentName": "Panel Incoming Genset",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000516",
+    "equipmentName": "Panel MCC Pompa",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000517",
+    "equipmentName": "Panel Cap.Bank 600 kVAr",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000518",
+    "equipmentName": "Panel Feeder-1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000519",
+    "equipmentName": "Panel Feeder-2",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000520",
+    "equipmentName": "Panel Trafo 20 kV",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000521",
+    "equipmentName": "Panel Incoming Pompa",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000522",
+    "equipmentName": "Panel Power Pompa 700M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000524",
+    "equipmentName": "Panel Power Pompa 701M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000526",
+    "equipmentName": "Panel Power Pompa 702M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000528",
+    "equipmentName": "Panel Power Pompa 703M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000535",
+    "equipmentName": "Motor Mixing Alum 310M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000536",
+    "equipmentName": "Impellar Alum 310M2",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000537",
+    "equipmentName": "Motor Mixing Alum 311M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000538",
+    "equipmentName": "Impellar Alum 311M2",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000670",
+    "equipmentName": "Pump 801M1 Sludge Basin WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-012",
+    "functionalLocation": "A-A2-03-012",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000671",
+    "equipmentName": "Pump 802M1 Sludge Basin WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-012",
+    "functionalLocation": "A-A2-03-012",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000699",
+    "equipmentName": "Pompa 802M1 Transfer Lagoon Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-013",
+    "functionalLocation": "A-A2-03-013",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000700",
+    "equipmentName": "Pompa 803M1 Transfer Lagoon Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-013",
+    "functionalLocation": "A-A2-03-013",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000701",
+    "equipmentName": "Pompa 804M1 Transfer Lagoon Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-013",
+    "functionalLocation": "A-A2-03-013",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000702",
+    "equipmentName": "Engine Genset 1250 kVA WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-011",
+    "functionalLocation": "A-A2-03-011",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000710",
+    "equipmentName": "Kanal Kabel WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-016",
+    "functionalLocation": "A-A2-03-016",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002857",
+    "equipmentName": "Sensor Alum WCD 1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002863",
+    "equipmentName": "Sensor Level Bak Alum WCD",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002968",
+    "equipmentName": "Flowmeter Jalur PS I - WTP Cidanau",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-001",
+    "functionalLocation": "A-A2-03-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003273",
+    "equipmentName": "Level Sensor Tangki Chlorine",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-009-001",
+    "functionalLocation": "A-A2-03-009-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003575",
+    "equipmentName": "Aktuator Floc 400M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003576",
+    "equipmentName": "Aktuator Floc 401M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003577",
+    "equipmentName": "Aktuator Floc 402M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003578",
+    "equipmentName": "Aktuator Floc 403M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003579",
+    "equipmentName": "Aktuator Floc 404M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003580",
+    "equipmentName": "Aktuator Floc 405M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-003",
+    "functionalLocation": "A-A2-03-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003581",
+    "equipmentName": "Aktuator Sediment 504M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-001",
+    "functionalLocation": "A-A2-03-004-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003582",
+    "equipmentName": "Aktuator Sediment 505M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-001",
+    "functionalLocation": "A-A2-03-004-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003583",
+    "equipmentName": "Aktuator Sediment 506M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-001",
+    "functionalLocation": "A-A2-03-004-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003584",
+    "equipmentName": "Aktuator Sediment 507M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-002",
+    "functionalLocation": "A-A2-03-004-002",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003585",
+    "equipmentName": "Aktuator Sediment 508M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-002",
+    "functionalLocation": "A-A2-03-004-002",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003586",
+    "equipmentName": "Aktuator Sediment 509M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-002",
+    "functionalLocation": "A-A2-03-004-002",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003587",
+    "equipmentName": "Aktuator Sediment 510M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-003",
+    "functionalLocation": "A-A2-03-004-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003588",
+    "equipmentName": "Aktuator Sediment 511M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-003",
+    "functionalLocation": "A-A2-03-004-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003589",
+    "equipmentName": "Aktuator Sediment 512M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-003",
+    "functionalLocation": "A-A2-03-004-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003590",
+    "equipmentName": "Aktuator Sediment 513M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-004",
+    "functionalLocation": "A-A2-03-004-004",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003591",
+    "equipmentName": "Aktuator Sediment 514M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-004",
+    "functionalLocation": "A-A2-03-004-004",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003592",
+    "equipmentName": "Aktuator Sediment 515M1",
+    "plantId": "P-22L006",
+    "funcLocId": "A-A2-03-004-004",
+    "functionalLocation": "A-A2-03-004-004",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000606",
+    "equipmentName": "Flowmeter Air Baku CPS (FL 08)",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000569",
+    "equipmentName": "Panel DCS CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-001",
+    "functionalLocation": "A-A1-02-003-001",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000581",
+    "equipmentName": "Panel MV-VSD 1000 CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-009",
+    "functionalLocation": "A-A1-02-003-009",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000597",
+    "equipmentName": "Transformator MV CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-003",
+    "functionalLocation": "A-A1-02-003-003",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000608",
+    "equipmentName": "Pompa Transfer Hypo CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-007",
+    "functionalLocation": "A-A1-02-003-007",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000467",
+    "equipmentName": "Genset Cipasauran",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-004",
+    "functionalLocation": "A-A1-02-003-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000243",
+    "equipmentName": "Crane PS VII (C11)",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000457",
+    "equipmentName": "Pompa Intake Cipasauran 1M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000458",
+    "equipmentName": "Pompa Intake Cipasauran 2M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000459",
+    "equipmentName": "Pompa Intake Cipasauran 3M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000562",
+    "equipmentName": "Motor Actuator Gate 100M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001-002",
+    "functionalLocation": "A-A1-02-001-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000564",
+    "equipmentName": "Motor Actuator Gate 101M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001-002",
+    "functionalLocation": "A-A1-02-001-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000465",
+    "equipmentName": "Pompa Distribusi WTP Mini Cipasauran",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-006-002",
+    "functionalLocation": "A-A1-02-006-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000467",
+    "equipmentName": "Genset Cipasauran",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-004",
+    "functionalLocation": "A-A1-02-003-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000559",
+    "equipmentName": "Sensor Level Mercu CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001",
+    "functionalLocation": "A-A1-02-001",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000562",
+    "equipmentName": "Motor Actuator Gate 100M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001-002",
+    "functionalLocation": "A-A1-02-001-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000564",
+    "equipmentName": "Motor Actuator Gate 101M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001-002",
+    "functionalLocation": "A-A1-02-001-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000566",
+    "equipmentName": "Flowmeter Ultrasonic CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-002-001",
+    "functionalLocation": "A-A1-02-002-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000598",
+    "equipmentName": "Transformator LV CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-003",
+    "functionalLocation": "A-A1-02-003-003",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000606",
+    "equipmentName": "Flowmeter Air Baku CPS (FL 08)",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000607",
+    "equipmentName": "Motor Transfer Hypo CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-007",
+    "functionalLocation": "A-A1-02-003-007",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000608",
+    "equipmentName": "Pompa Transfer Hypo CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-007",
+    "functionalLocation": "A-A1-02-003-007",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000603",
+    "equipmentName": "Sensor Level Sump Pump",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-005",
+    "functionalLocation": "A-A1-02-005",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000613",
+    "equipmentName": "Turbidity Analyzer CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-006-002",
+    "functionalLocation": "A-A1-02-006-002",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000614",
+    "equipmentName": "pH Analyzer CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-006-002",
+    "functionalLocation": "A-A1-02-006-002",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000659",
+    "equipmentName": "Motor SEPS 3M1",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-003",
+    "functionalLocation": "A-A2-02-002-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000660",
+    "equipmentName": "Motor SEPS 4M1",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-003",
+    "functionalLocation": "A-A2-02-002-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000661",
+    "equipmentName": "Motor SEPS 5M1",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-003",
+    "functionalLocation": "A-A2-02-002-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000654",
+    "equipmentName": "Panel Trafo 1 SEPS",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-002",
+    "functionalLocation": "A-A2-02-002-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000655",
+    "equipmentName": "Panel Trafo 2 SEPS",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-002",
+    "functionalLocation": "A-A2-02-002-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000425",
+    "equipmentName": "Pompa SEPS 3M1",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-003",
+    "functionalLocation": "A-A2-02-002-003",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000426",
+    "equipmentName": "Pompa SEPS 4M1",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-003",
+    "functionalLocation": "A-A2-02-002-003",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000427",
+    "equipmentName": "Pompa SEPS 5M1",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-003",
+    "functionalLocation": "A-A2-02-002-003",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000658",
+    "equipmentName": "Motor SEPS 2M1",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-003",
+    "functionalLocation": "A-A2-02-002-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002908",
+    "equipmentName": "Panel VSD Pompa SEPS 2M1",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-002",
+    "functionalLocation": "A-A2-02-002-002",
+    "category": null,
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000433",
+    "equipmentName": "Engine Genset SEPS 250 kVA",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-003-001",
+    "functionalLocation": "A-A2-02-003-001",
+    "category": null,
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002868",
+    "equipmentName": "Transformator SEPS 1",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-002",
+    "functionalLocation": "A-A2-02-002-002",
+    "category": null,
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002869",
+    "equipmentName": "Transformator SEPS 2",
+    "plantId": "D-22L010",
+    "funcLocId": "A-A2-02-002-002",
+    "functionalLocation": "A-A2-02-002-002",
+    "category": null,
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000541",
+    "equipmentName": "Crane PS II (C4)",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000542",
+    "equipmentName": "Motor Waduk 1M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000543",
+    "equipmentName": "Motor Waduk 2M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000544",
+    "equipmentName": "Motor Waduk 3M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000545",
+    "equipmentName": "Motor Waduk 4M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000546",
+    "equipmentName": "Motor Waduk 5M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000408",
+    "equipmentName": "Pompa Waduk 1M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000409",
+    "equipmentName": "Pompa Waduk 2M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000410",
+    "equipmentName": "Pompa Waduk 3M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000411",
+    "equipmentName": "Pompa Waduk 4M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000412",
+    "equipmentName": "Pompa Waduk 5M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000552",
+    "equipmentName": "Flowmeter Air Baku Waduk (FL 06)",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000553",
+    "equipmentName": "Flowmeter Overflow Waduk (FL 10)",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-003-003",
+    "functionalLocation": "A-A1-03-003-003",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000548",
+    "equipmentName": "Motor Grease 2M2",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000550",
+    "equipmentName": "Motor Grease 4M2",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-002",
+    "functionalLocation": "A-A1-03-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000554",
+    "equipmentName": "Motor Gate 6M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-003-001",
+    "functionalLocation": "A-A1-03-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000555",
+    "equipmentName": "Motor Gate 7M1",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-003-001",
+    "functionalLocation": "A-A1-03-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000558",
+    "equipmentName": "Panel Katodik Waduk",
+    "plantId": "I-22L003",
+    "funcLocId": "A-A1-03-003-001",
+    "functionalLocation": "A-A1-03-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000125",
+    "equipmentName": "Panel VSD 5M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210003075",
+    "equipmentName": "Panel VSD 4M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002872",
+    "equipmentName": "Panel VSD 3M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003468",
+    "equipmentName": "Panel VSD 2M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-014",
+    "functionalLocation": "A-A2-01-002-014",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003314",
+    "equipmentName": "Panel VSD 1M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000072",
+    "equipmentName": "Sensor pH ACC I",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-005-001",
+    "functionalLocation": "A-A2-01-005-001",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000074",
+    "equipmentName": "Sensor Turbid ACC I",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-005-001",
+    "functionalLocation": "A-A2-01-005-001",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000077",
+    "equipmentName": "Sensor pH ACC II",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-005-002",
+    "functionalLocation": "A-A2-01-005-002",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000082",
+    "equipmentName": "Sensor pH ACC III",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-005-003",
+    "functionalLocation": "A-A2-01-005-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000084",
+    "equipmentName": "Sensor Turbid ACC III",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-005-003",
+    "functionalLocation": "A-A2-01-005-003",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002890",
+    "equipmentName": "Sensor pH Reservoir",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-002",
+    "functionalLocation": "A-A2-01-008-002",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000240",
+    "equipmentName": "Crane PS IV (C9)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000063",
+    "equipmentName": "Sensor Level Bak Alum 27",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-003",
+    "functionalLocation": "A-A2-01-003-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000064",
+    "equipmentName": "Sensor Level Bak Alum 28",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-003",
+    "functionalLocation": "A-A2-01-003-003",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000065",
+    "equipmentName": "Sensor Level Bak Kapur 39",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-004",
+    "functionalLocation": "A-A2-01-003-004",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000066",
+    "equipmentName": "Sensor Level Bak Kapur 40",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-004",
+    "functionalLocation": "A-A2-01-003-004",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000261",
+    "equipmentName": "Sensor Level Reservoir PS VI",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-002",
+    "functionalLocation": "A-A2-01-008-002",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000241",
+    "equipmentName": "Crane PS VI (C10)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000008",
+    "equipmentName": "Motor Alum Sulfat 33M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000006",
+    "equipmentName": "Motor Alum Sulfat 32M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000004",
+    "equipmentName": "Motor Alum Sulfat 31M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000002",
+    "equipmentName": "Motor Alum Sulfat 30M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000000",
+    "equipmentName": "Motor Alum Sulfat 29M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000280",
+    "equipmentName": "Motor 44M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000391",
+    "equipmentName": "Motor 74M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000392",
+    "equipmentName": "Motor 75M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000284",
+    "equipmentName": "Motor 46M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000286",
+    "equipmentName": "Motor 47M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000387",
+    "equipmentName": "Motor 70M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000282",
+    "equipmentName": "Motor 45M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000097",
+    "equipmentName": "Panel VSD 74M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000094",
+    "equipmentName": "Panel VSD 64M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000096",
+    "equipmentName": "Panel VSD 70M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000098",
+    "equipmentName": "Panel VSD 61M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000099",
+    "equipmentName": "Panel VSD 60M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000095",
+    "equipmentName": "Panel VSD 72M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000103",
+    "equipmentName": "Panel Softstart 75M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000104",
+    "equipmentName": "Panel Softstart 73M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000105",
+    "equipmentName": "Panel Softstart 71M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002891",
+    "equipmentName": "Panel SoftStart 43M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003089",
+    "equipmentName": "Panel VSD 73M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000231",
+    "equipmentName": "GenSet 2250 kVA",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-012",
+    "functionalLocation": "A-A2-01-002-012",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000236",
+    "equipmentName": "Crane Workshop (C5)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-013-003",
+    "functionalLocation": "A-A2-01-013-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000278",
+    "equipmentName": "Motor 43M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000040",
+    "equipmentName": "Crane C3",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-006",
+    "functionalLocation": "A-A2-01-003-006",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000041",
+    "equipmentName": "Crane C6",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-006",
+    "functionalLocation": "A-A2-01-003-006",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000235",
+    "equipmentName": "Crane Gudang Logistik (C4)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-001-002",
+    "functionalLocation": "A-A2-01-001-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000242",
+    "equipmentName": "Crane PS III (C8)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000279",
+    "equipmentName": "Pompa 43 M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000281",
+    "equipmentName": "Pompa 44 M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000283",
+    "equipmentName": "Pompa 45 M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000285",
+    "equipmentName": "Pompa 46 M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000287",
+    "equipmentName": "Pompa 47 M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000397",
+    "equipmentName": "Pompa 74M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000398",
+    "equipmentName": "Pompa 75M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000237",
+    "equipmentName": "Crane Distribusi (C7)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-013-004",
+    "functionalLocation": "A-A2-01-013-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000378",
+    "equipmentName": "Pompa 61M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000377",
+    "equipmentName": "Pompa 60M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000379",
+    "equipmentName": "Pompa 62M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000380",
+    "equipmentName": "Pompa 63M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000376",
+    "equipmentName": "Motor 64M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000388",
+    "equipmentName": "Motor 71M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000390",
+    "equipmentName": "Motor 73M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000373",
+    "equipmentName": "Motor 61M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000389",
+    "equipmentName": "Motor 72M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000372",
+    "equipmentName": "Motor 60M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000374",
+    "equipmentName": "Motor 62M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000375",
+    "equipmentName": "Motor 63M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000393",
+    "equipmentName": "Pompa 70M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000394",
+    "equipmentName": "Pompa 71M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000395",
+    "equipmentName": "Pompa 72M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000396",
+    "equipmentName": "Pompa 73M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000381",
+    "equipmentName": "Pompa 64M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000024",
+    "equipmentName": "Motor Vakum 41M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000011",
+    "equipmentName": "Motor Shock Chlorine 503M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000013",
+    "equipmentName": "Motor Shock Chlorine 503M2",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000015",
+    "equipmentName": "Motor Continous Chlorine 503M3",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000017",
+    "equipmentName": "Motor Continous Chlorine 503M4",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000021",
+    "equipmentName": "Motor Kapur 38M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000019",
+    "equipmentName": "Motor Kapur 37M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000100",
+    "equipmentName": "Panel Softstart 63M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000101",
+    "equipmentName": "Panel Softstart 62M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000001",
+    "equipmentName": "Pompa Alum Sulfat 29M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000003",
+    "equipmentName": "Pompa Alum Sulfat 30M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000005",
+    "equipmentName": "Pompa Alum Sulfat 31M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000007",
+    "equipmentName": "Pompa Alum Sulfat 32M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000009",
+    "equipmentName": "Pompa Alum Sulfat 33M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000012",
+    "equipmentName": "Pompa Shock Chlorine 503M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000014",
+    "equipmentName": "Pompa Shock Chlorine 503P2",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000016",
+    "equipmentName": "Pompa Continous Chlorine 503P3",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000018",
+    "equipmentName": "Pompa Continous Chlorine 503P4",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000019",
+    "equipmentName": "Motor Kapur 37M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000020",
+    "equipmentName": "Pompa Kapur 37M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000021",
+    "equipmentName": "Motor Kapur 38M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000022",
+    "equipmentName": "Pompa Kapur 38M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000025",
+    "equipmentName": "Pompa Vakum 41M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000026",
+    "equipmentName": "Motor Vakum 42M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000027",
+    "equipmentName": "Pompa Vakum 42M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000047",
+    "equipmentName": "Motor Bak Alum 27M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-003",
+    "functionalLocation": "A-A2-01-003-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000048",
+    "equipmentName": "Motor Bak Alum 28M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-003",
+    "functionalLocation": "A-A2-01-003-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000049",
+    "equipmentName": "Motor Bak Kapur 39M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-004",
+    "functionalLocation": "A-A2-01-003-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000050",
+    "equipmentName": "Motor Bak Kapur 40M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-004",
+    "functionalLocation": "A-A2-01-003-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000051",
+    "equipmentName": "Gear Box Bak Alum 27",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-003",
+    "functionalLocation": "A-A2-01-003-003",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000052",
+    "equipmentName": "Gear Box Bak Alum 28",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-003",
+    "functionalLocation": "A-A2-01-003-003",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000053",
+    "equipmentName": "Gear Box Bak Kapur 39",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-004",
+    "functionalLocation": "A-A2-01-003-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000054",
+    "equipmentName": "Gear Box Bak Kapur 40",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-004",
+    "functionalLocation": "A-A2-01-003-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000228",
+    "equipmentName": "GenSet 940 kVA",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-011",
+    "functionalLocation": "A-A2-01-002-011",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000231",
+    "equipmentName": "GenSet 2250 kVA",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-012",
+    "functionalLocation": "A-A2-01-002-012",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000235",
+    "equipmentName": "Crane Gudang Logistik (C4)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-001-002",
+    "functionalLocation": "A-A2-01-001-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000236",
+    "equipmentName": "Crane Workshop (C5)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-013-003",
+    "functionalLocation": "A-A2-01-013-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000237",
+    "equipmentName": "Crane Distribusi (C7)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-013-004",
+    "functionalLocation": "A-A2-01-013-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000240",
+    "equipmentName": "Crane PS IV (C9)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007-001",
+    "functionalLocation": "A-A2-01-007-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000241",
+    "equipmentName": "Crane PS VI (C10)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-008-001",
+    "functionalLocation": "A-A2-01-008-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000242",
+    "equipmentName": "Crane PS III (C8)",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003250",
+    "equipmentName": "Pompa Vakum 42M2",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003251",
+    "equipmentName": "Pompa Vakum 41M2",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-003-001",
+    "functionalLocation": "A-A2-01-003-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003283",
+    "equipmentName": "Pompa Recycle 68M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-009-004",
+    "functionalLocation": "A-A2-01-009-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003284",
+    "equipmentName": "VSD Pompa submersible 65M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-009-004",
+    "functionalLocation": "A-A2-01-009-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003285",
+    "equipmentName": "VSD Pompa submersible 66M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-009-004",
+    "functionalLocation": "A-A2-01-009-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003286",
+    "equipmentName": "VSD Pompa submersible 67M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-009-004",
+    "functionalLocation": "A-A2-01-009-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003287",
+    "equipmentName": "VSD Pompa submersible 68M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-009-004",
+    "functionalLocation": "A-A2-01-009-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002845",
+    "equipmentName": "Pompa Recycle 65M2",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-009-004",
+    "functionalLocation": "A-A2-01-009-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002846",
+    "equipmentName": "Pompa Recycle 66M2",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-009-004",
+    "functionalLocation": "A-A2-01-009-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002847",
+    "equipmentName": "Pompa Recycle 67M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-009-004",
+    "functionalLocation": "A-A2-01-009-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210002848",
+    "equipmentName": "Transformator KR 1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-006",
+    "functionalLocation": "A-A2-01-002-006",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002849",
+    "equipmentName": "Transformator KR 2",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-007",
+    "functionalLocation": "A-A2-01-002-007",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002850",
+    "equipmentName": "Transformator KR 3",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-008",
+    "functionalLocation": "A-A2-01-002-008",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210002851",
+    "equipmentName": "Transformator KR 4",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-009",
+    "functionalLocation": "A-A2-01-002-009",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210003089",
+    "equipmentName": "Panel VSD 73M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-004",
+    "functionalLocation": "A-A2-01-002-004",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000709",
+    "equipmentName": "Panel VSD Recycle Backwash",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-009-004",
+    "functionalLocation": "A-A2-01-009-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000264",
+    "equipmentName": "Panel VSD 44/45M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000265",
+    "equipmentName": "Panel VSD 46/47M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-006-001",
+    "functionalLocation": "A-A2-01-006-001",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000719",
+    "equipmentName": "SCADA WTP Krenceng",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-001",
+    "functionalLocation": "A-A2-01-002-001",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210003476",
+    "equipmentName": "Motor 65M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007",
+    "functionalLocation": "A-A2-01-007",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003477",
+    "equipmentName": "Motor 66M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007",
+    "functionalLocation": "A-A2-01-007",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003469",
+    "equipmentName": "Pompa 65M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007",
+    "functionalLocation": "A-A2-01-007",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003470",
+    "equipmentName": "Pompa 66M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-007",
+    "functionalLocation": "A-A2-01-007",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003471",
+    "equipmentName": "Panel VSD 66M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-014",
+    "functionalLocation": "A-A2-01-002-014",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003472",
+    "equipmentName": "Panel VSD 65M1",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-014",
+    "functionalLocation": "A-A2-01-002-014",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003473",
+    "equipmentName": "Panel Capasitor Bank Trafo I",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-014",
+    "functionalLocation": "A-A2-01-002-014",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210003474",
+    "equipmentName": "Panel Capasitor Bank Trafo II",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-014",
+    "functionalLocation": "A-A2-01-002-014",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210003475",
+    "equipmentName": "Panel Capasitor Bank Trafo III",
+    "plantId": "P-22L007",
+    "funcLocId": "A-A2-01-002-014",
+    "functionalLocation": "A-A2-01-002-014",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210003024",
+    "equipmentName": "Panel Pompa Polymer Thickner",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003025",
+    "equipmentName": "Pompa Polymer Thickner 1M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003026",
+    "equipmentName": "Pompa Polymer Thickner 2M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003027",
+    "equipmentName": "Pompa Polymer Decanter 1M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003028",
+    "equipmentName": "Pompa Polymer Decanter 2M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003029",
+    "equipmentName": "Motor Polymer Thickner 1M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003030",
+    "equipmentName": "Motor Polymer Decanter 1M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003031",
+    "equipmentName": "Panel Pompa Polymer Decanter",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003032",
+    "equipmentName": "Panel VSD Decanter 1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003033",
+    "equipmentName": "Panel VSD Decanter 2",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003034",
+    "equipmentName": "Panel VSD Decanter 3",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003035",
+    "equipmentName": "Panel Incoming",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003036",
+    "equipmentName": "Pompa Ekualisasi No.1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-004",
+    "functionalLocation": "A-A2-01-010-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003037",
+    "equipmentName": "Pompa Ekualisasi No.2",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-004",
+    "functionalLocation": "A-A2-01-010-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003038",
+    "equipmentName": "Pompa Ekualisasi No.3",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-004",
+    "functionalLocation": "A-A2-01-010-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003039",
+    "equipmentName": "Motor Scrapper Thickner 1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-002",
+    "functionalLocation": "A-A2-01-010-002",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003040",
+    "equipmentName": "Motor Scrapper Thickner 2",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-003",
+    "functionalLocation": "A-A2-01-010-003",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003041",
+    "equipmentName": "Pompa Transfer Sludge 1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003042",
+    "equipmentName": "Pompa Transfer Sludge 2",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003043",
+    "equipmentName": "Pompa Transfer Sludge 3",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003044",
+    "equipmentName": "Gearbox scrapper Thickner 1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-002",
+    "functionalLocation": "A-A2-01-010-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003045",
+    "equipmentName": "Gearbox scrapper Thickner 2",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-003",
+    "functionalLocation": "A-A2-01-010-003",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003046",
+    "equipmentName": "Decanter No.1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003047",
+    "equipmentName": "Decanter No.2",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003048",
+    "equipmentName": "Decanter No.3",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003279",
+    "equipmentName": "Gearbox Mixing polymer thickener 1M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003280",
+    "equipmentName": "Gearbox Mixing polymer thickener 2M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003319",
+    "equipmentName": "GearBox Motor Konveyor Decanter 2",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003320",
+    "equipmentName": "GearBox Motor Konveyor Decanter 3",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003321",
+    "equipmentName": "Motor Konveyor Decanter 2",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003322",
+    "equipmentName": "Motor Konveyor Decanter 3",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003414",
+    "equipmentName": "Motor Polymer Thicnker 2M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003415",
+    "equipmentName": "Motor Polymer Decanter 2M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003416",
+    "equipmentName": "Motor Screw Polymer Decanter",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003417",
+    "equipmentName": "Motor Mixing Polymer Decanter 1M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003418",
+    "equipmentName": "Motor Mixing Polymer Decanter 2M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003419",
+    "equipmentName": "Motor Mixing Polymer Decanter 3M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003420",
+    "equipmentName": "Motor Screw Polymer Thickner",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003421",
+    "equipmentName": "Motor Mixing Polymer Thickner 1M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003422",
+    "equipmentName": "Motor Mixing Polymer Thickner 2M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Sipil",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003423",
+    "equipmentName": "Motor Mixing Polymer Thickner 3M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003426",
+    "equipmentName": "Gearbox Mixing polymer thickener 3M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003427",
+    "equipmentName": "Gearbox Mixing Polymer Decanter 1M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003428",
+    "equipmentName": "Gearbox Mixing Polymer Decanter 2M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003429",
+    "equipmentName": "Gearbox Mixing Polymer Decanter 3M1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003435",
+    "equipmentName": "Motor Transfer Sludge Decanter 1",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003436",
+    "equipmentName": "Motor Transfer Sludge Decanter 2",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210003437",
+    "equipmentName": "Motor Transfer Sludge Decanter 3",
+    "plantId": "I-22L002",
+    "funcLocId": "A-A2-01-010-001",
+    "functionalLocation": "A-A2-01-010-001",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000606",
+    "equipmentName": "Flowmeter Air Baku CPS (FL 08)",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000569",
+    "equipmentName": "Panel DCS CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-001",
+    "functionalLocation": "A-A1-02-003-001",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000581",
+    "equipmentName": "Panel MV-VSD 1000 CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-009",
+    "functionalLocation": "A-A1-02-003-009",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000597",
+    "equipmentName": "Transformator MV CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-003",
+    "functionalLocation": "A-A1-02-003-003",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000608",
+    "equipmentName": "Pompa Transfer Hypo CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-007",
+    "functionalLocation": "A-A1-02-003-007",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000467",
+    "equipmentName": "Genset Cipasauran",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-004",
+    "functionalLocation": "A-A1-02-003-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000243",
+    "equipmentName": "Crane PS VII (C11)",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000457",
+    "equipmentName": "Pompa Intake Cipasauran 1M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000458",
+    "equipmentName": "Pompa Intake Cipasauran 2M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000459",
+    "equipmentName": "Pompa Intake Cipasauran 3M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000562",
+    "equipmentName": "Motor Actuator Gate 100M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001-002",
+    "functionalLocation": "A-A1-02-001-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000564",
+    "equipmentName": "Motor Actuator Gate 101M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001-002",
+    "functionalLocation": "A-A1-02-001-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000465",
+    "equipmentName": "Pompa Distribusi WTP Mini Cipasauran",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-006-002",
+    "functionalLocation": "A-A1-02-006-002",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000467",
+    "equipmentName": "Genset Cipasauran",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-004",
+    "functionalLocation": "A-A1-02-003-004",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000559",
+    "equipmentName": "Sensor Level Mercu CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001",
+    "functionalLocation": "A-A1-02-001",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000562",
+    "equipmentName": "Motor Actuator Gate 100M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001-002",
+    "functionalLocation": "A-A1-02-001-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000564",
+    "equipmentName": "Motor Actuator Gate 101M1",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-001-002",
+    "functionalLocation": "A-A1-02-001-002",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000566",
+    "equipmentName": "Flowmeter Ultrasonic CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-002-001",
+    "functionalLocation": "A-A1-02-002-001",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000598",
+    "equipmentName": "Transformator LV CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-003",
+    "functionalLocation": "A-A1-02-003-003",
+    "category": "Listrik",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000606",
+    "equipmentName": "Flowmeter Air Baku CPS (FL 08)",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-004",
+    "functionalLocation": "A-A1-02-004",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000607",
+    "equipmentName": "Motor Transfer Hypo CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-007",
+    "functionalLocation": "A-A1-02-003-007",
+    "category": "Listrik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000608",
+    "equipmentName": "Pompa Transfer Hypo CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-003-007",
+    "functionalLocation": "A-A1-02-003-007",
+    "category": "Mekanik",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000603",
+    "equipmentName": "Sensor Level Sump Pump",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-005",
+    "functionalLocation": "A-A1-02-005",
+    "category": "Otomasi",
+    "abcIndicator": "A"
+  },
+  {
+    "equipmentId": "2210000613",
+    "equipmentName": "Turbidity Analyzer CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-006-002",
+    "functionalLocation": "A-A1-02-006-002",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  },
+  {
+    "equipmentId": "2210000614",
+    "equipmentName": "pH Analyzer CPS",
+    "plantId": "I-22L004",
+    "funcLocId": "A-A1-02-006-002",
+    "functionalLocation": "A-A1-02-006-002",
+    "category": "Otomasi",
+    "abcIndicator": "B"
+  }
+]

@@ -26,4 +26,19 @@ const getOne = (req, res) => {
   res.json(JSON.parse(fs.readFileSync(geojsonPath, 'utf8')));
 };
 
-module.exports = { getAll, getOne };
+// PUT /api/maps/:plantId
+const save = (req, res) => {
+  const { plantId } = req.params;
+  const geojson = req.body;
+  if (!geojson || geojson.type !== 'FeatureCollection') {
+    return res.status(400).json({ error: 'Expected GeoJSON FeatureCollection' });
+  }
+  if (!fs.existsSync(MAPS_DIR)) {
+    fs.mkdirSync(MAPS_DIR, { recursive: true });
+  }
+  const geojsonPath = path.join(MAPS_DIR, `${plantId}.geojson`);
+  fs.writeFileSync(geojsonPath, JSON.stringify(geojson, null, 2), 'utf8');
+  res.json({ message: 'Map saved', plantId });
+};
+
+module.exports = { getAll, getOne, save };

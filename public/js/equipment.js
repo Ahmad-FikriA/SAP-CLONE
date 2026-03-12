@@ -3,6 +3,11 @@
 let allEquipment = [];
 let editingEquipId = null;
 
+// ── Pagination state ────────────────────────────────────────────────────────
+let currentPage = 1;
+const PAGE_SIZE = 25;
+let totalEquipment = 0;
+
 // ── Leaflet Map ─────────────────────────────────────────────────────────────
 let map = null;
 let markersLayer = null;
@@ -63,7 +68,11 @@ async function initMap() {
     if (plants.length > 0) {
       currentPlantId = plants[0].plantId;
       const plant = plants[0];
-      map.setView([plant.centerLat, plant.centerLon], plant.zoom);
+      if (plant.centerLat != null && plant.centerLon != null) {
+        map.setView([plant.centerLat, plant.centerLon], plant.zoom || 17);
+      } else {
+        map.setView([-6.0135, 106.0219], 14);
+      }
       loadMapOverlay(plant.plantId);
     } else {
       map.setView([-6.0135, 106.0219], 17);
@@ -72,6 +81,9 @@ async function initMap() {
     console.warn('[initMap] Could not load plants:', e);
     map.setView([-6.0135, 106.0219], 17);
   }
+
+  // Enable click-to-show-coordinates on map
+  map.on('click', onMapClickForCoords);
 }
 
 function renderPlantSelector() {
@@ -83,6 +95,18 @@ function renderPlantSelector() {
   sel.innerHTML = plants.map(p =>
     `<option value="${escHtml(p.plantId)}">${escHtml(p.plantName)} — ${escHtml(p.city || '')}</option>`
   ).join('');
+
+  // Populate the table filter dropdown using DOM methods (no innerHTML)
+  const filterSel = document.getElementById('filterPlant');
+  if (filterSel) {
+    while (filterSel.options.length > 1) filterSel.remove(1);
+    plants.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.plantId;
+      opt.textContent = p.plantName;
+      filterSel.appendChild(opt);
+    });
+  }
 }
 
 function switchPlant() {
@@ -92,9 +116,13 @@ function switchPlant() {
   if (!plant) return;
 
   currentPlantId = plantId;
-  map.setView([plant.centerLat, plant.centerLon], plant.zoom);
+  if (plant.centerLat != null && plant.centerLon != null) {
+    map.setView([plant.centerLat, plant.centerLon], plant.zoom || 17);
+  }
   loadMapOverlay(plantId);
   updateMapMarkers();
+  // If no coords set, fit to whatever markers exist for this plant
+  if (plant.centerLat == null) setTimeout(fitMapToMarkers, 300);
 }
 
 async function loadMapOverlay(plantId) {
@@ -140,16 +168,36 @@ function updateMapMarkers() {
     const marker = L.marker([eq.latitude, eq.longitude], {
       icon: createCircleIcon(color)
     });
+    const qrContainerId = `qr-${eq.equipmentId.replace(/[^a-zA-Z0-9]/g, '_')}`;
     marker.bindPopup(`
       <div class="eq-popup">
         <div class="eq-popup__id">${escHtml(eq.equipmentId)}</div>
         <div class="eq-popup__name">${escHtml(eq.equipmentName)}</div>
         <div class="eq-popup__meta">
-          <span class="eq-popup__badge" style="background:${color}22;color:${color}">${escHtml(eq.category)}</span>
+          <span class="eq-popup__badge" style="background:${color}22;color:${color}">${escHtml(eq.category || '—')}</span>
         </div>
-        <div class="eq-popup__loc">📍 ${escHtml(eq.functionalLocation)}</div>
+        <div class="eq-popup__loc">📍 ${escHtml(eq.functionalLocation || '—')}</div>
+        <div class="eq-popup__qr" style="margin-top:8px;text-align:center;">
+          <div style="font-size:11px;color:#666;margin-bottom:4px;">Scan QR Code</div>
+          <div id="${qrContainerId}" style="display:inline-block;"></div>
+        </div>
       </div>
-    `, { maxWidth: 260 });
+    `, { maxWidth: 280, minWidth: 180 });
+    marker.on('popupopen', () => {
+      setTimeout(() => {
+        const container = document.getElementById(qrContainerId);
+        if (container && !container.hasChildNodes()) {
+          new QRCode(container, {
+            text: eq.equipmentId,
+            width: 96,
+            height: 96,
+            colorDark: '#1a1a2e',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        }
+      }, 50);
+    });
     marker.addTo(markersLayer);
   });
 }
@@ -160,14 +208,44 @@ function fitMapToMarkers() {
   map.fitBounds(group.getBounds().pad(0.15));
 }
 
-// ── Load & render ──────────────────────────────────────────────────────────
+// ── Debounced search ────────────────────────────────────────────────────────
+let searchTimer = null;
+function debouncedSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    currentPage = 1;
+    loadEquipment();
+  }, 350);
+}
+
+// ── Load & render with server-side pagination ──────────────────────────────
 async function loadEquipment() {
   const tbody = document.getElementById('equipBody');
   tbody.innerHTML = '<tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>';
   try {
     const cat = document.getElementById('filterCategory').value;
-    allEquipment = await apiGet('/equipment' + (cat ? `?category=${cat}` : ''));
+    const plantId = document.getElementById('filterPlant').value;
+    const search = document.getElementById('searchEquipment').value.trim();
+    const offset = (currentPage - 1) * PAGE_SIZE;
+
+    // Build query string
+    const params = new URLSearchParams();
+    if (cat) params.set('category', cat);
+    if (plantId) params.set('plantId', plantId);
+    if (search) params.set('search', search);
+    params.set('limit', PAGE_SIZE);
+    params.set('offset', offset);
+
+    const res = await apiGet('/equipment?' + params.toString());
+    allEquipment = res.data || res;
+    totalEquipment = res.total || allEquipment.length;
+
+    // Update count display
+    const countEl = document.getElementById('equipCount');
+    if (countEl) countEl.textContent = `${totalEquipment} equipment`;
+
     renderEquipment();
+    renderPagination();
     updateMapMarkers();
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">${e.message}</td></tr>`;
@@ -184,8 +262,8 @@ function renderEquipment() {
     <tr>
       <td><strong>${escHtml(eq.equipmentId)}</strong></td>
       <td>${escHtml(eq.equipmentName)}</td>
-      <td>${escHtml(eq.functionalLocation)}</td>
-      <td><span class="badge badge-in_progress" style="background:${CATEGORY_COLORS[eq.category] || '#6C757D'}22;color:${CATEGORY_COLORS[eq.category] || '#6C757D'}">${escHtml(eq.category)}</span></td>
+      <td>${escHtml(eq.functionalLocation || '—')}</td>
+      <td>${eq.category ? `<span class="badge badge-in_progress" style="background:${CATEGORY_COLORS[eq.category] || '#6C757D'}22;color:${CATEGORY_COLORS[eq.category] || '#6C757D'}">${escHtml(eq.category)}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
       <td class="text-small text-muted">${escHtml(eq.plantName || '—')}</td>
       <td>
         <div class="table-actions">
@@ -199,6 +277,56 @@ function renderEquipment() {
       </td>
     </tr>
   `).join('');
+}
+
+// ── Pagination controls ─────────────────────────────────────────────────────
+function renderPagination() {
+  const bar = document.getElementById('paginationBar');
+  if (!bar) return;
+  const totalPages = Math.ceil(totalEquipment / PAGE_SIZE);
+  if (totalPages <= 1) { bar.innerHTML = ''; return; }
+
+  const startItem = (currentPage - 1) * PAGE_SIZE + 1;
+  const endItem = Math.min(currentPage * PAGE_SIZE, totalEquipment);
+
+  let html = `<span style="color:var(--text-muted);margin-right:12px">${startItem}–${endItem} dari ${totalEquipment}</span>`;
+
+  // Prev button
+  html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹ Prev</button>`;
+
+  // Page numbers (show max 7 pages)
+  const maxVisible = 7;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+  if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
+
+  if (startPage > 1) html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(1)">1</button>`;
+  if (startPage > 2) html += `<span style="color:var(--text-muted)">…</span>`;
+
+  for (let i = startPage; i <= endPage; i++) {
+    if (i === currentPage) {
+      html += `<button class="btn btn-primary btn-sm" style="min-width:32px">${i}</button>`;
+    } else {
+      html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(${i})" style="min-width:32px">${i}</button>`;
+    }
+  }
+
+  if (endPage < totalPages - 1) html += `<span style="color:var(--text-muted)">…</span>`;
+  if (endPage < totalPages) html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+
+  // Next button
+  html += `<button class="btn btn-ghost btn-sm" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next ›</button>`;
+
+  bar.innerHTML = html;
+}
+
+function goToPage(page) {
+  const totalPages = Math.ceil(totalEquipment / PAGE_SIZE);
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  loadEquipment();
+  // Scroll table into view
+  document.querySelector('.table-wrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Focus equipment on map ──────────────────────────────────────────────────
@@ -239,6 +367,10 @@ function renderForm(eq) {
     `<option value="${escHtml(p.plantId)}" ${eq?.plantId === p.plantId ? 'selected' : ''}>${escHtml(p.plantName)}</option>`
   ).join('');
 
+  // Fix: use null-safe check for lat/lon so 0 doesn't get treated as empty
+  const latVal = (eq?.latitude != null && eq?.latitude !== '') ? eq.latitude : '';
+  const lonVal = (eq?.longitude != null && eq?.longitude !== '') ? eq.longitude : '';
+
   document.getElementById('panelBody').innerHTML = `
     <div class="form-section">
       <div class="form-section__title">Detail Equipment</div>
@@ -262,8 +394,9 @@ function renderForm(eq) {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Kategori *</label>
+          <label>Kategori</label>
           <select id="f_category">
+            <option value="">— Belum ditentukan —</option>
             ${cats.map(c => `<option ${eq?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
           </select>
         </div>
@@ -280,11 +413,11 @@ function renderForm(eq) {
       <div class="form-row">
         <div class="form-group">
           <label>Latitude</label>
-          <input id="f_lat" type="number" step="any" value="${eq?.latitude || ''}" placeholder="-6.0135" />
+          <input id="f_lat" type="number" step="any" value="${latVal}" placeholder="-6.0135" />
         </div>
         <div class="form-group">
           <label>Longitude</label>
-          <input id="f_lon" type="number" step="any" value="${eq?.longitude || ''}" placeholder="106.0219" />
+          <input id="f_lon" type="number" step="any" value="${lonVal}" placeholder="106.0219" />
         </div>
       </div>
       <div class="hint" style="font-size:11px;color:var(--text-muted);margin-top:4px">
@@ -297,28 +430,68 @@ function renderForm(eq) {
   if (map) {
     map.off('click', onMapClickForCoords);
     map.on('click', onMapClickForCoords);
+
+    if (tempMarker) {
+      map.removeLayer(tempMarker);
+      tempMarker = null;
+    }
+
+    // Show marker if equipment already has coordinates
+    if (eq && eq.latitude != null && eq.longitude != null) {
+      tempMarker = L.marker([eq.latitude, eq.longitude]).addTo(map);
+    }
   }
 }
 
+let tempMarker = null;
+
 function onMapClickForCoords(e) {
+  const lat = e.latlng.lat.toFixed(7);
+  const lon = e.latlng.lng.toFixed(7);
+
   const latInput = document.getElementById('f_lat');
   const lonInput = document.getElementById('f_lon');
-  // Only set if panel is open
-  if (latInput && lonInput && document.getElementById('panel').classList.contains('show')) {
-    latInput.value = e.latlng.lat.toFixed(7);
-    lonInput.value = e.latlng.lng.toFixed(7);
+  const panelOpen = document.getElementById('panel') && document.getElementById('panel').classList.contains('show');
+
+  // Fill form fields if panel is open
+  if (panelOpen && latInput && lonInput) {
+    latInput.value = lat;
+    lonInput.value = lon;
+
+    if (tempMarker) {
+      map.removeLayer(tempMarker);
+    }
+    tempMarker = L.marker(e.latlng).addTo(map);
   }
+
+  // Always show a coordinate popup on click
+  L.popup({ closeButton: true, className: 'coord-popup' })
+    .setLatLng(e.latlng)
+    .setContent(`<div style="font-size:12px;font-family:monospace;"><strong>📍 Koordinat</strong><br>Lat: ${lat}<br>Lng: ${lon}</div>`)
+    .openOn(map);
 }
+
+// Override global closePanel to clean up marker
+const originalClosePanel = window.closePanel;
+window.closePanel = function () {
+  if (originalClosePanel) originalClosePanel();
+  if (tempMarker && map) {
+    map.removeLayer(tempMarker);
+    tempMarker = null;
+  }
+};
 
 // ── Save ────────────────────────────────────────────────────────────────────
 async function saveEquipment() {
   const equipmentId = document.getElementById('f_equipId').value.trim();
   const equipmentName = document.getElementById('f_equipName').value.trim();
   const functionalLocation = document.getElementById('f_location').value.trim();
-  const category = document.getElementById('f_category').value;
+  const category = document.getElementById('f_category').value || null;
   const plantId = document.getElementById('f_plantId').value;
-  const latitude = parseFloat(document.getElementById('f_lat').value) || null;
-  const longitude = parseFloat(document.getElementById('f_lon').value) || null;
+  const latRaw = document.getElementById('f_lat').value;
+  const lonRaw = document.getElementById('f_lon').value;
+  const latitude = latRaw !== '' ? parseFloat(latRaw) : null;
+  const longitude = lonRaw !== '' ? parseFloat(lonRaw) : null;
 
   if (!equipmentId || !equipmentName) { alert('ID dan Nama Equipment wajib diisi.'); return; }
 
