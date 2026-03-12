@@ -218,6 +218,15 @@ function debouncedSearch() {
   }, 350);
 }
 
+let funcLocTimer = null;
+function debouncedFuncLocSearch() {
+  clearTimeout(funcLocTimer);
+  funcLocTimer = setTimeout(() => {
+    currentPage = 1;
+    loadEquipment();
+  }, 350);
+}
+
 // ── Load & render with server-side pagination ──────────────────────────────
 async function loadEquipment() {
   const tbody = document.getElementById('equipBody');

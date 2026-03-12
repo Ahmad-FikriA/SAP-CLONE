@@ -35,39 +35,40 @@ const users = [
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// EQUIPMENT — loaded from data/equipment.json (single source of truth)
+// EQUIPMENT — loaded from data/equipment.json (real SAP IDs with demo coords)
 //
-// Real IDs from data/equipment.json:
-//   EQ-001  Pompa Air Utama A         Basement Lantai B1      Mekanik
-//   EQ-002  Pompa Air Utama B         Basement Lantai B1      Mekanik
-//   EQ-003  Pompa Booster Lantai 5    Ruang Pompa Lantai 5    Mekanik
-//   EQ-004  Kompresor Udara Gedung    Ruang Utilitas B2       Mekanik
-//   EQ-005  Panel Listrik Utama       Ruang Panel Lantai 1    Listrik
-//   EQ-006  Panel Distribusi Lantai 3 Ruang Panel Lantai 3    Listrik
-//   EQ-007  Genset Cadangan 200 kVA   Area Genset Basement    Listrik
-//   EQ-008  Bak Penampungan Utama     Area Luar Gedung        Sipil
-//   EQ-009  Saluran Drainase Utara    Area Drainase Utara     Sipil
-//   EQ-010  Sensor Level Air Tank 1   Rooftop Area            Otomasi
+// SAP IDs used for SPK/LK demo data:
+//   2210000438  Pompa Intake Cidanau 1M1        I-22L001  Mekanik  A
+//   2210000439  Pompa Intake Cidanau 2M1        I-22L001  Mekanik  A
+//   2210000449  Pompa Booster Clorine Cidanau   I-22L001  Mekanik  B
+//   2210000451  Pompa Sump Pump Cidanau         I-22L001  Mekanik  B
+//   2210000640  Panel Katodik Cidanau I         I-22L001  Listrik  B
+//   2210000651  Transformator BT 01             I-22L001  Listrik  A
+//   2210000652  Transformator BT 02             I-22L001  Listrik  A
+//   2210000327  Manhole SLD Basin               P-22L006  Sipil    B
+//   2210003422  Motor Mixing Polymer Thickner   I-22L002  Sipil    B
+//   2210000605  Sensor AWLR                     I-22L001  Otomasi  A
 // ────────────────────────────────────────────────────────────────────────────
 const equipment = [
   ...equipmentFileData,
 
   // ── TEST EQUIPMENT — QR Scanner GPS Demo Scenarios ────────────────────────
-  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam',      functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0135, longitude: 106.0219 },
-  { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', functionalLocation: 'Area Timur Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0117, longitude: 106.0219 },
-  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik',       functionalLocation: 'Area Remote Jauh (Test)',  category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0600, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam',      functionalLocation: 'A-A1-01-005-004', funcLocId: 'A-A1-01-005-004', category: 'Mekanik', plantId: 'I-22L001', latitude: -6.0135, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', functionalLocation: 'A-A1-01-005-004', funcLocId: 'A-A1-01-005-004', category: 'Mekanik', plantId: 'I-22L001', latitude: -6.0117, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik',       functionalLocation: 'A-A1-01-005-004', funcLocId: 'A-A1-01-005-004', category: 'Mekanik', plantId: 'I-22L001', latitude: -6.0600, longitude: 106.0219 },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
 // SPK
 //
-// Equipment IDs match data/equipment.json:
-//   EQ-001  Pompa Air Utama A      EQ-005  Panel Listrik Utama
-//   EQ-002  Pompa Air Utama B      EQ-006  Panel Distribusi Lantai 3
-//   EQ-003  Pompa Booster Lantai 5 EQ-007  Genset Cadangan 200 kVA
-//   EQ-004  Kompresor Udara Gedung EQ-008  Bak Penampungan Utama
-//                                  EQ-009  Saluran Drainase Utara
-//                                  EQ-010  Sensor Level Air Tank 1
+// All equipment IDs are real SAP IDs from data/equipment.json:
+//   2210000438  Pompa Intake Cidanau 1M1      (Mekanik, A)
+//   2210000439  Pompa Intake Cidanau 2M1      (Mekanik, A)
+//   2210000449  Pompa Booster Clorine Cidanau (Mekanik, B)
+//   2210000640  Panel Katodik Cidanau I       (Listrik, B)
+//   2210000652  Transformator BT 02           (Listrik, A)
+//   2210000327  Manhole SLD Basin             (Sipil,   B)
+//   2210000605  Sensor AWLR                   (Otomasi, A)
 //
 // dueDate comes from the parent LK's periodeEnd (computed in spkController).
 // SPK-M-001 → LK-FEB-MEK (periodeEnd = 2026-02-28, PAST) → isOverdue = true.
@@ -78,35 +79,35 @@ const spk = [
   // ⚠️ OVERDUE: LK periodeEnd = 2026-02-28 (past). Status still pending.
   {
     spkNumber: 'SPK-M-001',
-    description: 'Perawatan Rutin Pompa Air Utama A — Bulanan (Februari)',
+    description: 'Perawatan Rutin Pompa Intake Cidanau 1M1 — Bulanan (Februari)',
     interval: '1 Bulan',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1' },
+      { equipmentId: '2210000438', equipmentName: 'Pompa Intake Cidanau 1M1', functionalLocation: 'A-A1-01-005-004' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan pompa (bar)',         resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Cek kebocoran pipa dan fitting',       resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Pelumasan bearing motor pompa',        resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan pompa intake (bar)',    resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Cek kebocoran pipa dan fitting',        resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Pelumasan bearing motor pompa intake',  resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
     ],
   },
 
   {
     spkNumber: 'SPK-M-002',
-    description: 'Perawatan Rutin Pompa Air Utama B — Bulanan (Maret)',
+    description: 'Perawatan Rutin Pompa Intake Cidanau 2M1 — Bulanan (Maret)',
     interval: '1 Bulan',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-002', equipmentName: 'Pompa Air Utama B', functionalLocation: 'Basement Lantai B1' },
+      { equipmentId: '2210000439', equipmentName: 'Pompa Intake Cidanau 2M1', functionalLocation: 'A-A1-01-005-004' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan dan debit air keluar', resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Bersihkan strainer / saringan pompa',  resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Cek vibrasi dan suara abnormal',       resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan dan debit air keluar',  resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Bersihkan strainer / saringan pompa',   resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Cek vibrasi dan suara abnormal',        resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
     ],
   },
 
@@ -114,35 +115,35 @@ const spk = [
 
   {
     spkNumber: 'SPK-L-001',
-    description: 'Inspeksi Panel Listrik Utama — Bulanan (Maret)',
+    description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (Maret)',
     interval: '1 Bulan',
     category: 'Listrik',
     status: 'in_progress',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1' },
+      { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan input dan output (VAC)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Cek kondisi MCB dan MCCB',                resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Bersihkan debu pada busbar dan terminal', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan output panel katodik (VDC)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Cek kondisi elektroda dan sambungan kabel',   resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Bersihkan terminal dan periksa korosi',       resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
     ],
   },
 
   {
     spkNumber: 'SPK-L-002',
-    description: 'Servis Rutin Genset Cadangan 200 kVA — 6 Bulanan',
+    description: 'Servis Rutin Transformator BT 02 — 6 Bulanan',
     interval: '6 Bulan',
     category: 'Listrik',
     status: 'completed',
     durationActual: 3.0,
     equipmentModels: [
-      { equipmentId: 'EQ-007', equipmentName: 'Genset Cadangan 200 kVA', functionalLocation: 'Area Genset Basement' },
+      { equipmentId: '2210000652', equipmentName: 'Transformator BT 02', functionalLocation: 'A-A1-01-004-002' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Ganti oli mesin genset',                  resultComment: 'Oli diganti dengan Pertamina Fastron 15W40', durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
-      { activityNumber: 'ACT-002', operationText: 'Ganti filter oli dan filter bahan bakar',  resultComment: 'Kedua filter sudah diganti baru',             durationPlan: 0.5, durationActual: 0.75, isVerified: true },
-      { activityNumber: 'ACT-003', operationText: 'Uji coba operasi beban penuh 30 menit',   resultComment: 'Genset beroperasi normal, output 200V/50Hz',  durationPlan: 1.0, durationActual: 1.25, isVerified: true },
+      { activityNumber: 'ACT-001', operationText: 'Cek dan ambil sampel minyak isolasi trafo',  resultComment: 'Minyak isolasi dalam kondisi baik, tidak ada kontaminasi', durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Periksa tegangan primer dan sekunder (kV)',  resultComment: 'Tegangan primer 20kV, sekunder 380V — normal',            durationPlan: 0.5, durationActual: 0.75, isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Inspeksi bushing, terminal, dan grounding',  resultComment: 'Semua bushing bersih, grounding terpasang baik',          durationPlan: 1.0, durationActual: 1.25, isVerified: true },
     ],
   },
 
@@ -150,17 +151,17 @@ const spk = [
 
   {
     spkNumber: 'SPK-S-001',
-    description: 'Pemeriksaan Bak Penampungan Utama — 3 Bulanan',
+    description: 'Pemeriksaan Manhole SLD Basin — 3 Bulanan',
     interval: '3 Bulan',
     category: 'Sipil',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-008', equipmentName: 'Bak Penampungan Utama', functionalLocation: 'Area Luar Gedung' },
+      { equipmentId: '2210000327', equipmentName: 'Manhole SLD Basin', functionalLocation: 'A-A2-03-012' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa kebocoran dinding dan lantai bak', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Bersihkan sedimen dan lumpur dasar bak',   resultComment: null, durationPlan: 2.0, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-001', operationText: 'Periksa kondisi struktur dan tutup manhole', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Bersihkan sedimen dan lumpur dalam basin',   resultComment: null, durationPlan: 2.0, durationActual: null, isVerified: false },
     ],
   },
 
@@ -168,127 +169,126 @@ const spk = [
 
   {
     spkNumber: 'SPK-O-001',
-    description: 'Kalibrasi Sensor Level Air Tank 1 — 3 Bulanan',
+    description: 'Kalibrasi Sensor AWLR — 3 Bulanan',
     interval: '3 Bulan',
     category: 'Otomasi',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-010', equipmentName: 'Sensor Level Air Tank 1', functionalLocation: 'Rooftop Area' },
+      { equipmentId: '2210000605', equipmentName: 'Sensor AWLR', functionalLocation: 'A-A1-01-001' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Cek sinyal output sensor (4–20 mA)',       resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Kalibrasi titik 0% dan 100% level',        resultComment: null, durationPlan: 1.0,  durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Periksa kabel sinyal dan koneksi terminal', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-001', operationText: 'Cek sinyal output sensor AWLR (4–20 mA)',    resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Kalibrasi titik ukur level air (0–100%)',    resultComment: null, durationPlan: 1.0,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Periksa kabel sinyal dan koneksi terminal',  resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
     ],
   },
 
-  // ── EQ-001 Pompa Air Utama A — multi-month history (for EquipmentHistoryPage demo) ──
+  // ── 2210000438 Pompa Intake Cidanau 1M1 — multi-month history ────────────
 
-  // EQ-001 Pompa Air Utama A — Jan + Feb completed (Feb is SPK-M-001, already OVERDUE above)
   {
     spkNumber: 'SPK-M-PMP-A-JAN',
-    description: 'Perawatan Rutin Pompa Air Utama A — Bulanan (Januari)',
+    description: 'Perawatan Rutin Pompa Intake Cidanau 1M1 — Bulanan (Januari)',
     interval: '1 Bulan',
     category: 'Mekanik',
     status: 'completed',
     durationActual: 1.5,
     equipmentModels: [
-      { equipmentId: 'EQ-001', equipmentName: 'Pompa Air Utama A', functionalLocation: 'Basement Lantai B1' },
+      { equipmentId: '2210000438', equipmentName: 'Pompa Intake Cidanau 1M1', functionalLocation: 'A-A1-01-005-004' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan pompa (bar)',       resultComment: 'Tekanan normal: 4.2 bar',               durationPlan: 0.5,  durationActual: 0.5,  isVerified: true },
-      { activityNumber: 'ACT-002', operationText: 'Cek kebocoran pipa dan fitting',    resultComment: 'Tidak ada kebocoran',                   durationPlan: 0.5,  durationActual: 0.5,  isVerified: true },
-      { activityNumber: 'ACT-003', operationText: 'Pelumasan bearing motor pompa',    resultComment: 'Bearing dilumasi, kondisi baik',         durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan pompa intake (bar)',    resultComment: 'Tekanan normal: 4.2 bar',       durationPlan: 0.5,  durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Cek kebocoran pipa dan fitting',        resultComment: 'Tidak ada kebocoran',           durationPlan: 0.5,  durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Pelumasan bearing motor pompa intake',  resultComment: 'Bearing dilumasi, kondisi baik', durationPlan: 0.25, durationActual: 0.25, isVerified: true },
     ],
   },
 
-  // ── EQ-003 Pompa Booster Lantai 5 — 3-month history ──────────────────────
+  // ── 2210000449 Pompa Booster Clorine Cidanau — 3-month history ───────────
 
   {
     spkNumber: 'SPK-M-BST-JAN',
-    description: 'Perawatan Pompa Booster Lantai 5 — Bulanan (Januari)',
+    description: 'Perawatan Pompa Booster Clorine Cidanau — Bulanan (Januari)',
     interval: '1 Bulan',
     category: 'Mekanik',
     status: 'completed',
     durationActual: 1.0,
     equipmentModels: [
-      { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5' },
+      { equipmentId: '2210000449', equipmentName: 'Pompa Booster Clorine Cidanau', functionalLocation: 'A-A1-01-005-006' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Cek tekanan output pompa booster', resultComment: 'Tekanan normal: 3.8 bar',               durationPlan: 0.5,  durationActual: 0.5,  isVerified: true },
-      { activityNumber: 'ACT-002', operationText: 'Inspeksi seal dan gasket',         resultComment: 'Seal dalam kondisi baik',               durationPlan: 0.25, durationActual: 0.25, isVerified: true },
-      { activityNumber: 'ACT-003', operationText: 'Cek arus motor (ampere)',          resultComment: 'Arus normal: 8.5 A',                   durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+      { activityNumber: 'ACT-001', operationText: 'Cek tekanan output pompa booster clorine', resultComment: 'Tekanan normal: 3.8 bar',    durationPlan: 0.5,  durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Inspeksi seal dan gasket',                 resultComment: 'Seal dalam kondisi baik',    durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Cek arus motor (ampere)',                  resultComment: 'Arus normal: 8.5 A',        durationPlan: 0.25, durationActual: 0.25, isVerified: true },
     ],
   },
 
   {
     spkNumber: 'SPK-M-BST-FEB',
-    description: 'Perawatan Pompa Booster Lantai 5 — Bulanan (Februari)',
+    description: 'Perawatan Pompa Booster Clorine Cidanau — Bulanan (Februari)',
     interval: '1 Bulan',
     category: 'Mekanik',
     status: 'completed',
     durationActual: 1.25,
     equipmentModels: [
-      { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5' },
+      { equipmentId: '2210000449', equipmentName: 'Pompa Booster Clorine Cidanau', functionalLocation: 'A-A1-01-005-006' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Cek tekanan output pompa booster', resultComment: 'Tekanan sedikit turun: 3.5 bar, disetel ulang', durationPlan: 0.5,  durationActual: 0.75, isVerified: true },
-      { activityNumber: 'ACT-002', operationText: 'Inspeksi seal dan gasket',         resultComment: 'Seal mulai aus, dijadwalkan ganti bulan depan', durationPlan: 0.25, durationActual: 0.25, isVerified: true },
-      { activityNumber: 'ACT-003', operationText: 'Cek arus motor (ampere)',          resultComment: 'Arus normal: 8.7 A',                          durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+      { activityNumber: 'ACT-001', operationText: 'Cek tekanan output pompa booster clorine', resultComment: 'Tekanan sedikit turun: 3.5 bar, disetel ulang', durationPlan: 0.5,  durationActual: 0.75, isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Inspeksi seal dan gasket',                 resultComment: 'Seal mulai aus, dijadwalkan ganti bulan depan', durationPlan: 0.25, durationActual: 0.25, isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Cek arus motor (ampere)',                  resultComment: 'Arus normal: 8.7 A',                          durationPlan: 0.25, durationActual: 0.25, isVerified: true },
     ],
   },
 
   {
     spkNumber: 'SPK-M-BST-MAR',
-    description: 'Perawatan Pompa Booster Lantai 5 — Bulanan (Maret)',
+    description: 'Perawatan Pompa Booster Clorine Cidanau — Bulanan (Maret)',
     interval: '1 Bulan',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
     equipmentModels: [
-      { equipmentId: 'EQ-003', equipmentName: 'Pompa Booster Lantai 5', functionalLocation: 'Ruang Pompa Lantai 5' },
+      { equipmentId: '2210000449', equipmentName: 'Pompa Booster Clorine Cidanau', functionalLocation: 'A-A1-01-005-006' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Cek tekanan output pompa booster', resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-002', operationText: 'Ganti seal (tindak lanjut Feb)',   resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
-      { activityNumber: 'ACT-003', operationText: 'Cek arus motor (ampere)',          resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-001', operationText: 'Cek tekanan output pompa booster clorine', resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Ganti seal (tindak lanjut Februari)',       resultComment: null, durationPlan: 0.5,  durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Cek arus motor (ampere)',                  resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
     ],
   },
 
-  // ── EQ-005 Panel Listrik Utama — 3-month history (Jan/Feb + SPK-L-001 Mar) ─
+  // ── 2210000640 Panel Katodik Cidanau I — 3-month history ─────────────────
 
   {
     spkNumber: 'SPK-L-PNL-JAN',
-    description: 'Inspeksi Panel Listrik Utama — Bulanan (Januari)',
+    description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (Januari)',
     interval: '1 Bulan',
     category: 'Listrik',
     status: 'completed',
     durationActual: 1.5,
     equipmentModels: [
-      { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1' },
+      { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan input dan output (VAC)', resultComment: 'Tegangan normal 380V / 220V',              durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
-      { activityNumber: 'ACT-002', operationText: 'Cek kondisi MCB dan MCCB',                resultComment: 'Semua MCB berfungsi normal',              durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
-      { activityNumber: 'ACT-003', operationText: 'Bersihkan debu pada busbar dan terminal', resultComment: 'Busbar dibersihkan, tidak ada korosi',     durationPlan: 1.0, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan output panel katodik (VDC)', resultComment: 'Tegangan output normal: 24 VDC',              durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Cek kondisi elektroda dan sambungan kabel',   resultComment: 'Elektroda dan kabel dalam kondisi baik',     durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Bersihkan terminal dan periksa korosi',       resultComment: 'Terminal dibersihkan, tidak ada korosi',     durationPlan: 1.0, durationActual: 0.5,  isVerified: true },
     ],
   },
 
   {
     spkNumber: 'SPK-L-PNL-FEB',
-    description: 'Inspeksi Panel Listrik Utama — Bulanan (Februari)',
+    description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (Februari)',
     interval: '1 Bulan',
     category: 'Listrik',
     status: 'completed',
     durationActual: 2.0,
     equipmentModels: [
-      { equipmentId: 'EQ-005', equipmentName: 'Panel Listrik Utama', functionalLocation: 'Ruang Panel Lantai 1' },
+      { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
     activitiesModel: [
-      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan input dan output (VAC)', resultComment: 'Tegangan normal 382V / 221V',              durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
-      { activityNumber: 'ACT-002', operationText: 'Cek kondisi MCB dan MCCB',                resultComment: '1 MCB perlu penggantian, sudah dilaporkan', durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
-      { activityNumber: 'ACT-003', operationText: 'Bersihkan debu pada busbar dan terminal', resultComment: 'Busbar bersih',                            durationPlan: 1.0, durationActual: 1.0,  isVerified: true },
+      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan output panel katodik (VDC)', resultComment: 'Tegangan output: 23.5 VDC, sedikit turun',       durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-002', operationText: 'Cek kondisi elektroda dan sambungan kabel',   resultComment: '1 sambungan kabel longgar, sudah dikencangkan', durationPlan: 0.5, durationActual: 0.5,  isVerified: true },
+      { activityNumber: 'ACT-003', operationText: 'Bersihkan terminal dan periksa korosi',       resultComment: 'Ditemukan sedikit korosi pada terminal, dibersihkan', durationPlan: 1.0, durationActual: 1.0, isVerified: true },
     ],
   },
 ];
@@ -555,13 +555,18 @@ async function main() {
   }
   console.log(`  ✓  plants       (+${added} added, ${skipped} already existed)`);
 
-  // ── Equipment (insert-if-not-exists) ───────────────────────────────────────
+  // ── Equipment (upsert lat/lng — these rows may already exist from SAP seed) ─
   added = 0; skipped = 0;
   for (const e of equipment) {
-    const [, created] = await Equipment.findOrCreate({ where: { equipmentId: e.equipmentId }, defaults: e });
-    created ? added++ : skipped++;
+    const [instance, created] = await Equipment.findOrCreate({ where: { equipmentId: e.equipmentId }, defaults: e });
+    if (!created && (e.latitude != null || e.longitude != null)) {
+      await instance.update({ latitude: e.latitude, longitude: e.longitude });
+      skipped++;
+    } else {
+      created ? added++ : skipped++;
+    }
   }
-  console.log(`  ✓  equipment    (+${added} added, ${skipped} already existed)`);
+  console.log(`  ✓  equipment    (+${added} added, ${skipped} updated/existed)`);
 
   // ── Functional Locations (insert-if-not-exists) ────────────────────────────
   added = 0; skipped = 0;
@@ -674,23 +679,23 @@ async function main() {
 
   console.log('\n  Seed complete!\n');
   console.log('  SPK summary:');
-  console.log('    SPK-M-001        Mekanik  pending     ← OVERDUE  EQ-001 Pompa Air A (dueDate = 2026-02-28)');
-  console.log('    SPK-M-002        Mekanik  pending                EQ-002 Pompa Air B (dueDate = 2026-03-31)');
-  console.log('    SPK-L-001        Listrik  in_progress            EQ-005 Panel Listrik Utama');
-  console.log('    SPK-L-002        Listrik  completed              EQ-007 Genset Cadangan 200 kVA');
-  console.log('    SPK-S-001        Sipil    pending                EQ-008 Bak Penampungan Utama');
-  console.log('    SPK-O-001        Otomasi  pending                EQ-010 Sensor Level Air Tank 1');
-  console.log('    SPK-M-PMP-A-JAN  Mekanik  completed              EQ-001 Pompa Air A Januari');
-  console.log('    SPK-M-BST-JAN    Mekanik  completed              EQ-003 Pompa Booster Januari');
-  console.log('    SPK-M-BST-FEB    Mekanik  completed              EQ-003 Pompa Booster Februari');
-  console.log('    SPK-M-BST-MAR    Mekanik  pending                EQ-003 Pompa Booster Maret');
-  console.log('    SPK-L-PNL-JAN    Listrik  completed              EQ-005 Panel Listrik Januari');
-  console.log('    SPK-L-PNL-FEB    Listrik  completed              EQ-005 Panel Listrik Februari\n');
-  console.log('  Equipment with QR scan history (scan these IDs):');
-  console.log('    EQ-001  → 2 SPK (Jan completed, Feb OVERDUE)');
-  console.log('    EQ-003  → 3 SPK (Jan+Feb completed, Mar pending)');
-  console.log('    EQ-005  → 3 SPK (Jan+Feb completed, Mar in_progress)');
-  console.log('    EQ-007  → 1 SPK (6-bulanan completed)\n');
+  console.log('    SPK-M-001        Mekanik  pending     ← OVERDUE  2210000438 Pompa Intake Cidanau 1M1 (dueDate = 2026-02-28)');
+  console.log('    SPK-M-002        Mekanik  pending                2210000439 Pompa Intake Cidanau 2M1 (dueDate = 2026-03-31)');
+  console.log('    SPK-L-001        Listrik  in_progress            2210000640 Panel Katodik Cidanau I');
+  console.log('    SPK-L-002        Listrik  completed              2210000652 Transformator BT 02');
+  console.log('    SPK-S-001        Sipil    pending                2210000327 Manhole SLD Basin');
+  console.log('    SPK-O-001        Otomasi  pending                2210000605 Sensor AWLR');
+  console.log('    SPK-M-PMP-A-JAN  Mekanik  completed              2210000438 Pompa Intake Cidanau 1M1 (Januari)');
+  console.log('    SPK-M-BST-JAN    Mekanik  completed              2210000449 Pompa Booster Clorine Cidanau (Januari)');
+  console.log('    SPK-M-BST-FEB    Mekanik  completed              2210000449 Pompa Booster Clorine Cidanau (Februari)');
+  console.log('    SPK-M-BST-MAR    Mekanik  pending                2210000449 Pompa Booster Clorine Cidanau (Maret)');
+  console.log('    SPK-L-PNL-JAN    Listrik  completed              2210000640 Panel Katodik Cidanau I (Januari)');
+  console.log('    SPK-L-PNL-FEB    Listrik  completed              2210000640 Panel Katodik Cidanau I (Februari)\n');
+  console.log('  Equipment with QR scan history (scan these SAP IDs):');
+  console.log('    2210000438  → 2 SPK (Jan completed, Feb OVERDUE)');
+  console.log('    2210000449  → 3 SPK (Jan+Feb completed, Mar pending)');
+  console.log('    2210000640  → 3 SPK (Jan+Feb completed, Mar in_progress)');
+  console.log('    2210000652  → 1 SPK (6-bulanan completed)\n');
 
   await sequelize.close();
 }

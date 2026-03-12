@@ -165,6 +165,8 @@
         <select id="filterPlant" onchange="currentPage=1;loadEquipment()">
           <option value="">Semua Plant</option>
         </select>
+        <input id="filterFuncLoc" type="text" placeholder="Func. Location..." oninput="debouncedFuncLocSearch()"
+          style="width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;" />
         <div class="toolbar__spacer"></div>
         <span id="equipCount" style="font-size:12px;color:var(--text-muted);margin-right:8px;"></span>
         <button class="btn btn-ghost btn-sm" onclick="loadEquipment()">
