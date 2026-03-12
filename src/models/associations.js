@@ -7,6 +7,8 @@
 
 const User = require("./User");
 const Plant = require("./Plant");
+// Import FunctionalLocation BEFORE Equipment because Equipment has FK to it
+const FunctionalLocation = require("./FunctionalLocation");
 const Equipment = require("./Equipment");
 const { Spk, SpkEquipment, SpkActivity } = require("./Spk");
 const { LembarKerja, LembarKerjaSpk } = require("./LembarKerja");
@@ -19,7 +21,6 @@ const {
   CorrectiveRequest,
   CorrectiveRequestImage,
 } = require("./CorrectiveRequest");
-const FunctionalLocation = require("./FunctionalLocation");
 const {
   GeneralTaskList,
   GeneralTaskListActivity,
