@@ -234,6 +234,7 @@ async function loadEquipment() {
   try {
     const cat = document.getElementById('filterCategory').value;
     const plantId = document.getElementById('filterPlant').value;
+    const funcLoc = document.getElementById('filterFuncLoc').value.trim();
     const search = document.getElementById('searchEquipment').value.trim();
     const offset = (currentPage - 1) * PAGE_SIZE;
 
@@ -241,6 +242,7 @@ async function loadEquipment() {
     const params = new URLSearchParams();
     if (cat) params.set('category', cat);
     if (plantId) params.set('plantId', plantId);
+    if (funcLoc) params.set('funcLocId', funcLoc);
     if (search) params.set('search', search);
     params.set('limit', PAGE_SIZE);
     params.set('offset', offset);
