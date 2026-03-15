@@ -1,9 +1,9 @@
 [
   {
-    "equipmentId": "2210000438",
-    "equipmentName": "Pompa Intake Cidanau 1M1",
-    "functionalLocation": "A-A1-01-005-004",
-    "funcLocId": "A-A1-01-005-004",
+    "equipmentId": "EQ-001",
+    "equipmentName": "Pompa Air Utama A",
+    "functionalLocation": "Basement Lantai B1",
+    "funcLocId": "A-A1-01-001-001",
     "category": "Mekanik",
     "abcIndicator": "A",
     "plantId": "I-22L001",
@@ -12,10 +12,10 @@
     "longitude": 106.0215
   },
   {
-    "equipmentId": "2210000439",
-    "equipmentName": "Pompa Intake Cidanau 2M1",
-    "functionalLocation": "A-A1-01-005-004",
-    "funcLocId": "A-A1-01-005-004",
+    "equipmentId": "EQ-002",
+    "equipmentName": "Pompa Air Utama B",
+    "functionalLocation": "Basement Lantai B1",
+    "funcLocId": "A-A1-01-001-001",
     "category": "Mekanik",
     "abcIndicator": "A",
     "plantId": "I-22L001",
@@ -24,10 +24,10 @@
     "longitude": 106.0218
   },
   {
-    "equipmentId": "2210000449",
-    "equipmentName": "Pompa Booster Clorine Cidanau",
-    "functionalLocation": "A-A1-01-005-006",
-    "funcLocId": "A-A1-01-005-006",
+    "equipmentId": "EQ-003",
+    "equipmentName": "Pompa Booster Lantai 5",
+    "functionalLocation": "Ruang Pompa Lantai 5",
+    "funcLocId": "A-A1-01-003-001",
     "category": "Mekanik",
     "abcIndicator": "B",
     "plantId": "I-22L001",
@@ -36,10 +36,10 @@
     "longitude": 106.0222
   },
   {
-    "equipmentId": "2210000451",
-    "equipmentName": "Pompa Sump Pump Cidanau",
-    "functionalLocation": "A-A1-01-005-004",
-    "funcLocId": "A-A1-01-005-004",
+    "equipmentId": "EQ-004",
+    "equipmentName": "Kompresor Udara Gedung",
+    "functionalLocation": "Ruang Utilitas B2",
+    "funcLocId": "A-A1-01-004-001",
     "category": "Mekanik",
     "abcIndicator": "B",
     "plantId": "I-22L001",
@@ -48,10 +48,10 @@
     "longitude": 106.0210
   },
   {
-    "equipmentId": "2210000640",
-    "equipmentName": "Panel Katodik Cidanau I",
-    "functionalLocation": "A-A1-01-005",
-    "funcLocId": "A-A1-01-005",
+    "equipmentId": "EQ-005",
+    "equipmentName": "Panel Listrik Utama",
+    "functionalLocation": "Ruang Panel Lantai 1",
+    "funcLocId": "A-A1-01-004-002",
     "category": "Listrik",
     "abcIndicator": "B",
     "plantId": "I-22L001",
@@ -60,10 +60,10 @@
     "longitude": 106.0224
   },
   {
-    "equipmentId": "2210000651",
-    "equipmentName": "Transformator BT 01",
-    "functionalLocation": "A-A1-01-004-001",
-    "funcLocId": "A-A1-01-004-001",
+    "equipmentId": "EQ-006",
+    "equipmentName": "Panel Distribusi Lantai 3",
+    "functionalLocation": "Ruang Panel Lantai 3",
+    "funcLocId": "A-A1-01-004-003",
     "category": "Listrik",
     "abcIndicator": "A",
     "plantId": "I-22L001",
@@ -72,10 +72,10 @@
     "longitude": 106.0226
   },
   {
-    "equipmentId": "2210000652",
-    "equipmentName": "Transformator BT 02",
-    "functionalLocation": "A-A1-01-004-002",
-    "funcLocId": "A-A1-01-004-002",
+    "equipmentId": "EQ-007",
+    "equipmentName": "Genset Cadangan 200 kVA",
+    "functionalLocation": "Area Genset Basement",
+    "funcLocId": "A-A1-01-005-001",
     "category": "Listrik",
     "abcIndicator": "A",
     "plantId": "I-22L001",
@@ -84,10 +84,10 @@
     "longitude": 106.0220
   },
   {
-    "equipmentId": "2210000327",
-    "equipmentName": "Manhole SLD Basin",
-    "functionalLocation": "A-A2-03-012",
-    "funcLocId": "A-A2-03-012",
+    "equipmentId": "EQ-008",
+    "equipmentName": "Bak Penampungan Utama",
+    "functionalLocation": "Area Luar Gedung",
+    "funcLocId": "A-A1-01-005-004",
     "category": "Sipil",
     "abcIndicator": "B",
     "plantId": "P-22L006",
@@ -96,10 +96,10 @@
     "longitude": 106.0212
   },
   {
-    "equipmentId": "2210003422",
-    "equipmentName": "Motor Mixing Polymer Thickner 2M1",
-    "functionalLocation": "A-A2-01-010-001",
-    "funcLocId": "A-A2-01-010-001",
+    "equipmentId": "EQ-009",
+    "equipmentName": "Saluran Drainase Utara",
+    "functionalLocation": "Area Drainase Utara",
+    "funcLocId": "A-A1-01-006-003",
     "category": "Sipil",
     "abcIndicator": "B",
     "plantId": "I-22L002",
@@ -108,10 +108,10 @@
     "longitude": 106.0208
   },
   {
-    "equipmentId": "2210000605",
-    "equipmentName": "Sensor AWLR",
-    "functionalLocation": "A-A1-01-001",
-    "funcLocId": "A-A1-01-001",
+    "equipmentId": "EQ-010",
+    "equipmentName": "Sensor Level Air Tank 1",
+    "functionalLocation": "Rooftop Area",
+    "funcLocId": "A-A1-01-006-004",
     "category": "Otomasi",
     "abcIndicator": "A",
     "plantId": "I-22L001",
