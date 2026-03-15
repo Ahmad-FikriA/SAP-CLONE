@@ -5,8 +5,9 @@
     "functionalLocation": "Basement Lantai B1",
     "funcLocId": "A-A1-01-001-001",
     "category": "Mekanik",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
+    "abcIndicator": "A",
+    "plantId": "I-22L001",
+    "plantName": "PS I Cidanau",
     "latitude": -6.0131,
     "longitude": 106.0215
   },
@@ -16,8 +17,9 @@
     "functionalLocation": "Basement Lantai B1",
     "funcLocId": "A-A1-01-001-001",
     "category": "Mekanik",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
+    "abcIndicator": "A",
+    "plantId": "I-22L001",
+    "plantName": "PS I Cidanau",
     "latitude": -6.0133,
     "longitude": 106.0218
   },
@@ -27,8 +29,9 @@
     "functionalLocation": "Ruang Pompa Lantai 5",
     "funcLocId": "A-A1-01-003-001",
     "category": "Mekanik",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
+    "abcIndicator": "B",
+    "plantId": "I-22L001",
+    "plantName": "PS I Cidanau",
     "latitude": -6.0128,
     "longitude": 106.0222
   },
@@ -38,10 +41,11 @@
     "functionalLocation": "Ruang Utilitas B2",
     "funcLocId": "A-A1-01-004-001",
     "category": "Mekanik",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
+    "abcIndicator": "B",
+    "plantId": "I-22L001",
+    "plantName": "PS I Cidanau",
     "latitude": -6.0139,
-    "longitude": 106.0212
+    "longitude": 106.0210
   },
   {
     "equipmentId": "EQ-005",
@@ -49,8 +53,9 @@
     "functionalLocation": "Ruang Panel Lantai 1",
     "funcLocId": "A-A1-01-004-002",
     "category": "Listrik",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
+    "abcIndicator": "B",
+    "plantId": "I-22L001",
+    "plantName": "PS I Cidanau",
     "latitude": -6.0136,
     "longitude": 106.0224
   },
@@ -60,9 +65,10 @@
     "functionalLocation": "Ruang Panel Lantai 3",
     "funcLocId": "A-A1-01-004-003",
     "category": "Listrik",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
-    "latitude": -6.0130,
+    "abcIndicator": "A",
+    "plantId": "I-22L001",
+    "plantName": "PS I Cidanau",
+    "latitude": -6.0140,
     "longitude": 106.0226
   },
   {
@@ -71,8 +77,9 @@
     "functionalLocation": "Area Genset Basement",
     "funcLocId": "A-A1-01-005-001",
     "category": "Listrik",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
+    "abcIndicator": "A",
+    "plantId": "I-22L001",
+    "plantName": "PS I Cidanau",
     "latitude": -6.0141,
     "longitude": 106.0220
   },
@@ -82,10 +89,11 @@
     "functionalLocation": "Area Luar Gedung",
     "funcLocId": "A-A1-01-005-004",
     "category": "Sipil",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
-    "latitude": -6.0126,
-    "longitude": 106.0210
+    "abcIndicator": "B",
+    "plantId": "P-22L006",
+    "plantName": "WTP Cidanau",
+    "latitude": -6.0128,
+    "longitude": 106.0212
   },
   {
     "equipmentId": "EQ-009",
@@ -93,10 +101,11 @@
     "functionalLocation": "Area Drainase Utara",
     "funcLocId": "A-A1-01-006-003",
     "category": "Sipil",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
-    "latitude": -6.0124,
-    "longitude": 106.0217
+    "abcIndicator": "B",
+    "plantId": "I-22L002",
+    "plantName": "DECANTER",
+    "latitude": -6.0125,
+    "longitude": 106.0208
   },
   {
     "equipmentId": "EQ-010",
@@ -104,9 +113,10 @@
     "functionalLocation": "Rooftop Area",
     "funcLocId": "A-A1-01-006-004",
     "category": "Otomasi",
-    "plantId": "KTI-01",
-    "plantName": "PT Krakatau Tirta Industri",
-    "latitude": -6.0134,
+    "abcIndicator": "A",
+    "plantId": "I-22L001",
+    "plantName": "PS I Cidanau",
+    "latitude": -6.0143,
     "longitude": 106.0228
   }
 ]
