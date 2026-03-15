@@ -9,7 +9,7 @@ const User = sequelize.define('User', {
   password: { type: DataTypes.STRING(255), allowNull: false },
   name:     { type: DataTypes.STRING(100), allowNull: false },
   role:     { type: DataTypes.ENUM('teknisi','planner','supervisor','manager','admin','user','kadis','kasie','kadis_pusat'), allowNull: false, defaultValue: 'teknisi' },
-  workCenter: { type: DataTypes.ENUM('electrical','civil','automation','mechanical',null), allowNull: true, field: 'work_center' },
+  workCenter: { type: DataTypes.ENUM('electrical','civil','automation','mechanical'), allowNull: true, field: 'work_center' },
   department: { type: DataTypes.STRING(50), allowNull: true },
   email:    { type: DataTypes.STRING(100), allowNull: true },
 }, {
