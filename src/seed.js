@@ -561,8 +561,8 @@ async function main() {
   // Note: Don't use { alter: true } here to avoid FK constraint issues
   // when Equipment table has data but FunctionalLocations hasn't been seeded yet.
   // Schema migrations should be handled separately via proper migration files.
-  await sequelize.sync({ force: false });
-  console.log('  ✓  Tables synced');
+  await sequelize.sync({ force: true });
+  console.log('  ✓  Tables synced (force rebuilt)');
 
   let added, skipped;
 
