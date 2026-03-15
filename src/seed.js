@@ -77,9 +77,9 @@ const equipment = [
   ...equipmentFileData,
 
   // ── TEST EQUIPMENT — QR Scanner GPS Demo Scenarios ────────────────────────
-  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam',      functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0135, longitude: 106.0219 },
-  { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', functionalLocation: 'Area Timur Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0117, longitude: 106.0219 },
-  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik',       functionalLocation: 'Area Remote Jauh (Test)',  category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0600, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam',      funcLocId: 'A-A1-02-001-001', functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0135, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', funcLocId: 'A-A1-02-001-002', functionalLocation: 'Area Timur Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0117, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik',       funcLocId: 'A-A1-02-002-001', functionalLocation: 'Area Remote Jauh (Test)',  category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0600, longitude: 106.0219 },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -560,9 +560,10 @@ async function main() {
 
   // Note: Don't use { alter: true } here to avoid FK constraint issues
   // when Equipment table has data but FunctionalLocations hasn't been seeded yet.
-  // Schema migrations should be handled separately via proper migration files.
+  // Note: Temporarily disable foreign key checks to allow dropping and recreating tables safely without referencing errors
+  await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
   await sequelize.sync({ force: true });
-  console.log('  ✓  Tables synced (force rebuilt)');
+  console.log('  ✓  Tables synced (force rebuilt with FK checks disabled)');
 
   let added, skipped;
 
@@ -944,10 +945,12 @@ async function main() {
   console.log(`  ✓  spk_corrective (+${added} added, ${skipped} already existed)`);
 
   console.log('\n  Seed complete! (no existing data was modified)\n');
+  await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
   await sequelize.close();
 }
 
-main().catch(err => {
+main().catch(async err => {
   console.error('  ✗  Seed failed:', err.message);
+  try { await sequelize.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) {}
   process.exit(1);
 });
