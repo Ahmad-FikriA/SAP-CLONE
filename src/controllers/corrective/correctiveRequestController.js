@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const { v4: uuid } = require('uuid');
 const Notification = require('../../models/Notification');
 const { SpkCorrective } = require('../../models/associations');
-const { KADIS_ROLES } = require('../../middleware/correctiveAccess');
+const { KADIS_ROLE, KADIS_PUSAT_ROLE } = require('../../middleware/correctiveAccess');
 
 // GET /api/corrective/requests
 // Rules: Kadis Pelapor (own), Planner (all), Kadis Pusat (all)
@@ -15,7 +15,7 @@ const getAll = async (req, res) => {
   if (req.query.status) where.status = req.query.status;
   
   // Kadis Pelapor can only see own notifications
-  if (KADIS_ROLES.includes(role)) {
+  if (role === KADIS_ROLE) {
     where.kadisPelaporId = userId;
   }
   // Planner and Kadis Pusat can see all (no filter)
@@ -122,7 +122,7 @@ const update = async (req, res) => {
   }
   
   // Kadis Pelapor can only update if status is draft or submitted
-  if (KADIS_ROLES.includes(role)) {
+  if (role === KADIS_ROLE) {
     if (notification.status === 'spk_created' || notification.status === 'closed') {
       return res.status(400).json({
         error: 'Cannot modify notification after SPK is created or closed'

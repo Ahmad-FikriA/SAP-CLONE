@@ -6,7 +6,7 @@ const sequelize = require('../../config/database');
 const Notification = require('../../models/Notification');
 const SpkCorrective = require('../../models/SpkCorrective');
 const { SpkCorrectiveItem, SpkCorrectivePhoto } = require('../../models/SpkCorrectiveItem');
-const { KADIS_ROLES, ROLE_TO_WORKCENTER } = require('../../middleware/correctiveAccess');
+const { KADIS_ROLE, WORK_CENTER_ROLES } = require('../../middleware/correctiveAccess');
 
 // ── Eager-load config ─────────────────────────────────────────────────────────
 const SPK_INCLUDE = [
@@ -65,20 +65,19 @@ function fmtSpk(spk) {
 // GET /api/corrective/spk - List all corrective SPKs
 // Rules: Teknisi/Kasie (own work center), Planner (all), Kadis Pusat (all), Kadis Pelapor (own)
 const getAll = async (req, res) => {
-  const { userId, role } = req.user;
+  const { userId, role, workCenter } = req.user;
   const where = {};
   
   if (req.query.status) where.status = req.query.status;
   if (req.query.priority) where.priority = req.query.priority;
   
   // Teknisi/Kasie - only see their work center
-  const userWorkCenter = ROLE_TO_WORKCENTER[role];
-  if (userWorkCenter) {
-    where.workCenter = userWorkCenter;
+  if (WORK_CENTER_ROLES.includes(role) && workCenter) {
+    where.workCenter = workCenter;
   }
   
   // Kadis Pelapor - only see own reports
-  if (KADIS_ROLES.includes(role)) {
+  if (role === KADIS_ROLE) {
     const notifications = await Notification.findAll({
       where: { kadisPelaporId: userId },
       attributes: ['notificationId'],
@@ -486,17 +485,16 @@ const reject = async (req, res) => {
 // GET /api/corrective/spk/history
 // Get completed SPK history for user's work center
 const getHistory = async (req, res) => {
-  const { userId, role } = req.user;
+  const { userId, role, workCenter } = req.user;
   const where = { status: 'completed' };
   
   // Teknisi/Kasie - only see their work center history
-  const userWorkCenter = ROLE_TO_WORKCENTER[role];
-  if (userWorkCenter) {
-    where.workCenter = userWorkCenter;
+  if (WORK_CENTER_ROLES.includes(role) && workCenter) {
+    where.workCenter = workCenter;
   }
   
   // Kadis Pelapor - only see own reports
-  if (KADIS_ROLES.includes(role)) {
+  if (role === KADIS_ROLE) {
     const notifications = await Notification.findAll({
       where: { kadisPelaporId: userId },
       attributes: ['notificationId'],
