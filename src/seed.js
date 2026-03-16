@@ -618,6 +618,16 @@ async function main() {
   added = 0; skipped = 0;
   const plantNameMap = Object.fromEntries(plants.map(p => [p.plantId, p.plantName]));
   for (const se of sapEquipmentData) {
+    // Sanitize category to strictly match the DB ENUMs
+    let safeCategory = null;
+    if (se.category) {
+      const cat = se.category.toLowerCase().trim();
+      if (['mekanik', 'mechanical'].includes(cat)) safeCategory = 'Mekanik';
+      else if (['listrik', 'electrical'].includes(cat)) safeCategory = 'Listrik';
+      else if (['sipil', 'civil'].includes(cat)) safeCategory = 'Sipil';
+      else if (['otomasi', 'automation'].includes(cat)) safeCategory = 'Otomasi';
+    }
+
     const defaults = {
       equipmentId: se.equipmentId,
       equipmentName: se.equipmentName,
@@ -625,27 +635,34 @@ async function main() {
       plantName: plantNameMap[se.plantId] || null,
       funcLocId: se.funcLocId || null,
       functionalLocation: se.functionalLocation || null,
-      category: se.category || null,
+      category: safeCategory,
       abcIndicator: se.abcIndicator || null,
     };
-    const [instance, created] = await Equipment.findOrCreate({
-      where: { equipmentId: se.equipmentId },
-      defaults,
-    });
-    if (!created) {
-      // Update fields that may have been missing from older sparse seed
-      await instance.update({
-        equipmentName: defaults.equipmentName,
-        plantId: defaults.plantId,
-        plantName: defaults.plantName,
-        funcLocId: defaults.funcLocId,
-        functionalLocation: defaults.functionalLocation,
-        category: defaults.category,
-        abcIndicator: defaults.abcIndicator,
-      });
-      skipped++;
-    } else {
-      added++;
+    try {
+      let instance = await Equipment.findOne({ where: { equipmentId: se.equipmentId } });
+      let created = false;
+      if (!instance) {
+        instance = await Equipment.create(defaults);
+        created = true;
+      }
+      if (!created) {
+        // Update fields that may have been missing from older sparse seed
+        await instance.update({
+          equipmentName: defaults.equipmentName,
+          plantId: defaults.plantId,
+          plantName: defaults.plantName,
+          funcLocId: defaults.funcLocId,
+          functionalLocation: defaults.functionalLocation,
+          category: defaults.category,
+          abcIndicator: defaults.abcIndicator,
+        });
+        skipped++;
+      } else {
+        added++;
+      }
+    } catch (upsertError) {
+      console.error(`\nFAILED ON EQUIP ID: ${se.equipmentId}`);
+      throw upsertError;
     }
   }
   console.log(`  ✓  sap_equip    (+${added} added, ${skipped} updated)`);
@@ -743,7 +760,7 @@ async function main() {
       notificationType: 'Kerusakan',
       description: 'Pompa Air Utama A tidak berfungsi',
       functionalLocation: 'Basement Lantai B1',
-      equipment: 'Pompa Air Utama A',
+      equipmentName: 'Pompa Air Utama A',
       equipmentId: 'EQ-001',
       requiredStart: '2026-03-11',
       requiredEnd: '2026-03-15',
@@ -760,10 +777,10 @@ async function main() {
     {
       notificationId: 'NOTIF-002',
       notificationDate: '2026-03-11',
-      notificationType: 'Kerusakan',
-      description: 'Panel Listrik Utama sering trip',
+      notificationType: 'Anomali',
+      description: 'Panel Listrik Utama berbau hangus',
       functionalLocation: 'Ruang Panel Lantai 1',
-      equipment: 'Panel Listrik Utama',
+      equipmentName: 'Panel Listrik Utama',
       equipmentId: 'EQ-005',
       requiredStart: '2026-03-12',
       requiredEnd: '2026-03-16',
@@ -783,7 +800,7 @@ async function main() {
       notificationType: 'Kerusakan',
       description: 'Bak Penampungan bocor',
       functionalLocation: 'Area Luar Gedung',
-      equipment: 'Bak Penampungan Utama',
+      equipmentName: 'Bak Penampungan Utama',
       equipmentId: 'EQ-008',
       requiredStart: '2026-03-13',
       requiredEnd: '2026-03-18',
@@ -800,10 +817,10 @@ async function main() {
     {
       notificationId: 'NOTIF-004',
       notificationDate: '2026-03-09',
-      notificationType: 'Kerusakan',
-      description: 'Sensor Level tidak akurat',
+      notificationType: 'Anomali',
+      description: 'Sensor Level Air sering memberi nilai kosong',
       functionalLocation: 'Rooftop Area',
-      equipment: 'Sensor Level Air Tank 1',
+      equipmentName: 'Sensor Level Air Tank 1',
       equipmentId: 'EQ-010',
       requiredStart: '2026-03-10',
       requiredEnd: '2026-03-14',
@@ -823,7 +840,7 @@ async function main() {
       notificationType: 'Kerusakan',
       description: 'Genset tidak bisa start',
       functionalLocation: 'Area Genset Basement',
-      equipment: 'Genset Cadangan 200 kVA',
+      equipmentName: 'Genset Cadangan 200 kVA',
       equipmentId: 'EQ-007',
       requiredStart: '2026-03-09',
       requiredEnd: '2026-03-13',
@@ -963,7 +980,7 @@ async function main() {
 }
 
 main().catch(async err => {
-  console.error('  ✗  Seed failed:', err.message);
+  console.error('  ✗  Seed failed:\n', err);
   try { await sequelize.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) {}
   process.exit(1);
 });
