@@ -478,7 +478,7 @@ function onMapClickForCoords(e) {
   // Always show a coordinate popup on click
   L.popup({ closeButton: true, className: 'coord-popup' })
     .setLatLng(e.latlng)
-    .setContent(`<div style="font-size:12px;font-family:monospace;"><strong>📍 Koordinat</strong><br>Lat: ${lat}<br>Lng: ${lon}</div>`)
+    .setContent(`<div style="font-size:12px;font-family:monospace;"><strong>📍 Koordinat</strong><br>Lat: & Long: ${lat}, ${lon}</div>`)
     .openOn(map);
 }
 
