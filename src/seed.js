@@ -823,7 +823,7 @@ async function main() {
       notificationType: 'Kerusakan',
       description: 'Genset tidak bisa start',
       functionalLocation: 'Area Genset Basement',
-      equipment: 'Genset Cadangan 200 kVA',
+      equipmentName: 'Genset Cadangan 200 kVA',
       equipmentId: 'EQ-007',
       requiredStart: '2026-03-09',
       requiredEnd: '2026-03-13',
