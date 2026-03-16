@@ -7732,6 +7732,76 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "source": "custom",
+        "name": "Pump Station IV",
+        "featureType": "industrial"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              106.022368,
+              -6.012514
+            ],
+            [
+              106.022368,
+              -6.012382
+            ],
+            [
+              106.022564,
+              -6.012382
+            ],
+            [
+              106.022564,
+              -6.012514
+            ],
+            [
+              106.022368,
+              -6.012514
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "source": "custom",
+        "name": "Pump Station VI",
+        "featureType": "industrial"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              106.02265,
+              -6.012446
+            ],
+            [
+              106.02265,
+              -6.012343
+            ],
+            [
+              106.022895,
+              -6.012343
+            ],
+            [
+              106.022895,
+              -6.012446
+            ],
+            [
+              106.02265,
+              -6.012446
+            ]
+          ]
+        ]
+      }
     }
   ]
 }
