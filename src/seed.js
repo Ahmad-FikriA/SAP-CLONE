@@ -963,7 +963,7 @@ async function main() {
 }
 
 main().catch(async err => {
-  console.error('  ✗  Seed failed:', err.message);
+  console.error('  ✗  Seed failed:\n', err);
   try { await sequelize.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) {}
   process.exit(1);
 });
