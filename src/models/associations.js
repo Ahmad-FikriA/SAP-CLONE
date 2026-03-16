@@ -41,6 +41,13 @@ Spk.hasMany(SpkEquipment, {
 });
 SpkEquipment.belongsTo(Spk, { foreignKey: "spkNumber", as: "spk" });
 
+// ── SpkEquipment ↔ Equipment (for lat/lng eager-load in spkController) ────────
+SpkEquipment.belongsTo(Equipment, {
+  foreignKey: "equipmentId",
+  as: "equipmentDetails",
+  constraints: false,
+});
+
 // ── SPK ↔ SpkActivity ─────────────────────────────────────────────────────────
 Spk.hasMany(SpkActivity, {
   foreignKey: "spkNumber",
@@ -57,7 +64,7 @@ LembarKerja.hasMany(LembarKerjaSpk, {
 });
 LembarKerjaSpk.belongsTo(LembarKerja, {
   foreignKey: "lkNumber",
-  as: "lembarKerja",
+  as: "lk",
 });
 
 // ── LembarKerjaSpk ↔ Spk (resolve SPK details from junction) ──────────────────
@@ -164,6 +171,15 @@ InspectionFollowUp.belongsTo(InspectionReport, {
   as: "report",
 });
 
+// InspectionRequest (User → Planner)
+const InspectionRequest = require("./InspectionRequest");
+
+InspectionRequest.belongsTo(InspectionSchedule, {
+  foreignKey: "scheduleId",
+  as: "schedule",
+  constraints: false,
+});
+
 // InspectionFollowUp ↔ SuratPelanggaran
 const SuratPelanggaran = require("./SuratPelanggaran");
 
@@ -188,13 +204,17 @@ FunctionalLocation.belongsTo(FunctionalLocation, {
 });
 
 // ── Equipment ↔ FunctionalLocation ───────────────────────────────────────────
+// constraints: false — not all SAP funcLocIds exist in functional_locations tree,
+// so we skip the DB-level FK and let Sequelize handle joins in application code.
 FunctionalLocation.hasMany(Equipment, {
   foreignKey: "funcLocId",
   as: "equipment",
+  constraints: false,
 });
 Equipment.belongsTo(FunctionalLocation, {
   foreignKey: "funcLocId",
   as: "funcLoc",
+  constraints: false,
 });
 
 // ── GeneralTaskList ↔ GeneralTaskListActivity ────────────────────────────────
