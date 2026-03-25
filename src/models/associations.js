@@ -180,6 +180,13 @@ InspectionRequest.belongsTo(InspectionSchedule, {
   constraints: false,
 });
 
+// Reverse: InspectionSchedule → InspectionRequest (for schedules created from user requests)
+InspectionSchedule.hasOne(InspectionRequest, {
+  foreignKey: "scheduleId",
+  as: "userRequest",
+  constraints: false,
+});
+
 // InspectionFollowUp ↔ SuratPelanggaran
 const SuratPelanggaran = require("./SuratPelanggaran");
 
@@ -250,6 +257,7 @@ module.exports = {
   InspectionReport,
   InspectionReportPhoto,
   InspectionFollowUp,
+  InspectionRequest,
   SuratPelanggaran,
   FunctionalLocation,
   GeneralTaskList,

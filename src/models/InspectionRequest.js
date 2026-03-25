@@ -68,7 +68,7 @@ const InspectionRequest = sequelize.define(
       comment: "Username user yang membuat request",
     },
     status: {
-      type: DataTypes.ENUM("pending", "approved", "rejected"),
+      type: DataTypes.ENUM("pending", "approved", "rejected", "cancelled"),
       allowNull: false,
       defaultValue: "pending",
       comment: "Status tindak lanjut oleh Planner",

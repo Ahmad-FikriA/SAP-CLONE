@@ -42,6 +42,7 @@ const {
   createRequest,
   approveRequest,
   rejectRequest,
+  cancelRequest,
 } = require("../controllers/inspection/inspectionRequestController");
 
 // All inspection routes require authentication
@@ -81,5 +82,6 @@ router.get("/requests/:id", getRequest);
 router.post("/requests", createRequest);
 router.put("/requests/:id/approve", approveRequest);
 router.put("/requests/:id/reject", rejectRequest);
+router.put("/requests/:id/cancel", cancelRequest);
 
 module.exports = router;

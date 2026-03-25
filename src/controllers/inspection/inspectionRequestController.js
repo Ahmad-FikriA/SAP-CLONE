@@ -91,7 +91,7 @@ async function createRequest(req, res) {
 }
 
 // PUT /api/inspection/requests/:id/approve
-// Body: { notes?, scheduledDate?, assignedTo? }
+// Body: { notes?, scheduledDate?, assignedTo?, title?, unitKerja?, nomorPoJo? }
 async function approveRequest(req, res) {
   try {
     const request = await InspectionRequest.findByPk(req.params.id);
@@ -109,7 +109,8 @@ async function approveRequest(req, res) {
       });
     }
 
-    const { notes, scheduledDate, assignedTo } = req.body;
+    const { notes, scheduledDate, assignedTo, title, unitKerja, nomorPoJo } =
+      req.body;
 
     // Tentukan tanggal jadwal: dari req.body atau dari tanggalDiinginkan user
     const finalDate =
@@ -125,12 +126,14 @@ async function approveRequest(req, res) {
     // Auto-create InspectionSchedule
     const schedule = await InspectionSchedule.create({
       type: request.jenisInspeksi === "k3" ? "k3" : "rutin",
-      title: request.judul,
+      title: title || request.judul,
+      unitKerja: unitKerja || null,
       location: request.lokasi,
       scheduledDate: finalDate,
       createdBy: req.user?.username ?? "planner",
       assignedTo: finalAssignedTo,
-      triggerSource: "user_darurat",
+      triggerSource: "planner",
+      nomorPoJo: nomorPoJo || null,
       notes: request.deskripsi,
       status: "scheduled",
     });
@@ -190,10 +193,57 @@ async function rejectRequest(req, res) {
   }
 }
 
+// PUT /api/inspection/requests/:id/cancel
+// Body: { notes }
+async function cancelRequest(req, res) {
+  try {
+    const request = await InspectionRequest.findByPk(req.params.id);
+
+    if (!request) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found." });
+    }
+
+    if (request.requestedBy !== req.user?.username) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda hanya dapat membatalkan permintaan milik sendiri.",
+      });
+    }
+
+    if (request.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Permintaan hanya dapat dibatalkan selama status masih proses.",
+      });
+    }
+
+    const cancellationNote = req.body?.notes?.toString().trim();
+
+    await request.update({
+      status: "cancelled",
+      notes:
+        cancellationNote && cancellationNote.length > 0
+          ? `[Dibatalkan User] ${cancellationNote}`
+          : "[Dibatalkan User]",
+    });
+
+    res.json({
+      success: true,
+      message: "Permintaan inspeksi berhasil dibatalkan.",
+      data: request,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 module.exports = {
   listRequests,
   getRequest,
   createRequest,
   approveRequest,
   rejectRequest,
+  cancelRequest,
 };

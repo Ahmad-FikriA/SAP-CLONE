@@ -1,6 +1,7 @@
 "use strict";
 
 const InspectionSchedule = require("../../models/InspectionSchedule");
+const InspectionRequest = require("../../models/InspectionRequest");
 
 /**
  * Schedule Controller — CRUD for inspection schedules.
@@ -19,6 +20,14 @@ async function listSchedules(req, res) {
     const schedules = await InspectionSchedule.findAll({
       where,
       order: [["scheduledDate", "DESC"]],
+      include: [
+        {
+          model: InspectionRequest,
+          as: "userRequest",
+          attributes: ["id", "deskripsi", "mediaPaths", "requestedBy", "judul"],
+          required: false,
+        },
+      ],
     });
 
     res.json({
@@ -35,7 +44,15 @@ async function listSchedules(req, res) {
 async function getSchedule(req, res) {
   try {
     const schedule = await InspectionSchedule.findByPk(req.params.id, {
-      include: [{ association: "reports" }],
+      include: [
+        { association: "reports" },
+        {
+          model: InspectionRequest,
+          as: "userRequest",
+          attributes: ["id", "deskripsi", "mediaPaths", "requestedBy", "judul"],
+          required: false,
+        },
+      ],
     });
 
     if (!schedule) {

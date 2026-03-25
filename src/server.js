@@ -92,6 +92,110 @@ const uploadCorrectivePhotos = multer({
   },
 });
 
+// Storage for inspection media (images/videos)
+const inspectionStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, "..", "uploads", "inspection");
+    // Create directory if not exists
+    require('fs').mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}_${file.originalname}`);
+  },
+});
+
+// 25MB file size limit for inspection media (images and videos)
+const INSPECTION_MEDIA_MAX_SIZE_MB = 25;
+const INSPECTION_MEDIA_MAX_SIZE = INSPECTION_MEDIA_MAX_SIZE_MB * 1024 * 1024;
+const INSPECTION_MEDIA_MAX_COUNT = 5;
+const INSPECTION_MEDIA_ALLOWED_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".jfif",
+  ".png",
+  ".gif",
+  ".webp",
+  ".heic",
+  ".heif",
+  ".mp4",
+  ".m4v",
+  ".mpeg",
+  ".mpg",
+  ".3gp",
+  ".3gpp",
+  ".mov",
+  ".avi",
+  ".mkv",
+  ".webm",
+]);
+
+function isInspectionMediaAllowed(file) {
+  const mimeType = String(file?.mimetype || "").toLowerCase();
+  const originalName = String(file?.originalname || "");
+  const extension = path.extname(originalName).toLowerCase();
+  const hasAllowedMimePrefix =
+    mimeType.startsWith("image/") || mimeType.startsWith("video/");
+  const hasAllowedExtension = INSPECTION_MEDIA_ALLOWED_EXTENSIONS.has(extension);
+  const looksLikeBlobUpload =
+    mimeType === "application/octet-stream" &&
+    (originalName.toLowerCase() === "blob" || originalName.toLowerCase().startsWith("image_picker"));
+
+  return hasAllowedMimePrefix || hasAllowedExtension || looksLikeBlobUpload;
+}
+
+const uploadInspectionMedia = multer({
+  storage: inspectionStorage,
+  limits: {
+    fileSize: INSPECTION_MEDIA_MAX_SIZE,
+    files: INSPECTION_MEDIA_MAX_COUNT,
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images/videos by MIME type OR by known file extension
+    // (some clients send application/octet-stream for camera files).
+    if (!isInspectionMediaAllowed(file)) {
+      return cb(new Error("Only image and video files are allowed"), false);
+    }
+    cb(null, true);
+  },
+});
+
+function handleInspectionMediaUpload(req, res, next) {
+  uploadInspectionMedia.array("media", INSPECTION_MEDIA_MAX_COUNT)(req, res, (err) => {
+    if (!err) {
+      return next();
+    }
+
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({
+          success: false,
+          error: `Ukuran file maksimal ${INSPECTION_MEDIA_MAX_SIZE_MB}MB per file.`,
+        });
+      }
+
+      if (err.code === "LIMIT_FILE_COUNT") {
+        return res.status(400).json({
+          success: false,
+          error: "Maksimal 5 file dalam sekali upload.",
+        });
+      }
+
+      if (err.code === "LIMIT_UNEXPECTED_FILE") {
+        return res.status(400).json({
+          success: false,
+          error: "Field upload tidak valid. Gunakan field 'media'.",
+        });
+      }
+    }
+
+    return res.status(400).json({
+      success: false,
+      error: err.message || "Gagal upload media.",
+    });
+  });
+}
+
 const { verifyToken } = require("./middleware/auth");
 
 // Generic photo upload endpoint
@@ -112,6 +216,15 @@ app.post('/api/upload/photos', verifyToken, uploadCorrectivePhotos.array('photos
   }
   const paths = req.files.map(file => `uploads/${file.filename}`);
   res.json({ paths });
+});
+
+// Multiple media upload endpoint for inspection requests (images & videos)
+app.post('/api/upload/inspection-media', verifyToken, handleInspectionMediaUpload, (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ success: false, error: 'No files uploaded' });
+  }
+  const paths = req.files.map(file => `uploads/inspection/${file.filename}`);
+  res.json({ success: true, paths });
 });
 
 // ── API Routes ───────────────────────────────────────────────────────────────
