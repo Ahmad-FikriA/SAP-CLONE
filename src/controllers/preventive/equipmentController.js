@@ -1,7 +1,11 @@
 'use strict';
 
+const path = require('path');
+const fs   = require('fs');
 const { Op } = require('sequelize');
 const Equipment = require('../../models/Equipment');
+
+const MAPS_DIR = path.join(__dirname, '..', '..', '..', 'data', 'maps');
 
 // GET /api/equipment
 // Query: ?category=Mekanik  ?search=pompa  ?limit=50  ?offset=0  ?funcLocId=A-A1-01
@@ -41,7 +45,32 @@ const create = async (req, res) => {
 const getOne = async (req, res) => {
   const eq = await Equipment.findByPk(req.params.equipmentId);
   if (!eq) return res.status(404).json({ error: 'Equipment not found' });
-  res.json(eq);
+
+  const result = eq.toJSON();
+
+  // Resolve polygon from plant GeoJSON if feature name is set
+  if (result.polygonFeatureName && result.plantId) {
+    try {
+      const geojsonPath = path.join(MAPS_DIR, `${result.plantId}.geojson`);
+      if (fs.existsSync(geojsonPath)) {
+        const geojson = JSON.parse(fs.readFileSync(geojsonPath, 'utf8'));
+        const feature = geojson.features.find(
+          f => f.properties?.name === result.polygonFeatureName
+            && f.geometry?.type === 'Polygon'
+        );
+        if (feature) {
+          // GeoJSON is [lon, lat] — convert to [lat, lon] for mobile
+          result.boundaryPolygon = feature.geometry.coordinates[0].map(
+            ([lon, lat]) => [lat, lon]
+          );
+        }
+      }
+    } catch (_) {
+      // GeoJSON read failure is non-fatal — omit boundaryPolygon
+    }
+  }
+
+  res.json(result);
 };
 
 // PUT /api/equipment/:equipmentId

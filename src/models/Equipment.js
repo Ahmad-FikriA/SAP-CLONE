@@ -22,6 +22,11 @@ const Equipment = sequelize.define('Equipment', {
     allowNull: true,
     validate: { min: -180, max: 180 }
   },
+  polygonFeatureName: {
+    type: DataTypes.STRING(150),
+    allowNull: true,
+    field: 'polygon_feature_name',
+  },
 }, {
   tableName: 'equipment',
   underscored: true,
