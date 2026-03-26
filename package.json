@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed": "node src/seed.js",
+    "seed:preventive": "node src/preventive_seed.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watch --runInBand",
     "test:coverage": "jest --coverage --runInBand"
@@ -38,6 +39,7 @@
     "collectCoverageFrom": [
       "src/**/*.js",
       "!src/seed.js",
+      "!src/preventive_seed.js",
       "!src/server.js"
     ],
     "coverageThreshold": {

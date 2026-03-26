@@ -98,4 +98,17 @@ const remove = async (req, res) => {
   res.json({ message: 'Deleted' });
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, remove };
+// POST /api/equipment/bulk-update
+// Body: { ids: ["EQ001","EQ002"], plantId: "I-22L001", plantName: "PS I Cidanau" }
+const bulkUpdate = async (req, res) => {
+  const { ids, ...fields } = req.body;
+  if (!Array.isArray(ids) || !ids.length)
+    return res.status(400).json({ error: 'ids array required' });
+  delete fields.equipmentId;
+  const [count] = await Equipment.update(fields, {
+    where: { equipmentId: { [Op.in]: ids } },
+  });
+  res.json({ message: `Updated ${count} equipment(s)` });
+};
+
+module.exports = { getAll, getOne, create, update, bulkDelete, bulkUpdate, remove };

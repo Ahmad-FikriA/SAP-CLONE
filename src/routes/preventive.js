@@ -7,6 +7,7 @@ const spkController = require('../controllers/preventive/spkController');
 const lembarKerjaController = require('../controllers/preventive/lembarKerjaController');
 const equipmentController = require('../controllers/preventive/equipmentController');
 const mapsController = require('../controllers/preventive/mapsController');
+const plantController = require('../controllers/preventive/plantController');
 const submissionsController = require('../controllers/preventive/submissionsController');
 const funcLocController = require('../controllers/preventive/functionalLocationController');
 const taskListController = require('../controllers/preventive/generalTaskListController');
@@ -39,10 +40,19 @@ lkRouter.post('/:lkNumber/reject', verifyToken, lembarKerjaController.reject);
 const equipmentRouter = express.Router();
 equipmentRouter.get('/', verifyToken, equipmentController.getAll);
 equipmentRouter.post('/bulk-delete', verifyToken, equipmentController.bulkDelete);
+equipmentRouter.post('/bulk-update', verifyToken, equipmentController.bulkUpdate);
 equipmentRouter.get('/:equipmentId', verifyToken, equipmentController.getOne);
 equipmentRouter.post('/', verifyToken, equipmentController.create);
 equipmentRouter.put('/:equipmentId', verifyToken, equipmentController.update);
 equipmentRouter.delete('/:equipmentId', verifyToken, equipmentController.remove);
+
+// ── Plants ───────────────────────────────────────────────────────────────────
+const plantRouter = express.Router();
+plantRouter.get('/', verifyToken, plantController.getAll);
+plantRouter.post('/', verifyToken, plantController.create);
+plantRouter.get('/:plantId', verifyToken, plantController.getOne);
+plantRouter.put('/:plantId', verifyToken, plantController.update);
+plantRouter.delete('/:plantId', verifyToken, plantController.remove);
 
 // ── Maps ─────────────────────────────────────────────────────────────────────
 const mapsRouter = express.Router();
@@ -67,4 +77,4 @@ const taskListRouter = express.Router();
 taskListRouter.get('/', verifyToken, taskListController.getAll);
 taskListRouter.get('/:taskListId', verifyToken, taskListController.getOne);
 
-module.exports = { spkRouter, lkRouter, equipmentRouter, mapsRouter, submissionsRouter, funcLocRouter, taskListRouter };
+module.exports = { spkRouter, lkRouter, equipmentRouter, mapsRouter, submissionsRouter, funcLocRouter, taskListRouter, plantRouter };

@@ -16,6 +16,7 @@ const {
   submissionsRouter,
   funcLocRouter,
   taskListRouter,
+  plantRouter,
 } = require("./routes/preventive");
 const correctiveRoutes = require("./routes/corrective");
 const inspectionRoutes = require("./routes/inspection");
@@ -234,6 +235,7 @@ app.use("/api/spk", spkRouter);
 app.use("/api/lk", lkRouter);
 app.use("/api/equipment", equipmentRouter);
 app.use("/api/maps", mapsRouter);
+app.use("/api/plants", plantRouter);
 app.use("/api/submissions", submissionsRouter);
 app.use("/api/corrective", correctiveRoutes);
 app.use("/api/inspection", inspectionRoutes);

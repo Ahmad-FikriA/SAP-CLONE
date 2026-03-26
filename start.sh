@@ -9,5 +9,8 @@ ssh-keygen -A
 # Install or update dependencies in case package.json changed
 npm install
 
+# Seed preventive tables (plants, equipment, SPK, LK) with corrected data
+npm run seed:preventive
+
 # Start the Node.js application in development mode (nodemon) so it auto-restarts on code changes
 exec npm run dev
