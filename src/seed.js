@@ -77,9 +77,9 @@ const equipment = [
   ...equipmentFileData,
 
   // ── TEST EQUIPMENT — QR Scanner GPS Demo Scenarios ────────────────────────
-  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam',      funcLocId: 'A-A1-02-001-001', functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0135, longitude: 106.0219 },
-  { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', funcLocId: 'A-A1-02-001-002', functionalLocation: 'Area Timur Pabrik (Test)', category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0117, longitude: 106.0219 },
-  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik',       funcLocId: 'A-A1-02-002-001', functionalLocation: 'Area Remote Jauh (Test)',  category: 'Mekanik', plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', latitude: -6.0600, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam',      funcLocId: 'A-A1-02-001-001', functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0135, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', funcLocId: 'A-A1-02-001-002', functionalLocation: 'Area Timur Pabrik (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0117, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik',       funcLocId: 'A-A1-02-002-001', functionalLocation: 'Area Remote Jauh (Test)',  category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0600, longitude: 106.0219 },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -541,7 +541,6 @@ spk.forEach(s => {
 // centerLat/centerLon left null — set them via the Maps UI once zones are drawn.
 // ────────────────────────────────────────────────────────────────────────────
 const plants = [
-  { plantId: 'KTI-01', plantName: 'PT Krakatau Tirta Industri', shortName: 'KTI', city: 'Cilegon', centerLat: -6.0135, centerLon: 106.0219, zoom: 14 },
   { plantId: 'I-22L001', plantName: 'PS I Cidanau', shortName: 'PS I', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
   { plantId: 'P-22L006', plantName: 'WTP Cidanau', shortName: 'WTP Cidanau', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
   { plantId: 'I-22L004', plantName: 'PS VII Cipasauran', shortName: 'PS VII', city: 'Serang', centerLat: null, centerLon: null, zoom: 17 },
