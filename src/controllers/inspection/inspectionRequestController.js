@@ -111,6 +111,10 @@ async function approveRequest(req, res) {
 
     const { notes, scheduledDate, assignedTo, title, unitKerja, nomorPoJo } =
       req.body;
+    const plannerNotes =
+      typeof notes === "string" && notes.trim().length > 0
+        ? notes.trim()
+        : null;
 
     // Tentukan tanggal jadwal: dari req.body atau dari tanggalDiinginkan user
     const finalDate =
@@ -134,7 +138,7 @@ async function approveRequest(req, res) {
       assignedTo: finalAssignedTo,
       triggerSource: "planner",
       nomorPoJo: nomorPoJo || null,
-      notes: request.deskripsi,
+      notes: plannerNotes,
       status: "scheduled",
     });
 
@@ -143,7 +147,7 @@ async function approveRequest(req, res) {
       status: "approved",
       approvedBy: req.user?.username,
       approvedAt: new Date(),
-      notes,
+      notes: plannerNotes,
       scheduleId: schedule.id,
     });
 
