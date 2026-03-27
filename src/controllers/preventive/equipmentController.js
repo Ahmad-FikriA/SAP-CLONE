@@ -21,7 +21,7 @@ const getAll = async (req, res) => {
     ];
   }
 
-  const limit = parseInt(req.query.limit, 10) || 50;
+  const limit = parseInt(req.query.limit, 10) || 500;
   const offset = parseInt(req.query.offset, 10) || 0;
 
   const { count, rows } = await Equipment.findAndCountAll({ where, limit, offset, order: [['equipmentId', 'ASC']] });

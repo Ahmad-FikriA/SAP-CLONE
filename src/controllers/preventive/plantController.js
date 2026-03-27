@@ -12,7 +12,7 @@ const getAll = async (req, res) => {
       { plantName: { [Op.like]: `%${req.query.search}%` } },
     ];
   }
-  const rows = await Plant.findAll({ where, order: [['plantId', 'ASC']] });
+  const rows = await Plant.findAll({ where, order: [['sortOrder', 'ASC'], ['plantId', 'ASC']] });
   res.json(rows);
 };
 

@@ -43,6 +43,7 @@ function fmt(spk) {
     category: j.category,
     status: j.status,
     durationActual: j.durationActual,
+    scheduledDate: j.scheduledDate ?? null,
     dueDate: dueDate ? dueDate.toISOString() : null,
     equipmentModels: (j.equipmentModels || []).map(em => ({
       equipmentId: em.equipmentId,
@@ -63,6 +64,8 @@ const getAll = async (req, res) => {
     return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
   }
   const where = req.query.category ? { category: req.query.category } : {};
+  if (req.query.from) where.scheduledDate = { ...where.scheduledDate, [Op.gte]: req.query.from };
+  if (req.query.to)   where.scheduledDate = { ...where.scheduledDate, [Op.lte]: req.query.to };
 
   // If equipmentId is given, replace the SpkEquipment include with a filtered one
   // (INNER JOIN — only SPKs that have this equipment)
@@ -93,7 +96,7 @@ const getOne = async (req, res) => {
 
 // POST /api/spk
 const create = async (req, res) => {
-  const { spkNumber, description, interval, category, status, durationActual, equipmentModels = [], activitiesModel = [] } = req.body;
+  const { spkNumber, description, interval, category, status, durationActual, scheduledDate, equipmentModels = [], activitiesModel = [] } = req.body;
   if (!spkNumber) return res.status(400).json({ error: 'spkNumber is required' });
 
   const exists = await Spk.findByPk(spkNumber);
@@ -101,7 +104,7 @@ const create = async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
-    const spk = await Spk.create({ spkNumber, description, intervalPeriod: interval, category, status: status || 'pending', durationActual: durationActual ?? null }, { transaction: t });
+    const spk = await Spk.create({ spkNumber, description, intervalPeriod: interval, category, status: status || 'pending', durationActual: durationActual ?? null, scheduledDate: scheduledDate ?? null }, { transaction: t });
     for (const eq of equipmentModels) await SpkEquipment.create({ ...eq, spkNumber }, { transaction: t });
     for (const act of activitiesModel) await SpkActivity.create({ ...act, spkNumber }, { transaction: t });
     await t.commit();

@@ -21,24 +21,24 @@ const { GeneralTaskList, GeneralTaskListActivity } = require('./models/GeneralTa
 require('./models/associations');
 
 // Load JSON data files
-const funcLocData      = require(path.join(__dirname, '..', 'data', 'functional_locations.json'));
+const funcLocData = require(path.join(__dirname, '..', 'data', 'functional_locations.json'));
 const sapEquipmentData = require(path.join(__dirname, '..', 'data', 'sap_equipment.json'));
-const taskListData     = require(path.join(__dirname, '..', 'data', 'general_task_lists.json'));
+const taskListData = require(path.join(__dirname, '..', 'data', 'general_task_lists.json'));
 const equipmentFileData = require(path.join(__dirname, '..', 'data', 'equipment.json'));
 
 // ────────────────────────────────────────────────────────────────────────────
 // PLANTS — corrected from SAP sticky note
 // ────────────────────────────────────────────────────────────────────────────
 const plants = [
-  { plantId: 'I-22L001', plantName: 'PS I Cidanau',               shortName: 'PS I',          city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'I-22L002', plantName: 'Re-use Plant',               shortName: 'Re-use',        city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'I-22L003', plantName: 'PS II Waduk',                shortName: 'PS II',         city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'I-22L004', plantName: 'PS VII Cipasauran',          shortName: 'PS VII',        city: 'Serang',  centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'I-22L005', plantName: 'Bendung & Jalur Intake',     shortName: 'Bendung',       city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'P-22L006', plantName: 'WTP Cidanau',                shortName: 'WTP Cidanau',   city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'P-22L007', plantName: 'WTP Krenceng',               shortName: 'WTP Krenceng',  city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'D-22L010', plantName: 'Plant SEPS',                 shortName: 'SEPS',          city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'P-22L019', plantName: 'Pos Keamanan',               shortName: 'Pos',           city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
+  { plantId: 'I-22L001', plantName: 'PS I Cidanau', shortName: 'PS I', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 1 },
+  { plantId: 'I-22L002', plantName: 'Re-use Plant', shortName: 'Re-use', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 2 },
+  { plantId: 'I-22L003', plantName: 'PS II Waduk', shortName: 'PS II', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 3 },
+  { plantId: 'I-22L004', plantName: 'PS VII Cipasauran', shortName: 'PS VII', city: 'Serang', centerLat: null, centerLon: null, zoom: 17, sortOrder: 4 },
+  { plantId: 'I-22L005', plantName: 'Bendung & Jalur Intake', shortName: 'Bendung', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 5 },
+  { plantId: 'P-22L006', plantName: 'WTP Cidanau', shortName: 'WTP Cidanau', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 6 },
+  { plantId: 'P-22L007', plantName: 'WTP Krenceng', shortName: 'WTP Krenceng', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 7 },
+  { plantId: 'D-22L010', plantName: 'Plant SEPS', shortName: 'SEPS', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 8 },
+  { plantId: 'P-22L019', plantName: 'Pos Keamanan', shortName: 'Pos', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 9 },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -48,23 +48,28 @@ const equipment = [
   ...equipmentFileData,
 
   // ── TEST EQUIPMENT — QR Scanner GPS Demo Scenarios ────────────────────────
-  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam',      funcLocId: 'A-A1-02-001-001', functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0135, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam', funcLocId: 'A-A1-02-001-001', functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0135, longitude: 106.0219 },
   { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', funcLocId: 'A-A1-02-001-002', functionalLocation: 'Area Timur Pabrik (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0117, longitude: 106.0219 },
-  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik',       funcLocId: 'A-A1-02-002-001', functionalLocation: 'Area Remote Jauh (Test)',  category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0600, longitude: 106.0219 },
+  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik', funcLocId: 'A-A1-02-002-001', functionalLocation: 'Area Remote Jauh (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0600, longitude: 106.0219 },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
 // SPK
 // ────────────────────────────────────────────────────────────────────────────
+// SPK Week-number reference:
+//   Jan 2026 → WK1–WK4  |  Feb 2026 → WK5–WK8  |  Mar 2026 → WK9–WK13
+//   Format: SPK-{CAT}-WK{weekOfYear}
+//   CAT codes: M = Mekanik, L = Listrik, S = Sipil, O = Otomasi
 const spk = [
-  // ── MEKANIK ──────────────────────────────────────────────────────────────
+  // ── MEKANIK — Feb (WK8) & Mar (WK13) current ─────────────────────────────
   {
-    spkNumber: 'SPK-M-001',
+    spkNumber: 'SPK-M-004',
     description: 'Perawatan Rutin Pompa Intake Cidanau 1M1 — Bulanan (Februari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-02-23',
     equipmentModels: [
       { equipmentId: '2210000438', equipmentName: 'Pompa Intake Cidanau 1M1', functionalLocation: 'A-A1-01-005-004' },
     ],
@@ -75,12 +80,13 @@ const spk = [
     ],
   },
   {
-    spkNumber: 'SPK-M-002',
+    spkNumber: 'SPK-M-006',
     description: 'Perawatan Rutin Pompa Intake Cidanau 2M1 — Bulanan (Maret)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-03-30',
     equipmentModels: [
       { equipmentId: '2210000439', equipmentName: 'Pompa Intake Cidanau 2M1', functionalLocation: 'A-A1-01-005-004' },
     ],
@@ -91,14 +97,15 @@ const spk = [
     ],
   },
 
-  // ── LISTRIK ──────────────────────────────────────────────────────────────
+  // ── LISTRIK — Mar (WK9) current & WK8 completed ───────────────────────────
   {
-    spkNumber: 'SPK-L-001',
+    spkNumber: 'SPK-L-004',
     description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (Maret)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Listrik',
     status: 'in_progress',
     durationActual: null,
+    scheduledDate: '2026-03-02',
     equipmentModels: [
       { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
@@ -109,12 +116,13 @@ const spk = [
     ],
   },
   {
-    spkNumber: 'SPK-L-002',
+    spkNumber: 'SPK-L-003',
     description: 'Servis Rutin Transformator BT 02 — 6 Bulanan',
-    interval: '6 Bulan',
+    interval: '16wk',
     category: 'Listrik',
     status: 'completed',
     durationActual: 3.0,
+    scheduledDate: '2026-02-23',
     equipmentModels: [
       { equipmentId: '2210000652', equipmentName: 'Transformator BT 02', functionalLocation: 'A-A1-01-004-002' },
     ],
@@ -125,14 +133,15 @@ const spk = [
     ],
   },
 
-  // ── SIPIL ─────────────────────────────────────────────────────────────────
+  // ── SIPIL — Mar (WK10) ────────────────────────────────────────────────────
   {
     spkNumber: 'SPK-S-001',
     description: 'Pemeriksaan Manhole SLD Basin — 3 Bulanan',
-    interval: '3 Bulan',
+    interval: '12wk',
     category: 'Sipil',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-03-09',
     equipmentModels: [
       { equipmentId: '2210000327', equipmentName: 'Manhole SLD Basin', functionalLocation: 'A-A2-03-012' },
     ],
@@ -142,14 +151,15 @@ const spk = [
     ],
   },
 
-  // ── OTOMASI ───────────────────────────────────────────────────────────────
+  // ── OTOMASI — Mar (WK11) ──────────────────────────────────────────────────
   {
     spkNumber: 'SPK-O-001',
     description: 'Kalibrasi Sensor AWLR — 3 Bulanan',
-    interval: '3 Bulan',
+    interval: '12wk',
     category: 'Otomasi',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-03-16',
     equipmentModels: [
       { equipmentId: '2210000605', equipmentName: 'Sensor AWLR', functionalLocation: 'A-A1-01-001' },
     ],
@@ -162,12 +172,13 @@ const spk = [
 
   // ── Multi-month history ───────────────────────────────────────────────────
   {
-    spkNumber: 'SPK-M-PMP-A-JAN',
+    spkNumber: 'SPK-M-001',
     description: 'Perawatan Rutin Pompa Intake Cidanau 1M1 — Bulanan (Januari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'completed',
     durationActual: 1.5,
+    scheduledDate: '2026-01-19',
     equipmentModels: [
       { equipmentId: '2210000438', equipmentName: 'Pompa Intake Cidanau 1M1', functionalLocation: 'A-A1-01-005-004' },
     ],
@@ -178,12 +189,13 @@ const spk = [
     ],
   },
   {
-    spkNumber: 'SPK-M-BST-JAN',
+    spkNumber: 'SPK-M-002',
     description: 'Perawatan Pompa Booster Clorine Cidanau — Bulanan (Januari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'completed',
     durationActual: 1.0,
+    scheduledDate: '2026-01-26',
     equipmentModels: [
       { equipmentId: '2210000449', equipmentName: 'Pompa Booster Clorine Cidanau', functionalLocation: 'A-A1-01-005-006' },
     ],
@@ -194,12 +206,13 @@ const spk = [
     ],
   },
   {
-    spkNumber: 'SPK-M-BST-FEB',
+    spkNumber: 'SPK-M-003',
     description: 'Perawatan Pompa Booster Clorine Cidanau — Bulanan (Februari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'completed',
     durationActual: 1.25,
+    scheduledDate: '2026-02-16',
     equipmentModels: [
       { equipmentId: '2210000449', equipmentName: 'Pompa Booster Clorine Cidanau', functionalLocation: 'A-A1-01-005-006' },
     ],
@@ -210,12 +223,13 @@ const spk = [
     ],
   },
   {
-    spkNumber: 'SPK-M-BST-MAR',
+    spkNumber: 'SPK-M-005',
     description: 'Perawatan Pompa Booster Clorine Cidanau — Bulanan (Maret)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-03-23',
     equipmentModels: [
       { equipmentId: '2210000449', equipmentName: 'Pompa Booster Clorine Cidanau', functionalLocation: 'A-A1-01-005-006' },
     ],
@@ -226,12 +240,13 @@ const spk = [
     ],
   },
   {
-    spkNumber: 'SPK-L-PNL-JAN',
+    spkNumber: 'SPK-L-001',
     description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (Januari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Listrik',
     status: 'completed',
     durationActual: 1.5,
+    scheduledDate: '2026-01-12',
     equipmentModels: [
       { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
@@ -242,12 +257,13 @@ const spk = [
     ],
   },
   {
-    spkNumber: 'SPK-L-PNL-FEB',
+    spkNumber: 'SPK-L-002',
     description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (Februari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Listrik',
     status: 'completed',
     durationActual: 2.0,
+    scheduledDate: '2026-02-09',
     equipmentModels: [
       { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
@@ -255,6 +271,74 @@ const spk = [
       { activityNumber: 'ACT-001', operationText: 'Periksa tegangan output panel katodik (VDC)', resultComment: 'Tegangan output: 23.5 VDC, sedikit turun', durationPlan: 0.5, durationActual: 0.5, isVerified: true },
       { activityNumber: 'ACT-002', operationText: 'Cek kondisi elektroda dan sambungan kabel', resultComment: '1 sambungan kabel longgar, sudah dikencangkan', durationPlan: 0.5, durationActual: 0.5, isVerified: true },
       { activityNumber: 'ACT-003', operationText: 'Bersihkan terminal dan periksa korosi', resultComment: 'Ditemukan sedikit korosi pada terminal, dibersihkan', durationPlan: 1.0, durationActual: 1.0, isVerified: true },
+    ],
+  },
+  // ── Apr/May 2026 — standalone for period filter testing ──────────────────
+  {
+    spkNumber: 'SPK-M-007',
+    description: 'Perawatan Rutin Pompa Intake Cidanau 1M1 — Bulanan (April)',
+    interval: '4wk',
+    category: 'Mekanik',
+    status: 'pending',
+    durationActual: null,
+    scheduledDate: '2026-04-06',
+    equipmentModels: [
+      { equipmentId: '2210000438', equipmentName: 'Pompa Intake Cidanau 1M1', functionalLocation: 'A-A1-01-005-004' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan pompa intake (bar)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Cek kebocoran pipa dan fitting', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Pelumasan bearing motor pompa intake', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+    ],
+  },
+  {
+    spkNumber: 'SPK-L-005',
+    description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (April)',
+    interval: '4wk',
+    category: 'Listrik',
+    status: 'pending',
+    durationActual: null,
+    scheduledDate: '2026-04-06',
+    equipmentModels: [
+      { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan output panel katodik (VDC)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Cek kondisi elektroda dan sambungan kabel', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Bersihkan terminal dan periksa korosi', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
+    ],
+  },
+  {
+    spkNumber: 'SPK-S-002',
+    description: 'Pemeriksaan Manhole SLD Basin — 3 Bulanan (Mei)',
+    interval: '12wk',
+    category: 'Sipil',
+    status: 'pending',
+    durationActual: null,
+    scheduledDate: '2026-05-04',
+    equipmentModels: [
+      { equipmentId: '2210000327', equipmentName: 'Manhole SLD Basin', functionalLocation: 'A-A2-03-012' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Periksa kondisi struktur dan tutup manhole', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Bersihkan sedimen dan lumpur dalam basin', resultComment: null, durationPlan: 2.0, durationActual: null, isVerified: false },
+    ],
+  },
+  {
+    spkNumber: 'SPK-O-002',
+    description: 'Kalibrasi Sensor AWLR — 3 Bulanan (Mei)',
+    interval: '12wk',
+    category: 'Otomasi',
+    status: 'pending',
+    durationActual: null,
+    scheduledDate: '2026-05-04',
+    equipmentModels: [
+      { equipmentId: '2210000605', equipmentName: 'Sensor AWLR', functionalLocation: 'A-A1-01-001' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Cek sinyal output sensor AWLR (4–20 mA)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Kalibrasi titik ukur level air (0–100%)', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Periksa kabel sinyal dan koneksi terminal', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
     ],
   },
 ];
@@ -273,12 +357,12 @@ spk.forEach(s => {
 // LEMBAR KERJA
 // ────────────────────────────────────────────────────────────────────────────
 const lembarKerja = [
-  { lkNumber: 'LK-JAN-MEK', periodeStart: '2026-01-01T00:00:00.000Z', periodeEnd: '2026-01-31T23:59:59.000Z', category: 'Mekanik', status: 'completed', lembarKe: 1, totalLembar: 1, evaluasi: 'Perawatan Mekanik Januari selesai. Semua peralatan dalam kondisi baik.', spkModels: ['SPK-M-PMP-A-JAN', 'SPK-M-BST-JAN'] },
-  { lkNumber: 'LK-JAN-LIS', periodeStart: '2026-01-01T00:00:00.000Z', periodeEnd: '2026-01-31T23:59:59.000Z', category: 'Listrik', status: 'completed', lembarKe: 1, totalLembar: 1, evaluasi: 'Inspeksi Listrik Januari selesai. Tidak ada temuan kritis.', spkModels: ['SPK-L-PNL-JAN'] },
-  { lkNumber: 'LK-FEB-MEK', periodeStart: '2026-02-01T00:00:00.000Z', periodeEnd: '2026-02-28T23:59:59.000Z', category: 'Mekanik', status: 'in_progress', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-M-001', 'SPK-M-BST-FEB'] },
-  { lkNumber: 'LK-FEB-LIS', periodeStart: '2026-02-01T00:00:00.000Z', periodeEnd: '2026-02-28T23:59:59.000Z', category: 'Listrik', status: 'completed', lembarKe: 1, totalLembar: 1, evaluasi: 'Inspeksi Listrik Februari selesai. 1 MCB perlu penggantian, sudah dilaporkan.', spkModels: ['SPK-L-PNL-FEB'] },
-  { lkNumber: 'LK-MAR-MEK', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Mekanik', status: 'in_progress', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-M-002', 'SPK-M-BST-MAR'] },
-  { lkNumber: 'LK-MAR-LIS', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Listrik', status: 'in_progress', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-L-001', 'SPK-L-002'] },
+  { lkNumber: 'LK-JAN-MEK', periodeStart: '2026-01-01T00:00:00.000Z', periodeEnd: '2026-01-31T23:59:59.000Z', category: 'Mekanik', status: 'completed', lembarKe: 1, totalLembar: 1, evaluasi: 'Perawatan Mekanik Januari selesai. Semua peralatan dalam kondisi baik.', spkModels: ['SPK-M-001', 'SPK-M-002'] },
+  { lkNumber: 'LK-JAN-LIS', periodeStart: '2026-01-01T00:00:00.000Z', periodeEnd: '2026-01-31T23:59:59.000Z', category: 'Listrik', status: 'completed', lembarKe: 1, totalLembar: 1, evaluasi: 'Inspeksi Listrik Januari selesai. Tidak ada temuan kritis.', spkModels: ['SPK-L-001'] },
+  { lkNumber: 'LK-FEB-MEK', periodeStart: '2026-02-01T00:00:00.000Z', periodeEnd: '2026-02-28T23:59:59.000Z', category: 'Mekanik', status: 'in_progress', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-M-004', 'SPK-M-003'] },
+  { lkNumber: 'LK-FEB-LIS', periodeStart: '2026-02-01T00:00:00.000Z', periodeEnd: '2026-02-28T23:59:59.000Z', category: 'Listrik', status: 'completed', lembarKe: 1, totalLembar: 1, evaluasi: 'Inspeksi Listrik Februari selesai. 1 MCB perlu penggantian, sudah dilaporkan.', spkModels: ['SPK-L-002'] },
+  { lkNumber: 'LK-MAR-MEK', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Mekanik', status: 'in_progress', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-M-006', 'SPK-M-005'] },
+  { lkNumber: 'LK-MAR-LIS', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Listrik', status: 'in_progress', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-L-004', 'SPK-L-003'] },
   { lkNumber: 'LK-MAR-SIP', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Sipil', status: 'pending', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-S-001'] },
   { lkNumber: 'LK-MAR-OTO', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Otomasi', status: 'pending', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-O-001'] },
 ];
@@ -288,7 +372,7 @@ const lembarKerja = [
 // ────────────────────────────────────────────────────────────────────────────
 const submissions = [
   {
-    id: 'SUB-001', spkNumber: 'SPK-L-002', durationActual: 3.0,
+    id: 'SUB-001', spkNumber: 'SPK-L-003', durationActual: 3.0,
     evaluasi: 'Servis genset berjalan lancar. Semua komponen dalam kondisi baik pasca servis.',
     latitude: -6.0141, longitude: 106.0220, submittedAt: '2026-02-20T14:00:00.000Z', photoPaths: [],
     activityResultsModel: [
@@ -298,7 +382,7 @@ const submissions = [
     ],
   },
   {
-    id: 'SUB-002', spkNumber: 'SPK-M-PMP-A-JAN', durationActual: 1.5,
+    id: 'SUB-002', spkNumber: 'SPK-M-001', durationActual: 1.5,
     evaluasi: 'Perawatan Pompa A Januari selesai. Tidak ada temuan kritis.',
     latitude: -6.0131, longitude: 106.0215, submittedAt: '2026-01-22T09:30:00.000Z', photoPaths: [],
     activityResultsModel: [
@@ -308,7 +392,7 @@ const submissions = [
     ],
   },
   {
-    id: 'SUB-003', spkNumber: 'SPK-M-BST-JAN', durationActual: 1.0,
+    id: 'SUB-003', spkNumber: 'SPK-M-002', durationActual: 1.0,
     evaluasi: 'Perawatan Pompa Booster Januari selesai. Semua normal.',
     latitude: -6.0128, longitude: 106.0222, submittedAt: '2026-01-23T11:00:00.000Z', photoPaths: [],
     activityResultsModel: [
@@ -318,7 +402,7 @@ const submissions = [
     ],
   },
   {
-    id: 'SUB-004', spkNumber: 'SPK-L-PNL-JAN', durationActual: 1.5,
+    id: 'SUB-004', spkNumber: 'SPK-L-001', durationActual: 1.5,
     evaluasi: 'Inspeksi Panel Listrik Januari selesai. Tidak ada temuan kritis.',
     latitude: -6.0136, longitude: 106.0224, submittedAt: '2026-01-20T14:00:00.000Z', photoPaths: [],
     activityResultsModel: [
@@ -328,7 +412,7 @@ const submissions = [
     ],
   },
   {
-    id: 'SUB-005', spkNumber: 'SPK-M-BST-FEB', durationActual: 1.25,
+    id: 'SUB-005', spkNumber: 'SPK-M-003', durationActual: 1.25,
     evaluasi: 'Perawatan Pompa Booster Februari selesai. Tekanan disetel ulang, seal dijadwalkan ganti bulan depan.',
     latitude: -6.0128, longitude: 106.0222, submittedAt: '2026-02-21T10:00:00.000Z', photoPaths: [],
     activityResultsModel: [
@@ -338,7 +422,7 @@ const submissions = [
     ],
   },
   {
-    id: 'SUB-006', spkNumber: 'SPK-L-PNL-FEB', durationActual: 2.0,
+    id: 'SUB-006', spkNumber: 'SPK-L-002', durationActual: 2.0,
     evaluasi: 'Inspeksi Panel Listrik Februari selesai. 1 MCB perlu penggantian, sudah dilaporkan ke pengadaan.',
     latitude: -6.0136, longitude: 106.0224, submittedAt: '2026-02-19T13:00:00.000Z', photoPaths: [],
     activityResultsModel: [
@@ -443,7 +527,7 @@ async function main() {
 
   // ── 7. SPK ────────────────────────────────────────────────────────────────
   for (const s of spk) {
-    await Spk.create({ spkNumber: s.spkNumber, description: s.description, intervalPeriod: s.interval, category: s.category, status: s.status, durationActual: s.durationActual });
+    await Spk.create({ spkNumber: s.spkNumber, description: s.description, intervalPeriod: s.interval, category: s.category, status: s.status, durationActual: s.durationActual, scheduledDate: s.scheduledDate ?? null });
     for (const eq of s.equipmentModels) {
       await SpkEquipment.create({ spkNumber: s.spkNumber, equipmentId: eq.equipmentId, equipmentName: eq.equipmentName, functionalLocation: eq.functionalLocation });
     }
