@@ -121,7 +121,7 @@ function renderPanelForm(spk) {
       <div class="form-row">
         <div class="form-group">
           <label>Kategori *</label>
-          <select id="f_category">
+          <select id="f_category" onchange="if(!editingSpkNumber)document.getElementById('f_spkNumber').value=suggestSpkNumber()">
             ${categories.map(c => `<option ${spk && spk.category === c ? 'selected' : ''}>${c}</option>`).join('')}
           </select>
         </div>
@@ -249,12 +249,16 @@ function removeRow(id) {
 }
 
 function suggestSpkNumber() {
-  const year = new Date().getFullYear();
+  const catCode = { Mekanik: 'M', Listrik: 'L', Sipil: 'S', Otomasi: 'O' };
+  const cat = document.getElementById('f_category').value;
+  const code = catCode[cat] || 'M';
+  const prefix = 'SPK-' + code + '-';
   const max = allSpk.reduce(function (m, s) {
-    const match = s.spkNumber.match(/SPK-\d+-(\d+)/);
+    if (!s.spkNumber.startsWith(prefix)) return m;
+    const match = s.spkNumber.match(/SPK-[A-Z]+-(\d+)$/);
     return match ? Math.max(m, parseInt(match[1])) : m;
   }, 0);
-  return 'SPK-' + year + '-' + String(max + 1).padStart(3, '0');
+  return prefix + String(max + 1).padStart(3, '0');
 }
 
 // ── Save SPK ────────────────────────────────────────────────────────────

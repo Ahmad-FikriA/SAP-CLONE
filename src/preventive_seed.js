@@ -261,6 +261,70 @@ const spk = [
       { activityNumber: 'ACT-003', operationText: 'Bersihkan terminal dan periksa korosi', resultComment: 'Ditemukan sedikit korosi pada terminal, dibersihkan', durationPlan: 1.0, durationActual: 1.0, isVerified: true },
     ],
   },
+  // ── Apr/May 2026 — standalone for period filter testing ──────────────────
+  {
+    spkNumber: 'SPK-M-007',
+    description: 'Perawatan Rutin Pompa Intake Cidanau 1M1 — Bulanan (April)',
+    interval: '1 Bulan',
+    category: 'Mekanik',
+    status: 'pending',
+    durationActual: null,
+    equipmentModels: [
+      { equipmentId: '2210000438', equipmentName: 'Pompa Intake Cidanau 1M1', functionalLocation: 'A-A1-01-005-004' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Periksa tekanan pompa intake (bar)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Cek kebocoran pipa dan fitting', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Pelumasan bearing motor pompa intake', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+    ],
+  },
+  {
+    spkNumber: 'SPK-L-005',
+    description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (April)',
+    interval: '1 Bulan',
+    category: 'Listrik',
+    status: 'pending',
+    durationActual: null,
+    equipmentModels: [
+      { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Periksa tegangan output panel katodik (VDC)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Cek kondisi elektroda dan sambungan kabel', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Bersihkan terminal dan periksa korosi', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
+    ],
+  },
+  {
+    spkNumber: 'SPK-S-002',
+    description: 'Pemeriksaan Manhole SLD Basin — 3 Bulanan (Mei)',
+    interval: '3 Bulan',
+    category: 'Sipil',
+    status: 'pending',
+    durationActual: null,
+    equipmentModels: [
+      { equipmentId: '2210000327', equipmentName: 'Manhole SLD Basin', functionalLocation: 'A-A2-03-012' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Periksa kondisi struktur dan tutup manhole', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Bersihkan sedimen dan lumpur dalam basin', resultComment: null, durationPlan: 2.0, durationActual: null, isVerified: false },
+    ],
+  },
+  {
+    spkNumber: 'SPK-O-002',
+    description: 'Kalibrasi Sensor AWLR — 3 Bulanan (Mei)',
+    interval: '3 Bulan',
+    category: 'Otomasi',
+    status: 'pending',
+    durationActual: null,
+    equipmentModels: [
+      { equipmentId: '2210000605', equipmentName: 'Sensor AWLR', functionalLocation: 'A-A1-01-001' },
+    ],
+    activitiesModel: [
+      { activityNumber: 'ACT-001', operationText: 'Cek sinyal output sensor AWLR (4–20 mA)', resultComment: null, durationPlan: 0.5, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-002', operationText: 'Kalibrasi titik ukur level air (0–100%)', resultComment: null, durationPlan: 1.0, durationActual: null, isVerified: false },
+      { activityNumber: 'ACT-003', operationText: 'Periksa kabel sinyal dan koneksi terminal', resultComment: null, durationPlan: 0.25, durationActual: null, isVerified: false },
+    ],
+  },
 ];
 
 // Assign equipmentId to each activity (round-robin)
