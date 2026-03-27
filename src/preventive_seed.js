@@ -65,10 +65,11 @@ const spk = [
   {
     spkNumber: 'SPK-M-004',
     description: 'Perawatan Rutin Pompa Intake Cidanau 1M1 — Bulanan (Februari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-02-23',
     equipmentModels: [
       { equipmentId: '2210000438', equipmentName: 'Pompa Intake Cidanau 1M1', functionalLocation: 'A-A1-01-005-004' },
     ],
@@ -81,10 +82,11 @@ const spk = [
   {
     spkNumber: 'SPK-M-006',
     description: 'Perawatan Rutin Pompa Intake Cidanau 2M1 — Bulanan (Maret)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-03-30',
     equipmentModels: [
       { equipmentId: '2210000439', equipmentName: 'Pompa Intake Cidanau 2M1', functionalLocation: 'A-A1-01-005-004' },
     ],
@@ -99,10 +101,11 @@ const spk = [
   {
     spkNumber: 'SPK-L-004',
     description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (Maret)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Listrik',
     status: 'in_progress',
     durationActual: null,
+    scheduledDate: '2026-03-02',
     equipmentModels: [
       { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
@@ -115,10 +118,11 @@ const spk = [
   {
     spkNumber: 'SPK-L-003',
     description: 'Servis Rutin Transformator BT 02 — 6 Bulanan',
-    interval: '6 Bulan',
+    interval: '16wk',
     category: 'Listrik',
     status: 'completed',
     durationActual: 3.0,
+    scheduledDate: '2026-02-23',
     equipmentModels: [
       { equipmentId: '2210000652', equipmentName: 'Transformator BT 02', functionalLocation: 'A-A1-01-004-002' },
     ],
@@ -133,10 +137,11 @@ const spk = [
   {
     spkNumber: 'SPK-S-001',
     description: 'Pemeriksaan Manhole SLD Basin — 3 Bulanan',
-    interval: '3 Bulan',
+    interval: '12wk',
     category: 'Sipil',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-03-09',
     equipmentModels: [
       { equipmentId: '2210000327', equipmentName: 'Manhole SLD Basin', functionalLocation: 'A-A2-03-012' },
     ],
@@ -150,10 +155,11 @@ const spk = [
   {
     spkNumber: 'SPK-O-001',
     description: 'Kalibrasi Sensor AWLR — 3 Bulanan',
-    interval: '3 Bulan',
+    interval: '12wk',
     category: 'Otomasi',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-03-16',
     equipmentModels: [
       { equipmentId: '2210000605', equipmentName: 'Sensor AWLR', functionalLocation: 'A-A1-01-001' },
     ],
@@ -168,10 +174,11 @@ const spk = [
   {
     spkNumber: 'SPK-M-001',
     description: 'Perawatan Rutin Pompa Intake Cidanau 1M1 — Bulanan (Januari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'completed',
     durationActual: 1.5,
+    scheduledDate: '2026-01-19',
     equipmentModels: [
       { equipmentId: '2210000438', equipmentName: 'Pompa Intake Cidanau 1M1', functionalLocation: 'A-A1-01-005-004' },
     ],
@@ -184,10 +191,11 @@ const spk = [
   {
     spkNumber: 'SPK-M-002',
     description: 'Perawatan Pompa Booster Clorine Cidanau — Bulanan (Januari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'completed',
     durationActual: 1.0,
+    scheduledDate: '2026-01-26',
     equipmentModels: [
       { equipmentId: '2210000449', equipmentName: 'Pompa Booster Clorine Cidanau', functionalLocation: 'A-A1-01-005-006' },
     ],
@@ -200,10 +208,11 @@ const spk = [
   {
     spkNumber: 'SPK-M-003',
     description: 'Perawatan Pompa Booster Clorine Cidanau — Bulanan (Februari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'completed',
     durationActual: 1.25,
+    scheduledDate: '2026-02-16',
     equipmentModels: [
       { equipmentId: '2210000449', equipmentName: 'Pompa Booster Clorine Cidanau', functionalLocation: 'A-A1-01-005-006' },
     ],
@@ -216,10 +225,11 @@ const spk = [
   {
     spkNumber: 'SPK-M-005',
     description: 'Perawatan Pompa Booster Clorine Cidanau — Bulanan (Maret)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-03-23',
     equipmentModels: [
       { equipmentId: '2210000449', equipmentName: 'Pompa Booster Clorine Cidanau', functionalLocation: 'A-A1-01-005-006' },
     ],
@@ -232,10 +242,11 @@ const spk = [
   {
     spkNumber: 'SPK-L-001',
     description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (Januari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Listrik',
     status: 'completed',
     durationActual: 1.5,
+    scheduledDate: '2026-01-12',
     equipmentModels: [
       { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
@@ -248,10 +259,11 @@ const spk = [
   {
     spkNumber: 'SPK-L-002',
     description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (Februari)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Listrik',
     status: 'completed',
     durationActual: 2.0,
+    scheduledDate: '2026-02-09',
     equipmentModels: [
       { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
@@ -265,10 +277,11 @@ const spk = [
   {
     spkNumber: 'SPK-M-007',
     description: 'Perawatan Rutin Pompa Intake Cidanau 1M1 — Bulanan (April)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Mekanik',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-04-06',
     equipmentModels: [
       { equipmentId: '2210000438', equipmentName: 'Pompa Intake Cidanau 1M1', functionalLocation: 'A-A1-01-005-004' },
     ],
@@ -281,10 +294,11 @@ const spk = [
   {
     spkNumber: 'SPK-L-005',
     description: 'Inspeksi Panel Katodik Cidanau I — Bulanan (April)',
-    interval: '1 Bulan',
+    interval: '4wk',
     category: 'Listrik',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-04-06',
     equipmentModels: [
       { equipmentId: '2210000640', equipmentName: 'Panel Katodik Cidanau I', functionalLocation: 'A-A1-01-005' },
     ],
@@ -297,10 +311,11 @@ const spk = [
   {
     spkNumber: 'SPK-S-002',
     description: 'Pemeriksaan Manhole SLD Basin — 3 Bulanan (Mei)',
-    interval: '3 Bulan',
+    interval: '12wk',
     category: 'Sipil',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-05-04',
     equipmentModels: [
       { equipmentId: '2210000327', equipmentName: 'Manhole SLD Basin', functionalLocation: 'A-A2-03-012' },
     ],
@@ -312,10 +327,11 @@ const spk = [
   {
     spkNumber: 'SPK-O-002',
     description: 'Kalibrasi Sensor AWLR — 3 Bulanan (Mei)',
-    interval: '3 Bulan',
+    interval: '12wk',
     category: 'Otomasi',
     status: 'pending',
     durationActual: null,
+    scheduledDate: '2026-05-04',
     equipmentModels: [
       { equipmentId: '2210000605', equipmentName: 'Sensor AWLR', functionalLocation: 'A-A1-01-001' },
     ],
@@ -511,7 +527,7 @@ async function main() {
 
   // ── 7. SPK ────────────────────────────────────────────────────────────────
   for (const s of spk) {
-    await Spk.create({ spkNumber: s.spkNumber, description: s.description, intervalPeriod: s.interval, category: s.category, status: s.status, durationActual: s.durationActual });
+    await Spk.create({ spkNumber: s.spkNumber, description: s.description, intervalPeriod: s.interval, category: s.category, status: s.status, durationActual: s.durationActual, scheduledDate: s.scheduledDate ?? null });
     for (const eq of s.equipmentModels) {
       await SpkEquipment.create({ spkNumber: s.spkNumber, equipmentId: eq.equipmentId, equipmentName: eq.equipmentName, functionalLocation: eq.functionalLocation });
     }

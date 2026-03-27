@@ -11,6 +11,7 @@ const Spk = sequelize.define('Spk', {
   category:       { type: DataTypes.ENUM('Mekanik','Listrik','Sipil','Otomasi'), allowNull: false },
   status:         { type: DataTypes.ENUM('pending','in_progress','completed'), allowNull: false, defaultValue: 'pending' },
   durationActual: { type: DataTypes.DECIMAL(6,2), allowNull: true, field: 'duration_actual' },
+  scheduledDate:  { type: DataTypes.DATEONLY,     allowNull: true, field: 'scheduled_date' },
 }, {
   tableName: 'spk',
   underscored: true,

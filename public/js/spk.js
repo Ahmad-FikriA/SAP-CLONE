@@ -80,7 +80,7 @@ async function loadEquipmentList() {
 function renderPanelForm(spk) {
   const isEdit = !!spk;
   const categories = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
-  const intervals = ['1 Minggu', '2 Minggu', '1 Bulan', '3 Bulan', '6 Bulan', '1 Tahun'];
+  const intervals = ['1wk', '2wk', '4wk', '8wk', '12wk', '14wk', '16wk'];
   const statuses = ['pending', 'in_progress', 'completed'];
 
   // Equipment checkboxes — onchange triggers per-equipment activity sections
@@ -110,6 +110,10 @@ function renderPanelForm(spk) {
           <select id="f_interval">
             ${intervals.map(v => `<option ${spk && spk.interval === v ? 'selected' : ''}>${v}</option>`).join('')}
           </select>
+        </div>
+        <div class="form-group">
+          <label>Tanggal Mulai</label>
+          <input type="date" id="f_scheduledDate" value="${escHtml(spk && spk.scheduledDate ? spk.scheduledDate : '')}" />
         </div>
       </div>
       <div class="form-row full">
@@ -268,6 +272,7 @@ async function saveSpk() {
   const interval = document.getElementById('f_interval').value;
   const category = document.getElementById('f_category').value;
   const status = document.getElementById('f_status').value;
+  const scheduledDate = document.getElementById('f_scheduledDate').value || null;
 
   if (!spkNumber || !description) { alert('SPK Number dan Deskripsi wajib diisi.'); return; }
 
@@ -304,6 +309,7 @@ async function saveSpk() {
 
   const body = {
     spkNumber, description, interval, category, status,
+    scheduledDate,
     durationActual: null, equipmentModels: checkedEq, activitiesModel
   };
 
