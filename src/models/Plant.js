@@ -21,6 +21,7 @@ const Plant = sequelize.define('Plant', {
     validate: { min: -180, max: 180 } 
   },
   zoom:      { type: DataTypes.INTEGER,      defaultValue: 17 },
+  sortOrder: { type: DataTypes.INTEGER,      allowNull: true,   field: 'sort_order' },
 }, {
   tableName: 'plants',
   underscored: true,

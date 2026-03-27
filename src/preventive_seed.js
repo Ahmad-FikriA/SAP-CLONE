@@ -30,15 +30,15 @@ const equipmentFileData = require(path.join(__dirname, '..', 'data', 'equipment.
 // PLANTS — corrected from SAP sticky note
 // ────────────────────────────────────────────────────────────────────────────
 const plants = [
-  { plantId: 'I-22L001', plantName: 'PS I Cidanau',               shortName: 'PS I',          city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'I-22L002', plantName: 'Re-use Plant',               shortName: 'Re-use',        city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'I-22L003', plantName: 'PS II Waduk',                shortName: 'PS II',         city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'I-22L004', plantName: 'PS VII Cipasauran',          shortName: 'PS VII',        city: 'Serang',  centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'I-22L005', plantName: 'Bendung & Jalur Intake',     shortName: 'Bendung',       city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'P-22L006', plantName: 'WTP Cidanau',                shortName: 'WTP Cidanau',   city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'P-22L007', plantName: 'WTP Krenceng',               shortName: 'WTP Krenceng',  city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'D-22L010', plantName: 'Plant SEPS',                 shortName: 'SEPS',          city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
-  { plantId: 'P-22L019', plantName: 'Pos Keamanan',               shortName: 'Pos',           city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17 },
+  { plantId: 'I-22L001', plantName: 'PS I Cidanau',               shortName: 'PS I',          city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 1 },
+  { plantId: 'I-22L002', plantName: 'Re-use Plant',               shortName: 'Re-use',        city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 2 },
+  { plantId: 'I-22L003', plantName: 'PS II Waduk',                shortName: 'PS II',         city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 3 },
+  { plantId: 'I-22L004', plantName: 'PS VII Cipasauran',          shortName: 'PS VII',        city: 'Serang',  centerLat: null, centerLon: null, zoom: 17, sortOrder: 4 },
+  { plantId: 'I-22L005', plantName: 'Bendung & Jalur Intake',     shortName: 'Bendung',       city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 5 },
+  { plantId: 'P-22L006', plantName: 'WTP Cidanau',                shortName: 'WTP Cidanau',   city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 6 },
+  { plantId: 'P-22L007', plantName: 'WTP Krenceng',               shortName: 'WTP Krenceng',  city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 7 },
+  { plantId: 'D-22L010', plantName: 'Plant SEPS',                 shortName: 'SEPS',          city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 8 },
+  { plantId: 'P-22L019', plantName: 'Pos Keamanan',               shortName: 'Pos',           city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 9 },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
