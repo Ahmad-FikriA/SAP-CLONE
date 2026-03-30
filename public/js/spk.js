@@ -3,6 +3,7 @@
 let allSpk = [];
 let editingSpkNumber = null;
 let availableEquipment = [];
+let availableMappings = [];
 
 // ── Load & render ──────────────────────────────────────────────────────────
 async function loadSpk() {
@@ -54,7 +55,7 @@ function renderSpk() {
 async function openCreate() {
   editingSpkNumber = null;
   document.getElementById('panelTitle').textContent = 'Tambah SPK';
-  await loadEquipmentList();
+  await Promise.all([loadEquipmentList(), loadMappings()]);
   renderPanelForm(null);
   openPanel();
 }
@@ -63,7 +64,7 @@ async function openCreate() {
 async function openEdit(spkNumber) {
   editingSpkNumber = spkNumber;
   document.getElementById('panelTitle').textContent = 'Edit SPK';
-  await loadEquipmentList();
+  await Promise.all([loadEquipmentList(), loadMappings()]);
   const spk = allSpk.find(s => s.spkNumber === spkNumber);
   renderPanelForm(spk);
   openPanel();
@@ -74,6 +75,12 @@ async function loadEquipmentList() {
     const res = await apiGet('/equipment?limit=9999');
     availableEquipment = res.data || res;
   } catch { availableEquipment = []; }
+}
+
+async function loadMappings() {
+  try {
+    availableMappings = await apiGet('/equipment-mappings');
+  } catch { availableMappings = []; }
 }
 
 // ── Render panel form ─────────────────────────────────────────────────────
@@ -184,6 +191,34 @@ function renderActivitySections(existingActs) {
     container.innerHTML = '<div class="form-section"><div class="form-section__title">Aktivitas</div>' +
       '<p style="padding:12px;color:var(--text-muted)">Pilih equipment terlebih dahulu untuk menambahkan aktivitas.</p></div>';
     return;
+  }
+
+  // Auto-populate from mappings in create mode only, for equipment with no activities yet
+  if (!editingSpkNumber) {
+    var intervalEl = document.getElementById('f_interval');
+    var currentInterval = intervalEl ? intervalEl.value : null;
+    if (currentInterval) {
+      checkedEqs.forEach(function(eq) {
+        var hasActs = acts.some(function(a) { return a.equipmentId === eq.equipmentId; });
+        if (!hasActs) {
+          var mapping = availableMappings.find(function(m) {
+            return m.equipmentId === eq.equipmentId && m.interval === currentInterval;
+          });
+          if (mapping) {
+            (mapping.activities || []).forEach(function(step) {
+              acts.push({
+                equipmentId: eq.equipmentId,
+                operationText: step.operationText,
+                durationPlan: 0.5,
+                resultComment: null,
+                durationActual: null,
+                isVerified: false,
+              });
+            });
+          }
+        }
+      });
+    }
   }
 
   container.innerHTML = checkedEqs.map(eq => {

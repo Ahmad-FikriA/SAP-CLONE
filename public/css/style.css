@@ -1081,6 +1081,14 @@ tbody tr:last-child {
   font-size: 14px;
 }
 
+.empty-cell {
+  text-align: center;
+  padding: 32px 24px !important;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+
 /* ═══════════════════════════════════════════════════════════════
    LOADING SPINNER
 ═══════════════════════════════════════════════════════════════ */

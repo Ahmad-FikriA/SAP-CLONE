@@ -14,6 +14,7 @@ const SpkCorrective = require('./models/SpkCorrective');
 const { SpkCorrectiveItem, SpkCorrectivePhoto } = require('./models/SpkCorrectiveItem');
 const FunctionalLocation = require('./models/FunctionalLocation');
 const { GeneralTaskList, GeneralTaskListActivity } = require('./models/GeneralTaskList');
+const EquipmentIntervalMapping = require('./models/EquipmentIntervalMapping');
 
 // Ensure all relationship and new models are loaded before syncing
 require('./models/associations');
@@ -552,6 +553,21 @@ const plants = [
   { plantId: 'P-22L019', plantName: 'Pos Keamanan',            shortName: 'Pos',           city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 9 },
 ];
 
+// Equipment x Interval x TaskList defaults.
+// Intervals match SPK form select values: '1wk','2wk','4wk','8wk','12wk','14wk','16wk'
+// Task list IDs from data/general_task_lists.json
+const equipmentMappings = [
+  { equipmentId: '2210000438', interval: '4wk',  taskListId: 'KTI_0001' }, // Pompa Intake 1M1
+  { equipmentId: '2210000438', interval: '12wk', taskListId: 'KTI_0005' },
+  { equipmentId: '2210000439', interval: '4wk',  taskListId: 'KTI_0001' }, // Pompa Intake 2M1
+  { equipmentId: '2210000439', interval: '12wk', taskListId: 'KTI_0005' },
+  { equipmentId: '2210000449', interval: '4wk',  taskListId: 'KTI_0001' }, // Pompa Booster Clorine
+  { equipmentId: '2210000451', interval: '4wk',  taskListId: 'KTI_0001' }, // Pompa Sump Pump
+  { equipmentId: '2210000640', interval: '4wk',  taskListId: 'KTI_0014' }, // Panel Katodik
+  { equipmentId: '2210000651', interval: '12wk', taskListId: 'KTI_0014' }, // Transformator BT 01
+  { equipmentId: '2210000652', interval: '12wk', taskListId: 'KTI_0014' }, // Transformator BT 02
+];
+
 // ────────────────────────────────────────────────────────────────────────────
 // MAIN
 // ────────────────────────────────────────────────────────────────────────────
@@ -682,6 +698,17 @@ async function main() {
     }
   }
   console.log(`  ✓  task_lists   (+${added} added, ${skipped} already existed)`);
+
+  // Equipment Interval Mappings (insert-if-not-exists)
+  added = 0; skipped = 0;
+  for (const m of equipmentMappings) {
+    const [, created] = await EquipmentIntervalMapping.findOrCreate({
+      where: { equipmentId: m.equipmentId, interval: m.interval },
+      defaults: m,
+    });
+    created ? added++ : skipped++;
+  }
+  console.log(`  ✓  eq_mappings  (+${added} added, ${skipped} already existed)`);
 
   // ── RESET SPK / LK / Submission tables ────────────────────────────────────
   // Truncate in dependency order (children first), then re-insert clean data.

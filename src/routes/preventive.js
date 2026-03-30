@@ -11,6 +11,7 @@ const plantController = require('../controllers/preventive/plantController');
 const submissionsController = require('../controllers/preventive/submissionsController');
 const funcLocController = require('../controllers/preventive/functionalLocationController');
 const taskListController = require('../controllers/preventive/generalTaskListController');
+const equipmentMappingController = require('../controllers/preventive/equipmentMappingController');
 
 // ── SPK ─────────────────────────────────────────────────────────────────────
 const spkRouter = express.Router();
@@ -74,7 +75,16 @@ funcLocRouter.get('/:funcLocId', verifyToken, funcLocController.getOne);
 
 // ── General Task Lists ───────────────────────────────────────────────────────
 const taskListRouter = express.Router();
-taskListRouter.get('/', verifyToken, taskListController.getAll);
-taskListRouter.get('/:taskListId', verifyToken, taskListController.getOne);
+taskListRouter.get('/',                 verifyToken, taskListController.getAll);
+taskListRouter.post('/',                verifyToken, taskListController.create);
+taskListRouter.get('/:taskListId',      verifyToken, taskListController.getOne);
+taskListRouter.put('/:taskListId',      verifyToken, taskListController.update);
+taskListRouter.delete('/:taskListId',   verifyToken, taskListController.remove);
 
-module.exports = { spkRouter, lkRouter, equipmentRouter, mapsRouter, submissionsRouter, funcLocRouter, taskListRouter, plantRouter };
+// Equipment Interval Mappings
+const mappingRouter = express.Router();
+mappingRouter.get('/',       verifyToken, equipmentMappingController.getAll);
+mappingRouter.post('/',      verifyToken, equipmentMappingController.create);
+mappingRouter.delete('/:id', verifyToken, equipmentMappingController.remove);
+
+module.exports = { spkRouter, lkRouter, equipmentRouter, mapsRouter, submissionsRouter, funcLocRouter, taskListRouter, plantRouter, mappingRouter };

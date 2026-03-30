@@ -25,6 +25,7 @@ const {
   GeneralTaskList,
   GeneralTaskListActivity,
 } = require("./GeneralTaskList");
+const EquipmentIntervalMapping = require("./EquipmentIntervalMapping");
 const Notification = require("./Notification");
 const SpkCorrective = require("./SpkCorrective");
 const { SpkCorrectiveItem, SpkCorrectivePhoto } = require("./SpkCorrectiveItem");
@@ -235,6 +236,12 @@ GeneralTaskListActivity.belongsTo(GeneralTaskList, {
   as: "taskList",
 });
 
+// ── Equipment x GeneralTaskList interval mappings ────────────────────────────
+Equipment.hasMany(EquipmentIntervalMapping, { foreignKey: 'equipmentId', as: 'intervalMappings', onDelete: 'CASCADE' });
+EquipmentIntervalMapping.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });
+GeneralTaskList.hasMany(EquipmentIntervalMapping, { foreignKey: 'taskListId', as: 'intervalMappings' });
+EquipmentIntervalMapping.belongsTo(GeneralTaskList, { foreignKey: 'taskListId', as: 'taskList' });
+
 module.exports = {
   User,
   Plant,
@@ -262,4 +269,5 @@ module.exports = {
   FunctionalLocation,
   GeneralTaskList,
   GeneralTaskListActivity,
+  EquipmentIntervalMapping,
 };

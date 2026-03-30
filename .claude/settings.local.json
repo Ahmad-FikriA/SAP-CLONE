@@ -14,7 +14,10 @@
       "Bash(cd \"C:/Users/fik/Projects/SAP-CLONE\" && node -e \"\nconst data = require\\('./data/sap_equipment.json'\\);\nconst ids = ['2210000438','2210000439','2210000449','2210000451','2210000640','2210000651','2210000652','2210000327','2210003422','2210000605'];\nids.forEach\\(id => {\n  const e = data.find\\(x => x.equipmentId === id\\);\n  if\\(e\\) console.log\\(JSON.stringify\\(e\\)\\);\n}\\);\n\")",
       "Bash(npm run:*)",
       "Bash(node -c src/preventive_seed.js)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(\"C:\\\\Users\\\\fik\\\\Projects\\\\SAP-CLONE\\\\docs\\\\superpowers\\\\plans\\\\2026-03-30-equipment-interval-mapping.md\":*)",
+      "Bash(python3 -c \":*)",
+      "Bash(python3:*)"
     ]
   }
 }
