@@ -254,7 +254,8 @@ function removeRow(id) {
 
 function suggestSpkNumber() {
   const catCode = { Mekanik: 'M', Listrik: 'L', Sipil: 'S', Otomasi: 'O' };
-  const cat = document.getElementById('f_category').value;
+  const catEl = document.getElementById('f_category');
+  const cat = catEl ? catEl.value : 'Mekanik';
   const code = catCode[cat] || 'M';
   const prefix = 'SPK-' + code + '-';
   const max = allSpk.reduce(function (m, s) {
