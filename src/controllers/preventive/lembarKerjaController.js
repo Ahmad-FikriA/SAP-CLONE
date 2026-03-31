@@ -6,7 +6,7 @@ const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
 const { LembarKerja, LembarKerjaSpk }    = require('../../models/LembarKerja');
 const Equipment = require('../../models/Equipment');
 
-const _PENDING_STATES = ['awaiting_kasie','awaiting_ap','awaiting_kadis_pusat','awaiting_kadis_keamanan'];
+const _PENDING_STATES = ['awaiting_kasie','awaiting_kadis_pusat','awaiting_kadis_keamanan'];
 
 // ── Eager-load config ─────────────────────────────────────────────────────────
 const SPK_INCLUDE = [
@@ -127,16 +127,16 @@ const remove = async (req, res) => {
 const submit = async (req, res) => {
   const lk = await LembarKerja.findByPk(req.params.lkNumber);
   if (!lk) return res.status(404).json({ error: 'LembarKerja not found' });
-  const { evaluasi } = req.body;
-  await lk.update({ status: 'completed', approvalStatus: 'awaiting_kasie', ...(evaluasi !== undefined && { evaluasi }) });
+  await lk.update({ status: 'completed', approvalStatus: 'awaiting_kasie' });
   res.json({ message: 'Lembar kerja submitted', lkNumber: lk.lkNumber });
 };
 
 // POST /api/lk/:lkNumber/approve
 const approve = async (req, res) => {
   const { role, userId } = req.user;
-  if (role !== 'supervisor' && role !== 'manager') {
-    return res.status(403).json({ error: 'Forbidden: only supervisor or manager can approve' });
+  const allowed = ['supervisor', 'kepala_seksi', 'kepala_dinas', 'kepala_divisi'];
+  if (!allowed.includes(role)) {
+    return res.status(403).json({ error: 'Forbidden: only Kasie or Kadis can approve' });
   }
 
   const result = await sequelize.transaction(async (t) => {
@@ -149,14 +149,17 @@ const approve = async (req, res) => {
     const now = new Date().toISOString();
     const updates = {};
 
-    if (role === 'supervisor') {
+    if (role === 'supervisor' || role === 'kepala_seksi') {
       if (lk.approvalStatus !== 'awaiting_kasie') return { status: 400, body: { error: 'LK is not awaiting Kasie approval' } };
-      Object.assign(updates, { approvalStatus: 'awaiting_ap', kasieApprovedBy: userId, kasieApprovedAt: now });
+      Object.assign(updates, { approvalStatus: 'awaiting_kadis_pusat', kasieApprovedBy: userId, kasieApprovedAt: now });
+    } else if (role === 'kepala_dinas') {
+      if (lk.approvalStatus !== 'awaiting_kadis_pusat') return { status: 400, body: { error: 'LK is not awaiting Kadis Pusat approval' } };
+      Object.assign(updates, { approvalStatus: 'awaiting_kadis_keamanan', kadisPusatApprovedBy: userId, kadisPusatApprovedAt: now });
+    } else if (role === 'kepala_divisi') {
+      if (lk.approvalStatus !== 'awaiting_kadis_keamanan') return { status: 400, body: { error: 'LK is not awaiting Kadis Keamanan approval' } };
+      Object.assign(updates, { approvalStatus: 'approved', kadisKeamananApprovedBy: userId, kadisKeamananApprovedAt: now });
     } else {
-      if      (lk.approvalStatus === 'awaiting_ap')             Object.assign(updates, { approvalStatus: 'awaiting_kadis_pusat',    apApprovedBy: userId,         apApprovedAt: now });
-      else if (lk.approvalStatus === 'awaiting_kadis_pusat')    Object.assign(updates, { approvalStatus: 'awaiting_kadis_keamanan', kadisPusatApprovedBy: userId,  kadisPusatApprovedAt: now });
-      else if (lk.approvalStatus === 'awaiting_kadis_keamanan') Object.assign(updates, { approvalStatus: 'approved',                kadisKeamananApprovedBy: userId, kadisKeamananApprovedAt: now });
-      else return { status: 400, body: { error: 'LK is not awaiting manager approval' } };
+      return { status: 400, body: { error: 'Role not authorized for this approval step' } };
     }
 
     await lk.update(updates, { transaction: t });
@@ -170,8 +173,9 @@ const approve = async (req, res) => {
 // POST /api/lk/:lkNumber/reject
 const reject = async (req, res) => {
   const { role, userId } = req.user;
-  if (role !== 'supervisor' && role !== 'manager') {
-    return res.status(403).json({ error: 'Forbidden: only supervisor or manager can reject' });
+  const allowedReject = ['supervisor', 'kepala_seksi', 'kepala_dinas', 'kepala_divisi'];
+  if (!allowedReject.includes(role)) {
+    return res.status(403).json({ error: 'Forbidden: only Kasie or Kadis can reject' });
   }
 
   const lk = await LembarKerja.findByPk(req.params.lkNumber, { include: LK_INCLUDE });
