@@ -63,7 +63,6 @@ function openEdit(id) {
 }
 
 function renderForm(u) {
-  const roles = ['teknisi', 'planner', 'supervisor', 'manager', 'admin'];
   const isEdit = !!u;
   document.getElementById('panelBody').innerHTML = `
     <div class="form-section">
@@ -87,9 +86,7 @@ function renderForm(u) {
       <div class="form-row">
         <div class="form-group">
           <label>Role *</label>
-          <select id="f_role">
-            ${roles.map(r => `<option value="${r}" ${u?.role === r ? 'selected' : ''}>${r}</option>`).join('')}
-          </select>
+          <input id="f_role" value="${escHtml(u?.role || '')}" placeholder="teknisi / planner / supervisor / manager / admin" />
         </div>
         <div class="form-group">
           <label>Email</label>
