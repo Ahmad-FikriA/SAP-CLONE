@@ -67,6 +67,7 @@ mapsRouter.put('/:plantId', verifyToken, mapsController.save);
 // ── Submissions ───────────────────────────────────────────────────────────────
 const submissionsRouter = express.Router();
 submissionsRouter.get('/', verifyToken, submissionsController.getAll);
+submissionsRouter.get('/export', verifyToken, submissionsController.exportExcel);
 submissionsRouter.post('/bulk-delete', verifyToken, submissionsController.bulkDelete);
 submissionsRouter.get('/:id', verifyToken, submissionsController.getOne);
 submissionsRouter.delete('/:id', verifyToken, submissionsController.remove);
