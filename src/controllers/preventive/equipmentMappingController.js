@@ -56,4 +56,31 @@ const remove = async (req, res) => {
   res.json({ message: 'Deleted' });
 };
 
-module.exports = { getAll, create, remove };
+// POST /api/equipment-mappings/bulk
+const bulkCreate = async (req, res) => {
+  const { equipmentIds, interval, taskListId } = req.body;
+  if (!Array.isArray(equipmentIds) || !equipmentIds.length || !interval || !taskListId) {
+    return res.status(400).json({ error: 'equipmentIds[], interval, dan taskListId wajib diisi' });
+  }
+
+  let created = 0;
+  const skipped = [];
+
+  for (const equipmentId of equipmentIds) {
+    const existing = await EquipmentIntervalMapping.findOne({ where: { equipmentId, interval } });
+    if (existing) {
+      skipped.push(equipmentId);
+      continue;
+    }
+    await EquipmentIntervalMapping.create({ equipmentId, interval, taskListId });
+    created++;
+  }
+
+  res.status(201).json({
+    message: `${created} mapping dibuat, ${skipped.length} dilewati (sudah ada).`,
+    created,
+    skipped,
+  });
+};
+
+module.exports = { getAll, create, remove, bulkCreate };

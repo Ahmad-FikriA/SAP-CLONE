@@ -23,6 +23,9 @@ spkRouter.post('/', verifyToken, spkController.create);
 spkRouter.put('/:spkNumber', verifyToken, spkController.update);
 spkRouter.delete('/:spkNumber', verifyToken, spkController.remove);
 spkRouter.post('/:spkNumber/submit', verifyToken, spkController.submit);
+spkRouter.post('/:spkNumber/approve-kasie', verifyToken, spkController.approveKasie);
+spkRouter.post('/:spkNumber/approve-kadis-perawatan', verifyToken, spkController.approveKadisPerawatan);
+spkRouter.post('/:spkNumber/approve-kadis', verifyToken, spkController.approveKadis);
 spkRouter.post('/:spkNumber/sync', verifyToken, spkController.sync);
 
 // ── Lembar Kerja ─────────────────────────────────────────────────────────────
@@ -84,6 +87,7 @@ taskListRouter.delete('/:taskListId',   verifyToken, taskListController.remove);
 // Equipment Interval Mappings
 const mappingRouter = express.Router();
 mappingRouter.get('/',       verifyToken, equipmentMappingController.getAll);
+mappingRouter.post('/bulk',  verifyToken, equipmentMappingController.bulkCreate);
 mappingRouter.post('/',      verifyToken, equipmentMappingController.create);
 mappingRouter.delete('/:id', verifyToken, equipmentMappingController.remove);
 

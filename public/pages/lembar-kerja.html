@@ -97,6 +97,7 @@
       <table>
         <thead>
           <tr>
+            <th class="col-check"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
             <th>LK Number</th><th>Kategori</th><th>Periode</th>
             <th>Status</th><th>Lembar</th><th>SPK</th><th>Aksi</th>
           </tr>
@@ -105,6 +106,13 @@
           <tr class="loading-row"><td colspan="7"><div class="spinner"></div></td></tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Bulk action bar -->
+    <div class="bulk-bar" id="bulkBar">
+      <span class="bulk-bar__count">0 dipilih</span>
+      <button class="btn btn-danger-fill" onclick="bulkDeleteLk()">Hapus Terpilih</button>
+      <button class="btn btn-ghost-light" onclick="document.getElementById('selectAll').click()">Batal</button>
     </div>
   </main>
 </div>

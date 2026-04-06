@@ -4,13 +4,14 @@ var allMappings   = [];
 var allEquipment  = [];
 var allTaskLists  = [];
 var INTERVALS     = ['1wk', '2wk', '4wk', '8wk', '12wk', '14wk', '16wk'];
-var _panelMode    = 'mapping'; // 'mapping' | 'tasklist'
+var _panelMode    = 'mapping'; // 'mapping' | 'tasklist' | 'bulk'
 var _editingTlId  = null;      // null = create, string = edit
 var _tlActIdx     = 0;
 
 // ── Dynamic panel save dispatcher ────────────────────────────────────────────
 function handlePanelSave() {
   if (_panelMode === 'tasklist') saveTaskList();
+  else if (_panelMode === 'bulk') saveBulkMapping();
   else saveMapping();
 }
 
@@ -113,6 +114,91 @@ async function deleteMapping(id) {
     showMessage('Mapping berhasil dihapus.', 'success');
     loadMappings();
   } catch (e) { showMessage(e.message || 'Gagal menghapus mapping.', 'error'); }
+}
+
+// ── Bulk Create Mapping ───────────────────────────────────────────────────────
+async function openBulkCreate() {
+  _panelMode = 'bulk';
+  document.getElementById('panelTitle').textContent = 'Bulk Mapping Equipment';
+  document.getElementById('panelSave').textContent  = 'Simpan Semua';
+  document.getElementById('panelBody').innerHTML = '<div style="padding:32px;text-align:center"><div class="spinner"></div></div>';
+  openPanel();
+
+  try {
+    var r = await Promise.all([apiGet('/equipment?limit=9999'), apiGet('/task-lists')]);
+    allEquipment = r[0].data || r[0];
+    allTaskLists = Array.isArray(r[1]) ? r[1] : (r[1].data || []);
+  } catch (e) { allEquipment = []; allTaskLists = []; }
+
+  var ivOpts = INTERVALS.map(function(iv) {
+    return '<option value="' + escHtml(iv) + '">' + escHtml(iv) + '</option>';
+  }).join('');
+
+  var tlOpts = allTaskLists.map(function(tl) {
+    var id   = tl.taskListId || tl.id || '';
+    var name = tl.taskListName || tl.name || id;
+    return '<option value="' + escHtml(String(id)) + '">' + escHtml(name + ' (' + id + ')') + '</option>';
+  }).join('');
+
+  // Build searchable equipment checkbox list
+  var eqItems = allEquipment.map(function(eq) {
+    var id = eq.equipmentId || eq.id;
+    var name = eq.equipmentName || eq.name || '';
+    return '<label class="multi-select-item" style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer">' +
+      '<input type="checkbox" name="bulkEq" value="' + escHtml(id) + '">' +
+      '<span><strong>' + escHtml(id) + '</strong>' + (name ? ' — ' + escHtml(name) : '') + '</span>' +
+      '</label>';
+  }).join('');
+
+  document.getElementById('panelBody').innerHTML =
+    '<div class="form-section">' +
+      '<div class="form-section__title">Pengaturan Mapping</div>' +
+      '<div class="form-group"><label class="form-label">Interval *</label>' +
+        '<select id="fb_interval">' + ivOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Task List *</label>' +
+        '<select id="fb_taskListId"><option value="">-- Pilih Task List --</option>' + tlOpts + '</select></div>' +
+    '</div>' +
+    '<div class="form-section">' +
+      '<div class="form-section__title" style="margin-bottom:8px">Pilih Equipment</div>' +
+      '<div style="margin-bottom:8px;display:flex;gap:8px;align-items:center">' +
+        '<input type="text" id="fb_eqSearch" placeholder="Cari equipment..." oninput="filterBulkEqList()" style="flex:1" />' +
+        '<label style="white-space:nowrap;font-size:13px;cursor:pointer">' +
+          '<input type="checkbox" id="fb_selectAll" onchange="toggleBulkSelectAll(this)"> Pilih Semua' +
+        '</label>' +
+      '</div>' +
+      '<div id="fb_eqList" class="multi-select-list" style="max-height:320px;overflow-y:auto">' +
+        (eqItems || '<p style="padding:12px;color:var(--text-muted)">Tidak ada equipment</p>') +
+      '</div>' +
+    '</div>';
+}
+
+function filterBulkEqList() {
+  var q = (document.getElementById('fb_eqSearch').value || '').toLowerCase();
+  document.querySelectorAll('#fb_eqList .multi-select-item').forEach(function(el) {
+    el.style.display = !q || el.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+  });
+}
+
+function toggleBulkSelectAll(cb) {
+  document.querySelectorAll('#fb_eqList input[name="bulkEq"]').forEach(function(el) {
+    if (el.closest('.multi-select-item').style.display !== 'none') el.checked = cb.checked;
+  });
+}
+
+async function saveBulkMapping() {
+  var interval   = document.getElementById('fb_interval').value;
+  var taskListId = document.getElementById('fb_taskListId').value;
+  var equipmentIds = Array.from(document.querySelectorAll('#fb_eqList input[name="bulkEq"]:checked')).map(function(cb) { return cb.value; });
+
+  if (!taskListId)       { showMessage('Task List harus dipilih.', 'error'); return; }
+  if (!equipmentIds.length) { showMessage('Pilih minimal 1 equipment.', 'error'); return; }
+
+  try {
+    var result = await apiPost('/equipment-mappings/bulk', { equipmentIds: equipmentIds, interval: interval, taskListId: taskListId });
+    showMessage(result.message || (equipmentIds.length + ' mapping berhasil diproses.'), 'success');
+    closePanel();
+    loadMappings();
+  } catch (e) { showMessage(e.message || 'Gagal menyimpan bulk mapping.', 'error'); }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

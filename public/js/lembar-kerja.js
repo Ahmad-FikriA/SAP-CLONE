@@ -23,7 +23,7 @@ function renderLk() {
   const tbody = document.getElementById('lkBody');
 
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
     return;
   }
 
@@ -32,6 +32,7 @@ function renderLk() {
     const spkCount = spkList.length;
     return `
     <tr>
+      <td class="col-check"><input type="checkbox" name="bulk" value="${escHtml(l.lkNumber)}" onchange="updateBulkBar()"></td>
       <td><strong>${escHtml(l.lkNumber)}</strong></td>
       <td>${escHtml(l.category)}</td>
       <td class="text-small">${formatPeriod(l.periodeStart, l.periodeEnd)}</td>
@@ -47,6 +48,7 @@ function renderLk() {
       </td>
     </tr>`;
   }).join('');
+  updateBulkBar();
 }
 
 // ── View Detail ────────────────────────────────────────────────────────────
@@ -247,6 +249,18 @@ async function saveLk() {
       showMessage(`LK ${lkNumber} berhasil dibuat`);
     }
     closePanel();
+    loadLk();
+  } catch (e) { showMessage(e.message, 'error'); }
+}
+
+// ── Bulk Delete LK ─────────────────────────────────────────────────────────
+async function bulkDeleteLk() {
+  var ids = getCheckedIds();
+  if (!ids.length) return;
+  if (!window.confirm('Hapus ' + ids.length + ' Lembar Kerja terpilih? Tindakan ini tidak dapat dibatalkan.')) return;
+  try {
+    await apiPost('/lk/bulk-delete', { ids: ids });
+    showMessage(ids.length + ' LK berhasil dihapus');
     loadLk();
   } catch (e) { showMessage(e.message, 'error'); }
 }

@@ -7,35 +7,51 @@ const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('../../models/Submission');
 const Equipment = require('../../models/Equipment');
 const { GeneralTaskList, GeneralTaskListActivity } = require('../../models/GeneralTaskList');
-const { LembarKerja, LembarKerjaSpk } = require('../../models/LembarKerja');
+const { LembarKerjaSpk } = require('../../models/LembarKerja'); // kept for destroySpksByNumbers cleanup
+
+/**
+ * Delete all child records for the given spkNumbers inside an existing transaction,
+ * then delete the SPK rows themselves.
+ * Order: LembarKerjaSpk → Submission (children cascade) → SpkActivity → SpkEquipment → Spk
+ */
+async function destroySpksByNumbers(spkNumbers, transaction) {
+  const where = { spkNumber: { [Op.in]: spkNumbers } };
+
+  // 1. lembar_kerja_spk — no DB cascade from spk side
+  await LembarKerjaSpk.destroy({ where, transaction });
+
+  // 2. Submissions — find IDs first so child tables cascade via Sequelize
+  const submissions = await Submission.findAll({ attributes: ['id'], where, transaction });
+  if (submissions.length) {
+    const subIds = submissions.map(s => s.id);
+    await SubmissionPhoto.destroy({ where: { submissionId: { [Op.in]: subIds } }, transaction });
+    await SubmissionActivityResult.destroy({ where: { submissionId: { [Op.in]: subIds } }, transaction });
+    await Submission.destroy({ where: { id: { [Op.in]: subIds } }, transaction });
+  }
+
+  // 3. SPK children with existing CASCADE (belt-and-suspenders)
+  await SpkActivity.destroy({ where, transaction });
+  await SpkEquipment.destroy({ where, transaction });
+
+  // 4. Delete the SPK itself
+  return Spk.destroy({ where, transaction });
+}
 
 // ── Eager-load config ─────────────────────────────────────────────────────────
 const INCLUDE_FULL = [
   {
     model: SpkEquipment, as: 'equipmentModels',
     attributes: ['equipmentId', 'equipmentName', 'functionalLocation'],
-    include: [{ model: Equipment, as: 'equipmentDetails', attributes: ['latitude', 'longitude'] }],
+    include: [{ model: Equipment, as: 'equipmentDetails', attributes: ['latitude', 'longitude', 'plantName'] }],
   },
   {
     model: SpkActivity, as: 'activitiesModel',
     attributes: ['activityNumber', 'equipmentId', 'operationText', 'resultComment', 'durationPlan', 'durationActual', 'isVerified'],
   },
-  {
-    model: LembarKerjaSpk, as: 'lkLinks',
-    attributes: ['lkNumber'],   // FK needed for the nested LembarKerja join
-    include: [{ model: LembarKerja, as: 'lk', attributes: ['periodeEnd'] }],
-  },
 ];
 
 function fmt(spk) {
   const j = spk.toJSON();
-  const lkEnds = (j.lkLinks || [])
-    .map(link => link.lk?.periodeEnd)
-    .filter(Boolean)
-    .map(d => new Date(d));
-  const dueDate = lkEnds.length > 0
-    ? new Date(Math.min(...lkEnds))
-    : null;
   return {
     spkNumber: j.spkNumber,
     description: j.description,
@@ -44,11 +60,22 @@ function fmt(spk) {
     status: j.status,
     durationActual: j.durationActual,
     scheduledDate: j.scheduledDate ?? null,
-    dueDate: dueDate ? dueDate.toISOString() : null,
+    dueDate: j.scheduledDate ? new Date(j.scheduledDate).toISOString() : null,
+    orderNumber: j.orderNumber ?? null,
+    evaluasi: j.evaluasi ?? null,
+    submittedBy: j.submittedBy ?? null,
+    submittedAt: j.submittedAt ?? null,
+    kasieApprovedBy: j.kasieApprovedBy ?? null,
+    kasieApprovedAt: j.kasieApprovedAt ?? null,
+    kadisPerawatanApprovedBy: j.kadisPerawatanApprovedBy ?? null,
+    kadisPerawatanApprovedAt: j.kadisPerawatanApprovedAt ?? null,
+    kadisApprovedBy: j.kadisApprovedBy ?? null,
+    kadisApprovedAt: j.kadisApprovedAt ?? null,
     equipmentModels: (j.equipmentModels || []).map(em => ({
       equipmentId: em.equipmentId,
       equipmentName: em.equipmentName,
       functionalLocation: em.functionalLocation,
+      plantName: em.equipmentDetails?.plantName ?? null,
       latitude: em.equipmentDetails?.latitude ?? null,
       longitude: em.equipmentDetails?.longitude ?? null,
     })),
@@ -64,6 +91,7 @@ const getAll = async (req, res) => {
     return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
   }
   const where = req.query.category ? { category: req.query.category } : {};
+  if (req.query.status) where.status = req.query.status;
   if (req.query.from) where.scheduledDate = { ...where.scheduledDate, [Op.gte]: req.query.from };
   if (req.query.to)   where.scheduledDate = { ...where.scheduledDate, [Op.lte]: req.query.to };
 
@@ -77,7 +105,7 @@ const getAll = async (req, res) => {
         where: { equipmentId: req.query.equipmentId },
         required: true,
         attributes: ['equipmentId', 'equipmentName', 'functionalLocation'],
-        include: [{ model: Equipment, as: 'equipmentDetails', attributes: ['latitude', 'longitude'] }],
+        include: [{ model: Equipment, as: 'equipmentDetails', attributes: ['latitude', 'longitude', 'plantName'] }],
       },
       ...INCLUDE_FULL.slice(1), // keep SpkActivity + LembarKerjaSpk includes unchanged
     ];
@@ -127,15 +155,32 @@ const update = async (req, res) => {
 const bulkDelete = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
-  const count = await Spk.destroy({ where: { spkNumber: { [Op.in]: ids } } });
-  res.json({ message: `Deleted ${count} SPK(s)` });
+
+  const t = await sequelize.transaction();
+  try {
+    const count = await destroySpksByNumbers(ids, t);
+    await t.commit();
+    res.json({ message: `Deleted ${count} SPK(s)` });
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
 };
 
 // DELETE /api/spk/:spkNumber
 const remove = async (req, res) => {
-  const count = await Spk.destroy({ where: { spkNumber: req.params.spkNumber } });
-  if (!count) return res.status(404).json({ error: 'SPK not found' });
-  res.json({ message: 'Deleted' });
+  const spk = await Spk.findByPk(req.params.spkNumber);
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+
+  const t = await sequelize.transaction();
+  try {
+    await destroySpksByNumbers([req.params.spkNumber], t);
+    await t.commit();
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
 };
 
 // POST /api/spk/:spkNumber/submit
@@ -172,8 +217,14 @@ const submit = async (req, res) => {
       );
     }
 
-    // Mark SPK as completed
-    await spk.update({ status: 'completed', durationActual: durationActual ?? spk.durationActual }, { transaction: t });
+    // Move SPK into approval chain
+    await spk.update({
+      status: 'awaiting_kasie',
+      durationActual: durationActual ?? spk.durationActual,
+      evaluasi: evaluasi || null,
+      submittedBy: req.user?.userId ?? null,
+      submittedAt: new Date(),
+    }, { transaction: t });
 
     await t.commit();
     res.json({ message: 'SPK submitted', spkNumber: spk.spkNumber, submissionId: subId });
@@ -267,4 +318,99 @@ const generateFromTaskList = async (req, res) => {
   } catch (err) { await t.rollback(); throw err; }
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync, generateFromTaskList };
+// Kadis funcloc routing map
+const KADIS_FUNCLOC_MAP = [
+  { pattern: /PS I Cidanau|PS II Waduk/i,                         role: 'kadis_air_baku' },
+  { pattern: /WTP Cidanau|Cipasauran/i,                            role: 'kadis_pengolahan_cidanau' },
+  { pattern: /Decanter|WTP Krenceng/i,                             role: 'kadis_pengolahan_krenceng' },
+  { pattern: /Pos Keamanan/i,                                       role: 'kadis_keamanan' },
+];
+
+function getExpectedKadisRole(functionalLocation) {
+  if (!functionalLocation) return null;
+  for (const entry of KADIS_FUNCLOC_MAP) {
+    if (entry.pattern.test(functionalLocation)) return entry.role;
+  }
+  return null;
+}
+
+// POST /api/spk/:spkNumber/approve-kasie
+const approveKasie = async (req, res) => {
+  const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+  if (spk.status !== 'awaiting_kasie') {
+    return res.status(400).json({ error: `SPK status is '${spk.status}', expected 'awaiting_kasie'` });
+  }
+
+  const role = req.user?.role;
+  const validKasieRoles = ['supervisor', 'kepala_seksi', 'kasie'];
+  if (!validKasieRoles.includes(role)) {
+    return res.status(403).json({ error: 'Only Kasie/Supervisor can approve this step' });
+  }
+
+  await spk.update({
+    status: 'awaiting_kadis_perawatan',
+    kasieApprovedBy: req.user.userId,
+    kasieApprovedAt: new Date(),
+  });
+
+  const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
+  res.json(fmt(fresh));
+};
+
+// POST /api/spk/:spkNumber/approve-kadis-perawatan
+const approveKadisPerawatan = async (req, res) => {
+  const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+  if (spk.status !== 'awaiting_kadis_perawatan') {
+    return res.status(400).json({ error: `SPK status is '${spk.status}', expected 'awaiting_kadis_perawatan'` });
+  }
+
+  const role = req.user?.role;
+  if (role !== 'kadis_perawatan') {
+    return res.status(403).json({ error: 'Only Kadis Perawatan can approve this step' });
+  }
+
+  await spk.update({
+    status: 'awaiting_kadis',
+    kadisPerawatanApprovedBy: req.user.userId,
+    kadisPerawatanApprovedAt: new Date(),
+  });
+
+  const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
+  res.json(fmt(fresh));
+};
+
+// POST /api/spk/:spkNumber/approve-kadis
+const approveKadis = async (req, res) => {
+  const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+  if (spk.status !== 'awaiting_kadis') {
+    return res.status(400).json({ error: `SPK status is '${spk.status}', expected 'awaiting_kadis'` });
+  }
+
+  const role = req.user?.role;
+  // Validate Kadis funcloc routing
+  const funclocs = (spk.equipmentModels || []).map(e => e.functionalLocation).filter(Boolean);
+  const expectedRole = funclocs.length > 0 ? getExpectedKadisRole(funclocs[0]) : null;
+  if (expectedRole && role !== expectedRole) {
+    return res.status(403).json({ error: `This SPK requires approval from '${expectedRole}'` });
+  }
+
+  // Fallback: if funcloc not mapped, any kadis role can approve
+  const kadisRoles = ['kadis_air_baku', 'kadis_pengolahan_cidanau', 'kadis_pengolahan_krenceng', 'kadis_keamanan', 'kepala_dinas', 'kepala_divisi'];
+  if (!kadisRoles.includes(role)) {
+    return res.status(403).json({ error: 'Only Kadis can approve this step' });
+  }
+
+  await spk.update({
+    status: 'approved',
+    kadisApprovedBy: req.user.userId,
+    kadisApprovedAt: new Date(),
+  });
+
+  const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
+  res.json(fmt(fresh));
+};
+
+module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync, generateFromTaskList, approveKasie, approveKadisPerawatan, approveKadis };

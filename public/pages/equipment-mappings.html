@@ -114,13 +114,22 @@
           <div class="page__title">Task Mapping</div>
           <div class="page__subtitle">Peta equipment ke task list per interval perawatan</div>
         </div>
-        <button class="btn btn-primary" onclick="openCreate()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          + Tambah Mapping
-        </button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-secondary" onclick="openBulkCreate()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <rect x="2" y="3" width="8" height="6" rx="1"/><rect x="2" y="12" width="8" height="6" rx="1"/>
+              <line x1="14" y1="6" x2="22" y2="6"/><line x1="14" y1="15" x2="22" y2="15"/>
+            </svg>
+            Bulk Mapping
+          </button>
+          <button class="btn btn-primary" onclick="openCreate()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            + Tambah Mapping
+          </button>
+        </div>
       </div>
 
       <div class="table-wrapper">

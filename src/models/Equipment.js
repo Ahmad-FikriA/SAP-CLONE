@@ -11,6 +11,7 @@ const Equipment = sequelize.define('Equipment', {
   funcLocId: { type: DataTypes.STRING(50), allowNull: true, field: 'func_loc_id' },
   plantId: { type: DataTypes.STRING(20), allowNull: true, field: 'plant_id' },
   plantName: { type: DataTypes.STRING(150), allowNull: true, field: 'plant_name' },
+  plantCode: { type: DataTypes.STRING(20), allowNull: true, field: 'plant_code' },
   abcIndicator: { type: DataTypes.STRING(1), allowNull: true, field: 'abc_indicator' },
   latitude: {
     type: DataTypes.DECIMAL(10, 7),

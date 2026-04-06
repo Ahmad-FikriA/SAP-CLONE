@@ -112,15 +112,35 @@ const update = async (req, res) => {
 const bulkDelete = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
-  const count = await LembarKerja.destroy({ where: { lkNumber: { [Op.in]: ids } } });
-  res.json({ message: `Deleted ${count} LK(s)` });
+
+  const t = await sequelize.transaction();
+  try {
+    // Delete junction rows first (no DB-level CASCADE from lembar_kerja side)
+    await LembarKerjaSpk.destroy({ where: { lkNumber: { [Op.in]: ids } }, transaction: t });
+    const count = await LembarKerja.destroy({ where: { lkNumber: { [Op.in]: ids } }, transaction: t });
+    await t.commit();
+    res.json({ message: `Deleted ${count} LK(s)` });
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
 };
 
 // DELETE /api/lk/:lkNumber
 const remove = async (req, res) => {
-  const count = await LembarKerja.destroy({ where: { lkNumber: req.params.lkNumber } });
-  if (!count) return res.status(404).json({ error: 'LembarKerja not found' });
-  res.json({ message: 'Deleted' });
+  const lk = await LembarKerja.findByPk(req.params.lkNumber);
+  if (!lk) return res.status(404).json({ error: 'LembarKerja not found' });
+
+  const t = await sequelize.transaction();
+  try {
+    await LembarKerjaSpk.destroy({ where: { lkNumber: req.params.lkNumber }, transaction: t });
+    await LembarKerja.destroy({ where: { lkNumber: req.params.lkNumber }, transaction: t });
+    await t.commit();
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
 };
 
 // POST /api/lk/:lkNumber/submit
