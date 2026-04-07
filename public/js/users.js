@@ -19,7 +19,7 @@ async function loadUsers() {
 function renderUsers() {
   const tbody = document.getElementById('usersBody');
   if (!allUsers.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
     return;
   }
   tbody.innerHTML = allUsers.map(u => `

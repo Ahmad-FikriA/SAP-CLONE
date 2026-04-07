@@ -4,8 +4,6 @@
   "description": "KTI SmartCare — SAP Mock API Server with Admin UI",
   "main": "src/server.js",
   "scripts": {
-    "prestart": "node src/migrate_users.js",
-    "predev": "node src/migrate_users.js",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed": "node src/seed.js",
