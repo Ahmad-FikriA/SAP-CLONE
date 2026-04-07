@@ -95,7 +95,7 @@ async function createSchedule(req, res) {
       location,
       scheduledDate,
       scheduledEndDate,
-      createdBy: req.user.username,
+      createdBy: req.user.nik,
       assignedTo,
       kategoriTeknisi,
       kategoriK3: kategoriK3 || null,

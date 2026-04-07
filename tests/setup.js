@@ -19,7 +19,7 @@ const TEST_CONFIG = {
   BASE_URL: '/api',
   TIMEOUT: 30000,
   DEFAULT_USER: {
-    username: 'admin_01',
+    nik: '100001',
     password: 'password123',
   },
 };

@@ -14,7 +14,7 @@ describe('👥 Users API Tests', () => {
       users.forEach(user => {
         validateResponse(user, {
           id: 'string',
-          username: 'string',
+          nik: 'string',
           name: 'string',
           role: 'string',
         });
@@ -41,11 +41,12 @@ describe('👥 Users API Tests', () => {
     it('should create a new user', async () => {
       const newUser = {
         id: `TEST-${Date.now()}`,
-        username: `testuser_${Date.now()}`,
+        nik: `testnik_${Date.now()}`,
         password: 'testpass123',
         name: 'Test User',
         role: 'teknisi',
         email: 'test@example.com',
+        divisi: 'Test Divisi'
       };
 
       const response = await authRequest('post', '/users')
@@ -53,20 +54,20 @@ describe('👥 Users API Tests', () => {
 
       const body = expectObject(response, 201);
       expect(body.id).toBe(newUser.id);
-      expect(body.username).toBe(newUser.username);
+      expect(body.nik).toBe(newUser.nik);
       expect(body.name).toBe(newUser.name);
       expect(body.role).toBe(newUser.role);
       expect(body).not.toHaveProperty('password');
       
       testUserId = body.id;
-      console.log('  ✓ Created new user:', body.username);
+      console.log('  ✓ Created new user:', body.nik);
     });
 
-    it('should reject duplicate username', async () => {
+    it('should reject duplicate nik', async () => {
       const response = await authRequest('post', '/users')
         .send({
           id: `TEST-${Date.now() + 1}`,
-          username: 'admin_01', // Existing username
+          nik: '100001', // Existing username
           password: 'testpass123',
           name: 'Duplicate User',
           role: 'teknisi',
@@ -149,10 +150,11 @@ describe('👥 Users API Tests', () => {
       for (let i = 0; i < 3; i++) {
         const newUser = {
           id: `BULK-${Date.now()}-${i}`,
-          username: `bulkuser_${Date.now()}_${i}`,
+          nik: `bulkuser_${Date.now()}_${i}`,
           password: 'testpass123',
           name: `Bulk Test User ${i}`,
           role: 'teknisi',
+          divisi: 'Test Divisi'
         };
         
         const createResponse = await authRequest('post', '/users').send(newUser);

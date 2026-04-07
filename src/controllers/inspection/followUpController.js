@@ -108,7 +108,7 @@ async function createFollowUp(req, res) {
       description,
       deadline,
       status: "pending",
-      assignedBy: req.user.username,
+      assignedBy: req.user.nik,
     });
 
     res.status(201).json({

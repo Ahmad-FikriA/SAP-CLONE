@@ -90,7 +90,7 @@ async function createJob(req, res) {
       waktuBerakhir,
       namaPengawas,
       picSupervisi,
-      createdBy: req.user.username,
+      createdBy: req.user.nik,
     });
 
     res.status(201).json({ success: true, message: "Pekerjaan supervisi berhasil dibuat.", data: job });
@@ -169,7 +169,7 @@ async function submitVisit(req, res) {
         keterangan: status === "hadir" ? keterangan : null,
         alasanTidakHadir: status === "tidak_hadir" ? alasanTidakHadir : null,
         photos: photoPaths,
-        submittedBy: req.user.username,
+        submittedBy: req.user.nik,
         submittedAt: new Date(),
         isPelanggaran: status === "tidak_hadir",
       },
@@ -182,7 +182,7 @@ async function submitVisit(req, res) {
         keterangan: status === "hadir" ? keterangan : null,
         alasanTidakHadir: status === "tidak_hadir" ? alasanTidakHadir : null,
         photos: photoPaths.length > 0 ? photoPaths : visit.photos,
-        submittedBy: req.user.username,
+        submittedBy: req.user.nik,
         submittedAt: new Date(),
         isPelanggaran: status === "tidak_hadir",
       });

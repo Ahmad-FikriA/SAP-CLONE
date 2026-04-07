@@ -8,7 +8,7 @@ describe('🔐 Authentication API Tests', () => {
       const response = await request(app)
         .post(`${TEST_CONFIG.BASE_URL}/auth/login`)
         .send({
-          username: 'admin_01',
+          nik: '100001',
           password: 'password123',
         });
 
@@ -23,7 +23,7 @@ describe('🔐 Authentication API Tests', () => {
       validateResponse(body.user, {
         id: 'string',
         name: 'string',
-        username: 'string',
+        nik: 'string',
         role: 'string',
         email: 'string',
       });
@@ -35,7 +35,7 @@ describe('🔐 Authentication API Tests', () => {
       const response = await request(app)
         .post(`${TEST_CONFIG.BASE_URL}/auth/login`)
         .send({
-          username: 'admin_01',
+          nik: '100001',
           password: 'wrongpassword',
         });
 
@@ -58,7 +58,7 @@ describe('🔐 Authentication API Tests', () => {
       const response = await request(app)
         .post(`${TEST_CONFIG.BASE_URL}/auth/login`)
         .send({
-          username: 'nonexistent_user',
+          nik: 'nonexistent_user',
           password: 'password123',
         });
 
