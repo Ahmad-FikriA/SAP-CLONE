@@ -36,7 +36,7 @@ EXPOSE 3000 22
 # Health-check: verify the login endpoint responds
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://localhost:3000/api/auth/login \
-  --post-data='{"username":"admin_01","password":"wrong"}' \
+  --post-data='{"nik":"100001","password":"wrong"}' \
   --header='Content-Type: application/json' || exit 1
 
 # Make start script executable
