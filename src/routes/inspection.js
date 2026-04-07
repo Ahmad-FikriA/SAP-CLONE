@@ -45,6 +45,17 @@ const {
   cancelRequest,
 } = require("../controllers/inspection/inspectionRequestController");
 
+const {
+  uploadPhotos,
+  listJobs,
+  getJob,
+  createJob,
+  updateJob,
+  listVisits,
+  submitVisit,
+  listPelanggaran,
+} = require("../controllers/inspection/supervisiController");
+
 // All inspection routes require authentication
 router.use(verifyToken);
 
@@ -83,5 +94,14 @@ router.post("/requests", createRequest);
 router.put("/requests/:id/approve", approveRequest);
 router.put("/requests/:id/reject", rejectRequest);
 router.put("/requests/:id/cancel", cancelRequest);
+
+// ── Supervisi ───────────────────────────────────────────────────────────────────────────
+router.get("/supervisi/jobs", listJobs);
+router.get("/supervisi/jobs/:id", getJob);
+router.post("/supervisi/jobs", createJob);
+router.put("/supervisi/jobs/:id", updateJob);
+router.get("/supervisi/jobs/:id/visits", listVisits);
+router.post("/supervisi/visits", uploadPhotos, submitVisit);
+router.get("/supervisi/pelanggaran", listPelanggaran);
 
 module.exports = router;

@@ -8,6 +8,9 @@ const InspectionSchedule = require("../../models/InspectionSchedule");
 const InspectionFollowUp = require("../../models/InspectionFollowUp");
 const sequelize = require("../../config/database");
 
+const FOLLOW_UP_TARGET_DINAS_HSE = "dinas_hse";
+const FOLLOW_UP_TARGET_DINAS_PERAWATAN = "dinas_perawatan";
+
 /**
  * Report Controller — Submit, list, approve/reject inspection reports.
  */
@@ -173,17 +176,18 @@ async function approveReport(req, res) {
     );
 
     // If kerusakan found → auto-create follow-up
-    // Branching: manusia → assign ke HSE tim, bangunan → assign ke teknisi via Kepala Dinas
+    // Branching: manusia → assign ke Dinas HSE, selain itu → assign ke Dinas Perawatan
     if (report.hasKerusakan) {
       const kategori = report.kategoriK3 || req.body.kategoriK3;
       const isManusia = kategori === "manusia";
+      const autoAssignedTarget = isManusia
+        ? FOLLOW_UP_TARGET_DINAS_HSE
+        : FOLLOW_UP_TARGET_DINAS_PERAWATAN;
 
       await InspectionFollowUp.create(
         {
           reportId: report.id,
-          assignedTechnician:
-            req.body.assignedTechnician ||
-            (isManusia ? "Tim Dinas HSE" : "Unassigned"),
+          assignedTechnician: req.body.assignedTechnician || autoAssignedTarget,
           kategoriTeknisi:
             req.body.kategoriTeknisi || report.schedule?.kategoriTeknisi,
           kategoriK3: kategori || null,

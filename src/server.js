@@ -22,6 +22,7 @@ const {
 const correctiveRoutes = require("./routes/corrective");
 const inspectionRoutes = require("./routes/inspection");
 const errorHandler = require("./middleware/errorHandler");
+const { syncDatabase } = require("./config/syncMode");
 
 // Register all Sequelize model associations (must run before any query)
 require("./models/associations");
@@ -259,8 +260,7 @@ sequelize
   .authenticate()
   .then(() => {
     console.log("Connection to database has been established successfully.");
-    // Sync models (alter: true to add new columns/enums without dropping data)
-    return sequelize.sync({ alter: true });
+    return syncDatabase(sequelize, "server startup");
   })
   .then(() => {
     console.log("Database models synced successfully.");

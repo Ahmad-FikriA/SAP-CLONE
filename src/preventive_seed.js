@@ -11,6 +11,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const sequelize = require('./config/database');
+const { syncDatabase } = require('./config/syncMode');
 const Plant = require('./models/Plant');
 const Equipment = require('./models/Equipment');
 const { Spk, SpkEquipment, SpkActivity } = require('./models/Spk');
@@ -150,7 +151,7 @@ const equipment = [
 // ────────────────────────────────────────────────────────────────────────────
 async function main() {
   await sequelize.authenticate();
-  await sequelize.sync({ alter: true });
+  await syncDatabase(sequelize, 'preventive seed');
   console.log('\n  KTI SmartCare — Preventive Seed\n');
 
   // ── 1a. Snapshot protected fields before wiping ───────────────────────────

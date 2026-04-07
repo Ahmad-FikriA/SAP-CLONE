@@ -131,6 +131,20 @@ SpkCorrectiveItem.belongsTo(SpkCorrective, { foreignKey: 'spkId', as: 'spk' });
 SpkCorrective.hasMany(SpkCorrectivePhoto, { foreignKey: 'spkId', as: 'photos', onDelete: 'CASCADE' });
 SpkCorrectivePhoto.belongsTo(SpkCorrective, { foreignKey: 'spkId', as: 'spk' });
 
+// ── Supervisi Module ─────────────────────────────────────────────────────────
+const SupervisiJob = require("./SupervisiJob");
+const SupervisiVisit = require("./SupervisiVisit");
+
+SupervisiJob.hasMany(SupervisiVisit, {
+  foreignKey: "jobId",
+  as: "visits",
+  onDelete: "CASCADE",
+});
+SupervisiVisit.belongsTo(SupervisiJob, {
+  foreignKey: "jobId",
+  as: "job",
+});
+
 // ── Inspection Module ─────────────────────────────────────────────────────────
 const InspectionSchedule = require("./InspectionSchedule");
 const {
@@ -270,4 +284,6 @@ module.exports = {
   GeneralTaskList,
   GeneralTaskListActivity,
   EquipmentIntervalMapping,
+  SupervisiJob,
+  SupervisiVisit,
 };

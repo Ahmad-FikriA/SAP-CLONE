@@ -36,6 +36,13 @@ const InspectionRequest = sequelize.define(
       field: "jenis_inspeksi",
       comment: "Jenis inspeksi yang diminta",
     },
+    kategoriInspeksi: {
+      type: DataTypes.ENUM("sipil", "mekanik", "elektrik", "otomasi", "safety", "environment"),
+      allowNull: false,
+      defaultValue: "sipil",
+      field: "kategori_inspeksi",
+      comment: "Kategori inspeksi berdasarkan jenis",
+    },
     tanggalDiinginkan: {
       type: DataTypes.DATEONLY,
       allowNull: true,

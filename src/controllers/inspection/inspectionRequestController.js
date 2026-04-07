@@ -55,16 +55,35 @@ async function createRequest(req, res) {
       judul,
       lokasi,
       jenisInspeksi,
+      kategoriInspeksi,
       tanggalDiinginkan,
       asapMungkin,
       deskripsi,
       mediaPaths,
     } = req.body;
 
-    if (!judul || !lokasi || !jenisInspeksi) {
+    if (!judul || !lokasi || !jenisInspeksi || !kategoriInspeksi) {
       return res.status(400).json({
         success: false,
-        message: "judul, lokasi, dan jenisInspeksi wajib diisi.",
+        message: "judul, lokasi, jenisInspeksi, dan kategoriInspeksi wajib diisi.",
+      });
+    }
+
+    // Validate kategori based on jenis
+    const validRutinKategories = ["sipil", "mekanik", "elektrik", "otomasi"];
+    const validK3Kategories = ["safety", "environment"];
+    
+    if (jenisInspeksi === "rutin" && !validRutinKategories.includes(kategoriInspeksi)) {
+      return res.status(400).json({
+        success: false,
+        message: "Kategori tidak valid untuk jenis inspeksi rutin.",
+      });
+    }
+    
+    if (jenisInspeksi === "k3" && !validK3Kategories.includes(kategoriInspeksi)) {
+      return res.status(400).json({
+        success: false,
+        message: "Kategori tidak valid untuk jenis inspeksi K3.",
       });
     }
 
@@ -72,6 +91,7 @@ async function createRequest(req, res) {
       judul,
       lokasi,
       jenisInspeksi,
+      kategoriInspeksi,
       tanggalDiinginkan: asapMungkin ? null : tanggalDiinginkan,
       asapMungkin: asapMungkin ?? false,
       deskripsi,
