@@ -5,7 +5,7 @@ const sequelize = require('../config/database');
 
 const User = sequelize.define('User', {
   id:       { type: DataTypes.STRING(20),  primaryKey: true },
-  username: { type: DataTypes.STRING(50),  allowNull: false, unique: true },
+  nik:      { type: DataTypes.STRING(50),  allowNull: false, unique: true },
   password: { type: DataTypes.STRING(255), allowNull: false },
   name:     { type: DataTypes.STRING(100), allowNull: false },
   role:     {
@@ -37,8 +37,8 @@ const User = sequelize.define('User', {
     allowNull: false,
     defaultValue: 'teknisi'
   },
-  workCenter: { type: DataTypes.ENUM('electrical','civil','automation','mechanical'), allowNull: true, field: 'work_center' },
-  department: { type: DataTypes.STRING(50), allowNull: true },
+  dinas:    { type: DataTypes.STRING(100), allowNull: true },
+  divisi:   { type: DataTypes.STRING(100), allowNull: false },
   email:    { type: DataTypes.STRING(100), allowNull: true },
 }, {
   tableName: 'users',

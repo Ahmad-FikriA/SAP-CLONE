@@ -96,7 +96,7 @@ async function createRequest(req, res) {
       asapMungkin: asapMungkin ?? false,
       deskripsi,
       mediaPaths: mediaPaths ?? [],
-      requestedBy: req.user?.username ?? "unknown",
+      requestedBy: req.user?.nik ?? "unknown",
       status: "pending",
     });
 
@@ -154,7 +154,7 @@ async function approveRequest(req, res) {
       unitKerja: unitKerja || null,
       location: request.lokasi,
       scheduledDate: finalDate,
-      createdBy: req.user?.username ?? "planner",
+      createdBy: req.user?.nik ?? "planner",
       assignedTo: finalAssignedTo,
       triggerSource: "planner",
       nomorPoJo: nomorPoJo || null,
@@ -165,7 +165,7 @@ async function approveRequest(req, res) {
     // Update request
     await request.update({
       status: "approved",
-      approvedBy: req.user?.username,
+      approvedBy: req.user?.nik,
       approvedAt: new Date(),
       notes: plannerNotes,
       scheduleId: schedule.id,
@@ -202,7 +202,7 @@ async function rejectRequest(req, res) {
 
     await request.update({
       status: "rejected",
-      approvedBy: req.user?.username,
+      approvedBy: req.user?.nik,
       approvedAt: new Date(),
       notes: req.body.notes,
     });
@@ -229,7 +229,7 @@ async function cancelRequest(req, res) {
         .json({ success: false, message: "Request not found." });
     }
 
-    if (request.requestedBy !== req.user?.username) {
+    if (request.requestedBy !== req.user?.nik) {
       return res.status(403).json({
         success: false,
         message: "Anda hanya dapat membatalkan permintaan milik sendiri.",
