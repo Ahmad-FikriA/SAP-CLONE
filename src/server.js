@@ -31,6 +31,15 @@ require("./models/associations");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Catch unhandled promise rejections to pinpoint the mystery crash
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 UNHANDLED PROMISE REJECTION DETECTED!');
+  console.error('Promise:', promise);
+  console.error('Reason:', reason);
+  console.error('Stack Trace:', reason && reason.stack ? reason.stack : 'No stack');
+  process.exit(1);
+});
+
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));

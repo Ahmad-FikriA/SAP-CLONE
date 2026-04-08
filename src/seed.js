@@ -29,27 +29,27 @@ const taskListData = require(path.join(__dirname, '..', 'data', 'general_task_li
 // ────────────────────────────────────────────────────────────────────────────
 const users = [
   // Admin & Planning
-  { id: 'USR-001', username: 'admin_01',   password: 'password123', name: 'Admin KTI',        role: 'admin',    workCenter: null,         department: 'IT',          email: 'admin@kti-water.co.id' },
-  { id: 'USR-002', username: 'planner_01', password: 'password123', name: 'Siti Rahayu',       role: 'planner',  workCenter: null,         department: 'Planning',    email: 'siti@kti-water.co.id' },
+  { id: 'USR-001', nik: '100001', password: 'password123', name: 'Admin KTI',        role: 'admin',    dinas: null, divisi: 'IT', email: 'admin@kti-water.co.id' },
+  { id: 'USR-002', nik: '100002', password: 'password123', name: 'Siti Rahayu',       role: 'planner',  dinas: null, divisi: 'Planning', email: 'siti@kti-water.co.id' },
 
   // Teknisi — one per category (for UAT testing per work center)
-  { id: 'USR-003', username: 'teknisi_01', password: 'password123', name: 'Budi Santoso',      role: 'teknisi',  workCenter: null,         department: 'Maintenance', email: 'budi@kti-water.co.id' },
-  { id: 'USR-004', username: 'mekanik_01', password: 'password123', name: 'Riko Prasetyo',     role: 'teknisi',  workCenter: 'mechanical', department: 'Maintenance', email: 'riko@kti-water.co.id' },
-  { id: 'USR-005', username: 'listrik_01', password: 'password123', name: 'Hendra Gunawan',    role: 'teknisi',  workCenter: 'electrical', department: 'Maintenance', email: 'hendra@kti-water.co.id' },
-  { id: 'USR-006', username: 'sipil_01',   password: 'password123', name: 'Agus Wijaya',       role: 'teknisi',  workCenter: 'civil',      department: 'Maintenance', email: 'agus@kti-water.co.id' },
-  { id: 'USR-007', username: 'otomasi_01', password: 'password123', name: 'Dian Permana',      role: 'teknisi',  workCenter: 'automation', department: 'Maintenance', email: 'dian@kti-water.co.id' },
+  { id: 'USR-003', nik: '100003', password: 'password123', name: 'Budi Santoso',      role: 'teknisi',  dinas: null, divisi: 'Maintenance', email: 'budi@kti-water.co.id' },
+  { id: 'USR-004', nik: '100004', password: 'password123', name: 'Riko Prasetyo',     role: 'teknisi_mekanik',  dinas: 'mechanical', divisi: 'Maintenance', email: 'riko@kti-water.co.id' },
+  { id: 'USR-005', nik: '100005', password: 'password123', name: 'Hendra Gunawan',    role: 'teknisi_listrik',  dinas: 'electrical', divisi: 'Maintenance', email: 'hendra@kti-water.co.id' },
+  { id: 'USR-006', nik: '100006', password: 'password123', name: 'Agus Wijaya',       role: 'teknisi_sipil',  dinas: 'civil', divisi: 'Maintenance', email: 'agus@kti-water.co.id' },
+  { id: 'USR-007', nik: '100007', password: 'password123', name: 'Dian Permana',      role: 'teknisi_otomasi',  dinas: 'automation', divisi: 'Maintenance', email: 'dian@kti-water.co.id' },
 
   // Kasie — step 1 approval (all categories)
-  { id: 'USR-008', username: 'kasie_test',      password: 'password123', name: 'Kasie Perawatan',         role: 'kasie',           workCenter: null, department: 'Perawatan', email: 'kasie@kti-water.co.id' },
+  { id: 'USR-008', nik: '100008', password: 'password123', name: 'Kasie Perawatan',         role: 'kasie',   dinas: null, divisi: 'Perawatan', email: 'kasie@kti-water.co.id' },
 
   // Kadis Perawatan — step 2 approval (all SPKs, any funcloc)
-  { id: 'USR-013', username: 'kadis_perawatan', password: 'password123', name: 'Kadis Perawatan',          role: 'kadis_perawatan', workCenter: null, department: 'Perawatan', email: 'kadis.perawatan@kti-water.co.id' },
+  { id: 'USR-013', nik: '100009', password: 'password123', name: 'Kadis Perawatan',          role: 'kadis_perawatan', dinas: null, divisi: 'Perawatan', email: 'kadis.perawatan@kti-water.co.id' },
 
   // Kadis — step 3 approval, routed by equipment funcloc
-  { id: 'USR-009', username: 'kadis_airbaku',  password: 'password123', name: 'Kadis Air Baku',              role: 'kadis_air_baku',              workCenter: null, department: 'Air Baku',             email: 'kadis.airbaku@kti-water.co.id' },
-  { id: 'USR-010', username: 'kadis_cidanau',  password: 'password123', name: 'Kadis Pengolahan Cidanau',    role: 'kadis_pengolahan_cidanau',    workCenter: null, department: 'Pengolahan Cidanau',   email: 'kadis.cidanau@kti-water.co.id' },
-  { id: 'USR-011', username: 'kadis_krenceng', password: 'password123', name: 'Kadis Pengolahan Krenceng',   role: 'kadis_pengolahan_krenceng',   workCenter: null, department: 'Pengolahan Krenceng',  email: 'kadis.krenceng@kti-water.co.id' },
-  { id: 'USR-012', username: 'kadis_keamanan', password: 'password123', name: 'Kadis Keamanan',              role: 'kadis_keamanan',              workCenter: null, department: 'Keamanan',             email: 'kadis.keamanan@kti-water.co.id' },
+  { id: 'USR-009', nik: '100010', password: 'password123', name: 'Kadis Air Baku',              role: 'kadis_air_baku',              dinas: null, divisi: 'Air Baku', email: 'kadis.airbaku@kti-water.co.id' },
+  { id: 'USR-010', nik: '100011', password: 'password123', name: 'Kadis Pengolahan Cidanau',    role: 'kadis_pengolahan_cidanau',    dinas: null, divisi: 'Pengolahan Cidanau', email: 'kadis.cidanau@kti-water.co.id' },
+  { id: 'USR-011', nik: '100012', password: 'password123', name: 'Kadis Pengolahan Krenceng',   role: 'kadis_pengolahan_krenceng',   dinas: null, divisi: 'Pengolahan Krenceng', email: 'kadis.krenceng@kti-water.co.id' },
+  { id: 'USR-012', nik: '100013', password: 'password123', name: 'Kadis Keamanan',              role: 'kadis_keamanan',              dinas: null, divisi: 'Keamanan', email: 'kadis.keamanan@kti-water.co.id' },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────

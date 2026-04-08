@@ -112,7 +112,7 @@ async function createReport(req, res) {
         kategoriK3: kategoriK3 || null,
         signaturePath: signaturePath || null,
         status: "submitted",
-        submittedBy: req.user.username,
+        submittedBy: req.user.nik,
         submittedAt: new Date(),
       },
       { transaction: t },
@@ -168,7 +168,7 @@ async function approveReport(req, res) {
     await report.update(
       {
         status: "approved",
-        approvedBy: req.user.username,
+        approvedBy: req.user.nik,
         approvalDate: new Date(),
         approvalNotes: req.body.notes || null,
       },
@@ -197,7 +197,7 @@ async function approveReport(req, res) {
             "Tindak lanjut kerusakan",
           deadline: req.body.deadline || null,
           status: "pending",
-          assignedBy: req.user.username,
+          assignedBy: req.user.nik,
         },
         { transaction: t },
       );
@@ -239,7 +239,7 @@ async function rejectReport(req, res) {
 
     await report.update({
       status: "rejected",
-      approvedBy: req.user.username,
+      approvedBy: req.user.nik,
       approvalDate: new Date(),
       approvalNotes: req.body.notes || null,
     });

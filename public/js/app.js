@@ -17,7 +17,7 @@ async function fetchFreshToken() {
     const res = await fetch(`${window.API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'admin_01', password: 'password123' })
+      body: JSON.stringify({ nik: '100001', password: 'password123' })
     });
     const data = await res.json();
     if (data.token) setToken(data.token);

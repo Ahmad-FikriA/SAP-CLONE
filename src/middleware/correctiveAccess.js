@@ -2,28 +2,30 @@
 
 /**
  * Role-Based Access Control Middleware for Corrective Maintenance
- * Enforces access rules based on user roles and work centers
+ * Enforces access rules based on user roles and dinas
  */
 
 const Notification = require('../models/Notification');
 const SpkCorrective = require('../models/SpkCorrective');
 
-// Allowed roles for creating notifications (Kadis with work center)
+// Allowed roles for creating notifications (Kadis with dinas)
 const KADIS_ROLE = 'kadis';
 const KADIS_PUSAT_ROLE = 'kadis_pusat';
 
-// Roles that can work on SPK by work center
+// Roles that can work on SPK by dinas
 const WORK_CENTER_ROLES = ['teknisi', 'kasie'];
 
 /**
- * Check if user can create notification (must be Kadis with work center)
+ * Check if user can create notification (must be Kadis or admin with dinas, or just admin)
  */
 const requireKadis = (req, res, next) => {
-  const { role, workCenter } = req.user;
+  const { role, dinas } = req.user;
   
-  if (role !== KADIS_ROLE || !workCenter) {
+  if (role === 'admin') return next();
+  
+  if (role !== KADIS_ROLE || !dinas) {
     return res.status(403).json({
-      error: 'Access denied. Only Kadis with work center can create corrective requests.'
+      error: 'Access denied. Only Kadis with dinas can create corrective requests.'
     });
   }
   
@@ -72,11 +74,13 @@ const canViewNotification = async (req, res, next) => {
 };
 
 /**
- * Check if user can create SPK Corrective (must be Planner)
+ * Check if user can create SPK Corrective (must be Planner or admin)
  */
 const requirePlanner = (req, res, next) => {
   const { role } = req.user;
   
+  if (role === 'admin') return next();
+
   if (role !== 'planner') {
     return res.status(403).json({
       error: 'Access denied. Only Planner can create SPK Corrective.'
@@ -89,18 +93,19 @@ const requirePlanner = (req, res, next) => {
 /**
  * Check if user can view specific SPK Corrective
  * Rules:
- * 1. Teknisi/Kasie - can view only their work center
+ * 1. Teknisi/Kasie - can view only their dinas
  * 2. Planner - can view all
  * 3. Kadis Pusat - can view all
  * 4. Kadis Pelapor - can view only their own reports
+ * 5. Admin - can view all
  */
 const canViewSpkCorrective = async (req, res, next) => {
   try {
-    const { userId, role, workCenter } = req.user;
+    const { userId, role, dinas } = req.user;
     const { spkId } = req.params;
     
-    // Planner and Kadis Pusat can view all
-    if (role === 'planner' || role === KADIS_PUSAT_ROLE) {
+    // Planner, Admin, and Kadis Pusat can view all
+    if (role === 'planner' || role === 'admin' || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
@@ -126,19 +131,19 @@ const canViewSpkCorrective = async (req, res, next) => {
       });
     }
     
-    // Teknisi/Kasie - check work center
+    // Teknisi/Kasie - check dinas
     if (WORK_CENTER_ROLES.includes(role)) {
-      if (!workCenter) {
+      if (!dinas) {
         return res.status(403).json({
-          error: 'Access denied. User has no work center assigned.'
+          error: 'Access denied. User has no dinas assigned.'
         });
       }
       
-      if (spk.workCenter === workCenter) {
+      if (spk.workCenter === dinas) {
         return next();
       }
       return res.status(403).json({
-        error: `Access denied. This SPK is assigned to ${spk.workCenter} work center.`
+        error: `Access denied. This SPK is assigned to ${spk.workCenter} dinas.`
       });
     }
     

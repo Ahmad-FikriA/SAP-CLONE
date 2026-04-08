@@ -97,7 +97,7 @@ async function createSuratPelanggaran(req, res) {
       pelanggar,
       deadline,
       status: "issued",
-      issuedBy: req.user.username,
+      issuedBy: req.user.nik,
       issuedAt: new Date(),
       notes,
     });
@@ -191,7 +191,7 @@ async function checkOverdueFollowUps(req, res) {
         pelanggar: fu.assignedTechnician || "-",
         deadline: fu.deadline,
         status: "issued",
-        issuedBy: req.user.username,
+        issuedBy: req.user.nik,
         issuedAt: now,
         notes: "Auto-generated: follow-up overdue.",
       });
