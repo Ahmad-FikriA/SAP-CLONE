@@ -188,5 +188,37 @@ async function bulkDeleteUsers() {
   } catch (e) { showMessage(e.message, 'error'); }
 }
 
+// ── Export to Excel ───────────────────────────────────────────────────────────
+function exportToExcel() {
+  if (!allUsers.length) {
+    showMessage('Tidak ada data user untuk diekspor', 'error');
+    return;
+  }
+  
+  // Format data for excel sheet
+  const data = allUsers.map((u, index) => ({
+    No: index + 1,
+    NIK: u.nik,
+    Nama: u.name,
+    Jabatan: u.role,
+    Dinas: u.dinas || '-',
+    Divisi: u.divisi || '-',
+    Group: u.group || '-',
+    Email: u.email || '-'
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+  
+  // Adjust column widths
+  const max_width = data.reduce((w, r) => Math.max(w, r.Nama.length), 10);
+  worksheet["!cols"] = [ { wch: 5 }, { wch: 15 }, { wch: max_width }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 25 } ];
+
+  // Generate date string for filename
+  const dateStr = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(workbook, `Data_Users_${dateStr}.xlsx`);
+}
+
 // ── Init ────────────────────────────────────────────────────────────────────
 loadUsers();
