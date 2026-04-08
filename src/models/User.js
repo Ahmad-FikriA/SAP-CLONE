@@ -16,6 +16,7 @@ const User = sequelize.define('User', {
   dinas:    { type: DataTypes.STRING(100), allowNull: true },
   divisi:   { type: DataTypes.STRING(100), allowNull: false },
   email:    { type: DataTypes.STRING(100), allowNull: true },
+  group:    { type: DataTypes.STRING(100), allowNull: true },
 }, {
   tableName: 'users',
   underscored: true,

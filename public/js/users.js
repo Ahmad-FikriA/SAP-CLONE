@@ -6,20 +6,20 @@ let editingUserId = null;
 // ── Load & render ──────────────────────────────────────────────────────────
 async function loadUsers() {
   const tbody = document.getElementById('usersBody');
-  tbody.innerHTML = '<tr class="loading-row"><td colspan="6"><div class="spinner"></div></td></tr>';
+  tbody.innerHTML = '<tr class="loading-row"><td colspan="10"><div class="spinner"></div></td></tr>';
   try {
     const role = document.getElementById('filterRole').value;
     allUsers = await apiGet('/users' + (role ? `?role=${role}` : ''));
     renderUsers();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text-muted)">${e.message}</td></tr>`;
   }
 }
 
 function renderUsers() {
   const tbody = document.getElementById('usersBody');
   if (!allUsers.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted)">Tidak ada data</td></tr>';
     return;
   }
   tbody.innerHTML = allUsers.map(u => `
@@ -30,6 +30,7 @@ function renderUsers() {
       <td>${roleBadge(u.role)}</td>
       <td>${escHtml(u.dinas || '-')}</td>
       <td>${escHtml(u.divisi)}</td>
+      <td>${escHtml(u.group || '-')}</td>
       <td>${escHtml(u.email || '-')}</td>
       <td>
         <div class="password-cell">
@@ -102,6 +103,12 @@ function renderForm(u) {
           <input id="f_divisi" value="${escHtml(u?.divisi || '')}" placeholder="Nama Divisi" />
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Group</label>
+          <input id="f_group" value="${escHtml(u?.group || '')}" placeholder="Nama Group (opsional)" />
+        </div>
+      </div>
       ${!isEdit ? `
       <div class="form-row full">
         <div class="form-group">
@@ -124,13 +131,14 @@ async function saveUser() {
   const dinas = document.getElementById('f_dinas').value.trim();
   const divisi = document.getElementById('f_divisi').value.trim();
   const email = document.getElementById('f_email').value.trim();
+  const group = document.getElementById('f_group').value.trim();
 
   if (!nik || !name || !role || !divisi) { 
     alert('NIK, Nama, Jabatan, dan Divisi wajib diisi.'); 
     return; 
   }
 
-  const body = { id, nik, name, role, dinas, divisi, email };
+  const body = { id, nik, name, role, dinas, divisi, email, group: group || null };
   if (!editingUserId) {
     const pw = document.getElementById('f_password');
     body.password = pw ? pw.value.trim() || 'password123' : 'password123';

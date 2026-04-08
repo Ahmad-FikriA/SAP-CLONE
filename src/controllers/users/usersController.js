@@ -20,14 +20,14 @@ const getAll = async (req, res) => {
 // POST /api/users
 const create = async (req, res) => {
   try {
-    const { id, nik, password, name, role, email, dinas, divisi } = req.body;
+    const { id, nik, password, name, role, email, dinas, divisi, group } = req.body;
     if (!id || !nik) {
       return res.status(400).json({ error: 'id and nik are required' });
     }
     const exists = await User.findOne({ where: { nik } });
     if (exists) return res.status(409).json({ error: 'NIK already exists' });
 
-    const user = await User.create({ id, nik, password: password || 'password123', name, role, email, dinas, divisi });
+    const user = await User.create({ id, nik, password: password || 'password123', name, role, email, dinas, divisi, group });
     const { password: _, ...safe } = user.toJSON();
     res.status(201).json(safe);
   } catch (err) {

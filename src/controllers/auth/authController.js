@@ -22,7 +22,7 @@ const login = async (req, res) => {
 
   res.json({
     token,
-    user: { id: user.id, name: user.name, nik: user.nik, role: user.role, dinas: user.dinas, divisi: user.divisi, email: user.email },
+    user: { id: user.id, name: user.name, nik: user.nik, role: user.role, dinas: user.dinas, divisi: user.divisi, email: user.email, group: user.group },
   });
 };
 
