@@ -26,6 +26,7 @@ const {
   GeneralTaskListActivity,
 } = require("./GeneralTaskList");
 const EquipmentIntervalMapping = require("./EquipmentIntervalMapping");
+const PreventiveWeekSchedule = require("./PreventiveWeekSchedule");
 const Notification = require("./Notification");
 const SpkCorrective = require("./SpkCorrective");
 const { SpkCorrectiveItem, SpkCorrectivePhoto } = require("./SpkCorrectiveItem");
@@ -260,6 +261,7 @@ module.exports = {
   User,
   Plant,
   Equipment,
+  PreventiveWeekSchedule,
   Spk,
   SpkEquipment,
   SpkActivity,

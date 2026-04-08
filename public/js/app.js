@@ -159,8 +159,14 @@ function statusBadge(status) {
     completed: 'badge-completed',
     error: 'badge-error'
   };
-  const label = { pending: 'Pending', in_progress: 'In Progress', completed: 'Completed', error: 'Error' };
-  return `<span class="badge ${map[status] || 'badge-pending'}">${label[status] || status}</span>`;
+  const label = {
+    pending: 'On Progress', in_progress: 'On Progress',
+    completed: 'Selesai', approved: 'Disetujui',
+    awaiting_kasie: 'Menunggu Kasie', awaiting_kadis_perawatan: 'Menunggu Kadis Perawatan',
+    awaiting_kadis: 'Menunggu Kadis', error: 'Error'
+  };
+  const fullMap = Object.assign({ awaiting_kasie: 'badge-in_progress', awaiting_kadis_perawatan: 'badge-in_progress', awaiting_kadis: 'badge-in_progress', approved: 'badge-completed' }, map);
+  return `<span class="badge ${fullMap[status] || 'badge-pending'}">${label[status] || status}</span>`;
 }
 
 function roleBadge(role) {

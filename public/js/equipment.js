@@ -536,6 +536,32 @@ async function deleteEquipment(id) {
   } catch (e) { showMessage(e.message, 'error'); }
 }
 
+// ── Import Excel ────────────────────────────────────────────────────────────
+async function importEquipmentExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  showMessage('Mengimport ' + file.name + '...');
+  try {
+    const token = localStorage.getItem('admin_token');
+    const res = await fetch('/api/equipment/import-excel', {
+      method: 'POST',
+      headers: token ? { Authorization: 'Bearer ' + token } : {},
+      body: fd,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Import gagal');
+    showMessage(data.message || ('Import selesai: ' + data.imported + ' equipment'));
+    loadEquipment();
+  } catch (e) {
+    showMessage(e.message, 'error');
+  }
+}
+
 // ── Init ────────────────────────────────────────────────────────────────────
 initMap();
 loadEquipment();

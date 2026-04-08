@@ -1,0 +1,40 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "source": "custom",
+        "name": "Cipasauran",
+        "featureType": "industrial"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              105.8372,
+              -6.226909
+            ],
+            [
+              105.8375,
+              -6.230065
+            ],
+            [
+              105.843294,
+              -6.228125
+            ],
+            [
+              105.840011,
+              -6.22484
+            ],
+            [
+              105.8372,
+              -6.226909
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

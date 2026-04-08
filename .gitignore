@@ -5,3 +5,7 @@ uploads/*
 
 storage/*
 !storage/.gitkeep
+
+/docs
+/exceldata
+/preventive_field.md

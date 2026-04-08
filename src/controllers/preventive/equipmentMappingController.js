@@ -83,4 +83,72 @@ const bulkCreate = async (req, res) => {
   });
 };
 
-module.exports = { getAll, create, remove, bulkCreate };
+// POST /api/equipment-mappings/import-excel
+// Expects multipart/form-data with field "file" containing an .xlsx file.
+// Excel must have a header row with columns (any order, case-insensitive):
+//   equipment_id | interval | task_list_id
+// Rows with missing values are skipped.
+const importExcel = async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded. Send field "file" as multipart/form-data.' });
+
+  let XLSX;
+  try { XLSX = require('xlsx'); } catch { return res.status(500).json({ error: 'xlsx package not installed' }); }
+
+  const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+  if (!rows.length) return res.status(400).json({ error: 'Excel sheet is empty or has no data rows' });
+
+  // Normalise header names (case-insensitive, ignore spaces/underscores)
+  function normalise(s) { return String(s || '').toLowerCase().replace(/[\s_-]/g, ''); }
+  const sample = rows[0];
+  const keyMap = {};
+  for (const k of Object.keys(sample)) {
+    const n = normalise(k);
+    if (['equipmentid', 'equipment'].includes(n))   keyMap.equipmentId = k;
+    if (['interval'].includes(n))                    keyMap.interval   = k;
+    if (['tasklistid', 'tasklist'].includes(n))       keyMap.taskListId = k;
+  }
+
+  if (!keyMap.equipmentId || !keyMap.interval || !keyMap.taskListId) {
+    return res.status(400).json({
+      error: 'Could not find required columns. Expected: equipment_id, interval, task_list_id',
+      foundColumns: Object.keys(sample),
+    });
+  }
+
+  const VALID_INTERVALS = ['1wk','2wk','3wk','4wk','8wk','12wk','16wk','24wk'];
+  let imported = 0, skipped = 0;
+  const errors = [];
+
+  for (const row of rows) {
+    const equipmentId = String(row[keyMap.equipmentId] || '').trim();
+    const interval    = String(row[keyMap.interval]    || '').trim();
+    const taskListId  = String(row[keyMap.taskListId]  || '').trim();
+
+    if (!equipmentId || !interval || !taskListId) { skipped++; continue; }
+    if (!VALID_INTERVALS.includes(interval)) {
+      errors.push(`Row skipped: invalid interval "${interval}" for equipment ${equipmentId}`);
+      skipped++;
+      continue;
+    }
+
+    try {
+      await EquipmentIntervalMapping.upsert({ equipmentId, interval, taskListId });
+      imported++;
+    } catch (err) {
+      errors.push(`Row skipped: ${equipmentId}/${interval} — ${err.message}`);
+      skipped++;
+    }
+  }
+
+  res.json({
+    message: `Import selesai: ${imported} baris diimpor, ${skipped} dilewati`,
+    imported, skipped,
+    errors: errors.slice(0, 20), // cap error list
+  });
+};
+
+module.exports = { getAll, create, remove, bulkCreate, importExcel };

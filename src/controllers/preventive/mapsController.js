@@ -26,8 +26,19 @@ const getOne = (req, res) => {
   res.json(JSON.parse(fs.readFileSync(geojsonPath, 'utf8')));
 };
 
+// Compute centroid of a GeoJSON polygon outer ring [[lon, lat], ...]
+function computeCentroid(coords) {
+  let sumLat = 0, sumLon = 0;
+  const n = coords.length;
+  for (const [lon, lat] of coords) {
+    sumLon += lon;
+    sumLat += lat;
+  }
+  return { lat: sumLat / n, lon: sumLon / n };
+}
+
 // PUT /api/maps/:plantId
-const save = (req, res) => {
+const save = async (req, res) => {
   const { plantId } = req.params;
   const geojson = req.body;
   if (!geojson || geojson.type !== 'FeatureCollection') {
@@ -38,6 +49,20 @@ const save = (req, res) => {
   }
   const geojsonPath = path.join(MAPS_DIR, `${plantId}.geojson`);
   fs.writeFileSync(geojsonPath, JSON.stringify(geojson, null, 2), 'utf8');
+
+  // Auto-update Plant.centerLat/centerLon from the first polygon's centroid.
+  // This gives Flutter a fallback point even before it parses the full polygon.
+  try {
+    const firstPolygon = geojson.features.find(f => f.geometry?.type === 'Polygon');
+    if (firstPolygon) {
+      const ring = firstPolygon.geometry.coordinates[0]; // outer ring
+      const { lat, lon } = computeCentroid(ring);
+      await Plant.update({ centerLat: lat, centerLon: lon }, { where: { plantId } });
+    }
+  } catch (_) {
+    // Non-fatal — centroid update is best-effort
+  }
+
   res.json({ message: 'Map saved', plantId });
 };
 

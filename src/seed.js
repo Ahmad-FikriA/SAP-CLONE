@@ -23,7 +23,6 @@ require('./models/associations');
 const funcLocData = require(path.join(__dirname, '..', 'data', 'functional_locations.json'));
 const sapEquipmentData = require(path.join(__dirname, '..', 'data', 'sap_equipment.json'));
 const taskListData = require(path.join(__dirname, '..', 'data', 'general_task_lists.json'));
-const equipmentFileData = require(path.join(__dirname, '..', 'data', 'equipment.json'));
 
 // ────────────────────────────────────────────────────────────────────────────
 // USERS
@@ -54,24 +53,9 @@ const users = [
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// EQUIPMENT — loaded from data/equipment.json (real SAP IDs with demo coords)
-//
-// SAP IDs used for SPK/LK demo data:
-//   2210000438  Pompa Intake Cidanau 1M1        I-22L001  Mekanik  A
-//   2210000439  Pompa Intake Cidanau 2M1        I-22L001  Mekanik  A
-//   2210000449  Pompa Booster Clorine Cidanau   I-22L001  Mekanik  B
-//   2210000451  Pompa Sump Pump Cidanau         I-22L001  Mekanik  B
-//   2210000640  Panel Katodik Cidanau I         I-22L001  Listrik  B
-//   2210000651  Transformator BT 01             I-22L001  Listrik  A
-//   2210000652  Transformator BT 02             I-22L001  Listrik  A
-//   2210000327  Manhole SLD Basin               P-22L006  Sipil    B
-//   2210003422  Motor Mixing Polymer Thickner   I-22L002  Sipil    B
-//   2210000605  Sensor AWLR                     I-22L001  Otomasi  A
+// EQUIPMENT — QR Scanner GPS demo scenarios only; real equipment imported via Excel
 // ────────────────────────────────────────────────────────────────────────────
 const equipment = [
-  ...equipmentFileData,
-
-  // ── TEST EQUIPMENT — QR Scanner GPS Demo Scenarios ────────────────────────
   { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam', funcLocId: 'A-A1-02-001-001', functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0135, longitude: 106.0219 },
   { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', funcLocId: 'A-A1-02-001-002', functionalLocation: 'Area Timur Pabrik (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0117, longitude: 106.0219 },
   { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik', funcLocId: 'A-A1-02-002-001', functionalLocation: 'Area Remote Jauh (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0600, longitude: 106.0219 },

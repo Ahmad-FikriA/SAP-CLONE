@@ -7,6 +7,7 @@ const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('../../models/Submission');
 const Equipment = require('../../models/Equipment');
 const { GeneralTaskList, GeneralTaskListActivity } = require('../../models/GeneralTaskList');
+const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping');
 const { LembarKerjaSpk } = require('../../models/LembarKerja'); // kept for destroySpksByNumbers cleanup
 
 /**
@@ -50,8 +51,24 @@ const INCLUDE_FULL = [
   },
 ];
 
+// Derive ISO week number and year from a DATEONLY string (YYYY-MM-DD)
+function getISOWeek(dateStr) {
+  if (!dateStr) return { weekNumber: null, weekYear: null };
+  // Parse as UTC date (DATEONLY field is already YYYY-MM-DD, treat as UTC)
+  const d = new Date(dateStr + 'T00:00:00Z');
+  const thu = new Date(d);
+  thu.setUTCDate(d.getUTCDate() + (4 - (d.getUTCDay() || 7)));
+  const yearStart = new Date(Date.UTC(thu.getUTCFullYear(), 0, 4)); // Jan 4 always in week 1
+  const jan4Day = yearStart.getUTCDay() || 7;
+  const week1Mon = new Date(yearStart);
+  week1Mon.setUTCDate(yearStart.getUTCDate() - (jan4Day - 1));
+  const weekNumber = Math.floor((thu - week1Mon) / (7 * 86400000)) + 1;
+  return { weekNumber, weekYear: thu.getUTCFullYear() };
+}
+
 function fmt(spk) {
   const j = spk.toJSON();
+  const { weekNumber, weekYear } = getISOWeek(j.scheduledDate);
   return {
     spkNumber: j.spkNumber,
     description: j.description,
@@ -60,6 +77,8 @@ function fmt(spk) {
     status: j.status,
     durationActual: j.durationActual,
     scheduledDate: j.scheduledDate ?? null,
+    weekNumber: weekNumber ?? null,
+    weekYear: weekYear ?? null,
     dueDate: j.scheduledDate ? new Date(j.scheduledDate).toISOString() : null,
     orderNumber: j.orderNumber ?? null,
     evaluasi: j.evaluasi ?? null,
@@ -94,6 +113,24 @@ const getAll = async (req, res) => {
   if (req.query.status) where.status = req.query.status;
   if (req.query.from) where.scheduledDate = { ...where.scheduledDate, [Op.gte]: req.query.from };
   if (req.query.to)   where.scheduledDate = { ...where.scheduledDate, [Op.lte]: req.query.to };
+
+  // Filter by ISO week number + year (alternative to from/to date range)
+  if (req.query.week && req.query.year) {
+    const week = parseInt(req.query.week, 10);
+    const year = parseInt(req.query.year, 10);
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const jan4Day = jan4.getUTCDay() || 7;
+    const week1Mon = new Date(jan4);
+    week1Mon.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+    const weekStart = new Date(week1Mon);
+    weekStart.setUTCDate(week1Mon.getUTCDate() + (week - 1) * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+    where.scheduledDate = {
+      [Op.gte]: weekStart.toISOString().slice(0, 10),
+      [Op.lte]: weekEnd.toISOString().slice(0, 10),
+    };
+  }
 
   // If equipmentId is given, replace the SpkEquipment include with a filtered one
   // (INNER JOIN — only SPKs that have this equipment)
@@ -413,4 +450,124 @@ const approveKadis = async (req, res) => {
   res.json(fmt(fresh));
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync, generateFromTaskList, approveKasie, approveKadisPerawatan, approveKadis };
+// POST /api/spk/batch-generate
+const batchGenerate = async (req, res) => {
+  const { week, year, interval, category, equipmentIds = [] } = req.body;
+
+  if (!week || !year || !interval || !category || !equipmentIds.length) {
+    return res.status(400).json({ error: 'week, year, interval, category, and equipmentIds[] are required' });
+  }
+  if (week < 1 || week > 53) {
+    return res.status(400).json({ error: 'week must be between 1 and 53' });
+  }
+
+  // Compute weekStart (Monday of ISO week W) — use UTC to avoid timezone shift
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const week1Mon = new Date(jan4);
+  week1Mon.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+  const weekStartDate = new Date(week1Mon);
+  weekStartDate.setUTCDate(week1Mon.getUTCDate() + (week - 1) * 7);
+  const scheduledDate = weekStartDate.toISOString().slice(0, 10);
+
+  const catCode = { Mekanik: 'M', Listrik: 'L', Sipil: 'S', Otomasi: 'O' }[category] || 'X';
+  const weekStr = String(week).padStart(2, '0');
+  const spkPrefix = `SPK-${catCode}-${year}-W${weekStr}-`;
+
+  // Find highest existing sequence for this prefix
+  const existingWithPrefix = await Spk.findAll({
+    where: { spkNumber: { [Op.like]: spkPrefix + '%' } },
+    attributes: ['spkNumber'],
+  });
+  let seq = existingWithPrefix.reduce((max, s) => {
+    const m = s.spkNumber.match(/-(\d+)$/);
+    return m ? Math.max(max, parseInt(m[1])) : max;
+  }, 0);
+
+  // Load mappings for all requested equipment + interval (in bulk)
+  const mappings = await EquipmentIntervalMapping.findAll({
+    where: { equipmentId: { [Op.in]: equipmentIds }, interval },
+    include: [{
+      model: GeneralTaskList, as: 'taskList',
+      include: [{ model: GeneralTaskListActivity, as: 'activities', order: [['stepNumber', 'ASC']] }],
+    }],
+  });
+  const mappingByEq = {};
+  for (const m of mappings) mappingByEq[m.equipmentId] = m;
+
+  // Idempotency: find equipment that already have an SPK for this week + interval
+  const existingLinks = await SpkEquipment.findAll({
+    where: { equipmentId: { [Op.in]: equipmentIds } },
+    include: [{
+      model: Spk, as: 'spk',
+      where: { scheduledDate, intervalPeriod: interval },
+      required: true,
+      attributes: ['spkNumber'],
+    }],
+    attributes: ['equipmentId'],
+  });
+  const alreadyDone = new Set(existingLinks.map(e => e.equipmentId));
+
+  // Load equipment details
+  const eqRecords = await Equipment.findAll({ where: { equipmentId: { [Op.in]: equipmentIds } } });
+  const eqMap = {};
+  for (const eq of eqRecords) eqMap[eq.equipmentId] = eq;
+
+  const created = [];
+  const skipped = [];
+
+  const t = await sequelize.transaction();
+  try {
+    for (const equipmentId of equipmentIds) {
+      const eq = eqMap[equipmentId];
+      if (!eq) { skipped.push({ equipmentId, reason: 'equipment not found' }); continue; }
+
+      if (alreadyDone.has(equipmentId)) {
+        skipped.push({ equipmentId, equipmentName: eq.equipmentName, reason: 'SPK already exists for this week/interval' });
+        continue;
+      }
+
+      const mapping = mappingByEq[equipmentId];
+      if (!mapping) {
+        skipped.push({ equipmentId, equipmentName: eq.equipmentName, reason: 'no mapping for this interval' });
+        continue;
+      }
+
+      seq++;
+      const spkNumber = spkPrefix + String(seq).padStart(3, '0');
+      const taskList = mapping.taskList;
+      const description = taskList
+        ? `${taskList.taskListName} — W${weekStr} ${year}`
+        : `${eq.equipmentName} — W${weekStr} ${year}`;
+
+      await Spk.create({ spkNumber, description, intervalPeriod: interval, category, status: 'pending', scheduledDate }, { transaction: t });
+      await SpkEquipment.create({ spkNumber, equipmentId, equipmentName: eq.equipmentName, functionalLocation: eq.functionalLocation || null }, { transaction: t });
+
+      let actNum = 1;
+      for (const step of (taskList?.activities || [])) {
+        await SpkActivity.create({
+          spkNumber,
+          activityNumber: `ACT-${String(actNum++).padStart(3, '0')}`,
+          equipmentId,
+          operationText: step.operationText,
+          durationPlan: 0.5,
+        }, { transaction: t });
+      }
+
+      created.push({ spkNumber, equipmentId, equipmentName: eq.equipmentName });
+    }
+
+    await t.commit();
+    res.status(201).json({
+      message: `${created.length} SPK berhasil dibuat untuk W${weekStr} ${year} / ${interval}`,
+      week, year, interval, scheduledDate,
+      created,
+      skipped,
+    });
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
+};
+
+module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync, generateFromTaskList, approveKasie, approveKadisPerawatan, approveKadis, batchGenerate };

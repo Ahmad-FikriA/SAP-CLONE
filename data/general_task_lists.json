@@ -28,341 +28,6 @@
     ]
   },
   {
-    "taskListId": "KTI_0005",
-    "taskListName": "PREV GATE SLUDGE FIELD",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Cek fungsi gate"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Bersihkan ulir jika tertutup lumpur"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Tambah grease jika diperlukan"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0014",
-    "taskListName": "PREV SLIDE GATE",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Cek posisi dudukan pintu rel"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Cek kondisi pelumasan gate"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Bersihkan ulir jika kotor"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Tambahkan grease jika diperlukan"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0017",
-    "taskListName": "PREV ENGINE GENSET",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Ganti Oli Engine & Filter Oli"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Cek kebocoran pada pipa nozzle"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Cek & kencangkan baut2 pada genset"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Bersihkan Filter Udara"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0026",
-    "taskListName": "PREV REGREASE POMPA",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Koordinasikan dengan Control Room"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Lakukan regrease (min 15x pompaan)"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Bersihkan setelah regrease"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Cek temperatur sebelum & sesudah..°C"
-      },
-      {
-        "stepNumber": 5,
-        "operationText": "Laporkan bila telah selesai"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0035",
-    "taskListName": "PREV POMPA",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Cek pompa & catat Pressure .... Bar"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Cek air pendingin,berfungsi dgn baik"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Cek kondisi gland packing"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Cek temperatur bearing ......... °C"
-      },
-      {
-        "stepNumber": 5,
-        "operationText": "Bersihkan & Cek Stuffing box"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0036",
-    "taskListName": "PREV VIBRASI POMPA (INT 8)",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Koordinasikan dengan Control Room"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Cek baut2 pondasi & body pompa"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Ukur & catat vibrasi pompa...mm/s"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Laporkan bila vibrasi >5mm/s"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0060",
-    "taskListName": "PREV TANGKI SOLAR",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Cek indikator level solar"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Catat level solar...%"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Bersihkan luar tangki dengan majun"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Buang endapan kotoran (bila ada)"
-      },
-      {
-        "stepNumber": 5,
-        "operationText": "Laporkan bila level dibawah 75%"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0062",
-    "taskListName": "PREV CHLORINATOR",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Cek kebocoran pada inst.chlorinator"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Cari sumber kebocoran dengan amoniak"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Kencangkan sambungan/fitting"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Cek rotameter,cleaning bila kotor"
-      },
-      {
-        "stepNumber": 5,
-        "operationText": "Cek pressure pada instalasi"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0066",
-    "taskListName": "PREV. KOMPRESSOR",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Koordinasikan dengan Control Room"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Bersihkan body kompressor"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Cek indikator level oli"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Cek safety valve"
-      },
-      {
-        "stepNumber": 5,
-        "operationText": "Cek & bersihkan filter udara"
-      },
-      {
-        "stepNumber": 6,
-        "operationText": "Cek tekanan dan temperatur.....ºC"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0068",
-    "taskListName": "PREV POMPA SCREW",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Bersihkan body pompa dengan majun"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Cek pompa & instalasi"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Catat temperatur ...........°C"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0069",
-    "taskListName": "PREV GEARBOX (OIL)",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Bersihkan body gearbox dengan majun"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Cek level oli gearbox"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Cek dan ukur suhu gearbox ….... °C"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Laporkan bila ada kelainan"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0070",
-    "taskListName": "PREV DECANTER",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Koordinasikan dengan Control Room"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Bersihkan body decanter dengan majun"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Cek fungsi tombol emergency"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Cek fungsi speed sensor"
-      },
-      {
-        "stepNumber": 5,
-        "operationText": "Cek kondisi belt dan gearbox decanter"
-      },
-      {
-        "stepNumber": 6,
-        "operationText": "Regrease bagian bowl & scroll"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0074",
-    "taskListName": "PREV POMPA (2)",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Cek pompa & temperatur bearing....ºC"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Bersihkan body pompa"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0082",
-    "taskListName": "ENGINE GENSET (2)",
-    "category": "Mekanik",
-    "workCenter": null,
-    "activities": []
-  },
-  {
     "taskListId": "KTI_0002",
     "taskListName": "PREV ELECTRIC MOTOR (WITH OIL LUBRICATIO",
     "category": "Listrik",
@@ -419,82 +84,6 @@
     ]
   },
   {
-    "taskListId": "KTI_0010",
-    "taskListName": "PREV EXT. GROUNDING",
-    "category": "Listrik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Cek & bersihkan koneksi down conductr"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Ukur & catat hasil pengukuran.....Ohm"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Laporkan bila hasil pengukuran >5 Ohm"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0018",
-    "taskListName": "PREV MAGNETIC CONTACTOR (DAYA KECIL)",
-    "category": "Listrik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Koordinasikan dengan Control Room"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Pastikan bebas tegangan listrik"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "Cek fungsi contact,bersihkan"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "kencangkan baut2 koneksi"
-      }
-    ]
-  },
-  {
-    "taskListId": "KTI_0019",
-    "taskListName": "PREV MAGNETIC CONTACTOR (DAYA BESAR)",
-    "category": "Listrik",
-    "workCenter": null,
-    "activities": [
-      {
-        "stepNumber": 1,
-        "operationText": "Koordinasikan dengan Control Room"
-      },
-      {
-        "stepNumber": 2,
-        "operationText": "Pasang label/tanda ( dalam perbaikan)"
-      },
-      {
-        "stepNumber": 3,
-        "operationText": "pastikan bebas tegangan"
-      },
-      {
-        "stepNumber": 4,
-        "operationText": "Cek main contact,bersihkan jika perlu"
-      },
-      {
-        "stepNumber": 5,
-        "operationText": "kencangkan baut2 koneksi"
-      },
-      {
-        "stepNumber": 6,
-        "operationText": "Laporkan,bila telah selesai"
-      }
-    ]
-  },
-  {
     "taskListId": "KTI_0004",
     "taskListName": "PREV PH METER",
     "category": "Otomasi",
@@ -523,6 +112,74 @@
     ]
   },
   {
+    "taskListId": "KTI_0005",
+    "taskListName": "PREV GATE SLUDGE FIELD",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek fungsi gate"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan ulir jika tertutup lumpur"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Tambah grease jika diperlukan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0006",
+    "taskListName": "PREV MANHOLE ACCELATOR",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Buka tutup manhole"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek valve pembuangan lumpur"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek instalasi pembuangan lumpur"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Setelah selesai,tutup manhole kembali"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0007",
+    "taskListName": "PREV MANHOLE RESERVOIR",
+    "category": "Sipil",
+    "workCenter": "S1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Buka tutup manhole"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek kebocoran pada valve inlet"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan manhole dari kotoran"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Tutup kembali manhole"
+      }
+    ]
+  },
+  {
     "taskListId": "KTI_0009",
     "taskListName": "PREV SENSOR LEVEL",
     "category": "Otomasi",
@@ -547,10 +204,30 @@
     ]
   },
   {
+    "taskListId": "KTI_0010",
+    "taskListName": "PREV EXT. GROUNDING",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek & bersihkan koneksi down conductr"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Ukur & catat hasil pengukuran.....Ohm"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Laporkan bila hasil pengukuran >5 Ohm"
+      }
+    ]
+  },
+  {
     "taskListId": "KTI_0011",
     "taskListName": "PREV HYBRID CONTROLLER (PLC)",
     "category": "Otomasi",
-    "workCenter": null,
+    "workCenter": "O1-N01",
     "activities": [
       {
         "stepNumber": 1,
@@ -571,6 +248,1486 @@
       {
         "stepNumber": 5,
         "operationText": "Laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0012",
+    "taskListName": "PREV MEMOGRAPH",
+    "category": "Otomasi",
+    "workCenter": "O1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Bersihkan modul2 memograph"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek fungsi kerja memograph"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek kabel koneksi, kencangkan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0013",
+    "taskListName": "PREV SLIDE GATE BENDUNG",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek fungsi slide gate"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek kondisi pelumasan gate valve"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan ulir jika kotor"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Tambahkan grease jika diperlukan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0014",
+    "taskListName": "PREV SLIDE GATE",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek posisi dudukan pintu rel"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek kondisi pelumasan gate"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan ulir jika kotor"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Tambahkan grease jika diperlukan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0015",
+    "taskListName": "PREV SLIDE GATE SUMP PUMP",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek fungsi slide gate"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Regrease jika diperlukan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0016",
+    "taskListName": "PREV MOTOR RELAY BLINKER",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek kartu motor relay"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek fungsi blinker, beri penetrant"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0017",
+    "taskListName": "PREV ENGINE GENSET",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Ganti Oli Engine & Filter Oli"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek kebocoran pada pipa nozzle"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek & kencangkan baut2 pada genset"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Bersihkan Filter Udara"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0019",
+    "taskListName": "PREV MAGNETIC CONTACTOR (DAYA BESAR)",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Pasang label/tanda ( dalam perbaikan)"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "pastikan bebas tegangan"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek main contact,bersihkan jika perlu"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "kencangkan baut2 koneksi"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Laporkan,bila telah selesai"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0020",
+    "taskListName": "PREV PANEL CAPACITOR BANK TR",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek fisik komponen Cntrl & Capasitor"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Catat nilai cos Phi....."
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan panel & filter udara"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0021",
+    "taskListName": "PREV 5R RUANG STAFF",
+    "category": "Sipil",
+    "workCenter": "S1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek kondisi wastafel"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek kondisi kran"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek kondisi pintu dan jendela"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "cek kondisi urinoir (toilet)"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "cek kondisi partisi ( jika ada)"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0022",
+    "taskListName": "PREV PANEL LISTRIK",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Pastikan kondisi aman di area panel"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan panel dengan Vakum"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek komponen Control"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Laporkan bila ada kelainan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0023",
+    "taskListName": "PREV CIRCUIT BREAKER (TRAFO)",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Pastikan kondisi aman di area panel"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek fisik & komponen Control"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek Modul UVT & Shunt Trip"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Catat arus beban pada Breaker ....A"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0024",
+    "taskListName": "PREV PANEL SOFT STARTER",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Off kan sumber tegangan"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan body dan fan"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "kencangkan baut2 koneksi"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "On kan kembali sumber tegangan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0025",
+    "taskListName": "PREV PANEL VSD INVERTER",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Off kan sumber tegangan"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek exhaust fan & komponen Control"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Bersihkan panel VSD dengan Vakum"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Catat ampere Motor...A"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "On kan & laporkan bila telah selesai"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0026",
+    "taskListName": "PREV REGREASE POMPA",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Lakukan regrease (min 15x pompaan)"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan setelah regrease"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek temperatur sebelum & sesudah..°C"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Laporkan bila telah selesai"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0027",
+    "taskListName": "PREV LIGHTNING ARRESTER",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Matikan sumber tegangan"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek fisik & warna indikator arrester"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Ukur dan Catat hasilnya......KΩ"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "On kan kembali tegangan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0028",
+    "taskListName": "PREV REGREASE MOTOR",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Lakukan regrease (min 15x pompaan)"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan setelah regrease"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek temperatur sebelum & sesudah..°C"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Laporkan bila telah selesai"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0029",
+    "taskListName": "PREV MOTOR AC (Daya Kecil)",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan Bodi motor dengan majun"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek & kencangkan koneksi motor (Off)"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Catat temperature saat operasi..°C"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0030",
+    "taskListName": "PREV PANEL ABSORBER",
+    "category": "Otomasi",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Pastikan panel dalam kondisi aman"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan panel dengan Vakum"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek komponen Control"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek fungsi sensor chlorinator"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Test/Operasikan secara manual"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Cek motor absorber,catat suhu..°C"
+      },
+      {
+        "stepNumber": 7,
+        "operationText": "Cek motor soda,catat suhu..°C"
+      },
+      {
+        "stepNumber": 8,
+        "operationText": "Laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0031",
+    "taskListName": "PREV SOFT STARTER",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Off kan sumber tegangan"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan body & fan softstar"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek/ukur teristor dengan multitester"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "On kan & laporkan bila telah selesai"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0032",
+    "taskListName": "PREV VSD INVERTER",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Off kan sumber tegangan"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan panel & komponen VSD"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek/ukur IGBT dengan multitester"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "On kan & laporkan bila telah selesai"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0033",
+    "taskListName": "PREV MOTOR IMPELLAR ACCELATOR",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Bersihkan body motor dengan majun"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek motor & temperatur bearing ....°C"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek koneksi pada slipring"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0034",
+    "taskListName": "PREV ELECTRIC MOTOR  (Non Lubrication)",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan body motor dengan majun"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek kerja motor, catat temperatur..°C"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek Ampere motor...(A)"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Laporkan bila telah selesai"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0035",
+    "taskListName": "PREV POMPA",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek pompa & catat Pressure .... Bar"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek air pendingin,berfungsi dgn baik"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek kondisi gland packing"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek temperatur bearing ......... °C"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Bersihkan & Cek Stuffing box"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0036",
+    "taskListName": "PREV VIBRASI POMPA (INT 8)",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek baut2 pondasi & body pompa"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Ukur & catat vibrasi pompa...mm/s"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Laporkan bila vibrasi >5mm/s"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0037",
+    "taskListName": "PREV BANGUNAN WTP",
+    "category": "Sipil",
+    "workCenter": "S1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek Kondisi Kelayakan Infrastruktur,"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan Dinding dan Ventilasi"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek Kondisi Pintu Besi"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0038",
+    "taskListName": "PREV SOLENOID VALVE",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek kondisi fisik solenoid"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Tes kerja solenoid valve"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan membran jika kotor"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Laporkan bila dan kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0039",
+    "taskListName": "PREV SCM",
+    "category": "Otomasi",
+    "workCenter": "O1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasi dengan control room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Matikan MCB power SCM"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Lepas kabel sensor secara perlahan"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Angkat sensor SCM ( jangan terbalik)"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Isi air bak penampungan dan sensor SCM."
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Bersihkan dengan sikat gigi halus"
+      },
+      {
+        "stepNumber": 7,
+        "operationText": "Setelah bersih, pasang kembali sensor SC"
+      },
+      {
+        "stepNumber": 8,
+        "operationText": "Tutup kran air bersih dan nyalakan Power"
+      },
+      {
+        "stepNumber": 9,
+        "operationText": "Catat nilai perubahan di SCM ......(SCU)"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0040",
+    "taskListName": "PREV MOTOR 6 kV",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Lepas fuse control heater"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek Carbon brush & brush holder"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Ganti bila ada yang pendek/rusak"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Bersihkan slipring dengan contact cle"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Bersihkan body motor"
+      },
+      {
+        "stepNumber": 7,
+        "operationText": "Pasang fuse heater & laporkan selesai"
+      },
+      {
+        "stepNumber": 8,
+        "operationText": "Ukur temperatur motor (On)....°C"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0041",
+    "taskListName": "PREV MOTOR DC",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Lepas fuse control heater"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek Carbon brush & brush holder"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Ganti bila ada yang pendek/rusak"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Bersihkan slipring dengan contact cle"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Bersihkan body motor"
+      },
+      {
+        "stepNumber": 7,
+        "operationText": "Pasang fuse heater & laporkan selesai"
+      },
+      {
+        "stepNumber": 8,
+        "operationText": "Ukur temperatur motor (On)....°C"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0042",
+    "taskListName": "PREV GENSET",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek air accu & air radiator"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek tegangan accu & komponen kontrol"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Test genset tanpa beban selama 10 mnt"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Catat temperatur...°C"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Posisikan auto setelah warm-up"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Bersihkan body genset"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0043",
+    "taskListName": "PREV CRANE",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Pastikan kondisi aman"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Lepas tombol emergency (bila ada)"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Test kerja crane"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Test fungsi limit switch & pengereman"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Tekan tombol emergency (standby)"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0058",
+    "taskListName": "PREV PLC SCADA",
+    "category": "Otomasi",
+    "workCenter": "O1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek kondisi fisik PLC dan Power Suppl"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek Modul Analog dan Digital PLC"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek & pastikan fungsi  komponen prote"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek komunikasi PLC pada jaringan ethe"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0059",
+    "taskListName": "PREV PANEL DCS",
+    "category": "Otomasi",
+    "workCenter": "O1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Bersihkan panel DCS dengan kuas/vakum"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek kondisi fisik CPU DCS"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek kondisi Module peripheral dan bat"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek & pastikan fungsi komponen protek"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Cek komunikasi DCS"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0060",
+    "taskListName": "PREV TANGKI SOLAR",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek indikator level solar"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Catat level solar...%"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan luar tangki dengan majun"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Buang endapan kotoran (bila ada)"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Laporkan bila level dibawah 75%"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0061",
+    "taskListName": "PREV TRANSFORMATOR",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek kondisi fisik trafo"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Ukur dan Catat Temperatur .......°C"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek level oli trafo"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek silica gel"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Cek exhaust fan ruang trafo"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Laporkan bila ada kelainan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0062",
+    "taskListName": "PREV CHLORINATOR",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek kebocoran pada inst.chlorinator"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cari sumber kebocoran dengan amoniak"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Kencangkan sambungan/fitting"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek rotameter,cleaning bila kotor"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Cek pressure pada instalasi"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0064",
+    "taskListName": "PREV. POMPA SUBMERSIBLE",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek kerja pompa submersible"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek & catat tekanan pompa...(Bar)"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek apabila ada kebocoran oli"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek kondisi pipa instalasi"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0065",
+    "taskListName": "PREV. FLOWMETER",
+    "category": "Otomasi",
+    "workCenter": "O1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek fungsi display module"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Buka dan bersihkan dengan kuas"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek dan bersihkan panel kontrol"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Ukur sinyal 4-20mA,bandingkan display"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Lumasi baut mounting dengan penetrant"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0066",
+    "taskListName": "PREV. KOMPRESSOR",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan body kompressor"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek indikator level oli"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek safety valve"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Cek & bersihkan filter udara"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Cek tekanan dan temperatur.....ºC"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0067",
+    "taskListName": "PREV. KOMPRESSOR YEARLY",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Ganti filter udara,oli & cartridge"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Laporkan bila telah selesai"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0068",
+    "taskListName": "PREV POMPA SCREW",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Bersihkan body pompa dengan majun"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek pompa & instalasi"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Catat temperatur ...........°C"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0069",
+    "taskListName": "PREV GEARBOX (OIL)",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Bersihkan body gearbox dengan majun"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek level oli gearbox"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek dan ukur suhu gearbox ….... °C"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Laporkan bila ada kelainan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0070",
+    "taskListName": "PREV DECANTER",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan body decanter dengan majun"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek fungsi tombol emergency"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek fungsi speed sensor"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Cek kondisi belt dan gearbox decanter"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Regrease bagian bowl & scroll"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0073",
+    "taskListName": "PREV TRANSFORMATOR (2)",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek kondisi fisik trafo"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Ukur dan catat temperatur.....°C"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek level oli trafo"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek silica gel (normal biru)"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Pastikan tidak ada rembesan oli"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0074",
+    "taskListName": "PREV POMPA (2)",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek pompa & temperatur bearing....ºC"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "2 Cek kondisi mechanical seal"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Bersihkan body pompa"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0075",
+    "taskListName": "PREV PANEL FACP",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek dan ukur tegangan batery"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek dan ukur tegangan power supply"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek fungsi kontrol"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0076",
+    "taskListName": "PREV PERALATAN FIRE ALARM",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan user"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek smoke detector secara visual"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "bersihkan perangkat smoke detector"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Cek koneksi kabel smoke detector"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Test sensor alarm / smoke detector"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0077",
+    "taskListName": "PREV SENSOR TURBIDITY",
+    "category": "Otomasi",
+    "workCenter": "O1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek sambungan kabel sensor"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan sensor dengan aquades"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Lakukan kalibrasi"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Catat nilai pembacaan ( )"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Laporkan bila ada deviasi pembacaan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0078",
+    "taskListName": "PREV PANEL DISTRIBUSI",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan user"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Bersihkan panel distribusi"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek koneksi kabel fire alarm"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0079",
+    "taskListName": "PREV INSTALASI PIPA SAMPLING",
+    "category": "Sipil",
+    "workCenter": "S1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek instalasi pipa,pastikan tidak ada"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "kebocoran"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Buka valve untuk flushing air sample"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Setelah selesai,valve ditutup kembali"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Cek fungsi kran air sampling"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Pastikan air sampling mengalir"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0080",
+    "taskListName": "PREV ACTUATOR",
+    "category": "Otomasi",
+    "workCenter": "O1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Bersihkan motor actuator"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek kabel koneksi & komponen kontrol"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Test operasi secara lokal & elektrik"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0081",
+    "taskListName": "PREV RECTIFIER BATTERY",
+    "category": "Otomasi",
+    "workCenter": "O1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "1.Bersihkan panel dan komponen kontrol"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "2.Cek komponen kontrol dan koneksi kabel"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "3.Ukur Vac input dan Vdc output"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "4.Ukur tegangan DC tiap cell"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "5.Laporkan bila ada kerusakan"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0082",
+    "taskListName": "ENGINE GENSET (2)",
+    "category": "Mekanik",
+    "workCenter": "M1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "1.Cek level oli & kondisi filter"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "2.Catat level solar.....(%)"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "3.Cek Kebocoran Oli pelumas pada Mesin"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0083",
+    "taskListName": "PREV. MV CPS",
+    "category": "Otomasi",
+    "workCenter": "O1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Check Temperatur Ruangan"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Check Kelembapan"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Check Gas Beracun"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "Check Adhesi Debu dan Minyak Kabut"
+      },
+      {
+        "stepNumber": 5,
+        "operationText": "Check Vibrasi dan Kebisingan Komponen"
+      },
+      {
+        "stepNumber": 6,
+        "operationText": "Cleaning Panel"
+      },
+      {
+        "stepNumber": 7,
+        "operationText": "Check PS Sirkuit Utama & Kontrol"
+      },
+      {
+        "stepNumber": 8,
+        "operationText": "Check Kipas Pendingin"
+      },
+      {
+        "stepNumber": 9,
+        "operationText": "Cleaning Filter Udara"
+      },
+      {
+        "stepNumber": 10,
+        "operationText": "Check Lampu Kontrol & Power Meter"
       }
     ]
   }

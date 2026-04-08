@@ -20,6 +20,8 @@ const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./mod
 // ↑ Kept for the truncation step (clearing old data on re-seed)
 const FunctionalLocation = require('./models/FunctionalLocation');
 const { GeneralTaskList, GeneralTaskListActivity } = require('./models/GeneralTaskList');
+const EquipmentIntervalMapping = require('./models/EquipmentIntervalMapping');
+const PreventiveWeekSchedule = require('./models/PreventiveWeekSchedule');
 
 require('./models/associations');
 
@@ -27,7 +29,7 @@ require('./models/associations');
 const funcLocData = require(path.join(__dirname, '..', 'data', 'functional_locations.json'));
 const sapEquipmentData = require(path.join(__dirname, '..', 'data', 'sap_equipment.json'));
 const taskListData = require(path.join(__dirname, '..', 'data', 'general_task_lists.json'));
-const equipmentFileData = require(path.join(__dirname, '..', 'data', 'equipment.json'));
+const mappingData = require(path.join(__dirname, '..', 'data', 'equipment_interval_mappings.json'));
 
 // ────────────────────────────────────────────────────────────────────────────
 // PLANTS — corrected from SAP sticky note
@@ -37,114 +39,11 @@ const plants = [
   { plantId: 'I-22L002', plantName: 'Re-use Plant', shortName: 'Re-use', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 2 },
   { plantId: 'I-22L003', plantName: 'Waduk', shortName: 'Waduk', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 3 },
   { plantId: 'I-22L004', plantName: 'Cipasauran', shortName: 'Cipasauran', city: 'Serang', centerLat: null, centerLon: null, zoom: 17, sortOrder: 4 },
-  { plantId: 'I-22L005', plantName: 'Bendung & Jalur Intake', shortName: 'Bendung', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 5 },
   { plantId: 'P-22L006', plantName: 'WTP Cidanau', shortName: 'WTP Cidanau', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 6 },
   { plantId: 'P-22L007', plantName: 'WTP Krenceng', shortName: 'WTP Krenceng', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 7 },
   { plantId: 'P-22L019', plantName: 'Pos Keamanan', shortName: 'Pos', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 8 },
 ];
 
-// ────────────────────────────────────────────────────────────────────────────
-// EQUIPMENT — inline test/demo rows (from data/equipment.json + SAP bulk below)
-// ────────────────────────────────────────────────────────────────────────────
-const equipment = [
-  ...equipmentFileData,
-
-  // ── TEST EQUIPMENT — QR Scanner GPS Demo Scenarios ────────────────────────
-  { equipmentId: 'EQ-TEST-01', equipmentName: '[TEST] Pompa Pusat — Dekat & Dalam', funcLocId: 'A-A1-02-001-001', functionalLocation: 'Area Pusat Pabrik (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0135, longitude: 106.0219 },
-  { equipmentId: 'EQ-TEST-02', equipmentName: '[TEST] Pompa Timur — Dalam Pabrik, Jauh', funcLocId: 'A-A1-02-001-002', functionalLocation: 'Area Timur Pabrik (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0117, longitude: 106.0219 },
-  { equipmentId: 'EQ-TEST-03', equipmentName: '[TEST] Pompa Remote — Luar Pabrik', funcLocId: 'A-A1-02-002-001', functionalLocation: 'Area Remote Jauh (Test)', category: 'Mekanik', plantId: 'I-22L001', plantName: 'PS I Cidanau', latitude: -6.0600, longitude: 106.0219 },
-];
-
-// ────────────────────────────────────────────────────────────────────────────
-// SPK
-// ────────────────────────────────────────────────────────────────────────────
-// SPK Week-number reference:
-//   Jan 2026 → WK1–WK4  |  Feb 2026 → WK5–WK8  |  Mar 2026 → WK9–WK13
-//   Format: SPK-{CAT}-WK{weekOfYear}
-//   CAT codes: M = Mekanik, L = Listrik, S = Sipil, O = Otomasi
-
-
-
-
-// // ────────────────────────────────────────────────────────────────────────────
-// // LEMBAR KERJA
-// // ────────────────────────────────────────────────────────────────────────────
-// const lembarKerja = [
-//   { lkNumber: 'LK-JAN-MEK', periodeStart: '2026-01-01T00:00:00.000Z', periodeEnd: '2026-01-31T23:59:59.000Z', category: 'Mekanik', status: 'completed', lembarKe: 1, totalLembar: 1, evaluasi: 'Perawatan Mekanik Januari selesai. Semua peralatan dalam kondisi baik.', spkModels: ['SPK-M-001', 'SPK-M-002'] },
-//   { lkNumber: 'LK-JAN-LIS', periodeStart: '2026-01-01T00:00:00.000Z', periodeEnd: '2026-01-31T23:59:59.000Z', category: 'Listrik', status: 'completed', lembarKe: 1, totalLembar: 1, evaluasi: 'Inspeksi Listrik Januari selesai. Tidak ada temuan kritis.', spkModels: ['SPK-L-001'] },
-//   { lkNumber: 'LK-FEB-MEK', periodeStart: '2026-02-01T00:00:00.000Z', periodeEnd: '2026-02-28T23:59:59.000Z', category: 'Mekanik', status: 'in_progress', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-M-004', 'SPK-M-003'] },
-//   { lkNumber: 'LK-FEB-LIS', periodeStart: '2026-02-01T00:00:00.000Z', periodeEnd: '2026-02-28T23:59:59.000Z', category: 'Listrik', status: 'completed', lembarKe: 1, totalLembar: 1, evaluasi: 'Inspeksi Listrik Februari selesai. 1 MCB perlu penggantian, sudah dilaporkan.', spkModels: ['SPK-L-002'] },
-//   { lkNumber: 'LK-MAR-MEK', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Mekanik', status: 'in_progress', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-M-006', 'SPK-M-005'] },
-//   { lkNumber: 'LK-MAR-LIS', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Listrik', status: 'in_progress', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-L-004', 'SPK-L-003'] },
-//   { lkNumber: 'LK-MAR-SIP', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Sipil', status: 'pending', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-S-001'] },
-//   { lkNumber: 'LK-MAR-OTO', periodeStart: '2026-03-01T00:00:00.000Z', periodeEnd: '2026-03-31T23:59:59.000Z', category: 'Otomasi', status: 'pending', lembarKe: 1, totalLembar: 1, evaluasi: null, spkModels: ['SPK-O-001'] },
-// ];
-
-// // ────────────────────────────────────────────────────────────────────────────
-// // SUBMISSIONS
-// // ────────────────────────────────────────────────────────────────────────────
-// const submissions = [
-//   {
-//     id: 'SUB-001', spkNumber: 'SPK-L-003', durationActual: 3.0,
-//     evaluasi: 'Servis genset berjalan lancar. Semua komponen dalam kondisi baik pasca servis.',
-//     latitude: -6.0141, longitude: 106.0220, submittedAt: '2026-02-20T14:00:00.000Z', photoPaths: [],
-//     activityResultsModel: [
-//       { activityNumber: 'ACT-001', resultComment: 'Oli diganti dengan Pertamina Fastron 15W40', isNormal: true, isVerified: true },
-//       { activityNumber: 'ACT-002', resultComment: 'Kedua filter sudah diganti baru', isNormal: true, isVerified: true },
-//       { activityNumber: 'ACT-003', resultComment: 'Genset beroperasi normal, output 200V/50Hz', isNormal: true, isVerified: true },
-//     ],
-//   },
-//   {
-//     id: 'SUB-002', spkNumber: 'SPK-M-001', durationActual: 1.5,
-//     evaluasi: 'Perawatan Pompa A Januari selesai. Tidak ada temuan kritis.',
-//     latitude: -6.0131, longitude: 106.0215, submittedAt: '2026-01-22T09:30:00.000Z', photoPaths: [],
-//     activityResultsModel: [
-//       { activityNumber: 'ACT-001', resultComment: 'Tekanan normal: 4.2 bar', isNormal: true, isVerified: true },
-//       { activityNumber: 'ACT-002', resultComment: 'Tidak ada kebocoran', isNormal: true, isVerified: true },
-//       { activityNumber: 'ACT-003', resultComment: 'Bearing dilumasi, kondisi baik', isNormal: true, isVerified: true },
-//     ],
-//   },
-//   {
-//     id: 'SUB-003', spkNumber: 'SPK-M-002', durationActual: 1.0,
-//     evaluasi: 'Perawatan Pompa Booster Januari selesai. Semua normal.',
-//     latitude: -6.0128, longitude: 106.0222, submittedAt: '2026-01-23T11:00:00.000Z', photoPaths: [],
-//     activityResultsModel: [
-//       { activityNumber: 'ACT-001', resultComment: 'Tekanan normal: 3.8 bar', isNormal: true, isVerified: true },
-//       { activityNumber: 'ACT-002', resultComment: 'Seal dalam kondisi baik', isNormal: true, isVerified: true },
-//       { activityNumber: 'ACT-003', resultComment: 'Arus normal: 8.5 A', isNormal: true, isVerified: true },
-//     ],
-//   },
-//   {
-//     id: 'SUB-004', spkNumber: 'SPK-L-001', durationActual: 1.5,
-//     evaluasi: 'Inspeksi Panel Listrik Januari selesai. Tidak ada temuan kritis.',
-//     latitude: -6.0136, longitude: 106.0224, submittedAt: '2026-01-20T14:00:00.000Z', photoPaths: [],
-//     activityResultsModel: [
-//       { activityNumber: 'ACT-001', resultComment: 'Tegangan normal 380V / 220V', isNormal: true, isVerified: true },
-//       { activityNumber: 'ACT-002', resultComment: 'Semua MCB berfungsi normal', isNormal: true, isVerified: true },
-//       { activityNumber: 'ACT-003', resultComment: 'Busbar dibersihkan, tidak ada korosi', isNormal: true, isVerified: true },
-//     ],
-//   },
-//   {
-//     id: 'SUB-005', spkNumber: 'SPK-M-003', durationActual: 1.25,
-//     evaluasi: 'Perawatan Pompa Booster Februari selesai. Tekanan disetel ulang, seal dijadwalkan ganti bulan depan.',
-//     latitude: -6.0128, longitude: 106.0222, submittedAt: '2026-02-21T10:00:00.000Z', photoPaths: [],
-//     activityResultsModel: [
-//       { activityNumber: 'ACT-001', resultComment: 'Tekanan sedikit turun: 3.5 bar, disetel ulang', isNormal: false, isVerified: true },
-//       { activityNumber: 'ACT-002', resultComment: 'Seal mulai aus, dijadwalkan ganti bulan depan', isNormal: false, isVerified: true },
-//       { activityNumber: 'ACT-003', resultComment: 'Arus normal: 8.7 A', isNormal: true, isVerified: true },
-//     ],
-//   },
-//   {
-//     id: 'SUB-006', spkNumber: 'SPK-L-002', durationActual: 2.0,
-//     evaluasi: 'Inspeksi Panel Listrik Februari selesai. 1 MCB perlu penggantian, sudah dilaporkan ke pengadaan.',
-//     latitude: -6.0136, longitude: 106.0224, submittedAt: '2026-02-19T13:00:00.000Z', photoPaths: [],
-//     activityResultsModel: [
-//       { activityNumber: 'ACT-001', resultComment: 'Tegangan normal 382V / 221V', isNormal: true, isVerified: true },
-//       { activityNumber: 'ACT-002', resultComment: '1 MCB perlu penggantian, sudah dilaporkan', isNormal: false, isVerified: true },
-//       { activityNumber: 'ACT-003', resultComment: 'Busbar bersih', isNormal: true, isVerified: true },
-//     ],
-//   },
-// ];
 
 // ────────────────────────────────────────────────────────────────────────────
 // MAIN
@@ -154,7 +53,19 @@ async function main() {
   await syncDatabase(sequelize, 'preventive seed');
   console.log('\n  KTI SmartCare — Preventive Seed\n');
 
-  // ── 1a. Snapshot protected fields before wiping ───────────────────────────
+  // ── 1a. Snapshot plant coords before wiping ──────────────────────────────
+  const plantCoordSnapshot = new Map();
+  const existingPlants = await Plant.findAll({ attributes: ['plantId', 'centerLat', 'centerLon'] });
+  for (const p of existingPlants) {
+    const lat = p.centerLat != null ? parseFloat(p.centerLat) : null;
+    const lon = p.centerLon != null ? parseFloat(p.centerLon) : null;
+    if (lat != null || lon != null) plantCoordSnapshot.set(p.plantId, { centerLat: lat, centerLon: lon });
+  }
+  if (plantCoordSnapshot.size > 0) {
+    console.log(`  ✓  Snapshotted coords for ${plantCoordSnapshot.size} plant(s)`);
+  }
+
+  // ── 1b. Snapshot protected fields before wiping ───────────────────────────
   //  Fields listed here will NEVER be overwritten by the seed, even after a
   //  full destroy + recreate cycle. Add any field you want "locked" here.
   const PROTECTED_FIELDS = ['latitude', 'longitude', 'polygonFeatureName'];
@@ -201,6 +112,16 @@ async function main() {
   for (const p of plants) await Plant.create(p);
   console.log(`  ✓  plants         (${plants.length} inserted)`);
 
+  // Restore snapshotted plant coords
+  if (plantCoordSnapshot.size > 0) {
+    let plantRestored = 0;
+    for (const [plantId, coords] of plantCoordSnapshot.entries()) {
+      const plant = await Plant.findByPk(plantId);
+      if (plant) { await plant.update(coords); plantRestored++; }
+    }
+    console.log(`  ✓  Restored coords for ${plantRestored} plant(s)`);
+  }
+
   // ── 3. Functional Locations (level-sorted so parent exists before child) ───
   added = 0;
   const sortedFuncLocs = [...funcLocData].sort((a, b) => a.level - b.level);
@@ -210,11 +131,7 @@ async function main() {
   }
   console.log(`  ✓  func_locs      (${added} inserted)`);
 
-  // ── 4. Equipment (from equipment.json + inline test rows) ─────────────────
-  for (const e of equipment) await Equipment.create(e);
-  console.log(`  ✓  equipment      (${equipment.length} inserted)`);
-
-  // ── 5. SAP Equipment (from sap_equipment.json — upsert plantName from seed) ─
+  // ── 4. SAP Equipment (from sap_equipment.json — upsert plantName from seed) ─
   const plantNameMap = Object.fromEntries(plants.map(p => [p.plantId, p.plantName]));
   added = 0;
   for (const se of sapEquipmentData) {
@@ -235,7 +152,6 @@ async function main() {
       funcLocId: se.funcLocId || null,
       functionalLocation: se.functionalLocation || null,
       category: safeCategory,
-      abcIndicator: se.abcIndicator || null,
     };
     try {
       let instance = await Equipment.findOne({ where: { equipmentId: se.equipmentId } });
@@ -263,7 +179,42 @@ async function main() {
   }
   console.log(`  ✓  task_lists     (${added} inserted)`);
 
-  // ── 7. Restore protected fields from in-memory snapshot ───────────────────
+  // ── 7. Equipment Interval Mappings ────────────────────────────────────────
+  await EquipmentIntervalMapping.destroy({ where: {} });
+  let mappingAdded = 0;
+  for (const m of mappingData) {
+    try {
+      await EquipmentIntervalMapping.create({ equipmentId: m.equipmentId, interval: m.interval, taskListId: m.taskListId });
+      mappingAdded++;
+    } catch (err) {
+      if (err.name !== 'SequelizeUniqueConstraintError') throw err;
+    }
+  }
+  console.log(`  ✓  eq_mappings    (${mappingAdded} inserted)`);
+
+  // ── 8. Preventive Week Schedule 2026 ──────────────────────────────────────
+  const SCHEDULE_YEAR = 2026;
+  const INTERVALS = [
+    { key: '1wk', weeks: 1 },
+    { key: '2wk', weeks: 2 },
+    { key: '3wk', weeks: 3 },
+    { key: '4wk', weeks: 4 },
+    { key: '8wk', weeks: 8 },
+    { key: '12wk', weeks: 12 },
+    { key: '16wk', weeks: 16 },
+    { key: '24wk', weeks: 24 },
+  ];
+  await PreventiveWeekSchedule.destroy({ where: { year: SCHEDULE_YEAR } });
+  const scheduleRows = [];
+  for (let week = 1; week <= 53; week++) {
+    for (const { key, weeks } of INTERVALS) {
+      if ((week - 1) % weeks === 0) scheduleRows.push({ year: SCHEDULE_YEAR, weekNumber: week, interval: key });
+    }
+  }
+  await PreventiveWeekSchedule.bulkCreate(scheduleRows, { ignoreDuplicates: true });
+  console.log(`  ✓  week_schedule  (${scheduleRows.length} entries for ${SCHEDULE_YEAR})`);
+
+  // ── 10. Restore protected fields from in-memory snapshot ──────────────────
   if (protectedSnapshot.size > 0) {
     let restored = 0;
     let missed = 0;

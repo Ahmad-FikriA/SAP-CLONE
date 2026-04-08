@@ -111,4 +111,105 @@ const bulkUpdate = async (req, res) => {
   res.json({ message: `Updated ${count} equipment(s)` });
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, bulkUpdate, remove };
+// POST /api/equipment/import-excel
+// Expects multipart/form-data field "file" (.xlsx).
+// Header row columns (case-insensitive, spaces/underscores ignored):
+//   equipment_id | equipment_name | category | func_loc_id | functional_location
+//   plant_id | plant_name
+// Rows are upserted — safe to re-import after updates.
+const importExcel = async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded. Send field "file" as multipart/form-data.' });
+
+  let XLSX;
+  try { XLSX = require('xlsx'); } catch { return res.status(500).json({ error: 'xlsx package not installed. Run: npm install xlsx' }); }
+
+  const workbook  = XLSX.read(req.file.buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+
+  // Normalise header names (lowercase, strip spaces/underscores/dashes)
+  function norm(s) { return String(s || '').toLowerCase().replace(/[\s_\.\-]/g, ''); }
+
+  // SAP exports often have 1-2 title rows before the real header.
+  // Scan raw rows until we find one that looks like a real header
+  // (contains a cell that normalises to a known equipment field name).
+  const KNOWN_HEADERS = new Set(['equipment', 'equipmentid', 'equipid', 'equipmentname', 'name', 'description', 'descriptionoftechnicalobject']);
+  const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', header: 1 });
+  let headerRowIdx = 0;
+  for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+    if (rawRows[i].some(cell => KNOWN_HEADERS.has(norm(cell)))) { headerRowIdx = i; break; }
+  }
+  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', range: headerRowIdx });
+
+  if (!rows.length) return res.status(400).json({ error: 'Sheet is empty or has no data rows' });
+
+  const sample = rows[0];
+  const map    = {};
+  for (const k of Object.keys(sample)) {
+    const n = norm(k);
+    if (['equipmentid', 'equipment', 'equip', 'equipid'].includes(n))                            map.equipmentId        = k;
+    if (['equipmentname', 'name', 'equipname', 'description', 'descriptionoftechnicalobject'].includes(n)) map.equipmentName = k;
+    if (['category', 'cat', 'kategori', 'pg', 'plannergroup'].includes(n))                       map.category           = k;
+    if (['funclocid', 'funcloc', 'funclocation', 'funclocation', 'functionallocationid'].includes(n)) map.funcLocId       = k;
+    if (['functionallocation'].includes(n))                                                       map.functionalLocation = k;
+    // SAP "Location" column = plant section ID (e.g. I-22L001) — use as plantId
+    // SAP "Plant" column = company code (e.g. KTI1) — lower priority, only use if no Location
+    if (n === 'location')                                                                          map.plantId            = k;
+    else if (['plantid', 'werkid'].includes(n))                                                   map.plantId            = map.plantId || k;
+    if (n === 'plant' && !map.plantId)                                                            map.plantId            = k;
+    if (['plantname', 'plantdesc', 'werk'].includes(n))                                           map.plantName          = k;
+  }
+
+  if (!map.equipmentId || !map.equipmentName) {
+    return res.status(400).json({
+      error: 'Could not find required columns: equipment_id and equipment_name',
+      foundColumns: Object.keys(sample),
+    });
+  }
+
+  // SAP PG column uses numeric codes; also accept text values
+  const VALID_CATEGORIES = {
+    mekanik: 'Mekanik', mechanical: 'Mekanik', '221': 'Mekanik',
+    listrik: 'Listrik', electrical: 'Listrik', '222': 'Listrik',
+    sipil: 'Sipil', civil: 'Sipil', '223': 'Sipil',
+    otomasi: 'Otomasi', automation: 'Otomasi', '224': 'Otomasi',
+  };
+
+  let imported = 0, skipped = 0;
+  const errors = [];
+
+  for (const row of rows) {
+    const equipmentId   = String(row[map.equipmentId]   || '').trim();
+    const equipmentName = String(row[map.equipmentName] || '').trim();
+    if (!equipmentId || !equipmentName) { skipped++; continue; }
+
+    const rawCat  = map.category ? String(row[map.category] || '').trim().toLowerCase() : '';
+    const category = VALID_CATEGORIES[rawCat] || null;
+
+    const vals = {
+      equipmentName,
+      category,
+      funcLocId:          map.funcLocId          ? (String(row[map.funcLocId]          || '').trim() || null) : null,
+      functionalLocation: map.functionalLocation ? (String(row[map.functionalLocation] || '').trim() || null) : null,
+      plantId:            map.plantId            ? (String(row[map.plantId]            || '').trim() || null) : null,
+      plantName:          map.plantName          ? (String(row[map.plantName]          || '').trim() || null) : null,
+    };
+
+    try {
+      const [, created] = await Equipment.upsert({ equipmentId, ...vals });
+      imported++;
+      if (!created) skipped++; // counted as updated — subtract from "new" mentally
+    } catch (err) {
+      errors.push('Row skipped: ' + equipmentId + ' — ' + err.message);
+      skipped++;
+    }
+  }
+
+  res.json({
+    message: 'Import selesai: ' + imported + ' baris diproses, ' + skipped + ' dilewati',
+    imported,
+    skipped,
+    errors: errors.slice(0, 20),
+  });
+};
+
+module.exports = { getAll, getOne, create, update, bulkDelete, bulkUpdate, remove, importExcel };

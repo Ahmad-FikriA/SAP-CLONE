@@ -18,6 +18,7 @@ const {
   taskListRouter,
   plantRouter,
   mappingRouter,
+  scheduleRouter,
 } = require("./routes/preventive");
 const correctiveRoutes = require("./routes/corrective");
 const inspectionRoutes = require("./routes/inspection");
@@ -244,6 +245,7 @@ app.use("/api/inspection", inspectionRoutes);
 app.use("/api/functional-locations", funcLocRouter);
 app.use("/api/task-lists", taskListRouter);
 app.use("/api/equipment-mappings", mappingRouter);
+app.use("/api/preventive-schedule", scheduleRouter);
 
 // ── SPA fallback: serve index.html for any non-API GET ───────────────────────
 app.get(/^(?!\/api).*$/, (req, res) => {

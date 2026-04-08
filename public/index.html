@@ -138,7 +138,7 @@
             <tr>
               <th>SPK Number</th>
               <th>Submitted At</th>
-              <th>Duration</th>
+              <th>Duration (menit)</th>
               <th>Evaluasi</th>
               <th>Photos</th>
             </tr>
@@ -179,7 +179,7 @@
         <tr>
           <td><strong>${escHtml(s.spkNumber)}</strong></td>
           <td>${formatDate(s.submittedAt)}</td>
-          <td>${s.durationActual ?? '—'} jam</td>
+          <td>${s.durationActual ?? '—'} menit</td>
           <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(s.evaluasi || '—')}</td>
           <td>${(s.photoPaths||[]).length}</td>
         </tr>

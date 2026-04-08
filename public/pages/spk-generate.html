@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generate SPK — KTI SmartCare Admin</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    /* ── Page layout ── */
+    .gen-page {
+      display: flex;
+      height: calc(100vh - var(--shell-height));
+      margin-top: var(--shell-height);
+      margin-left: var(--sidebar-width);
+      transition: margin-left var(--transition);
+      flex-direction: column;
+    }
+
+    .gen-page.sidebar-collapsed {
+      margin-left: var(--sidebar-collapsed);
+    }
+
+    /* Breadcrumb / page header */
+    .gen-topbar {
+      background: #fff;
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .gen-topbar__back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--primary);
+      text-decoration: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background var(--transition);
+    }
+
+    .gen-topbar__back:hover {
+      background: var(--table-hover);
+    }
+
+    .gen-topbar__sep {
+      color: var(--text-muted);
+    }
+
+    .gen-topbar__title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-base);
+    }
+
+    /* Two-column body */
+    .gen-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Left config panel */
+    .gen-config {
+      width: 360px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .gen-config__section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* Category cards */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .cat-card {
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      background: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    .cat-card:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .cat-card.active {
+      border-color: var(--primary);
+      background: #EBF5FB;
+      color: var(--primary);
+    }
+
+    .cat-card__icon {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    /* Week row */
+    .week-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .week-row .form-group {
+      flex: 1;
+    }
+
+    .week-range-info {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 4px 0 2px;
+    }
+
+    /* Interval chips (display only) */
+    .interval-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      min-height: 22px;
+      padding: 2px 0;
+    }
+
+    /* Right equipment panel */
+    .gen-equip {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--page-bg);
+    }
+
+    .gen-equip__header {
+      padding: 16px 24px 12px;
+      background: #fff;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .gen-equip__title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .gen-equip__toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .gen-equip__search-wrap {
+      position: relative;
+      flex: 1;
+    }
+
+    .gen-equip__search-wrap svg {
+      position: absolute;
+      left: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .gen-equip__search-wrap input {
+      width: 100%;
+      padding: 6px 10px 6px 30px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      background: #fff;
+    }
+
+    .gen-equip__search-wrap input:focus {
+      border-color: var(--primary);
+    }
+
+    .gen-equip__counter {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* Equipment list body */
+    .gen-equip__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 24px;
+    }
+
+    .gen-eq-group-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 8px 12px 4px;
+    }
+
+    .gen-eq-list {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    /* Each equipment row wrapper (contains .gen-eq-item + .gen-eq-detail) */
+    .gen-eq-row {
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .gen-eq-row:last-child {
+      border-bottom: none;
+    }
+
+    .gen-eq-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .gen-eq-item:hover {
+      background: var(--table-hover);
+    }
+
+    .gen-eq-item input[type="checkbox"] {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    .gen-eq-item label {
+      flex: 1;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .gen-eq-mapped-badge {
+      font-size: 11px;
+      padding: 1px 8px;
+      border-radius: 10px;
+      background: #e6f4ea;
+      color: #1a6e2e;
+      border: 1px solid #b7dfbf;
+      flex-shrink: 0;
+    }
+
+    .gen-eq-unmapped-badge {
+      font-size: 11px;
+      padding: 1px 8px;
+      border-radius: 10px;
+      background: #fef3cd;
+      color: #7a5500;
+      border: 1px solid #f5d27a;
+      flex-shrink: 0;
+    }
+
+    /* Expand toggle button */
+    .gen-eq-expand-btn {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: color var(--transition);
+      white-space: nowrap;
+    }
+
+    .gen-eq-expand-btn:hover {
+      color: var(--primary);
+    }
+
+    .gen-eq-expand-btn svg {
+      transition: transform 0.18s ease;
+    }
+
+    .gen-eq-expand-btn.open svg {
+      transform: rotate(180deg);
+    }
+
+    /* Expandable detail panel */
+    .gen-eq-detail {
+      display: none;
+      background: #f8fbff;
+      border-top: 1px solid #e8f0fa;
+      padding: 10px 14px 10px 44px;
+    }
+
+    .gen-eq-detail.open {
+      display: block;
+    }
+
+    .gen-eq-detail__title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+
+    .gen-eq-detail__activity {
+      font-size: 12px;
+      color: var(--text-base);
+      padding: 3px 0;
+      display: flex;
+      gap: 8px;
+    }
+
+    .gen-eq-detail__activity-num {
+      color: var(--text-muted);
+      min-width: 18px;
+      flex-shrink: 0;
+    }
+
+    .gen-eq-detail__no-mapping {
+      font-size: 12px;
+      color: #7a5500;
+      padding: 4px 0;
+    }
+
+    /* Unmapped toggle link */
+    .gen-unmapped-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px 0;
+      background: none;
+      border: none;
+      margin-top: 4px;
+      transition: color var(--transition);
+    }
+
+    .gen-unmapped-toggle:hover {
+      color: var(--primary);
+    }
+
+    .gen-eq-empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+    }
+
+    .gen-eq-empty svg {
+      opacity: 0.3;
+      margin-bottom: 12px;
+    }
+
+    /* Bottom action bar */
+    .gen-footer {
+      background: #fff;
+      border-top: 1px solid var(--border-color);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      gap: 16px;
+    }
+
+    .gen-footer__info {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .gen-footer__info strong {
+      color: var(--text-base);
+      font-size: 15px;
+    }
+
+    .gen-footer__actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    /* Select all / clear controls */
+    .gen-select-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .gen-select-controls button {
+      font-size: 12px;
+      padding: 3px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all var(--transition);
+    }
+
+    .gen-select-controls button:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Placeholder state */
+    .gen-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      gap: 12px;
+    }
+
+    .gen-placeholder svg {
+      opacity: 0.2;
+    }
+
+    .gen-placeholder p {
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Shell Bar -->
+  <header class="shell-bar">
+    <button class="shell-bar__menu-btn" id="sidebarToggle">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+    <a href="/" class="shell-bar__brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <path d="M8 21h8M12 17v4" />
+      </svg>
+    </a>
+    <div class="shell-bar__separator"></div>
+    <span class="shell-bar__title">KTI SmartCare Mock</span>
+    <div class="shell-bar__actions">
+      <div class="shell-bar__avatar">AD</div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar__nav">
+      <a href="/" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+        </svg><span>Dashboard</span>
+      </a>
+      <a href="/pages/spk.html" class="nav-item active">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="9" y1="13" x2="15" y2="13" />
+        </svg><span>SPK</span>
+      </a>
+      <a href="/pages/lembar-kerja.html" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg><span>Lembar Kerja</span>
+      </a>
+      <div class="sidebar__divider"></div>
+      <a href="/pages/equipment.html" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
+        </svg><span>Equipment</span>
+      </a>
+      <a href="/pages/task-lists.html" class="nav-item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>Task Lists</span></a>
+      <a href="/pages/maps.html" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+          <line x1="8" y1="2" x2="8" y2="18" />
+          <line x1="16" y1="6" x2="16" y2="22" />
+        </svg><span>Maps</span>
+      </a>
+      <a href="/pages/users.html" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+        </svg><span>Users</span>
+      </a>
+      <a href="/pages/equipment-mappings.html" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 17H7A5 5 0 0 1 7 7h2" />
+          <path d="M15 7h2a5 5 0 0 1 0 10h-2" />
+          <line x1="8" y1="12" x2="16" y2="12" />
+        </svg><span>Task Mapping</span>
+      </a>
+      <a href="/pages/interval-planner.html" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg><span>Interval Planner</span>
+      </a>
+      <div class="sidebar__divider"></div>
+      <a href="/pages/submissions.html" class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg><span>Submissions</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="message-strip" id="messageStrip">
+    <span id="messageText"></span>
+    <span class="message-strip__close" onclick="hideMessage()">✕</span>
+  </div>
+
+  <!-- Main generate page -->
+  <div class="gen-page" id="layout">
+    <!-- Topbar -->
+    <div class="gen-topbar">
+      <a href="/pages/spk.html" class="gen-topbar__back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Kembali ke SPK
+      </a>
+      <span class="gen-topbar__sep">/</span>
+      <span class="gen-topbar__title">Generate SPK</span>
+    </div>
+
+    <!-- Body: config left + equipment right -->
+    <div class="gen-body">
+      <!-- ── Left: configuration ── -->
+      <aside class="gen-config">
+
+        <!-- Step 1: Category -->
+        <div>
+          <div class="gen-config__section-title">1 — Pilih Kategori</div>
+          <div class="cat-grid">
+            <div class="cat-card" data-cat="Mekanik" onclick="selectCategory('Mekanik')">
+              <div class="cat-card__icon">⚙️</div>
+              Mekanik 221
+            </div>
+            <div class="cat-card" data-cat="Listrik" onclick="selectCategory('Listrik')">
+              <div class="cat-card__icon">⚡</div>
+              Listrik 222
+            </div>
+            <div class="cat-card" data-cat="Sipil" onclick="selectCategory('Sipil')">
+              <div class="cat-card__icon">🏗️</div>
+              Sipil 223
+            </div>
+            <div class="cat-card" data-cat="Otomasi" onclick="selectCategory('Otomasi')">
+              <div class="cat-card__icon">🤖</div>
+              Otomasi 224
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Week / Year -->
+        <div>
+          <div class="gen-config__section-title">2 — Pilih Minggu</div>
+          <div class="week-row">
+            <div class="form-group">
+              <label>Tahun</label>
+              <select id="f_year" onchange="onWeekChange()"></select>
+            </div>
+            <div class="form-group">
+              <label>Minggu ke-</label>
+              <select id="f_week" onchange="onWeekChange()"></select>
+            </div>
+          </div>
+          <div class="week-range-info" id="f_weekRange">—</div>
+          <div style="margin-top:8px">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Interval aktif minggu ini:</div>
+            <div class="interval-chips" id="f_intervalChips">
+              <span style="font-size:12px;color:var(--text-muted)">Pilih minggu...</span>
+            </div>
+          </div>
+          <input type="hidden" id="f_weekStart" value="" />
+        </div>
+
+      </aside>
+
+      <!-- ── Right: equipment list ── -->
+      <section class="gen-equip">
+        <div class="gen-equip__header">
+          <div class="gen-equip__title" id="equipTitle">Pilih kategori untuk melihat equipment</div>
+          <div class="gen-equip__toolbar">
+            <div class="gen-equip__search-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <input type="text" id="eqSearch" placeholder="Cari equipment..."
+                oninput="filterEquipment(); updateFooter()" />
+            </div>
+            <span class="gen-equip__counter" id="eqCounter"></span>
+          </div>
+        </div>
+
+        <div class="gen-equip__body" id="eqBody">
+          <div class="gen-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
+            </svg>
+            <p>Pilih kategori dan minggu untuk memulai</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Footer action bar -->
+    <div class="gen-footer">
+      <div class="gen-footer__info" id="footerInfo">
+        <span style="color:var(--text-muted)">Belum ada equipment dipilih</span>
+      </div>
+      <div class="gen-footer__actions">
+        <a href="/pages/spk.html" class="btn btn-ghost">Batal</a>
+        <button class="btn btn-ghost" id="previewBtn" onclick="openPreview()" disabled>
+          Lihat Preview
+        </button>
+        <button class="btn btn-primary" id="generateBtn" onclick="generateBatchSpk()" disabled>
+          Generate SPK
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SPK Preview Modal ── -->
+  <div id="previewOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;overflow-y:auto;padding:24px 16px">
+    <div style="max-width:1100px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+
+      <!-- modal header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-color);background:#fff;position:sticky;top:0;z-index:1">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--text-base)" id="pvTitle">Preview SPK</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="pvSubtitle"></div>
+        </div>
+        <button onclick="closePreview()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--text-muted);font-size:20px;line-height:1">&times;</button>
+      </div>
+
+      <!-- modal body -->
+      <div style="overflow-x:auto;padding:0">
+        <table id="pvTable" style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:#1B3A5C;color:#fff;text-align:left">
+              <th style="padding:8px 10px;white-space:nowrap;min-width:130px">No SPK / Aktivitas</th>
+              <th style="padding:8px 10px;min-width:200px">Deskripsi</th>
+              <th style="padding:8px 10px;white-space:nowrap">Interval</th>
+              <th style="padding:8px 10px;min-width:160px">Equipment</th>
+              <th style="padding:8px 10px;min-width:140px">Lokasi</th>
+              <th style="padding:8px 10px;white-space:nowrap">Latitude</th>
+              <th style="padding:8px 10px;white-space:nowrap">Longitude</th>
+              <th style="padding:8px 10px;white-space:nowrap">Durasi Rencana (menit)</th>
+            </tr>
+          </thead>
+          <tbody id="pvBody"></tbody>
+        </table>
+      </div>
+
+      <!-- modal footer -->
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border-color)">
+        <button class="btn btn-ghost" onclick="closePreview()">Tutup</button>
+        <button class="btn btn-primary" onclick="closePreview(); generateBatchSpk()">Generate SPK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/spk-generate.js"></script>
+</body>
+
+</html>
