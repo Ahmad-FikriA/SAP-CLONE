@@ -10,7 +10,7 @@ ssh-keygen -A
 npm install
 
 # Seed preventive tables (plants, equipment, SPK, LK) with corrected data
-node src/preventive_seed.js
+
 # ── One-time migration: add `group` column to users table ──────────────────
 MIGRATION_MARKER="/app/data/.migrated_add_group"
 if [ ! -f "$MIGRATION_MARKER" ]; then
