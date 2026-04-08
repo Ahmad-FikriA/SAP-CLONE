@@ -45,13 +45,13 @@ function initYearWeek() {
   const yearEl  = document.getElementById('f_year');
   const weekEl  = document.getElementById('f_week');
 
-  [curYear - 1, curYear, curYear + 1].forEach(function(y) {
+  for (var y = curYear - 2; y <= curYear + 10; y++) {
     const opt      = document.createElement('option');
     opt.value      = y;
     opt.textContent = y;
     if (y === curYear) opt.selected = true;
     yearEl.appendChild(opt);
-  });
+  }
 
   for (var w = 1; w <= 53; w++) {
     const opt      = document.createElement('option');

@@ -362,12 +362,12 @@ function onYearChange() {
 (function init() {
   const sel      = document.getElementById('yearSel');
   const thisYear = new Date().getFullYear();
-  [thisYear - 1, thisYear, thisYear + 1].forEach(function(y) {
+  for (var y = thisYear - 2; y <= thisYear + 10; y++) {
     const opt = document.createElement('option');
     opt.value = y; opt.textContent = y;
     if (y === thisYear) opt.selected = true;
     sel.appendChild(opt);
-  });
+  }
   currentYear = thisYear;
   loadYear(thisYear);
 

@@ -29,6 +29,7 @@ const taskListData = require(path.join(__dirname, '..', 'data', 'general_task_li
 // ────────────────────────────────────────────────────────────────────────────
 const users = [
   // Admin & Planning
+  { id: 'USR-000', nik: '999999', password: 'password123', name: 'admin',             role: 'admin',    dinas: null, divisi: 'IT', email: null },
   { id: 'USR-001', nik: '100001', password: 'password123', name: 'Admin KTI',        role: 'admin',    dinas: null, divisi: 'IT', email: 'admin@kti-water.co.id' },
   { id: 'USR-002', nik: '100002', password: 'password123', name: 'Siti Rahayu',       role: 'planner',  dinas: null, divisi: 'Planning', email: 'siti@kti-water.co.id' },
 

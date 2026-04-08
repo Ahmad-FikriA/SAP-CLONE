@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — KTI SmartCare</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-wrap {
+      width: 100%;
+      max-width: 400px;
+      padding: 24px 16px;
+    }
+
+    /* Brand */
+    .login-brand {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .login-brand__logo {
+      width: 48px;
+      height: 48px;
+      background: #1B3A5C;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .login-brand__name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1B3A5C;
+      letter-spacing: -.3px;
+    }
+    .login-brand__sub {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    /* Card */
+    .login-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.06);
+      padding: 32px;
+    }
+    .login-card__title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+    .login-card__sub {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+
+    /* Form */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #111827;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      background: #fff;
+    }
+    .form-group input:focus {
+      border-color: #1B3A5C;
+      box-shadow: 0 0 0 3px rgba(27,58,92,.12);
+    }
+    .form-group input::placeholder { color: #9ca3af; }
+
+    /* Error */
+    .login-error {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #b91c1c;
+      margin-bottom: 16px;
+    }
+    .login-error.show { display: flex; }
+
+    /* Submit */
+    .btn-login {
+      width: 100%;
+      padding: 11px;
+      background: #1B3A5C;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      margin-top: 4px;
+    }
+    .btn-login:hover  { background: #14304f; }
+    .btn-login:active { background: #0e2540; }
+    .btn-login:disabled { opacity: .6; cursor: not-allowed; }
+
+    /* Footer */
+    .login-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <!-- Brand -->
+    <div class="login-brand">
+      <div class="login-brand__logo">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8M12 17v4"/>
+        </svg>
+      </div>
+      <div class="login-brand__name">KTI SmartCare</div>
+      <div class="login-brand__sub">Preventive Maintenance System</div>
+    </div>
+
+    <!-- Card -->
+    <div class="login-card">
+      <div class="login-card__title">Masuk ke akun Anda</div>
+      <div class="login-card__sub">Gunakan NIK dan password yang terdaftar</div>
+
+      <div class="login-error" id="loginError">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="loginErrorText">NIK atau password salah.</span>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="nikInput">NIK</label>
+          <input type="text" id="nikInput" name="nik" placeholder="Masukkan NIK Anda"
+            autocomplete="username" inputmode="numeric" required />
+        </div>
+        <div class="form-group">
+          <label for="pwInput">Password</label>
+          <input type="password" id="pwInput" name="password" placeholder="••••••••"
+            autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-login" id="loginBtn">Masuk</button>
+      </form>
+    </div>
+
+    <div class="login-footer">KTI SmartCare &copy; 2026</div>
+  </div>
+
+  <script>
+    // If already logged in and token still valid, go straight to dashboard
+    (function () {
+      // Clean up the old auto-login key if present
+      localStorage.removeItem('admin_token');
+
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (!payload.exp || payload.exp * 1000 > Date.now()) {
+          window.location.replace('/');
+        }
+      } catch (e) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    })();
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const nik      = document.getElementById('nikInput').value.trim();
+      const password = document.getElementById('pwInput').value;
+      const btn      = document.getElementById('loginBtn');
+      const errBox   = document.getElementById('loginError');
+      const errText  = document.getElementById('loginErrorText');
+
+      errBox.classList.remove('show');
+      btn.disabled    = true;
+      btn.textContent = 'Masuk...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nik, password }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          errText.textContent = data.error || 'NIK atau password salah.';
+          errBox.classList.add('show');
+          return;
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/';
+      } catch (err) {
+        errText.textContent = 'Tidak dapat terhubung ke server. Coba lagi.';
+        errBox.classList.add('show');
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Masuk';
+      }
+    }
+  </script>
+</body>
+</html>
