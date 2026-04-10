@@ -39,9 +39,9 @@ const plants = [
   { plantId: 'I-22L002', plantName: 'Re-use Plant', shortName: 'Re-use', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 2 },
   { plantId: 'I-22L003', plantName: 'Waduk', shortName: 'Waduk', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 3 },
   { plantId: 'I-22L004', plantName: 'Cipasauran', shortName: 'Cipasauran', city: 'Serang', centerLat: null, centerLon: null, zoom: 17, sortOrder: 4 },
-  { plantId: 'P-22L006', plantName: 'WTP Cidanau', shortName: 'WTP Cidanau', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 6 },
-  { plantId: 'P-22L007', plantName: 'WTP Krenceng', shortName: 'WTP Krenceng', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 7 },
-  { plantId: 'P-22L019', plantName: 'Pos Keamanan', shortName: 'Pos', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 8 },
+  { plantId: 'P-22L006', plantName: 'WTP Cidanau', shortName: 'WTP Cidanau', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 5 },
+  { plantId: 'P-22L007', plantName: 'WTP Krenceng', shortName: 'WTP Krenceng', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 6 },
+  { plantId: 'P-22L019', plantName: 'Pos Keamanan', shortName: 'Pos', city: 'Cilegon', centerLat: null, centerLon: null, zoom: 17, sortOrder: 7 },
 ];
 
 

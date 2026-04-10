@@ -26,4 +26,18 @@ const login = async (req, res) => {
   });
 };
 
-module.exports = { login };
+const registerFcmToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    if (!fcmToken) {
+      return res.status(400).json({ error: 'fcmToken required' });
+    }
+    const userId = req.user.userId; // set by verifyToken middleware
+    await User.update({ fcmToken }, { where: { id: userId } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { login, registerFcmToken };

@@ -9,3 +9,5 @@ storage/*
 /docs
 /exceldata
 /preventive_field.md
+
+serviceAccountKey.json

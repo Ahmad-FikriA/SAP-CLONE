@@ -9,6 +9,8 @@ const Equipment = require('../../models/Equipment');
 const { GeneralTaskList, GeneralTaskListActivity } = require('../../models/GeneralTaskList');
 const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping');
 const { LembarKerjaSpk } = require('../../models/LembarKerja'); // kept for destroySpksByNumbers cleanup
+const NotificationService = require('../../services/notificationService');
+const User = require('../../models/User');
 
 /**
  * Delete all child records for the given spkNumbers inside an existing transaction,
@@ -173,6 +175,26 @@ const create = async (req, res) => {
     for (const eq of equipmentModels) await SpkEquipment.create({ ...eq, spkNumber }, { transaction: t });
     for (const act of activitiesModel) await SpkActivity.create({ ...act, spkNumber }, { transaction: t });
     await t.commit();
+
+    // Notify Teknisi of the matching discipline
+    const targetRole = CATEGORY_TEKNISI_ROLE[spk.category];
+    if (targetRole) {
+      const teknisiUsers = await User.findAll({
+        where: { role: targetRole },
+        attributes: ['id'],
+      });
+      if (teknisiUsers.length > 0) {
+        await NotificationService.notify({
+          module: 'preventive',
+          type: 'spk_created',
+          title: 'Ada SPK Baru',
+          body: `SPK ${spk.spkNumber} (${spk.category}) telah dibuat`,
+          data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+          recipientIds: teknisiUsers.map((u) => u.id),
+        });
+      }
+    }
+
     const fresh = await Spk.findByPk(spkNumber, { include: INCLUDE_FULL });
     res.status(201).json(fmt(fresh));
   } catch (err) { await t.rollback(); throw err; }
@@ -264,6 +286,23 @@ const submit = async (req, res) => {
     }, { transaction: t });
 
     await t.commit();
+
+    // Notify all Kasie
+    const kasieUsers = await User.findAll({
+      where: { role: ['supervisor', 'kepala_seksi', 'kasie'] },
+      attributes: ['id'],
+    });
+    if (kasieUsers.length > 0) {
+      await NotificationService.notify({
+        module: 'preventive',
+        type: 'spk_submitted',
+        title: 'SPK Menunggu Persetujuan',
+        body: `SPK ${spk.spkNumber} telah disubmit dan menunggu persetujuan Kasie`,
+        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        recipientIds: kasieUsers.map((u) => u.id),
+      });
+    }
+
     res.json({ message: 'SPK submitted', spkNumber: spk.spkNumber, submissionId: subId });
   } catch (err) { await t.rollback(); throw err; }
 };
@@ -355,6 +394,13 @@ const generateFromTaskList = async (req, res) => {
   } catch (err) { await t.rollback(); throw err; }
 };
 
+const CATEGORY_TEKNISI_ROLE = {
+  Mekanik: 'teknisi_mekanik',
+  Listrik: 'teknisi_listrik',
+  Sipil: 'teknisi_sipil',
+  Otomasi: 'teknisi_otomasi',
+};
+
 // Kadis funcloc routing map
 const KADIS_FUNCLOC_MAP = [
   { pattern: /PS I Cidanau|PS II Waduk/i,                         role: 'kadis_air_baku' },
@@ -391,6 +437,22 @@ const approveKasie = async (req, res) => {
     kasieApprovedAt: new Date(),
   });
 
+  // Notify Kadis Perawatan
+  const kadisPerawatanUsers = await User.findAll({
+    where: { role: 'kadis_perawatan' },
+    attributes: ['id'],
+  });
+  if (kadisPerawatanUsers.length > 0) {
+    await NotificationService.notify({
+      module: 'preventive',
+      type: 'spk_approved_kasie',
+      title: 'SPK Disetujui Kasie',
+      body: `SPK ${spk.spkNumber} telah disetujui Kasie dan menunggu Kadis Perawatan`,
+      data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+      recipientIds: kadisPerawatanUsers.map((u) => u.id),
+    });
+  }
+
   const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
   res.json(fmt(fresh));
 };
@@ -413,6 +475,30 @@ const approveKadisPerawatan = async (req, res) => {
     kadisPerawatanApprovedBy: req.user.userId,
     kadisPerawatanApprovedAt: new Date(),
   });
+
+  // Notify the correct Kadis using KADIS_FUNCLOC_MAP
+  const spkWithEquip = await Spk.findOne({
+    where: { spkNumber: spk.spkNumber },
+    include: [{ model: SpkEquipment, as: 'equipmentModels' }],
+  });
+  const funcLoc = spkWithEquip?.equipmentModels?.[0]?.functionalLocation ?? '';
+  const kadisEntry = KADIS_FUNCLOC_MAP.find((e) => e.pattern.test(funcLoc));
+  if (kadisEntry) {
+    const kadisUsers = await User.findAll({
+      where: { role: kadisEntry.role },
+      attributes: ['id'],
+    });
+    if (kadisUsers.length > 0) {
+      await NotificationService.notify({
+        module: 'preventive',
+        type: 'spk_approved_kadis_perawatan',
+        title: 'SPK Menunggu Persetujuan Kadis',
+        body: `SPK ${spk.spkNumber} telah disetujui Kadis Perawatan dan menunggu Kadis`,
+        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        recipientIds: kadisUsers.map((u) => u.id),
+      });
+    }
+  }
 
   const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
   res.json(fmt(fresh));
@@ -445,6 +531,28 @@ const approveKadis = async (req, res) => {
     kadisApprovedBy: req.user.userId,
     kadisApprovedAt: new Date(),
   });
+
+  // Notify the Teknisi who submitted (submittedBy stores NIK)
+  const submittedSpk = await Spk.findOne({
+    where: { spkNumber: spk.spkNumber },
+    attributes: ['submittedBy'],
+  });
+  if (submittedSpk?.submittedBy) {
+    const submitter = await User.findOne({
+      where: { nik: submittedSpk.submittedBy },
+      attributes: ['id'],
+    });
+    if (submitter) {
+      await NotificationService.notify({
+        module: 'preventive',
+        type: 'spk_fully_approved',
+        title: 'SPK Telah Disetujui',
+        body: `SPK ${spk.spkNumber} telah mendapat persetujuan penuh`,
+        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        recipientIds: [submitter.id],
+      });
+    }
+  }
 
   const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
   res.json(fmt(fresh));

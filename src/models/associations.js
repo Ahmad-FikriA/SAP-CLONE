@@ -30,6 +30,7 @@ const PreventiveWeekSchedule = require("./PreventiveWeekSchedule");
 const Notification = require("./Notification");
 const SpkCorrective = require("./SpkCorrective");
 const { SpkCorrectiveItem, SpkCorrectivePhoto } = require("./SpkCorrectiveItem");
+const PushNotification = require("./PushNotification");
 
 // ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
 Plant.hasMany(Equipment, { foreignKey: "plantId", as: "equipment" });
@@ -216,6 +217,10 @@ SuratPelanggaran.belongsTo(InspectionFollowUp, {
   as: "followUp",
 });
 
+// ── PushNotification ↔ User ──────────────────────────────────────────────────
+PushNotification.belongsTo(User, { foreignKey: 'recipient_id', as: 'recipient' });
+User.hasMany(PushNotification, { foreignKey: 'recipient_id', as: 'pushNotifications' });
+
 // ── FunctionalLocation (self-referencing tree) ────────────────────────────────
 FunctionalLocation.hasMany(FunctionalLocation, {
   foreignKey: "parentId",
@@ -288,4 +293,5 @@ module.exports = {
   EquipmentIntervalMapping,
   SupervisiJob,
   SupervisiVisit,
+  PushNotification,
 };
