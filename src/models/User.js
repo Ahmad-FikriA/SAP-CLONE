@@ -17,6 +17,11 @@ const User = sequelize.define('User', {
   divisi:   { type: DataTypes.STRING(100), allowNull: false },
   email:    { type: DataTypes.STRING(100), allowNull: true },
   group:    { type: DataTypes.STRING(100), allowNull: true },
+  fcmToken: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    field: 'fcm_token',
+  },
 }, {
   tableName: 'users',
   underscored: true,
