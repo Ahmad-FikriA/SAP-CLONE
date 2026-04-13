@@ -70,9 +70,15 @@ const Notification = sequelize.define('Notification', {
     field: 'photo_2',
   },
   status: {
-    type: DataTypes.ENUM('draft', 'submitted', 'spk_created', 'closed'),
+    type: DataTypes.ENUM('draft', 'submitted', 'menunggu_review_awal_kadis_pp', 'approved', 'ditolak_kadis_pp_awal', 'spk_created', 'closed'),
     allowNull: false,
     defaultValue: 'draft',
+  },
+  approvalStatus: {
+    type: DataTypes.ENUM('pending', 'menunggu_review_awal_kadis_pp', 'ditolak_kadis_pp_awal', 'approved', 'rejected', 'spk_masuk', 'spk_issued', 'eksekusi', 'menunggu_review_kadis_pp', 'menunggu_review_kadis_pelapor'),
+    allowNull: true,
+    defaultValue: 'pending',
+    field: 'approval_status',
   },
   // Work Center untuk routing ke teknisi yang tepat
   workCenter: {

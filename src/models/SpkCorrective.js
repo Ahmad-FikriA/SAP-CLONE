@@ -116,16 +116,6 @@ const SpkCorrective = sequelize.define('SpkCorrective', {
     field: 'total_actual_hour',
   },
   // Approval fields
-  kasieApprovedBy: {
-    type: DataTypes.STRING(20),
-    allowNull: true,
-    field: 'kasie_approved_by',
-  },
-  kasieApprovedAt: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    field: 'kasie_approved_at',
-  },
   kadisPusatApprovedBy: {
     type: DataTypes.STRING(20),
     allowNull: true,
@@ -147,7 +137,7 @@ const SpkCorrective = sequelize.define('SpkCorrective', {
     field: 'kadis_pelapor_approved_at',
   },
   status: {
-    type: DataTypes.ENUM('draft', 'in_progress', 'awaiting_kasie', 'awaiting_kadis_pusat', 'awaiting_kadis_pelapor', 'completed', 'rejected'),
+    type: DataTypes.ENUM('draft', 'in_progress', 'awaiting_kadis_pusat', 'awaiting_kadis_pelapor', 'completed', 'rejected'),
     allowNull: false,
     defaultValue: 'draft',
   },

@@ -64,6 +64,12 @@ router.delete('/requests/:id', verifyToken, canViewNotification, reqCtrl.remove)
 // POST /api/corrective/requests/bulk-delete
 router.post('/requests/bulk-delete', verifyToken, reqCtrl.bulkDelete);
 
+// POST /api/corrective/requests/:id/approve
+router.post('/requests/:id/approve', verifyToken, reqCtrl.approveKadisPusat);
+
+// POST /api/corrective/requests/:id/reject
+router.post('/requests/:id/reject', verifyToken, reqCtrl.rejectKadisPusat);
+
 // ── Corrective SPK ────────────────────────────────────────────────────────────
 // GET /api/corrective/spk
 // Rules: Teknisi/Kasie (own work center), Planner (all), Kadis Pusat (all), Kadis Pelapor (own)
@@ -92,10 +98,6 @@ router.post('/spk/:spkId/upload-after-photos', verifyToken, canViewSpkCorrective
 // PUT /api/corrective/spk/:spkId/update-by-teknisi
 // Rules: Teknisi can only update specific fields
 router.put('/spk/:spkId/update-by-teknisi', verifyToken, canViewSpkCorrective, validateSpkUpdate(TEKNISI_FIELDS), spkCtrl.updateByTeknisi);
-
-// ── Kasie Actions ────────────────────────────────────────────────────────────
-// POST /api/corrective/spk/:spkId/approve-kasie
-router.post('/spk/:spkId/approve-kasie', verifyToken, canViewSpkCorrective, spkCtrl.approveKasie);
 
 // ── Kadis Pusat Actions ─────────────────────────────────────────────────────
 // POST /api/corrective/spk/:spkId/approve-kadis-pusat

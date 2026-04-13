@@ -198,8 +198,6 @@ const TEKNISI_FIELDS = [
   'beforePhotos', 'afterPhotos'
 ];
 
-const KASIE_FIELDS = ['kasieApprovedBy', 'kasieApprovedAt', 'status'];
-
 const KADIS_PUSAT_FIELDS = ['kadisPusatApprovedBy', 'kadisPusatApprovedAt', 'status'];
 
 const KADIS_PELAPOR_FIELDS = ['kadisPelaporApprovedBy', 'kadisPelaporApprovedAt', 'status'];
@@ -212,7 +210,6 @@ module.exports = {
   validateSpkUpdate,
   PLANNER_FIELDS,
   TEKNISI_FIELDS,
-  KASIE_FIELDS,
   KADIS_PUSAT_FIELDS,
   KADIS_PELAPOR_FIELDS,
   KADIS_ROLE,
