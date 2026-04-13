@@ -22,6 +22,7 @@ function verifyToken(req, res, next) {
       nik: decoded.nik,
       role: decoded.role,
       dinas: decoded.dinas || null,
+      group: decoded.group || null,
     };
     next();
   } catch (err) {

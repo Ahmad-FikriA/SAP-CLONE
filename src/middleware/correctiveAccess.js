@@ -41,11 +41,13 @@ const requireKadis = (req, res, next) => {
  */
 const canViewNotification = async (req, res, next) => {
   try {
-    const { userId, role } = req.user;
+    const { userId, role, group } = req.user;
     const { id } = req.params;
     
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    
     // Planner and Kadis Pusat can view all
-    if (role === 'planner' || role === KADIS_PUSAT_ROLE) {
+    if (role === 'planner' || isPlannerGroup || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
@@ -77,11 +79,14 @@ const canViewNotification = async (req, res, next) => {
  * Check if user can create SPK Corrective (must be Planner or admin)
  */
 const requirePlanner = (req, res, next) => {
-  const { role } = req.user;
+  const { role, group } = req.user;
   
   if (role === 'admin') return next();
 
-  if (role !== 'planner') {
+  // Cek apakah user ada di grup perencanaan
+  const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+
+  if (role !== 'planner' && !isPlannerGroup) {
     return res.status(403).json({
       error: 'Access denied. Only Planner can create SPK Corrective.'
     });
@@ -101,11 +106,13 @@ const requirePlanner = (req, res, next) => {
  */
 const canViewSpkCorrective = async (req, res, next) => {
   try {
-    const { userId, role, dinas } = req.user;
+    const { userId, role, dinas, group } = req.user;
     const { spkId } = req.params;
     
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    
     // Planner, Admin, and Kadis Pusat can view all
-    if (role === 'planner' || role === 'admin' || role === KADIS_PUSAT_ROLE) {
+    if (role === 'planner' || isPlannerGroup || role === 'admin' || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
