@@ -156,7 +156,7 @@ function openSpkPanel(notificationId) {
   document.getElementById('f_notificationId').value = req.id;
   document.getElementById('f_equipmentId').value = req.equipment || '';
   document.getElementById('f_location').value = req.functionalLocation || '';
-  document.getElementById('f_jobDescription').value = req.description + '\\n' + (req.longText || '');
+  document.getElementById('f_jobDescription').value = req.description + (req.longText ? '\n' + req.longText : '');
   
   if (req.workCenter) {
     document.getElementById('f_workCenter').value = req.workCenter;
@@ -196,12 +196,12 @@ function openSpkEditPanel(spkId) {
   }
   document.getElementById('f_orderNumber').value = spk.orderNumber || '';
   document.getElementById('f_spkNumber').value = spk.spkNumber || spk.spkId;
-  document.getElementById('f_priority').value = spk.priority || 'medium';
+  document.getElementById('f_priority').value = spk.priority || '';
   document.getElementById('f_damageClassification').value = spk.damageClassification || '';
-  document.getElementById('f_ctrlKey').value = spk.ctrlKey || 'PM01';
-  document.getElementById('f_unit').value = spk.unit || 'HR';
-  document.getElementById('f_plannedWorker').value = spk.plannedWorker || 1;
-  document.getElementById('f_plannedHourPerWorker').value = spk.plannedHourPerWorker || 2;
+  document.getElementById('f_ctrlKey').value = spk.ctrlKey || '';
+  document.getElementById('f_unit').value = spk.unit || '';
+  document.getElementById('f_plannedWorker').value = spk.plannedWorker || '';
+  document.getElementById('f_plannedHourPerWorker').value = spk.plannedHourPerWorker || '';
 
   // restore items
   if (spk.items && spk.items.length > 0) {
