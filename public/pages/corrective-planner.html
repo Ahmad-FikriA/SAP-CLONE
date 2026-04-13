@@ -67,6 +67,7 @@
     </div>
     <div class="panel__body" id="panelBody">
       <form id="spkForm" class="form-grid">
+        <input type="hidden" id="f_spkId" />
         <input type="hidden" id="f_notificationId" />
         <input type="hidden" id="f_equipmentId" />
         <input type="hidden" id="f_location" />
@@ -155,6 +156,22 @@
     <div class="panel__footer">
       <button class="btn btn-ghost" onclick="closePanel()">Batal</button>
       <button class="btn btn-primary" id="panelSave" onclick="saveSpk()">Simpan SPK</button>
+    </div>
+  </div>
+
+  <!-- Modal Detail SPK -->
+  <div class="panel" id="detailPanel" style="width: 500px; z-index: 1002;">
+    <div class="panel__header">
+      <span class="panel__title">Detail SPK Corrective</span>
+      <button class="panel__close" onclick="closeDetailPanel()">✕</button>
+    </div>
+    <div class="panel__body">
+      <div style="font-size: 14px; color: var(--text-primary); line-height: 1.6;" id="detailContent">
+        <!-- Content injected via JS -->
+      </div>
+    </div>
+    <div class="panel__footer">
+      <button class="btn btn-primary" onclick="closeDetailPanel()">Tutup</button>
     </div>
   </div>
 

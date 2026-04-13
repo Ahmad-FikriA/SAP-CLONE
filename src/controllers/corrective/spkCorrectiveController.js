@@ -492,9 +492,80 @@ const getHistory = async (req, res) => {
   res.json(data.map(fmtSpk));
 };
 
+// PUT /api/corrective/spk/:spkId
+// Planner can update SPK if status is still draft
+const updateByPlanner = async (req, res) => {
+  const spk = await SpkCorrective.findByPk(req.params.spkId);
+  if (!spk) return res.status(404).json({ error: 'SPK Corrective not found' });
+
+  if (spk.status !== 'draft') {
+    return res.status(400).json({ error: 'Cannot edit SPK that is no longer in draft status' });
+  }
+
+  const {
+    orderNumber,
+    priority,
+    equipmentId,
+    location,
+    requestedFinishDate,
+    damageClassification,
+    jobDescription,
+    workCenter,
+    ctrlKey,
+    unit,
+    plannedWorker,
+    plannedHourPerWorker,
+    items,
+  } = req.body;
+
+  const totalPlannedHour = plannedWorker && plannedHourPerWorker
+    ? plannedWorker * plannedHourPerWorker
+    : spk.totalPlannedHour;
+
+  const t = await sequelize.transaction();
+  try {
+    await spk.update({
+      orderNumber: orderNumber !== undefined ? orderNumber : spk.orderNumber,
+      priority: priority !== undefined ? priority : spk.priority,
+      equipmentId: equipmentId !== undefined ? equipmentId : spk.equipmentId,
+      location: location !== undefined ? location : spk.location,
+      requestedFinishDate: requestedFinishDate !== undefined ? requestedFinishDate : spk.requestedFinishDate,
+      damageClassification: damageClassification !== undefined ? damageClassification : spk.damageClassification,
+      jobDescription: jobDescription !== undefined ? jobDescription : spk.jobDescription,
+      workCenter: workCenter !== undefined ? workCenter : spk.workCenter,
+      ctrlKey: ctrlKey !== undefined ? ctrlKey : spk.ctrlKey,
+      unit: unit !== undefined ? unit : spk.unit,
+      plannedWorker: plannedWorker !== undefined ? plannedWorker : spk.plannedWorker,
+      plannedHourPerWorker: plannedHourPerWorker !== undefined ? plannedHourPerWorker : spk.plannedHourPerWorker,
+      totalPlannedHour: totalPlannedHour,
+    }, { transaction: t });
+
+    // Handle items (delete existing and insert new if provided)
+    if (items && Array.isArray(items)) {
+      await SpkCorrectiveItem.destroy({ where: { spkId: spk.spkId }, transaction: t });
+      for (const item of items) {
+        await SpkCorrectiveItem.create({
+          spkId: spk.spkId,
+          itemType: item.itemType || 'material',
+          itemName: item.itemName,
+          quantity: item.quantity || 1,
+          uom: item.uom || 'pcs',
+        }, { transaction: t });
+      }
+    }
+
+    await t.commit();
+    const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
+    res.json(fmtSpk(fresh));
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
+};
+
 module.exports = {
   getAll, getOne, create, remove, bulkDelete,
   uploadBeforePhotos, uploadAfterPhotos, updateByTeknisi,
   approveKadisPusat, approveKadisPelapor, reject,
-  getHistory,
+  getHistory, updateByPlanner,
 };

@@ -116,7 +116,8 @@ async function loadSpk() {
           <td><span class="badge badge-error" style="background:var(--bg-body);color:currentColor">${escHtml(spk.priority)}</span></td>
           <td>${statusBadge(spk.status)}</td>
           <td>
-             ${spk.status === 'draft' ? `<button class="btn btn-ghost btn-sm" onclick="deleteSpk('${spk.spkId}')">Hapus</button>` : `<span style="font-size: 13px; color: var(--text-muted);">-</span>`}
+             <button class="btn btn-ghost btn-sm" onclick="showSpkDetail('${spk.spkId}')">Detail</button>
+             ${spk.status === 'draft' ? `<button class="btn btn-ghost btn-sm" onclick="openSpkEditPanel('${spk.spkId}')">Edit</button> <button class="btn btn-ghost btn-sm" style="color:var(--danger-color)" onclick="deleteSpk('${spk.spkId}')">Hapus</button>` : ``}
           </td>
         </tr>
       `).join('');
@@ -148,6 +149,9 @@ function openSpkPanel(notificationId) {
 
   document.getElementById('spkForm').reset();
   document.getElementById('spkItemsBody').innerHTML = '';
+  document.getElementById('f_spkId').value = ''; // Generate fresh SPK
+  
+  document.getElementById('panelTitle').textContent = 'Generate SPK Corrective';
 
   document.getElementById('f_notificationId').value = req.id;
   document.getElementById('f_equipmentId').value = req.equipment || '';
@@ -170,6 +174,94 @@ function openSpkPanel(notificationId) {
   }
 
   openPanel();
+}
+
+function openSpkEditPanel(spkId) {
+  const spk = allSpks.find(s => s.spkId === spkId);
+  if (!spk) return;
+
+  document.getElementById('spkForm').reset();
+  document.getElementById('spkItemsBody').innerHTML = '';
+  document.getElementById('f_spkId').value = spk.spkId;
+  document.getElementById('panelTitle').textContent = 'Edit SPK Corrective';
+
+  document.getElementById('f_notificationId').value = spk.notificationId;
+  document.getElementById('f_equipmentId').value = spk.equipmentId || '';
+  document.getElementById('f_location').value = spk.location || '';
+  document.getElementById('f_jobDescription').value = spk.jobDescription || '';
+  document.getElementById('f_workCenter').value = spk.workCenter || '';
+  
+  if (spk.requestedFinishDate) {
+    document.getElementById('f_requestedFinishDate').value = spk.requestedFinishDate.substring(0, 10);
+  }
+  document.getElementById('f_orderNumber').value = spk.orderNumber || '';
+  document.getElementById('f_spkNumber').value = spk.spkNumber || spk.spkId;
+  document.getElementById('f_priority').value = spk.priority || 'medium';
+  document.getElementById('f_damageClassification').value = spk.damageClassification || '';
+  document.getElementById('f_ctrlKey').value = spk.ctrlKey || 'PM01';
+  document.getElementById('f_unit').value = spk.unit || 'HR';
+  document.getElementById('f_plannedWorker').value = spk.plannedWorker || 1;
+  document.getElementById('f_plannedHourPerWorker').value = spk.plannedHourPerWorker || 2;
+
+  // restore items
+  if (spk.items && spk.items.length > 0) {
+    spk.items.forEach(i => {
+      addSpkItem();
+      const lastTr = document.getElementById('spkItemsBody').lastElementChild;
+      lastTr.querySelector('.item-type').value = i.itemType;
+      lastTr.querySelector('.item-name').value = i.itemName;
+      lastTr.querySelector('.item-qty').value = i.quantity;
+      lastTr.querySelector('.item-uom').value = i.uom;
+    });
+  }
+
+  openPanel();
+}
+
+function showSpkDetail(spkId) {
+  const spk = allSpks.find(s => s.spkId === spkId);
+  if (!spk) return;
+  document.getElementById('detailContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div><strong>SPK Number:</strong> ${escHtml(spk.spkNumber || spk.spkId)}</div>
+      <div><strong>Order Number:</strong> ${escHtml(spk.orderNumber || '-')}</div>
+      <div><strong>Equipment ID:</strong> ${escHtml(spk.equipmentId || '-')}</div>
+      <div><strong>Work Center:</strong> ${escHtml(spk.workCenter || '-')}</div>
+      <div><strong>Status:</strong> <span style="text-transform:capitalize;font-weight:600">${spk.status.replace(/_/g, ' ')}</span></div>
+      <div><strong>Priority:</strong> <span style="text-transform:capitalize">${spk.priority}</span></div>
+      <div><strong>Target Finish:</strong> ${formatDate(spk.requestedFinishDate)}</div>
+      <div><strong>Actual Start:</strong> ${spk.actualStartDate ? formatDate(spk.actualStartDate) : '-'}</div>
+      <div><strong>Workers / Durasi:</strong> 
+         ${spk.actualWorker ?? spk.plannedWorker ?? '-'} org x 
+         ${spk.actualHourPerWorker ?? spk.plannedHourPerWorker ?? '-'} jam
+      </div>
+      <div><strong>Total Durasi:</strong> ${spk.totalActualHour ?? spk.totalPlannedHour ?? '-'} jam</div>
+      <div style="grid-column:1/-1;border-top:1px solid var(--border-color);padding-top:12px;">
+         <strong>Job Description:</strong><br/>
+         <div style="white-space: pre-wrap; font-family: monospace; font-size: 13px; color: var(--text-muted);">${escHtml(spk.jobDescription || '-')}</div>
+      </div>
+      
+      ${spk.jobResultDescription ? `
+      <div style="grid-column:1/-1;border-top:1px solid var(--border-color);padding-top:12px;">
+         <strong>Job Result Description:</strong><br/>
+         <div style="white-space: pre-wrap; font-family: monospace; font-size: 13px; color: var(--text-muted);">${escHtml(spk.jobResultDescription)}</div>
+      </div>` : ''}
+    </div>
+
+    <strong>Materials & Tools:</strong>
+    <table class="items-table" style="margin-top:8px">
+      <tr><th>Type</th><th>Name</th><th>Qty</th><th>UOM</th></tr>
+      ${(spk.items || []).map(i => `<tr><td>${i.itemType}</td><td>${escHtml(i.itemName)}</td><td>${i.quantity}</td><td>${i.uom}</td></tr>`).join('')}
+      ${(!spk.items || spk.items.length === 0) ? '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">No items/materials planned.</td></tr>' : ''}
+    </table>
+  `;
+  document.getElementById('detailPanel').classList.add('visible');
+  document.getElementById('overlay').classList.add('visible');
+}
+
+function closeDetailPanel() {
+  document.getElementById('detailPanel').classList.remove('visible');
+  document.getElementById('overlay').classList.remove('visible');
 }
 
 function addSpkItem() {
@@ -229,8 +321,17 @@ async function saveSpk() {
   };
 
   try {
-    await apiPost('/corrective/spk', payload);
-    showMessage('SPK Corrective berhasil dibuat!');
+    const editId = document.getElementById('f_spkId').value;
+    if (editId) {
+      // Logic edit SPK
+      await apiPut('/corrective/spk/' + editId, payload);
+      showMessage('SPK Corrective berhasil diperbarui!');
+    } else {
+      // Logic generate baru
+      await apiPost('/corrective/spk', payload);
+      showMessage('SPK Corrective berhasil dibuat!');
+    }
+    
     closePanel();
     refreshData();
   } catch (err) {
