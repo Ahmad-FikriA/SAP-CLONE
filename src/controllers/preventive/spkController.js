@@ -176,13 +176,15 @@ const create = async (req, res) => {
     for (const act of activitiesModel) await SpkActivity.create({ ...act, spkNumber }, { transaction: t });
     await t.commit();
 
-    // Notify Teknisi of the matching discipline
-    const targetRole = CATEGORY_TEKNISI_ROLE[spk.category];
-    if (targetRole) {
+    // Notify Teknisi of the matching discipline — filter by group keyword
+    const groupKeyword = CATEGORY_GROUP_MAP[spk.category];
+    console.log(`[SPK notify] category=${spk.category} groupKeyword=${groupKeyword}`);
+    if (groupKeyword) {
       const teknisiUsers = await User.findAll({
-        where: { role: targetRole },
-        attributes: ['id'],
+        where: { role: 'teknisi', group: { [Op.like]: `%${groupKeyword}%` } },
+        attributes: ['id', 'fcmToken'],
       });
+      console.log(`[SPK notify] found ${teknisiUsers.length} teknisi, tokens: ${teknisiUsers.map(u => u.fcmToken ? 'OK' : 'NULL').join(', ')}`);
       if (teknisiUsers.length > 0) {
         await NotificationService.notify({
           module: 'preventive',
@@ -394,25 +396,27 @@ const generateFromTaskList = async (req, res) => {
   } catch (err) { await t.rollback(); throw err; }
 };
 
-const CATEGORY_TEKNISI_ROLE = {
-  Mekanik: 'teknisi_mekanik',
-  Listrik: 'teknisi_listrik',
-  Sipil: 'teknisi_sipil',
-  Otomasi: 'teknisi_otomasi',
+// Maps SPK category → teknisi group keyword in DB
+// All teknisi have role='teknisi', discipline is stored in `group` field
+const CATEGORY_GROUP_MAP = {
+  Mekanik: 'Mekanik',
+  Listrik: 'Elektrik',  // category='Listrik' but group='Elektrik' in DB
+  Sipil: 'Sipil',
+  Otomasi: 'Otomasi',
 };
 
-// Kadis funcloc routing map
+// Kadis funcloc routing map — keyed by dinas (bukan role variant)
 const KADIS_FUNCLOC_MAP = [
-  { pattern: /PS I Cidanau|PS II Waduk/i,                         role: 'kadis_air_baku' },
-  { pattern: /WTP Cidanau|Cipasauran/i,                            role: 'kadis_pengolahan_cidanau' },
-  { pattern: /Decanter|WTP Krenceng/i,                             role: 'kadis_pengolahan_krenceng' },
-  { pattern: /Pos Keamanan/i,                                       role: 'kadis_keamanan' },
+  { pattern: /PS I Cidanau|PS II Waduk/i,  dinas: 'Pengolahan Air Baku' },
+  { pattern: /WTP Cidanau|Cipasauran/i,     dinas: 'Pengolahan Air Cipasauran & Cidanau' },
+  { pattern: /Decanter|WTP Krenceng/i,      dinas: 'Pengolahan Air Kerenceng' },
+  { pattern: /Pos Keamanan/i,               dinas: 'Operasi Keamanan' },
 ];
 
-function getExpectedKadisRole(functionalLocation) {
+function getExpectedKadisDinas(functionalLocation) {
   if (!functionalLocation) return null;
   for (const entry of KADIS_FUNCLOC_MAP) {
-    if (entry.pattern.test(functionalLocation)) return entry.role;
+    if (entry.pattern.test(functionalLocation)) return entry.dinas;
   }
   return null;
 }
@@ -437,9 +441,9 @@ const approveKasie = async (req, res) => {
     kasieApprovedAt: new Date(),
   });
 
-  // Notify Kadis Perawatan
+  // Notify Kadis Perawatan — role='kadis' + dinas contains 'Pusat Perawatan'
   const kadisPerawatanUsers = await User.findAll({
-    where: { role: 'kadis_perawatan' },
+    where: { role: 'kadis', dinas: 'Pusat Perawatan' },
     attributes: ['id'],
   });
   if (kadisPerawatanUsers.length > 0) {
@@ -466,8 +470,9 @@ const approveKadisPerawatan = async (req, res) => {
   }
 
   const role = req.user?.role;
-  if (role !== 'kadis_perawatan') {
-    return res.status(403).json({ error: 'Only Kadis Perawatan can approve this step' });
+  const dinas = req.user?.dinas || '';
+  if (role !== 'kadis' || !dinas.toLowerCase().includes('pusat perawatan')) {
+    return res.status(403).json({ error: 'Only Kadis Perawatan (dinas: Pusat Perawatan) can approve this step' });
   }
 
   await spk.update({
@@ -485,7 +490,7 @@ const approveKadisPerawatan = async (req, res) => {
   const kadisEntry = KADIS_FUNCLOC_MAP.find((e) => e.pattern.test(funcLoc));
   if (kadisEntry) {
     const kadisUsers = await User.findAll({
-      where: { role: kadisEntry.role },
+      where: { role: 'kadis', dinas: kadisEntry.dinas },
       attributes: ['id'],
     });
     if (kadisUsers.length > 0) {
@@ -513,17 +518,16 @@ const approveKadis = async (req, res) => {
   }
 
   const role = req.user?.role;
-  // Validate Kadis funcloc routing
-  const funclocs = (spk.equipmentModels || []).map(e => e.functionalLocation).filter(Boolean);
-  const expectedRole = funclocs.length > 0 ? getExpectedKadisRole(funclocs[0]) : null;
-  if (expectedRole && role !== expectedRole) {
-    return res.status(403).json({ error: `This SPK requires approval from '${expectedRole}'` });
+  const dinas = req.user?.dinas || '';
+  if (role !== 'kadis') {
+    return res.status(403).json({ error: 'Only Kadis can approve this step' });
   }
 
-  // Fallback: if funcloc not mapped, any kadis role can approve
-  const kadisRoles = ['kadis_air_baku', 'kadis_pengolahan_cidanau', 'kadis_pengolahan_krenceng', 'kadis_keamanan', 'kepala_dinas', 'kepala_divisi'];
-  if (!kadisRoles.includes(role)) {
-    return res.status(403).json({ error: 'Only Kadis can approve this step' });
+  // Validate Kadis funcloc routing by dinas
+  const funclocs = (spk.equipmentModels || []).map(e => e.functionalLocation).filter(Boolean);
+  const expectedDinas = funclocs.length > 0 ? getExpectedKadisDinas(funclocs[0]) : null;
+  if (expectedDinas && !dinas.toLowerCase().includes(expectedDinas.toLowerCase())) {
+    return res.status(403).json({ error: `SPK ini memerlukan persetujuan Kadis dengan dinas '${expectedDinas}'` });
   }
 
   await spk.update({
