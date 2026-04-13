@@ -172,8 +172,8 @@ const create = async (req, res) => {
     kadisPelaporId: userId,
     submittedBy: userId,
     submittedAt: new Date(),
-    status: 'menunggu_review_awal_kadis_pp',
-    approvalStatus: 'menunggu_review_awal_kadis_pp',
+    status: 'submitted',
+    approvalStatus: 'pending',
     workCenter: workCenter || null,
   });
   
@@ -279,4 +279,23 @@ const bulkDelete = async (req, res) => {
   res.json({ message: `Deleted ${count} notification(s)` });
 };
 
-module.exports = { getAll, getOne, create, update, remove, bulkDelete, approveKadisPusat, rejectKadisPusat };
+// POST /api/corrective/requests/:id/approve-planner
+const approvePlanner = async (req, res) => {
+  const notification = await Notification.findByPk(req.params.id);
+  
+  if (!notification) return res.status(404).json({ error: 'Notification not found' });
+  
+  if (notification.status !== 'submitted' && notification.approvalStatus !== 'pending') {
+    return res.status(400).json({ error: 'Notification is not currently pending' });
+  }
+  
+  await notification.update({
+    status: 'approved',
+    approvalStatus: 'approved' 
+  });
+  
+  const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
+  res.json(fmtRequest(fresh));
+};
+
+module.exports = { getAll, getOne, create, update, remove, bulkDelete, approveKadisPusat, rejectKadisPusat, approvePlanner };

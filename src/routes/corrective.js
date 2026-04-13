@@ -64,6 +64,10 @@ router.delete('/requests/:id', verifyToken, canViewNotification, reqCtrl.remove)
 // POST /api/corrective/requests/bulk-delete
 router.post('/requests/bulk-delete', verifyToken, reqCtrl.bulkDelete);
 
+// POST /api/corrective/requests/:id/approve-planner
+// Rules: Planner changes pending to approved
+router.post('/requests/:id/approve-planner', verifyToken, requirePlanner, reqCtrl.approvePlanner);
+
 // POST /api/corrective/requests/:id/approve
 router.post('/requests/:id/approve', verifyToken, reqCtrl.approveKadisPusat);
 
