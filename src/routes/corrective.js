@@ -75,6 +75,9 @@ router.post('/requests/:id/reject', verifyToken, reqCtrl.rejectKadisPusat);
 // Rules: Teknisi/Kasie (own work center), Planner (all), Kadis Pusat (all), Kadis Pelapor (own)
 router.get('/spk', verifyToken, spkCtrl.getAll);
 
+// GET /api/corrective/spk/history
+router.get('/spk/history', verifyToken, spkCtrl.getHistory);
+
 // GET /api/corrective/spk/:spkId
 router.get('/spk/:spkId', verifyToken, canViewSpkCorrective, spkCtrl.getOne);
 
@@ -111,8 +114,5 @@ router.post('/spk/:spkId/approve-kadis-pelapor', verifyToken, canViewSpkCorrecti
 // POST /api/corrective/spk/:spkId/reject
 router.post('/spk/:spkId/reject', verifyToken, canViewSpkCorrective, spkCtrl.reject);
 
-// ── History ──────────────────────────────────────────────────────────────────
-// GET /api/corrective/spk/history
-router.get('/spk/history', verifyToken, spkCtrl.getHistory);
 
 module.exports = router;

@@ -463,10 +463,10 @@ const reject = async (req, res) => {
 };
 
 // GET /api/corrective/spk/history
-// Get completed SPK history for user's work center
+// Get completed and rejected SPK history for user's work center
 const getHistory = async (req, res) => {
   const { userId, role, workCenter } = req.user;
-  const where = { status: 'completed' };
+  const where = { status: { [Op.in]: ['completed', 'rejected'] } };
   
   // Teknisi/Kasie - only see their work center history
   if (WORK_CENTER_ROLES.includes(role) && workCenter) {
