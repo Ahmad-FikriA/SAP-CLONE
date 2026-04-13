@@ -6,6 +6,35 @@ const Notification = require('../../models/Notification');
 const { SpkCorrective, SpkCorrectiveItem, SpkCorrectivePhoto } = require('../../models/associations');
 const { KADIS_ROLE, KADIS_PUSAT_ROLE } = require('../../middleware/correctiveAccess');
 
+/**
+ * Normalize a date string to YYYY-MM-DD format.
+ * Accepts dd/MM/yyyy, yyyy-MM-dd, ISO 8601, or any JS-parseable date string.
+ * Returns null if the input is falsy or unparseable.
+ */
+function toDateOnly(raw) {
+  if (!raw) return null;
+  const str = String(raw).trim();
+  if (!str) return null;
+
+  // Try dd/MM/yyyy first (the format the mobile app sends)
+  const slashParts = str.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
+  if (slashParts) {
+    const [, day, month, year] = slashParts;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+  }
+
+  // Fallback: try native Date parsing (handles ISO, yyyy-MM-dd, etc.)
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().slice(0, 10);
+  }
+
+  return null; // unparseable → let the DB decide (will be NULL)
+}
+
 function fmtRequest(notif) {
   const n = notif.toJSON ? notif.toJSON() : notif;
   const spk = n.spkCorrective || {};
@@ -128,14 +157,14 @@ const create = async (req, res) => {
   
   await Notification.create({
     notificationId: id, // using correct primary key mapped to id in the payload
-    notificationDate,
+    notificationDate: toDateOnly(notificationDate),
     notificationType,
     description,
     functionalLocation,
     equipment,
     equipmentId,
-    requiredStart,
-    requiredEnd,
+    requiredStart: toDateOnly(requiredStart),
+    requiredEnd: toDateOnly(requiredEnd),
     reportedBy,
     longText,
     photo1: photoPaths[0] || null,
