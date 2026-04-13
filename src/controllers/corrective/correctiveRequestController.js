@@ -40,6 +40,8 @@ function fmtRequest(notif) {
     images,
     
     // SPK mapped fields
+    spkId: spk.spkId,
+    spkNumber: spk.spkNumber,
     priority: spk.priority,
     targetDate: spk.requestedFinishDate,
     classification: spk.damageClassification,
