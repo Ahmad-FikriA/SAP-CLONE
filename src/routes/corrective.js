@@ -85,6 +85,10 @@ router.get('/spk/:spkId', verifyToken, canViewSpkCorrective, spkCtrl.getOne);
 // Rules: Only Planner can create SPK from Notification
 router.post('/spk', verifyToken, requirePlanner, spkCtrl.create);
 
+// PUT /api/corrective/spk/:spkId
+// Rules: Only Planner can edit if SPK is still draft
+router.put('/spk/:spkId', verifyToken, requirePlanner, spkCtrl.updateByPlanner);
+
 // DELETE /api/corrective/spk/:spkId
 router.delete('/spk/:spkId', verifyToken, requirePlanner, spkCtrl.remove);
 

@@ -67,13 +67,14 @@
     </div>
     <div class="panel__body" id="panelBody">
       <form id="spkForm" class="form-grid">
+        <input type="hidden" id="f_spkId" />
         <input type="hidden" id="f_notificationId" />
         <input type="hidden" id="f_equipmentId" />
         <input type="hidden" id="f_location" />
         
         <div class="form-group">
           <label>Order Number</label>
-          <input type="text" class="form-control" id="f_orderNumber" placeholder="Cth: 1000283" required />
+          <input type="text" class="form-control" id="f_orderNumber" placeholder="Contoh: 1000283" required />
         </div>
         <div class="form-group">
           <label>SPK Number</label>
@@ -105,7 +106,7 @@
         </div>
         <div class="form-group">
           <label>Damage Classification</label>
-          <input type="text" class="form-control" id="f_damageClassification" placeholder="Cth: Major Leak" />
+          <input type="text" class="form-control" id="f_damageClassification" placeholder="Contoh: Major Leak, Minor Leak" />
         </div>
 
         <div class="form-group full">
@@ -116,20 +117,20 @@
         <!-- Estimates -->
         <div class="form-group">
           <label>Planned Workers</label>
-          <input type="number" class="form-control" id="f_plannedWorker" value="1" min="1" required />
+          <input type="number" class="form-control" id="f_plannedWorker" placeholder="Cth: 2" min="1" required />
         </div>
         <div class="form-group">
           <label>Hours per Worker</label>
-          <input type="number" step="0.5" class="form-control" id="f_plannedHourPerWorker" value="2" min="0.5" required />
+          <input type="number" step="0.5" class="form-control" id="f_plannedHourPerWorker" placeholder="Cth: 4" min="0.5" required />
         </div>
 
         <div class="form-group">
           <label>Ctrl Key</label>
-          <input type="text" class="form-control" id="f_ctrlKey" value="PM01" />
+          <input type="text" class="form-control" id="f_ctrlKey" placeholder="Cth: PM01" />
         </div>
         <div class="form-group">
           <label>Unit</label>
-          <input type="text" class="form-control" id="f_unit" value="HR" />
+          <input type="text" class="form-control" id="f_unit" placeholder="Cth: HR" />
         </div>
 
         <div class="form-group full">
@@ -155,6 +156,22 @@
     <div class="panel__footer">
       <button class="btn btn-ghost" onclick="closePanel()">Batal</button>
       <button class="btn btn-primary" id="panelSave" onclick="saveSpk()">Simpan SPK</button>
+    </div>
+  </div>
+
+  <!-- Modal Detail SPK -->
+  <div class="panel" id="detailPanel" style="width: 500px; z-index: 1002;">
+    <div class="panel__header">
+      <span class="panel__title">Detail SPK Corrective</span>
+      <button class="panel__close" onclick="closeDetailPanel()">✕</button>
+    </div>
+    <div class="panel__body">
+      <div style="font-size: 14px; color: var(--text-primary); line-height: 1.6;" id="detailContent">
+        <!-- Content injected via JS -->
+      </div>
+    </div>
+    <div class="panel__footer">
+      <button class="btn btn-primary" onclick="closeDetailPanel()">Tutup</button>
     </div>
   </div>
 
