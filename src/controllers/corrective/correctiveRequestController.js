@@ -161,7 +161,7 @@ const create = async (req, res) => {
     notificationType,
     description,
     functionalLocation,
-    equipment,
+    equipmentName: equipment, // Map from equipment to equipmentName in DB model
     equipmentId,
     requiredStart: toDateOnly(requiredStart),
     requiredEnd: toDateOnly(requiredEnd),
@@ -198,7 +198,14 @@ const update = async (req, res) => {
     }
   }
   
-  await notification.update(req.body);
+  // Transform mapped fields and dates for update
+  const payload = { ...req.body };
+  if (payload.equipment !== undefined) payload.equipmentName = payload.equipment;
+  if (payload.notificationDate) payload.notificationDate = toDateOnly(payload.notificationDate);
+  if (payload.requiredStart) payload.requiredStart = toDateOnly(payload.requiredStart);
+  if (payload.requiredEnd) payload.requiredEnd = toDateOnly(payload.requiredEnd);
+
+  await notification.update(payload);
   
   const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
   res.json(fmtRequest(fresh));
