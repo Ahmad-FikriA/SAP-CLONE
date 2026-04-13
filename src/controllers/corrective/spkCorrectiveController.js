@@ -185,7 +185,10 @@ const create = async (req, res) => {
     }
 
     // Update notification status
-    await notification.update({ status: 'spk_created' }, { transaction: t });
+    await notification.update({ 
+      status: 'spk_created',
+      approvalStatus: 'spk_issued'
+    }, { transaction: t });
 
     await t.commit();
 
@@ -206,7 +209,7 @@ const remove = async (req, res) => {
   try {
     // Update notification status back to submitted
     await Notification.update(
-      { status: 'submitted' },
+      { status: 'approved', approvalStatus: 'approved' },
       { where: { notificationId: spk.notificationId }, transaction: t }
     );
 
@@ -360,29 +363,6 @@ const updateByTeknisi = async (req, res) => {
   }
 };
 
-// POST /api/corrective/spk/:spkId/approve-kasie
-// Kasie approval
-const approveKasie = async (req, res) => {
-  const { userId } = req.user;
-  const spk = await SpkCorrective.findByPk(req.params.spkId);
-
-  if (!spk) return res.status(404).json({ error: 'SPK Corrective not found' });
-
-  if (spk.status !== 'in_progress') {
-    return res.status(400).json({ error: 'SPK must be in progress for Kasie approval' });
-  }
-
-  const now = new Date().toISOString();
-
-  await spk.update({
-    status: 'awaiting_kadis_pusat',
-    kasieApprovedBy: userId,
-    kasieApprovedAt: now,
-  });
-
-  const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
-  res.json(fmtSpk(fresh));
-};
 
 // POST /api/corrective/spk/:spkId/approve-kadis-pusat
 const approveKadisPusat = async (req, res) => {
@@ -515,6 +495,6 @@ const getHistory = async (req, res) => {
 module.exports = {
   getAll, getOne, create, remove, bulkDelete,
   uploadBeforePhotos, uploadAfterPhotos, updateByTeknisi,
-  approveKasie, approveKadisPusat, approveKadisPelapor, reject,
+  approveKadisPusat, approveKadisPelapor, reject,
   getHistory,
 };
