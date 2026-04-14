@@ -176,7 +176,7 @@
 
     status.textContent = 'Mengekspor...';
     try {
-      const token = localStorage.getItem('admin_token') || '';
+      const token = localStorage.getItem('token') || '';
       const res = await fetch(`/api/submissions/export?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

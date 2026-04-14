@@ -10,7 +10,7 @@ ssh-keygen -A
 npm install
 
 # Seed preventive tables (plants, equipment, SPK, LK) with corrected data
-# node src/preventive_seed.js
+#   
 
 
 # Start the Node.js application in development mode (nodemon) so it auto-restarts on code changes
