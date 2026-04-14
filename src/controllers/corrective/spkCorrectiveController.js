@@ -265,7 +265,7 @@ const uploadBeforePhotos = async (req, res) => {
       }, { transaction: t });
     }
 
-    await spk.update({ status: 'eksekusi' }, { transaction: t });
+    await spk.update({ status: 'in_progress' }, { transaction: t });
     await Notification.update(
       { approvalStatus: 'eksekusi' },
       { where: { notificationId: spk.notificationId }, transaction: t }
