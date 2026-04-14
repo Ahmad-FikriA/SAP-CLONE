@@ -67,11 +67,30 @@ async function notify({ module, type, title, body, data = {}, recipientIds = [] 
         tokens,
       };
       const response = await admin.messaging().sendEachForMulticast(fcmMessage);
+      const staleTokens = [];
       response.responses.forEach((r, i) => {
         if (!r.success) {
           console.error(`[NotificationService] FCM failed token=${tokens[i]}:`, r.error?.message);
+          // "registration-token-not-registered" and "invalid-registration-token"
+          // mean the token is permanently invalid — clear it from the DB.
+          const code = r.error?.code ?? '';
+          if (
+            code === 'messaging/registration-token-not-registered' ||
+            code === 'messaging/invalid-registration-token'
+          ) {
+            staleTokens.push(tokens[i]);
+          }
         }
       });
+      if (staleTokens.length > 0) {
+        await User.update(
+          { fcmToken: null },
+          { where: { fcmToken: staleTokens } }
+        ).catch((e) =>
+          console.error('[NotificationService] Failed to clear stale tokens:', e.message)
+        );
+        console.log(`[NotificationService] Cleared ${staleTokens.length} stale FCM token(s)`);
+      }
     }
 
     // 3. Persist one row per recipient (even those without FCM token)
