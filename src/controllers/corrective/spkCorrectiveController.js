@@ -265,6 +265,12 @@ const uploadBeforePhotos = async (req, res) => {
       }, { transaction: t });
     }
 
+    await spk.update({ status: 'eksekusi' }, { transaction: t });
+    await Notification.update(
+      { approvalStatus: 'eksekusi' },
+      { where: { notificationId: spk.notificationId }, transaction: t }
+    );
+
     await t.commit();
 
     const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
@@ -343,7 +349,14 @@ const updateByTeknisi = async (req, res) => {
       actualWorker: actualWorker ?? spk.actualWorker,
       actualHourPerWorker: actualHourPerWorker ?? spk.actualHourPerWorker,
       totalActualHour,
+      status: 'awaiting_kadis_pusat',
     }, { transaction: t });
+
+    // Update Notification status
+    await Notification.update(
+      { approvalStatus: 'menunggu_review_kadis_pp' },
+      { where: { notificationId: spk.notificationId }, transaction: t }
+    );
 
     // Add new items if provided
     if (items && items.length > 0) {
