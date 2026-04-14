@@ -76,14 +76,19 @@ const getAll = async (req, res) => {
     where.workCenter = workCenter;
   }
   
-  // Kadis Pelapor - only see own reports
+  // Kadis Pelapor - only see own reports, TAPI Kadis PP bisa lihat semua
   if (role === KADIS_ROLE) {
-    const notifications = await Notification.findAll({
-      where: { kadisPelaporId: userId },
-      attributes: ['notificationId'],
-    });
-    const notificationIds = notifications.map(n => n.notificationId);
-    where.notificationId = { [Op.in]: notificationIds };
+    const { dinas } = req.user;
+    const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
+    
+    if (!isKadisPusat) {
+      const notifications = await Notification.findAll({
+        where: { kadisPelaporId: userId },
+        attributes: ['notificationId'],
+      });
+      const notificationIds = notifications.map(n => n.notificationId);
+      where.notificationId = { [Op.in]: notificationIds };
+    }
   }
   
   // Planner and Kadis Pusat see all
@@ -473,14 +478,19 @@ const getHistory = async (req, res) => {
     where.workCenter = workCenter;
   }
   
-  // Kadis Pelapor - only see own reports
+  // Kadis Pelapor - only see own reports, TAPI Kadis PP bisa lihat semua
   if (role === KADIS_ROLE) {
-    const notifications = await Notification.findAll({
-      where: { kadisPelaporId: userId },
-      attributes: ['notificationId'],
-    });
-    const notificationIds = notifications.map(n => n.notificationId);
-    where.notificationId = { [Op.in]: notificationIds };
+    const { dinas } = req.user;
+    const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
+    
+    if (!isKadisPusat) {
+      const notifications = await Notification.findAll({
+        where: { kadisPelaporId: userId },
+        attributes: ['notificationId'],
+      });
+      const notificationIds = notifications.map(n => n.notificationId);
+      where.notificationId = { [Op.in]: notificationIds };
+    }
   }
   
   const data = await SpkCorrective.findAll({

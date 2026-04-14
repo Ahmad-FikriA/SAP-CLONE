@@ -51,8 +51,15 @@ const canViewNotification = async (req, res, next) => {
       return next();
     }
     
-    // Kadis Pelapor can only view own
+    // Kadis Pelapor can only view own, TAPI Kadis Pusat bisa lihat semua
     if (role === KADIS_ROLE) {
+      const { dinas } = req.user;
+      const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
+      
+      if (isKadisPusat) {
+         return next(); // Loloskan Kadis PP
+      }
+
       const notification = await Notification.findByPk(id);
       if (!notification) {
         return res.status(404).json({ error: 'Notification not found' });
@@ -128,8 +135,13 @@ const canViewSpkCorrective = async (req, res, next) => {
       return res.status(404).json({ error: 'SPK Corrective not found' });
     }
     
-    // Kadis Pelapor - can view only their own
+    // Kadis Pelapor - can view only their own, TAPI Kadis Pusat bisa lihat semua
     if (role === KADIS_ROLE) {
+      const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
+      if (isKadisPusat) {
+        return next(); // Loloskan Kadis PP
+      }
+
       if (spk.notification && spk.notification.kadisPelaporId === userId) {
         return next();
       }
