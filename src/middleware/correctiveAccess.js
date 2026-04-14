@@ -150,17 +150,24 @@ const canViewSpkCorrective = async (req, res, next) => {
       });
     }
     
-    // Teknisi/Kasie - check dinas
+    // Teknisi/Kasie - check group (spesialisasi)
     if (WORK_CENTER_ROLES.includes(role)) {
-      if (!dinas) {
-        return res.status(403).json({
-          error: 'Access denied. User has no dinas assigned.'
-        });
-      }
+      const userGroup = (group || '').toLowerCase();
+      const wc = (spk.workCenter || '').toLowerCase();
       
-      if (spk.workCenter === dinas) {
+      let isMatch = false;
+      if (wc === userGroup) isMatch = true;
+      else if (wc.includes('mechanic') && (userGroup.includes('mekanik') || userGroup.includes('mech'))) isMatch = true;
+      else if (wc.includes('electric') && (userGroup.includes('listrik') || userGroup.includes('elec'))) isMatch = true;
+      else if (wc.includes('civil') && (userGroup.includes('sipil') || userGroup.includes('civil'))) isMatch = true;
+      else if (wc.includes('automation') && (userGroup.includes('otomasi') || userGroup.includes('auto'))) isMatch = true;
+      // Temporary fallback for admins testing the flow or no group assigned
+      else if (!group || userGroup === '') isMatch = true;
+
+      if (isMatch) {
         return next();
       }
+      
       return res.status(403).json({
         error: `Access denied. This SPK is assigned to ${spk.workCenter} dinas.`
       });

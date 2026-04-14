@@ -336,9 +336,22 @@ function statusBadge(status) {
     pending: 'On Progress', in_progress: 'On Progress',
     completed: 'Selesai', approved: 'Disetujui',
     awaiting_kasie: 'Menunggu Kasie', awaiting_kadis_perawatan: 'Menunggu Kadis Perawatan',
-    awaiting_kadis: 'Menunggu Kadis', error: 'Error'
+    awaiting_kadis: 'Menunggu Kadis', error: 'Error',
+    // Corrective-specific
+    submitted: 'Submitted', spk_created: 'SPK Created',
+    eksekusi: 'Eksekusi', closed: 'Closed',
+    rejected: 'Ditolak', draft: 'Draft',
+    awaiting_kadis_pusat: 'Menunggu Kadis Pusat',
+    awaiting_kadis_pelapor: 'Menunggu Kadis Pelapor',
   };
-  const fullMap = Object.assign({ awaiting_kasie: 'badge-in_progress', awaiting_kadis_perawatan: 'badge-in_progress', awaiting_kadis: 'badge-in_progress', approved: 'badge-completed' }, map);
+  const fullMap = Object.assign({
+    awaiting_kasie: 'badge-in_progress', awaiting_kadis_perawatan: 'badge-in_progress',
+    awaiting_kadis: 'badge-in_progress', approved: 'badge-completed',
+    submitted: 'badge-pending', spk_created: 'badge-in_progress',
+    eksekusi: 'badge-in_progress', closed: 'badge-completed',
+    rejected: 'badge-error', draft: 'badge-pending',
+    awaiting_kadis_pusat: 'badge-in_progress', awaiting_kadis_pelapor: 'badge-in_progress',
+  }, map);
   return `<span class="badge ${fullMap[status] || 'badge-pending'}">${label[status] || status}</span>`;
 }
 
