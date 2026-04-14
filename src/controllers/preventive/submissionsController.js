@@ -8,6 +8,7 @@ const Equipment = require('../../models/Equipment');
 const FunctionalLocation = require('../../models/FunctionalLocation');
 const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping');
 const { GeneralTaskList } = require('../../models/GeneralTaskList');
+const User = require('../../models/User');
 
 const INCLUDE_FULL = [
   { model: SubmissionPhoto, as: 'photos', attributes: ['photoPath'] },
@@ -185,6 +186,21 @@ const exportExcel = async (req, res) => {
     });
     const spkMap = new Map(spks.map(s => [s.spkNumber, s.toJSON()]));
 
+    // ── Resolve user IDs → names for signature section ─────────────────────
+    const userIds = new Set();
+    for (const spk of spks) {
+      const j = spk.toJSON();
+      if (j.submittedBy) userIds.add(j.submittedBy);
+      if (j.kasieApprovedBy) userIds.add(j.kasieApprovedBy);
+      if (j.kadisPerawatanApprovedBy) userIds.add(j.kadisPerawatanApprovedBy);
+      if (j.kadisApprovedBy) userIds.add(j.kadisApprovedBy);
+    }
+    const users = userIds.size
+      ? await User.findAll({ where: { id: { [Op.in]: [...userIds] } }, attributes: ['id', 'name', 'nik'] })
+      : [];
+    const userMap = new Map(users.map(u => [u.id, u.name]));
+    const resolveName = (id) => (id ? (userMap.get(id) || id) : '-');
+
     // ── Build workbook — one sheet per SPK ────────────────────────────────
     const wb = new ExcelJS.Workbook();
     wb.creator = 'KTI SmartCare';
@@ -271,7 +287,7 @@ const exportExcel = async (req, res) => {
       // ── Row 2: SPK number + Lembar info ──────────────────────────────────
       ws.mergeCells(row, 1, row, 7);
       const spkCell = ws.getCell(row, 1);
-      spkCell.value = `No. SPK: ${sj.spkNumber}  |  Kategori: ${spk.category}  |  Submit: ${fmtDate(sj.submittedAt)}`;
+      spkCell.value = `No. SPK: ${sj.spkNumber}  |  Kategori: ${spk.category}  |  Dilaksanakan oleh: ${resolveName(spk.submittedBy)}  |  Submit: ${fmtTs(sj.submittedAt)}`;
       spkCell.font = { size: 9, color: { argb: 'FF555555' } };
       spkCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
@@ -427,25 +443,25 @@ const exportExcel = async (req, res) => {
 
       // Name / ID row
       ws.mergeCells(row, 1, row, 2);
-      ws.getCell(row, 1).value = spk.submittedBy || '-';
+      ws.getCell(row, 1).value = resolveName(spk.submittedBy);
       ws.getCell(row, 1).font = { size: 10 };
       ws.getCell(row, 1).alignment = { horizontal: 'center' };
       borderRange(ws, row, row, 1, 2, BORDER_THIN);
 
       ws.mergeCells(row, 3, row, 4);
-      ws.getCell(row, 3).value = spk.kasieApprovedBy || '-';
+      ws.getCell(row, 3).value = resolveName(spk.kasieApprovedBy);
       ws.getCell(row, 3).font = { size: 10 };
       ws.getCell(row, 3).alignment = { horizontal: 'center' };
       borderRange(ws, row, row, 3, 4, BORDER_THIN);
 
       ws.mergeCells(row, 5, row, 6);
-      ws.getCell(row, 5).value = spk.kadisPerawatanApprovedBy || '-';
+      ws.getCell(row, 5).value = resolveName(spk.kadisPerawatanApprovedBy);
       ws.getCell(row, 5).font = { size: 10 };
       ws.getCell(row, 5).alignment = { horizontal: 'center' };
       borderRange(ws, row, row, 5, 6, BORDER_THIN);
 
       ws.mergeCells(row, 7, row, LAST_COL);
-      ws.getCell(row, 7).value = spk.kadisApprovedBy || '-';
+      ws.getCell(row, 7).value = resolveName(spk.kadisApprovedBy);
       ws.getCell(row, 7).font = { size: 10 };
       ws.getCell(row, 7).alignment = { horizontal: 'center' };
       borderRange(ws, row, row, 7, LAST_COL, BORDER_THIN);
