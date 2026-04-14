@@ -105,9 +105,13 @@ const getAll = async (req, res) => {
   
   if (req.query.status) where.status = req.query.status;
   
-  // Kadis Pelapor can only see own notifications
+  // Kadis Pelapor can only see own notifications, TAPI Kadis PP bisa lihat semua
   if (role === KADIS_ROLE) {
-    where.kadisPelaporId = userId;
+    const { dinas } = req.user;
+    const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
+    if (!isKadisPusat) {
+      where.kadisPelaporId = userId;
+    }
   }
   
   const data = await Notification.findAll({
