@@ -187,7 +187,7 @@ const create = async (req, res) => {
     // Update notification status
     await notification.update({ 
       status: 'spk_created',
-      approvalStatus: 'spk_issued'
+      approvalStatus: 'menunggu_review_awal_kadis_pp'
     }, { transaction: t });
 
     await t.commit();

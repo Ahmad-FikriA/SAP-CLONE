@@ -217,13 +217,13 @@ const approveKadisPusat = async (req, res) => {
   
   if (!notification) return res.status(404).json({ error: 'Notification not found' });
   
-  if (notification.status !== 'menunggu_review_awal_kadis_pp') {
+  if (notification.approvalStatus !== 'menunggu_review_awal_kadis_pp') {
     return res.status(400).json({ error: 'Notification is not awaiting awal review' });
   }
   
   await notification.update({
-    status: 'approved',
-    approvalStatus: 'approved' // Tunggu SPK state in Flutter
+    status: 'spk_created',
+    approvalStatus: 'spk_issued'
   });
   
   const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
@@ -236,12 +236,12 @@ const rejectKadisPusat = async (req, res) => {
   
   if (!notification) return res.status(404).json({ error: 'Notification not found' });
   
-  if (notification.status !== 'menunggu_review_awal_kadis_pp') {
+  if (notification.approvalStatus !== 'menunggu_review_awal_kadis_pp') {
     return res.status(400).json({ error: 'Notification is not awaiting awal review' });
   }
   
   await notification.update({
-    status: 'ditolak_kadis_pp_awal',
+    status: 'spk_created',
     approvalStatus: 'ditolak_kadis_pp_awal'
   });
   
