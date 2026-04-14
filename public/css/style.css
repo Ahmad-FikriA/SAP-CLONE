@@ -1439,3 +1439,36 @@ tr:has(td.col-check input:checked) {
 .w-full {
   width: 100%;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   SPINNER / LOADING
+═══════════════════════════════════════════════════════════════ */
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-row td {
+  text-align: center;
+  padding: 40px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES ALIASES (used by corrective planner)
+═══════════════════════════════════════════════════════════════ */
+:root {
+  --primary-color: var(--primary);
+  --bg-body: #F5F5F5;
+  --bg-card: #FFFFFF;
+  --text-primary: var(--text-base);
+  --danger-color: #BB0000;
+}
