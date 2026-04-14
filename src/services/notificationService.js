@@ -9,7 +9,7 @@ let initialized = false;
 function ensureInitialized() {
   if (!initialized) {
     const serviceAccount = require(
-      path.resolve(__dirname, '../../config/serviceAccountKey.json')
+      path.resolve(__dirname, '../config/serviceAccountKey.json')
     );
     admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
     initialized = true;

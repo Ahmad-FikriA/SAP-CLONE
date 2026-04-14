@@ -180,6 +180,26 @@
     ]
   },
   {
+    "taskListId": "KTI_0008",
+    "taskListName": "PREV PAGAR AREA WTP KRENCENG",
+    "category": "Sipil",
+    "workCenter": "S1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Cek kondisi  tembok/pagar"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Cek kondisi  kawat/besi pagar"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek kondisi  cat pagar"
+      }
+    ]
+  },
+  {
     "taskListId": "KTI_0009",
     "taskListName": "PREV SENSOR LEVEL",
     "category": "Otomasi",
@@ -372,6 +392,30 @@
       {
         "stepNumber": 4,
         "operationText": "Bersihkan Filter Udara"
+      }
+    ]
+  },
+  {
+    "taskListId": "KTI_0018",
+    "taskListName": "PREV MAGNETIC CONTACTOR (DAYA KECIL)",
+    "category": "Listrik",
+    "workCenter": "E1-N01",
+    "activities": [
+      {
+        "stepNumber": 1,
+        "operationText": "Koordinasikan dengan Control Room"
+      },
+      {
+        "stepNumber": 2,
+        "operationText": "Pastikan bebas tegangan listrik"
+      },
+      {
+        "stepNumber": 3,
+        "operationText": "Cek fungsi contact,bersihkan"
+      },
+      {
+        "stepNumber": 4,
+        "operationText": "kencangkan baut2 koneksi"
       }
     ]
   },
@@ -1242,6 +1286,13 @@
         "operationText": "Cek pressure pada instalasi"
       }
     ]
+  },
+  {
+    "taskListId": "KTI_0063",
+    "taskListName": "PREV. BANGUNAN RECYCLE",
+    "category": "Sipil",
+    "workCenter": "S1-N01",
+    "activities": []
   },
   {
     "taskListId": "KTI_0064",

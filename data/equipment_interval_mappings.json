@@ -1,1 +1,1667 @@
-[]
+[
+  {
+    "equipmentId": "2210000372",
+    "taskListId": "KTI_0002",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000373",
+    "taskListId": "KTI_0002",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000374",
+    "taskListId": "KTI_0002",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000375",
+    "taskListId": "KTI_0002",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000376",
+    "taskListId": "KTI_0002",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000387",
+    "taskListId": "KTI_0002",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000388",
+    "taskListId": "KTI_0002",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000389",
+    "taskListId": "KTI_0002",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000390",
+    "taskListId": "KTI_0002",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000391",
+    "taskListId": "KTI_0034",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000392",
+    "taskListId": "KTI_0034",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000000",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000002",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000004",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000006",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000008",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000019",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000021",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000024",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000026",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000011",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000013",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000015",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000017",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000484",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000485",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000486",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000487",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000488",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000489",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000490",
+    "taskListId": "KTI_0029",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000409",
+    "taskListId": "KTI_0001",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000410",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000411",
+    "taskListId": "KTI_0001",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000412",
+    "taskListId": "KTI_0001",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000279",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000281",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000283",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000377",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000378",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000379",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000380",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000381",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000393",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000394",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000395",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000396",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000397",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000398",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000408",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000438",
+    "taskListId": "KTI_0035",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000439",
+    "taskListId": "KTI_0035",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000440",
+    "taskListId": "KTI_0035",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000441",
+    "taskListId": "KTI_0035",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000501",
+    "taskListId": "KTI_0035",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000502",
+    "taskListId": "KTI_0035",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000503",
+    "taskListId": "KTI_0035",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000504",
+    "taskListId": "KTI_0035",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000047",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000048",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000049",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000050",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000278",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000280",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000282",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000497",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000498",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000499",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000500",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000542",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000543",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000544",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000545",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000546",
+    "taskListId": "KTI_0003",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000072",
+    "taskListId": "KTI_0004",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000077",
+    "taskListId": "KTI_0004",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000082",
+    "taskListId": "KTI_0004",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000262",
+    "taskListId": "KTI_0004",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000505",
+    "taskListId": "KTI_0007",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000260",
+    "taskListId": "KTI_0009",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000261",
+    "taskListId": "KTI_0009",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000326",
+    "taskListId": "KTI_0009",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000506",
+    "taskListId": "KTI_0009",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000559",
+    "taskListId": "KTI_0009",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000603",
+    "taskListId": "KTI_0009",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000646",
+    "taskListId": "KTI_0009",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000288",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000289",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000290",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000291",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000293",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000294",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000295",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000296",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000297",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000298",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000299",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000300",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000301",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000302",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000303",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000304",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000616",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000617",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000618",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000647",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000305",
+    "taskListId": "KTI_0011",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000306",
+    "taskListId": "KTI_0011",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000307",
+    "taskListId": "KTI_0011",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000648",
+    "taskListId": "KTI_0011",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000309",
+    "taskListId": "KTI_0011",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000311",
+    "taskListId": "KTI_0011",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000312",
+    "taskListId": "KTI_0012",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000324",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000325",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000332",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000333",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000334",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000335",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000336",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000337",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000421",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000422",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000447",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000455",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000567",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000568",
+    "taskListId": "KTI_0014",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000448",
+    "taskListId": "KTI_0015",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000456",
+    "taskListId": "KTI_0015",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000129",
+    "taskListId": "KTI_0016",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000231",
+    "taskListId": "KTI_0017",
+    "interval": "24wk"
+  },
+  {
+    "equipmentId": "2210000316",
+    "taskListId": "KTI_0017",
+    "interval": "24wk"
+  },
+  {
+    "equipmentId": "2210000467",
+    "taskListId": "KTI_0017",
+    "interval": "24wk"
+  },
+  {
+    "equipmentId": "2210000094",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000095",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000096",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000097",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000098",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000099",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000103",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000104",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000105",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000264",
+    "taskListId": "KTI_0019",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000123",
+    "taskListId": "KTI_0020",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003473",
+    "taskListId": "KTI_0020",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003474",
+    "taskListId": "KTI_0020",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003475",
+    "taskListId": "KTI_0020",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000511",
+    "taskListId": "KTI_0020",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000031",
+    "taskListId": "KTI_0030",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000320",
+    "taskListId": "KTI_0022",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000359",
+    "taskListId": "KTI_0022",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000360",
+    "taskListId": "KTI_0022",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000361",
+    "taskListId": "KTI_0022",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000362",
+    "taskListId": "KTI_0022",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000363",
+    "taskListId": "KTI_0022",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000364",
+    "taskListId": "KTI_0022",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000569",
+    "taskListId": "KTI_0022",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000571",
+    "taskListId": "KTI_0022",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000573",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000574",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000575",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000576",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000577",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000578",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000579",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000580",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000583",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000584",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000586",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000587",
+    "taskListId": "KTI_0022",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000588",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000589",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000593",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000594",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000595",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000596",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000599",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000600",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000601",
+    "taskListId": "KTI_0022",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000111",
+    "taskListId": "KTI_0023",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000112",
+    "taskListId": "KTI_0023",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000113",
+    "taskListId": "KTI_0023",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000114",
+    "taskListId": "KTI_0023",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000119",
+    "taskListId": "KTI_0023",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000120",
+    "taskListId": "KTI_0023",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000121",
+    "taskListId": "KTI_0023",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000122",
+    "taskListId": "KTI_0023",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000124",
+    "taskListId": "KTI_0023",
+    "interval": "16wk"
+  },
+  {
+    "equipmentId": "2210000520",
+    "taskListId": "KTI_0023",
+    "interval": "24wk"
+  },
+  {
+    "equipmentId": "2210000581",
+    "taskListId": "KTI_0023",
+    "interval": "24wk"
+  },
+  {
+    "equipmentId": "2210000125",
+    "taskListId": "KTI_0025",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000523",
+    "taskListId": "KTI_0025",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000525",
+    "taskListId": "KTI_0025",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000527",
+    "taskListId": "KTI_0025",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000529",
+    "taskListId": "KTI_0025",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000481",
+    "taskListId": "KTI_0028",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000482",
+    "taskListId": "KTI_0028",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000483",
+    "taskListId": "KTI_0028",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000434",
+    "taskListId": "KTI_0028",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000435",
+    "taskListId": "KTI_0028",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000436",
+    "taskListId": "KTI_0028",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000437",
+    "taskListId": "KTI_0028",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000071",
+    "taskListId": "KTI_0033",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000076",
+    "taskListId": "KTI_0033",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000081",
+    "taskListId": "KTI_0033",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000167",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000168",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000169",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000170",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000171",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000172",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000173",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000174",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000175",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000176",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000177",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000178",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000179",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000180",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000181",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000182",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000183",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000184",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000185",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000186",
+    "taskListId": "KTI_0038",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000086",
+    "taskListId": "KTI_0039",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210002842",
+    "taskListId": "KTI_0039",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000706",
+    "taskListId": "KTI_0041",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000707",
+    "taskListId": "KTI_0041",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000040",
+    "taskListId": "KTI_0043",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000041",
+    "taskListId": "KTI_0043",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000235",
+    "taskListId": "KTI_0043",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000236",
+    "taskListId": "KTI_0043",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000237",
+    "taskListId": "KTI_0043",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000240",
+    "taskListId": "KTI_0043",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000241",
+    "taskListId": "KTI_0043",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000242",
+    "taskListId": "KTI_0043",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000541",
+    "taskListId": "KTI_0043",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000243",
+    "taskListId": "KTI_0043",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000244",
+    "taskListId": "KTI_0043",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000238",
+    "taskListId": "KTI_0043",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000239",
+    "taskListId": "KTI_0043",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000126",
+    "taskListId": "KTI_0058",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000703",
+    "taskListId": "KTI_0058",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000704",
+    "taskListId": "KTI_0058",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000032",
+    "taskListId": "KTI_0058",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210002848",
+    "taskListId": "KTI_0061",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210002849",
+    "taskListId": "KTI_0061",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210002850",
+    "taskListId": "KTI_0061",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210002851",
+    "taskListId": "KTI_0061",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000037",
+    "taskListId": "KTI_0062",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000038",
+    "taskListId": "KTI_0062",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210002915",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000220",
+    "taskListId": "KTI_0065",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000222",
+    "taskListId": "KTI_0065",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000219",
+    "taskListId": "KTI_0065",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000494",
+    "taskListId": "KTI_0065",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000552",
+    "taskListId": "KTI_0065",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000674",
+    "taskListId": "KTI_0066",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000675",
+    "taskListId": "KTI_0066",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000676",
+    "taskListId": "KTI_0066",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003024",
+    "taskListId": "KTI_0022",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210003031",
+    "taskListId": "KTI_0022",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210003029",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003030",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003025",
+    "taskListId": "KTI_0074",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003026",
+    "taskListId": "KTI_0074",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003027",
+    "taskListId": "KTI_0074",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003028",
+    "taskListId": "KTI_0074",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003041",
+    "taskListId": "KTI_0068",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003042",
+    "taskListId": "KTI_0068",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003043",
+    "taskListId": "KTI_0068",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000051",
+    "taskListId": "KTI_0069",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000052",
+    "taskListId": "KTI_0069",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000053",
+    "taskListId": "KTI_0069",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210000054",
+    "taskListId": "KTI_0069",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210003044",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003045",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003046",
+    "taskListId": "KTI_0070",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003047",
+    "taskListId": "KTI_0070",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003048",
+    "taskListId": "KTI_0070",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003279",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003280",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000651",
+    "taskListId": "KTI_0073",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000652",
+    "taskListId": "KTI_0073",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000598",
+    "taskListId": "KTI_0061",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000597",
+    "taskListId": "KTI_0061",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000314",
+    "taskListId": "KTI_0061",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000709",
+    "taskListId": "KTI_0025",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210000074",
+    "taskListId": "KTI_0077",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000079",
+    "taskListId": "KTI_0077",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000084",
+    "taskListId": "KTI_0077",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003297",
+    "taskListId": "KTI_0077",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003294",
+    "taskListId": "KTI_0075",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003296",
+    "taskListId": "KTI_0078",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003295",
+    "taskListId": "KTI_0078",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003319",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003320",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003321",
+    "taskListId": "KTI_0034",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210003322",
+    "taskListId": "KTI_0034",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000214",
+    "taskListId": "KTI_0080",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000215",
+    "taskListId": "KTI_0080",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000216",
+    "taskListId": "KTI_0080",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003405",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210003406",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210003407",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210003408",
+    "taskListId": "KTI_0010",
+    "interval": "12wk"
+  },
+  {
+    "equipmentId": "2210003414",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003415",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000702",
+    "taskListId": "KTI_0082",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003426",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003427",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003428",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003429",
+    "taskListId": "KTI_0069",
+    "interval": "2wk"
+  },
+  {
+    "equipmentId": "2210003417",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003418",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003419",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003421",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003422",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003423",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003039",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003040",
+    "taskListId": "KTI_0029",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003476",
+    "taskListId": "KTI_0034",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003477",
+    "taskListId": "KTI_0034",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003469",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003470",
+    "taskListId": "KTI_0035",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000513",
+    "taskListId": "KTI_0081",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210000585",
+    "taskListId": "KTI_0081",
+    "interval": "4wk"
+  },
+  {
+    "equipmentId": "2210003563",
+    "taskListId": "KTI_0082",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210003564",
+    "taskListId": "KTI_0042",
+    "interval": "1wk"
+  },
+  {
+    "equipmentId": "2210000144",
+    "taskListId": "KTI_0026",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000145",
+    "taskListId": "KTI_0026",
+    "interval": "8wk"
+  },
+  {
+    "equipmentId": "2210000146",
+    "taskListId": "KTI_0026",
+    "interval": "8wk"
+  }
+]

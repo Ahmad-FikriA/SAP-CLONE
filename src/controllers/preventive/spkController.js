@@ -391,6 +391,27 @@ const generateFromTaskList = async (req, res) => {
 
     await t.commit();
 
+    // Notify Teknisi of the matching discipline
+    const groupKeyword = CATEGORY_GROUP_MAP[taskList.category];
+    console.log(`[SPK notify] generateFromTaskList category=${taskList.category} groupKeyword=${groupKeyword}`);
+    if (groupKeyword) {
+      const teknisiUsers = await User.findAll({
+        where: { role: 'teknisi', group: { [Op.like]: `%${groupKeyword}%` } },
+        attributes: ['id', 'fcmToken'],
+      });
+      console.log(`[SPK notify] found ${teknisiUsers.length} teknisi, tokens: ${teknisiUsers.map(u => u.fcmToken ? 'OK' : 'NULL').join(', ')}`);
+      if (teknisiUsers.length > 0) {
+        await NotificationService.notify({
+          module: 'preventive',
+          type: 'spk_created',
+          title: 'Ada SPK Baru',
+          body: `SPK ${spkNumber} (${taskList.category}) telah dibuat`,
+          data: { spkNumber, deepLink: 'preventive/spk-detail' },
+          recipientIds: teknisiUsers.map((u) => u.id),
+        });
+      }
+    }
+
     const fresh = await Spk.findByPk(spkNumber, { include: INCLUDE_FULL });
     res.status(201).json(fmt(fresh));
   } catch (err) { await t.rollback(); throw err; }
@@ -670,6 +691,28 @@ const batchGenerate = async (req, res) => {
     }
 
     await t.commit();
+
+    // Notify Teknisi of the matching discipline
+    const groupKeyword = CATEGORY_GROUP_MAP[category];
+    console.log(`[SPK notify] batchGenerate category=${category} groupKeyword=${groupKeyword} created=${created.length}`);
+    if (groupKeyword && created.length > 0) {
+      const teknisiUsers = await User.findAll({
+        where: { role: 'teknisi', group: { [Op.like]: `%${groupKeyword}%` } },
+        attributes: ['id', 'fcmToken'],
+      });
+      console.log(`[SPK notify] found ${teknisiUsers.length} teknisi, tokens: ${teknisiUsers.map(u => u.fcmToken ? 'OK' : 'NULL').join(', ')}`);
+      if (teknisiUsers.length > 0) {
+        await NotificationService.notify({
+          module: 'preventive',
+          type: 'spk_created',
+          title: 'Ada SPK Baru',
+          body: `${created.length} SPK (${category}) telah dibuat untuk W${weekStr} ${year}`,
+          data: { spkNumber: created[0].spkNumber, deepLink: 'preventive/spk-detail' },
+          recipientIds: teknisiUsers.map((u) => u.id),
+        });
+      }
+    }
+
     res.status(201).json({
       message: `${created.length} SPK berhasil dibuat untuk W${weekStr} ${year} / ${interval}`,
       week, year, interval, scheduledDate,

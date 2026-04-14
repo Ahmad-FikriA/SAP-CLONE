@@ -38,8 +38,8 @@ const getAll = async (req, res) => {
 
 const create = async (req, res) => {
   const { equipmentId, interval, taskListId } = req.body;
-  if (!equipmentId || !interval || !taskListId) {
-    return res.status(400).json({ error: 'equipmentId, interval, dan taskListId wajib diisi' });
+  if (!equipmentId || !interval) {
+    return res.status(400).json({ error: 'equipmentId dan interval wajib diisi' });
   }
   const existing = await EquipmentIntervalMapping.findOne({ where: { equipmentId, interval } });
   if (existing) {
@@ -59,8 +59,8 @@ const remove = async (req, res) => {
 // POST /api/equipment-mappings/bulk
 const bulkCreate = async (req, res) => {
   const { equipmentIds, interval, taskListId } = req.body;
-  if (!Array.isArray(equipmentIds) || !equipmentIds.length || !interval || !taskListId) {
-    return res.status(400).json({ error: 'equipmentIds[], interval, dan taskListId wajib diisi' });
+  if (!Array.isArray(equipmentIds) || !equipmentIds.length || !interval) {
+    return res.status(400).json({ error: 'equipmentIds[] dan interval wajib diisi' });
   }
 
   let created = 0;
@@ -112,9 +112,9 @@ const importExcel = async (req, res) => {
     if (['tasklistid', 'tasklist'].includes(n))       keyMap.taskListId = k;
   }
 
-  if (!keyMap.equipmentId || !keyMap.interval || !keyMap.taskListId) {
+  if (!keyMap.equipmentId || !keyMap.interval) {
     return res.status(400).json({
-      error: 'Could not find required columns. Expected: equipment_id, interval, task_list_id',
+      error: 'Could not find required columns. Expected: equipment_id, interval (task_list_id is optional)',
       foundColumns: Object.keys(sample),
     });
   }
@@ -128,7 +128,7 @@ const importExcel = async (req, res) => {
     const interval    = String(row[keyMap.interval]    || '').trim();
     const taskListId  = String(row[keyMap.taskListId]  || '').trim();
 
-    if (!equipmentId || !interval || !taskListId) { skipped++; continue; }
+    if (!equipmentId || !interval) { skipped++; continue; }
     if (!VALID_INTERVALS.includes(interval)) {
       errors.push(`Row skipped: invalid interval "${interval}" for equipment ${equipmentId}`);
       skipped++;
