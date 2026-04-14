@@ -4,9 +4,11 @@ const { Op } = require('sequelize');
 const { v4: uuid } = require('uuid');
 const sequelize = require('../../config/database');
 const Notification = require('../../models/Notification');
+const User = require('../../models/User');
 const SpkCorrective = require('../../models/SpkCorrective');
 const { SpkCorrectiveItem, SpkCorrectivePhoto } = require('../../models/SpkCorrectiveItem');
 const { KADIS_ROLE, WORK_CENTER_ROLES } = require('../../middleware/correctiveAccess');
+const NotificationService = require('../../services/notificationService');
 
 // ── Eager-load config ─────────────────────────────────────────────────────────
 const SPK_INCLUDE = [
@@ -199,6 +201,20 @@ const create = async (req, res) => {
 
     const fresh = await SpkCorrective.findByPk(spkId, { include: SPK_INCLUDE });
     res.status(201).json(fmtSpk(fresh));
+
+    // 🔔 Notify Kadis PP about new SPK for review
+    const kadisppUsers = await User.findAll({
+      where: { role: 'kadis', dinas: { [Op.like]: '%pusat perawatan%' } },
+      attributes: ['id'],
+    });
+    await NotificationService.notify({
+      module: 'corrective',
+      type: 'spk_created',
+      title: 'SPK Baru Menunggu Review',
+      body: `SPK ${spkId} untuk ${notification.equipmentName || '-'} telah dibuat. Silakan review.`,
+      data: { requestId: notificationId, deepLink: 'corrective/request-detail' },
+      recipientIds: kadisppUsers.map(u => u.id),
+    });
   } catch (err) {
     await t.rollback();
     throw err;
@@ -375,6 +391,20 @@ const updateByTeknisi = async (req, res) => {
 
     const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
     res.json(fmtSpk(fresh));
+
+    // 🔔 Notify Kadis PP about teknisi execution results
+    const kadisppUsers = await User.findAll({
+      where: { role: 'kadis', dinas: { [Op.like]: '%pusat perawatan%' } },
+      attributes: ['id'],
+    });
+    await NotificationService.notify({
+      module: 'corrective',
+      type: 'execution_submitted',
+      title: 'Hasil Kerja Menunggu Review',
+      body: `Teknisi telah menyelesaikan pekerjaan SPK ${spk.spkId}. Silakan review hasil.`,
+      data: { requestId: spk.notificationId, deepLink: 'corrective/request-detail' },
+      recipientIds: kadisppUsers.map(u => u.id),
+    });
   } catch (err) {
     await t.rollback();
     throw err;
@@ -405,8 +435,27 @@ const approveKadisPusat = async (req, res) => {
     kadisPusatApprovedAt: now,
   });
 
+  // Update notification approvalStatus
+  await Notification.update(
+    { approvalStatus: 'menunggu_review_kadis_pelapor' },
+    { where: { notificationId: spk.notificationId } }
+  );
+
   const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
   res.json(fmtSpk(fresh));
+
+  // 🔔 Notify Kadis Pelapor that work is completed and needs final review
+  const notif = await Notification.findByPk(spk.notificationId);
+  if (notif && notif.kadisPelaporId) {
+    await NotificationService.notify({
+      module: 'corrective',
+      type: 'awaiting_pelapor_review',
+      title: 'Pekerjaan Selesai, Mohon Review',
+      body: `Pekerjaan corrective ${spk.spkId} telah disetujui Kadis PP. Silakan review final.`,
+      data: { requestId: spk.notificationId, deepLink: 'corrective/request-detail' },
+      recipientIds: [notif.kadisPelaporId],
+    });
+  }
 };
 
 // POST /api/corrective/spk/:spkId/approve-kadis-pelapor
@@ -446,6 +495,22 @@ const approveKadisPelapor = async (req, res) => {
 
     const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
     res.json(fmtSpk(fresh));
+
+    // 🔔 Notify Teknisi that the job is fully approved and closed
+    const wc = spk.workCenter;
+    const groupMap = { mechanical: 'mekanik', electrical: 'listrik', civil: 'sipil', automation: 'otomasi' };
+    const groupKeyword = groupMap[wc] || wc || '';
+    const teknisiWhere = { role: { [Op.in]: ['teknisi', 'kasie'] } };
+    if (groupKeyword) teknisiWhere.group = { [Op.like]: `%${groupKeyword}%` };
+    const teknisiUsers = await User.findAll({ where: teknisiWhere, attributes: ['id'] });
+    await NotificationService.notify({
+      module: 'corrective',
+      type: 'job_completed',
+      title: 'Pekerjaan Disetujui & Ditutup',
+      body: `SPK ${spk.spkId} telah disetujui Kadis Pelapor dan resmi ditutup. Terima kasih!`,
+      data: { requestId: spk.notificationId, deepLink: 'corrective/request-detail' },
+      recipientIds: teknisiUsers.map(u => u.id),
+    });
   } catch (err) {
     await t.rollback();
     throw err;
