@@ -188,7 +188,7 @@
   <!-- ═══════════════════════════════════════════════════ -->
   <!-- OVERLAY + PANEL: SPK Create / Edit -->
   <!-- ═══════════════════════════════════════════════════ -->
-  <div class="overlay" id="overlay" onclick="closePanel()"></div>
+  <div class="overlay" id="overlay" onclick="closeAllPanels()"></div>
   <div class="panel" id="panel" style="width: 640px;">
     <div class="panel__header">
       <span class="panel__title" id="panelTitle">Generate SPK Corrective</span>
@@ -222,10 +222,10 @@
         <div class="form-group">
           <label>Work Center</label>
           <select class="form-control" id="f_workCenter" required>
-            <option value="MEKANIK">MEKANIK</option>
-            <option value="LISTRIK">LISTRIK</option>
-            <option value="SIPIL">SIPIL</option>
-            <option value="INSTRUMEN">INSTRUMEN</option>
+            <option value="mechanical">MEKANIK</option>
+            <option value="electrical">LISTRIK</option>
+            <option value="civil">SIPIL</option>
+            <option value="automation">INSTRUMEN / OTOMASI</option>
           </select>
         </div>
 
