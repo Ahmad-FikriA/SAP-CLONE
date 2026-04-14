@@ -102,19 +102,20 @@ function apiDelete(path) {
 // ══════════════════════════════════════════════════
 
 const _NAV = [
-  { href: '/',                              label: 'Dashboard',       icon: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z' },
-  { href: '/pages/spk.html',               label: 'SPK',             icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z|M14 2v6h6|M9 13h6|M9 17h6' },
+  { href: '/', label: 'Dashboard', icon: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z' },
+  { href: '/pages/spk.html', label: 'SPK/Preventive', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z|M14 2v6h6|M9 13h6|M9 17h6' },
+  { href: '/pages/corrective-planner.html', label: 'Corrective Planner', icon: 'M12 20h9|M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z' },
   { href: '/pages/spk-import.html', label: 'Import SAP', icon: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4|M17 8l-5-5-5 5|M12 3v12' },
-  { href: '/pages/lembar-kerja.html',      label: 'Lembar Kerja',    icon: 'M9 11l3 3L22 4|M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' },
+  { href: '/pages/lembar-kerja.html', label: 'Lembar Kerja', icon: 'M9 11l3 3L22 4|M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' },
   { divider: true },
-  { href: '/pages/equipment.html',         label: 'Equipment',       icon: 'circle:12,12,3|M19.07 4.93a10 10 0 0 1 0 14.14|M4.93 4.93a10 10 0 0 0 0 14.14' },
-  { href: '/pages/task-lists.html',        label: 'Task Lists',      icon: 'M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01' },
-  { href: '/pages/maps.html',              label: 'Maps',            icon: 'M1 6l7-4 8 4 7-4v16l-7 4-8-4-7 4V6z|M8 2v16|M16 6v16' },
-  { href: '/pages/users.html',             label: 'Users',           icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2|circle:9,7,4|M23 21v-2a4 4 0 0 0-3-3.87|M16 3.13a4 4 0 0 1 0 7.75' },
-  { href: '/pages/equipment-mappings.html',label: 'Task Mapping',    icon: 'M9 17H7A5 5 0 0 1 7 7h2|M15 7h2a5 5 0 0 1 0 10h-2|M8 12h8' },
-  { href: '/pages/interval-planner.html',  label: 'Interval Planner',icon: 'rect:3,4,18,18,2|M16 2v4|M8 2v4|M3 10h18' },
+  { href: '/pages/equipment.html', label: 'Equipment', icon: 'circle:12,12,3|M19.07 4.93a10 10 0 0 1 0 14.14|M4.93 4.93a10 10 0 0 0 0 14.14' },
+  { href: '/pages/task-lists.html', label: 'Task Lists', icon: 'M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01' },
+  { href: '/pages/maps.html', label: 'Maps', icon: 'M1 6l7-4 8 4 7-4v16l-7 4-8-4-7 4V6z|M8 2v16|M16 6v16' },
+  { href: '/pages/users.html', label: 'Users', icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2|circle:9,7,4|M23 21v-2a4 4 0 0 0-3-3.87|M16 3.13a4 4 0 0 1 0 7.75' },
+  { href: '/pages/equipment-mappings.html', label: 'Task Mapping', icon: 'M9 17H7A5 5 0 0 1 7 7h2|M15 7h2a5 5 0 0 1 0 10h-2|M8 12h8' },
+  { href: '/pages/interval-planner.html', label: 'Interval Planner', icon: 'rect:3,4,18,18,2|M16 2v4|M8 2v4|M3 10h18' },
   { divider: true },
-  { href: '/pages/submissions.html',       label: 'Submissions',     icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
+  { href: '/pages/submissions.html', label: 'Submissions', icon: 'M22 12h-4l-3 9L9 3l-3 9H2' },
 ];
 
 function _buildSidebar() {
@@ -124,7 +125,7 @@ function _buildSidebar() {
 
   const path = window.location.pathname;
 
-  _NAV.forEach(function(item) {
+  _NAV.forEach(function (item) {
     if (item.divider) {
       const div = document.createElement('div');
       div.className = 'sidebar__divider';
@@ -154,14 +155,14 @@ function _buildSidebar() {
 }
 
 function _makeNavIcon(descriptor) {
-  const ns  = 'http://www.w3.org/2000/svg';
+  const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('width', '18'); svg.setAttribute('height', '18');
   svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
   svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2');
   svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
 
-  descriptor.split('|').forEach(function(seg) {
+  descriptor.split('|').forEach(function (seg) {
     if (seg.startsWith('circle:')) {
       const parts = seg.slice(7).split(',');
       const el = document.createElementNS(ns, 'circle');
@@ -181,7 +182,7 @@ function _makeNavIcon(descriptor) {
     } else {
       // Treat as individual lines separated by commas: x1,y1,x2,y2
       const el = document.createElementNS(ns, 'line');
-      const p  = seg.split(',');
+      const p = seg.split(',');
       el.setAttribute('x1', p[0]); el.setAttribute('y1', p[1]);
       el.setAttribute('x2', p[2]); el.setAttribute('y2', p[3]);
       svg.appendChild(el);
@@ -204,9 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const toggleBtn = document.getElementById('sidebarToggle');
-  const sidebar   = document.getElementById('sidebar');
-  const layout    = document.getElementById('layout');
-  const msgStrip  = document.getElementById('messageStrip');
+  const sidebar = document.getElementById('sidebar');
+  const layout = document.getElementById('layout');
+  const msgStrip = document.getElementById('messageStrip');
 
   const COLLAPSED_KEY = 'sidebar_collapsed';
   if (sidebar && layout && localStorage.getItem(COLLAPSED_KEY) === '1') {
@@ -228,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function _populateShellBar() {
-  const user      = getUser();
+  const user = getUser();
   const actionsEl = document.querySelector('.shell-bar__actions');
   if (!actionsEl) return;
 
@@ -236,26 +237,26 @@ function _populateShellBar() {
 
   if (user) {
     // Name label
-    const nameEl       = document.createElement('span');
+    const nameEl = document.createElement('span');
     nameEl.style.cssText = 'font-size:12px;color:rgba(255,255,255,.75);margin-right:4px;white-space:nowrap';
     nameEl.textContent = user.name || user.nik || '';
     actionsEl.appendChild(nameEl);
 
     // Avatar with initials
-    const avatarEl       = document.createElement('div');
-    avatarEl.className   = 'shell-bar__avatar';
+    const avatarEl = document.createElement('div');
+    avatarEl.className = 'shell-bar__avatar';
     const initials = (user.name || user.nik || 'U')
-      .split(' ').slice(0, 2).map(function(w) { return w[0]; }).join('').toUpperCase();
+      .split(' ').slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase();
     avatarEl.textContent = initials;
     actionsEl.appendChild(avatarEl);
   }
 
   // Logout button
-  const logoutBtn       = document.createElement('button');
-  logoutBtn.title       = 'Logout';
+  const logoutBtn = document.createElement('button');
+  logoutBtn.title = 'Logout';
   logoutBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:rgba(255,255,255,.7);padding:4px 6px;border-radius:4px;display:flex;align-items:center;transition:color .15s';
-  logoutBtn.addEventListener('mouseenter', function() { this.style.color = '#fff'; });
-  logoutBtn.addEventListener('mouseleave', function() { this.style.color = 'rgba(255,255,255,.7)'; });
+  logoutBtn.addEventListener('mouseenter', function () { this.style.color = '#fff'; });
+  logoutBtn.addEventListener('mouseleave', function () { this.style.color = 'rgba(255,255,255,.7)'; });
   logoutBtn.addEventListener('click', logout);
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -336,9 +337,22 @@ function statusBadge(status) {
     pending: 'On Progress', in_progress: 'On Progress',
     completed: 'Selesai', approved: 'Disetujui',
     awaiting_kasie: 'Menunggu Kasie', awaiting_kadis_perawatan: 'Menunggu Kadis Perawatan',
-    awaiting_kadis: 'Menunggu Kadis', error: 'Error'
+    awaiting_kadis: 'Menunggu Kadis', error: 'Error',
+    // Corrective-specific
+    submitted: 'Submitted', spk_created: 'SPK Created',
+    eksekusi: 'Eksekusi', closed: 'Closed',
+    rejected: 'Ditolak', draft: 'Draft',
+    awaiting_kadis_pusat: 'Menunggu Kadis Pusat',
+    awaiting_kadis_pelapor: 'Menunggu Kadis Pelapor',
   };
-  const fullMap = Object.assign({ awaiting_kasie: 'badge-in_progress', awaiting_kadis_perawatan: 'badge-in_progress', awaiting_kadis: 'badge-in_progress', approved: 'badge-completed' }, map);
+  const fullMap = Object.assign({
+    awaiting_kasie: 'badge-in_progress', awaiting_kadis_perawatan: 'badge-in_progress',
+    awaiting_kadis: 'badge-in_progress', approved: 'badge-completed',
+    submitted: 'badge-pending', spk_created: 'badge-in_progress',
+    eksekusi: 'badge-in_progress', closed: 'badge-completed',
+    rejected: 'badge-error', draft: 'badge-pending',
+    awaiting_kadis_pusat: 'badge-in_progress', awaiting_kadis_pelapor: 'badge-in_progress',
+  }, map);
   return `<span class="badge ${fullMap[status] || 'badge-pending'}">${label[status] || status}</span>`;
 }
 

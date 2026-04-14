@@ -12,6 +12,7 @@ This backend serves as the core data provider and business logic executor for th
 - **API Server:** Node.js + Express.js app serving RESTful APIs.
 - **Data Layer:** Sequelize ORM connecting to a MySQL database.
 - **Storage:** Local file system (`/uploads`) and potentially external cloud storage.
+- **Web Admin UI:** Simple vanilla HTML/JS dashboard under `public/` for administrative workflows and planner SPK Generation.
 - **Testing:** Jest + Supertest for comprehensive API testing.
 
 ---
@@ -194,7 +195,7 @@ The corrective maintenance system handles unplanned repairs and breakdowns.
 ```
 KadisPelapor creates Notification
            ↓
-Planner creates SpkCorrective from Notification
+Planner creates SpkCorrective from Notification (via Web Admin UI)
            ↓
 Teknisi executes work (start → complete)
            ↓

@@ -41,16 +41,25 @@ const requireKadis = (req, res, next) => {
  */
 const canViewNotification = async (req, res, next) => {
   try {
-    const { userId, role } = req.user;
+    const { userId, role, group } = req.user;
     const { id } = req.params;
     
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    
     // Planner and Kadis Pusat can view all
-    if (role === 'planner' || role === KADIS_PUSAT_ROLE) {
+    if (role === 'planner' || isPlannerGroup || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
-    // Kadis Pelapor can only view own
+    // Kadis Pelapor can only view own, TAPI Kadis Pusat bisa lihat semua
     if (role === KADIS_ROLE) {
+      const { dinas } = req.user;
+      const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
+      
+      if (isKadisPusat) {
+         return next(); // Loloskan Kadis PP
+      }
+
       const notification = await Notification.findByPk(id);
       if (!notification) {
         return res.status(404).json({ error: 'Notification not found' });
@@ -77,11 +86,14 @@ const canViewNotification = async (req, res, next) => {
  * Check if user can create SPK Corrective (must be Planner or admin)
  */
 const requirePlanner = (req, res, next) => {
-  const { role } = req.user;
+  const { role, group } = req.user;
   
   if (role === 'admin') return next();
 
-  if (role !== 'planner') {
+  // Cek apakah user ada di grup perencanaan
+  const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+
+  if (role !== 'planner' && !isPlannerGroup) {
     return res.status(403).json({
       error: 'Access denied. Only Planner can create SPK Corrective.'
     });
@@ -101,11 +113,13 @@ const requirePlanner = (req, res, next) => {
  */
 const canViewSpkCorrective = async (req, res, next) => {
   try {
-    const { userId, role, dinas } = req.user;
+    const { userId, role, dinas, group } = req.user;
     const { spkId } = req.params;
     
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    
     // Planner, Admin, and Kadis Pusat can view all
-    if (role === 'planner' || role === 'admin' || role === KADIS_PUSAT_ROLE) {
+    if (role === 'planner' || isPlannerGroup || role === 'admin' || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
@@ -121,8 +135,13 @@ const canViewSpkCorrective = async (req, res, next) => {
       return res.status(404).json({ error: 'SPK Corrective not found' });
     }
     
-    // Kadis Pelapor - can view only their own
+    // Kadis Pelapor - can view only their own, TAPI Kadis Pusat bisa lihat semua
     if (role === KADIS_ROLE) {
+      const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
+      if (isKadisPusat) {
+        return next(); // Loloskan Kadis PP
+      }
+
       if (spk.notification && spk.notification.kadisPelaporId === userId) {
         return next();
       }
@@ -131,17 +150,24 @@ const canViewSpkCorrective = async (req, res, next) => {
       });
     }
     
-    // Teknisi/Kasie - check dinas
+    // Teknisi/Kasie - check group (spesialisasi)
     if (WORK_CENTER_ROLES.includes(role)) {
-      if (!dinas) {
-        return res.status(403).json({
-          error: 'Access denied. User has no dinas assigned.'
-        });
-      }
+      const userGroup = (group || '').toLowerCase();
+      const wc = (spk.workCenter || '').toLowerCase();
       
-      if (spk.workCenter === dinas) {
+      let isMatch = false;
+      if (wc === userGroup) isMatch = true;
+      else if (wc.includes('mechanic') && (userGroup.includes('mekanik') || userGroup.includes('mech'))) isMatch = true;
+      else if (wc.includes('electric') && (userGroup.includes('listrik') || userGroup.includes('elec'))) isMatch = true;
+      else if (wc.includes('civil') && (userGroup.includes('sipil') || userGroup.includes('civil'))) isMatch = true;
+      else if (wc.includes('automation') && (userGroup.includes('otomasi') || userGroup.includes('auto'))) isMatch = true;
+      // Temporary fallback for admins testing the flow or no group assigned
+      else if (!group || userGroup === '') isMatch = true;
+
+      if (isMatch) {
         return next();
       }
+      
       return res.status(403).json({
         error: `Access denied. This SPK is assigned to ${spk.workCenter} dinas.`
       });
@@ -198,8 +224,6 @@ const TEKNISI_FIELDS = [
   'beforePhotos', 'afterPhotos'
 ];
 
-const KASIE_FIELDS = ['kasieApprovedBy', 'kasieApprovedAt', 'status'];
-
 const KADIS_PUSAT_FIELDS = ['kadisPusatApprovedBy', 'kadisPusatApprovedAt', 'status'];
 
 const KADIS_PELAPOR_FIELDS = ['kadisPelaporApprovedBy', 'kadisPelaporApprovedAt', 'status'];
@@ -212,7 +236,6 @@ module.exports = {
   validateSpkUpdate,
   PLANNER_FIELDS,
   TEKNISI_FIELDS,
-  KASIE_FIELDS,
   KADIS_PUSAT_FIELDS,
   KADIS_PELAPOR_FIELDS,
   KADIS_ROLE,

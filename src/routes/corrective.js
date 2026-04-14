@@ -64,10 +64,23 @@ router.delete('/requests/:id', verifyToken, canViewNotification, reqCtrl.remove)
 // POST /api/corrective/requests/bulk-delete
 router.post('/requests/bulk-delete', verifyToken, reqCtrl.bulkDelete);
 
+// POST /api/corrective/requests/:id/approve-planner
+// Rules: Planner changes pending to approved
+router.post('/requests/:id/approve-planner', verifyToken, requirePlanner, reqCtrl.approvePlanner);
+
+// POST /api/corrective/requests/:id/approve
+router.post('/requests/:id/approve', verifyToken, reqCtrl.approveKadisPusat);
+
+// POST /api/corrective/requests/:id/reject
+router.post('/requests/:id/reject', verifyToken, reqCtrl.rejectKadisPusat);
+
 // ── Corrective SPK ────────────────────────────────────────────────────────────
 // GET /api/corrective/spk
 // Rules: Teknisi/Kasie (own work center), Planner (all), Kadis Pusat (all), Kadis Pelapor (own)
 router.get('/spk', verifyToken, spkCtrl.getAll);
+
+// GET /api/corrective/spk/history
+router.get('/spk/history', verifyToken, spkCtrl.getHistory);
 
 // GET /api/corrective/spk/:spkId
 router.get('/spk/:spkId', verifyToken, canViewSpkCorrective, spkCtrl.getOne);
@@ -75,6 +88,10 @@ router.get('/spk/:spkId', verifyToken, canViewSpkCorrective, spkCtrl.getOne);
 // POST /api/corrective/spk
 // Rules: Only Planner can create SPK from Notification
 router.post('/spk', verifyToken, requirePlanner, spkCtrl.create);
+
+// PUT /api/corrective/spk/:spkId
+// Rules: Only Planner can edit if SPK is still draft
+router.put('/spk/:spkId', verifyToken, requirePlanner, spkCtrl.updateByPlanner);
 
 // DELETE /api/corrective/spk/:spkId
 router.delete('/spk/:spkId', verifyToken, requirePlanner, spkCtrl.remove);
@@ -93,10 +110,6 @@ router.post('/spk/:spkId/upload-after-photos', verifyToken, canViewSpkCorrective
 // Rules: Teknisi can only update specific fields
 router.put('/spk/:spkId/update-by-teknisi', verifyToken, canViewSpkCorrective, validateSpkUpdate(TEKNISI_FIELDS), spkCtrl.updateByTeknisi);
 
-// ── Kasie Actions ────────────────────────────────────────────────────────────
-// POST /api/corrective/spk/:spkId/approve-kasie
-router.post('/spk/:spkId/approve-kasie', verifyToken, canViewSpkCorrective, spkCtrl.approveKasie);
-
 // ── Kadis Pusat Actions ─────────────────────────────────────────────────────
 // POST /api/corrective/spk/:spkId/approve-kadis-pusat
 router.post('/spk/:spkId/approve-kadis-pusat', verifyToken, canViewSpkCorrective, spkCtrl.approveKadisPusat);
@@ -109,8 +122,5 @@ router.post('/spk/:spkId/approve-kadis-pelapor', verifyToken, canViewSpkCorrecti
 // POST /api/corrective/spk/:spkId/reject
 router.post('/spk/:spkId/reject', verifyToken, canViewSpkCorrective, spkCtrl.reject);
 
-// ── History ──────────────────────────────────────────────────────────────────
-// GET /api/corrective/spk/history
-router.get('/spk/history', verifyToken, spkCtrl.getHistory);
 
 module.exports = router;

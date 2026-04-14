@@ -20,7 +20,9 @@ function verifyToken(req, res, next) {
     req.user = {
       userId: decoded.userId,
       nik: decoded.nik,
-      role: decoded.role
+      role: decoded.role,
+      dinas: decoded.dinas || null,
+      group: decoded.group || null,
     };
     next();
   } catch (err) {

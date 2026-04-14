@@ -223,6 +223,7 @@ sap-mock/
 │   ├── css/style.css
 │   ├── index.html            # Dashboard
 │   ├── pages/
+│   │   ├── corrective-planner.html
 │   │   ├── spk.html
 │   │   ├── lembar-kerja.html
 │   │   ├── equipment.html
@@ -230,6 +231,7 @@ sap-mock/
 │   │   └── submissions.html
 │   └── js/
 │       ├── app.js            # Shared: auth, fetch helpers, sidebar, toast
+│       ├── corrective-planner.js
 │       ├── spk.js
 │       ├── lembar-kerja.js
 │       ├── equipment.js

@@ -231,6 +231,19 @@ try {
 │   ├── *.test.js           # Test files
 │   └── README.md           # Testing docs
 ├── data/                   # JSON Mock/Seed data
+├── public/                 # Web Admin UI
+│   ├── index.html          # Main Dashboard
+│   ├── pages/
+│   │   ├── corrective-planner.html  # Corrective Planner UI
+│   │   ├── equipment.html
+│   │   ├── lembar-kerja.html
+│   │   ├── spk.html
+│   │   └── submissions.html
+│   └── js/
+│       ├── app.js
+│       ├── corrective-planner.js    # Planner logic
+│       ├── spk.js
+│       └── equipment.js
 └── uploads/                # Local file storage
 ```
 
