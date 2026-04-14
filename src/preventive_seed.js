@@ -21,6 +21,7 @@ const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./mod
 const FunctionalLocation = require('./models/FunctionalLocation');
 const { GeneralTaskList, GeneralTaskListActivity } = require('./models/GeneralTaskList');
 const EquipmentIntervalMapping = require('./models/EquipmentIntervalMapping');
+const SipilFunclocMapping = require('./models/SipilFunclocMapping');
 const PreventiveWeekSchedule = require('./models/PreventiveWeekSchedule');
 
 require('./models/associations');
@@ -30,6 +31,7 @@ const funcLocData = require(path.join(__dirname, '..', 'data', 'functional_locat
 const sapEquipmentData = require(path.join(__dirname, '..', 'data', 'sap_equipment.json'));
 const taskListData = require(path.join(__dirname, '..', 'data', 'general_task_lists.json'));
 const mappingData = require(path.join(__dirname, '..', 'data', 'equipment_interval_mappings.json'));
+const sipilData   = require(path.join(__dirname, '..', 'data', 'sipil_funcloc_mappings.json'));
 
 // ────────────────────────────────────────────────────────────────────────────
 // PLANTS — corrected from SAP sticky note
@@ -191,6 +193,21 @@ async function main() {
     }
   }
   console.log(`  ✓  eq_mappings    (${mappingAdded} inserted)`);
+
+  // ── 7b. Sipil FuncLoc Mappings ────────────────────────────────────────────
+  await SipilFunclocMapping.destroy({ where: {} });
+  let sipilAdded = 0;
+  for (const s of sipilData) {
+    await SipilFunclocMapping.create({
+      funcLocId:  s.funcLocId,
+      name:       s.name,
+      taskListId: s.taskListId || null,
+      interval:   s.interval || '1wk',
+      location:   s.location || null,
+    });
+    sipilAdded++;
+  }
+  console.log(`  ✓  sipil_mappings (${sipilAdded} inserted)`);
 
   // ── 8. Preventive Week Schedule 2026 ──────────────────────────────────────
   const SCHEDULE_YEAR = 2026;

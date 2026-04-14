@@ -16,6 +16,7 @@ const funcLocController = require('../controllers/preventive/functionalLocationC
 const taskListController = require('../controllers/preventive/generalTaskListController');
 const equipmentMappingController = require('../controllers/preventive/equipmentMappingController');
 const preventiveScheduleController = require('../controllers/preventive/preventiveScheduleController');
+const spkImportController = require('../controllers/preventive/spkImportController');
 
 // ── SPK ─────────────────────────────────────────────────────────────────────
 const spkRouter = express.Router();
@@ -23,6 +24,8 @@ spkRouter.get('/', verifyToken, spkController.getAll);
 spkRouter.post('/bulk-delete', verifyToken, spkController.bulkDelete);
 spkRouter.post('/generate-from-task-list', verifyToken, spkController.generateFromTaskList);
 spkRouter.post('/batch-generate', verifyToken, spkController.batchGenerate);
+spkRouter.post('/import-excel/preview', verifyToken, excelUpload.single('file'), spkImportController.preview);
+spkRouter.post('/import-excel/confirm', verifyToken, spkImportController.confirm);
 spkRouter.get('/:spkNumber', verifyToken, spkController.getOne);
 spkRouter.post('/', verifyToken, spkController.create);
 spkRouter.put('/:spkNumber', verifyToken, spkController.update);

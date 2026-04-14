@@ -3,8 +3,8 @@
 var allMappings   = [];
 var allEquipment  = [];
 var allTaskLists  = [];
-var INTERVALS     = ['1wk', '2wk', '4wk', '8wk', '12wk', '14wk', '16wk'];
-var _panelMode    = 'mapping'; // 'mapping' | 'tasklist' | 'bulk'
+var INTERVALS     = ['1wk', '2wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
+var _panelMode    = 'mapping'; // 'mapping' | 'tasklist' | 'bulk' | 'bulkcat'
 var _editingTlId  = null;      // null = create, string = edit
 var _tlActIdx     = 0;
 
@@ -12,6 +12,7 @@ var _tlActIdx     = 0;
 function handlePanelSave() {
   if (_panelMode === 'tasklist') saveTaskList();
   else if (_panelMode === 'bulk') saveBulkMapping();
+  else if (_panelMode === 'bulkcat') saveBulkByCategory();
   else saveMapping();
 }
 
@@ -84,8 +85,8 @@ async function openCreate() {
         '<select id="f_equipmentId"><option value="">-- Pilih Equipment --</option>' + eqOpts + '</select></div>' +
       '<div class="form-group"><label class="form-label">Interval *</label>' +
         '<select id="f_interval">' + ivOpts + '</select></div>' +
-      '<div class="form-group"><label class="form-label">Task List *</label>' +
-        '<select id="f_taskListId"><option value="">-- Pilih Task List --</option>' + tlOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Task List <span style="font-weight:400;color:var(--text-muted)">(opsional)</span></label>' +
+        '<select id="f_taskListId"><option value="">-- Tidak ada --</option>' + tlOpts + '</select></div>' +
     '</div>';
 
   openPanel();
@@ -97,10 +98,11 @@ async function saveMapping() {
   var taskListId  = document.getElementById('f_taskListId').value;
 
   if (!equipmentId) { showMessage('Equipment harus dipilih.', 'error'); return; }
-  if (!taskListId)  { showMessage('Task List harus dipilih.', 'error'); return; }
 
   try {
-    await apiPost('/equipment-mappings', { equipmentId, interval, taskListId });
+    var body = { equipmentId, interval };
+    if (taskListId) body.taskListId = taskListId;
+    await apiPost('/equipment-mappings', body);
     showMessage('Mapping berhasil ditambahkan.', 'success');
     closePanel();
     loadMappings();
@@ -155,8 +157,8 @@ async function openBulkCreate() {
       '<div class="form-section__title">Pengaturan Mapping</div>' +
       '<div class="form-group"><label class="form-label">Interval *</label>' +
         '<select id="fb_interval">' + ivOpts + '</select></div>' +
-      '<div class="form-group"><label class="form-label">Task List *</label>' +
-        '<select id="fb_taskListId"><option value="">-- Pilih Task List --</option>' + tlOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Task List <span style="font-weight:400;color:var(--text-muted)">(opsional)</span></label>' +
+        '<select id="fb_taskListId"><option value="">-- Tidak ada --</option>' + tlOpts + '</select></div>' +
     '</div>' +
     '<div class="form-section">' +
       '<div class="form-section__title" style="margin-bottom:8px">Pilih Equipment</div>' +
@@ -190,15 +192,181 @@ async function saveBulkMapping() {
   var taskListId = document.getElementById('fb_taskListId').value;
   var equipmentIds = Array.from(document.querySelectorAll('#fb_eqList input[name="bulkEq"]:checked')).map(function(cb) { return cb.value; });
 
-  if (!taskListId)       { showMessage('Task List harus dipilih.', 'error'); return; }
   if (!equipmentIds.length) { showMessage('Pilih minimal 1 equipment.', 'error'); return; }
 
   try {
-    var result = await apiPost('/equipment-mappings/bulk', { equipmentIds: equipmentIds, interval: interval, taskListId: taskListId });
+    var bulkBody = { equipmentIds: equipmentIds, interval: interval };
+    if (taskListId) bulkBody.taskListId = taskListId;
+    var result = await apiPost('/equipment-mappings/bulk', bulkBody);
     showMessage(result.message || (equipmentIds.length + ' mapping berhasil diproses.'), 'success');
     closePanel();
     loadMappings();
   } catch (e) { showMessage(e.message || 'Gagal menyimpan bulk mapping.', 'error'); }
+}
+
+// ── Bulk by Category ─────────────────────────────────────────────────────────
+async function openBulkByCategory() {
+  _panelMode = 'bulkcat';
+  document.getElementById('panelTitle').textContent = 'Bulk Mapping per Kategori';
+  document.getElementById('panelSave').textContent  = 'Terapkan Mapping';
+
+  var body = document.getElementById('panelBody');
+  body.textContent = '';
+
+  // Loading spinner while fetching task lists
+  var spinner = document.createElement('div');
+  spinner.style.cssText = 'padding:32px;text-align:center';
+  spinner.innerHTML = '<div class="spinner"></div>';
+  body.appendChild(spinner);
+  openPanel();
+
+  try {
+    allTaskLists = await apiGet('/task-lists');
+  } catch (e) { allTaskLists = []; }
+
+  body.textContent = '';
+
+  // ── Section 1: settings ───
+  var sec1 = document.createElement('div');
+  sec1.className = 'form-section';
+
+  var secTitle = document.createElement('div');
+  secTitle.className = 'form-section__title';
+  secTitle.textContent = 'Pengaturan Kategori';
+  sec1.appendChild(secTitle);
+
+  var hint = document.createElement('p');
+  hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 12px';
+  hint.textContent = 'Semua equipment dengan kategori yang dipilih akan mendapat mapping interval ini. Mapping yang sudah ada dilewati.';
+  sec1.appendChild(hint);
+
+  // Category select
+  var grpCat = document.createElement('div');
+  grpCat.className = 'form-group';
+  var lblCat = document.createElement('label');
+  lblCat.className = 'form-label';
+  lblCat.textContent = 'Kategori *';
+  var selCat = document.createElement('select');
+  selCat.id = 'fbc_category';
+  ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'].forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    selCat.appendChild(o);
+  });
+  grpCat.appendChild(lblCat); grpCat.appendChild(selCat);
+  sec1.appendChild(grpCat);
+
+  // Interval select
+  var grpIv = document.createElement('div');
+  grpIv.className = 'form-group';
+  var lblIv = document.createElement('label');
+  lblIv.className = 'form-label';
+  lblIv.textContent = 'Interval *';
+  var selIv = document.createElement('select');
+  selIv.id = 'fbc_interval';
+  INTERVALS.forEach(function(iv) {
+    var o = document.createElement('option');
+    o.value = iv; o.textContent = iv;
+    selIv.appendChild(o);
+  });
+  grpIv.appendChild(lblIv); grpIv.appendChild(selIv);
+  sec1.appendChild(grpIv);
+
+  // Task list select (optional)
+  var grpTl = document.createElement('div');
+  grpTl.className = 'form-group';
+  var lblTl = document.createElement('label');
+  lblTl.className = 'form-label';
+  lblTl.textContent = 'Task List ';
+  var lblTlOpt = document.createElement('span');
+  lblTlOpt.style.cssText = 'font-weight:400;color:var(--text-muted)';
+  lblTlOpt.textContent = '(opsional)';
+  lblTl.appendChild(lblTlOpt);
+  var selTl = document.createElement('select');
+  selTl.id = 'fbc_taskListId';
+  var phOpt = document.createElement('option');
+  phOpt.value = ''; phOpt.textContent = '-- Tidak ada --';
+  selTl.appendChild(phOpt);
+  allTaskLists.forEach(function(tl) {
+    var id   = String(tl.taskListId || tl.id || '');
+    var name = tl.taskListName || tl.name || id;
+    var o = document.createElement('option');
+    o.value = id; o.textContent = name + ' (' + id + ')';
+    selTl.appendChild(o);
+  });
+  grpTl.appendChild(lblTl); grpTl.appendChild(selTl);
+  sec1.appendChild(grpTl);
+
+  body.appendChild(sec1);
+
+  // ── Section 2: preview ───
+  var sec2 = document.createElement('div');
+  sec2.className = 'form-section';
+  var secTitle2 = document.createElement('div');
+  secTitle2.className = 'form-section__title';
+  secTitle2.textContent = 'Pratinjau';
+  sec2.appendChild(secTitle2);
+  var prevP = document.createElement('p');
+  prevP.id = 'fbc_preview';
+  prevP.style.cssText = 'font-size:13px;color:var(--text-muted)';
+  prevP.textContent = 'Pilih kategori untuk melihat jumlah equipment yang akan dipetakan.';
+  sec2.appendChild(prevP);
+  body.appendChild(sec2);
+
+  selCat.addEventListener('change', previewBulkByCategory);
+  previewBulkByCategory();
+}
+
+async function previewBulkByCategory() {
+  var selCat = document.getElementById('fbc_category');
+  var p      = document.getElementById('fbc_preview');
+  if (!selCat || !p) return;
+  var cat = selCat.value;
+  if (!cat) return;
+  p.textContent = 'Memuat...';
+  try {
+    var data = await apiGet('/equipment?category=' + encodeURIComponent(cat) + '&limit=9999');
+    var list = data.data || data;
+    p.textContent = list.length + ' equipment kategori ' + cat + ' akan dipetakan. Mapping yang sudah ada akan dilewati.';
+  } catch (e) {
+    p.textContent = 'Gagal memuat: ' + e.message;
+  }
+}
+
+async function saveBulkByCategory() {
+  var category   = (document.getElementById('fbc_category')   || {}).value || '';
+  var interval   = (document.getElementById('fbc_interval')   || {}).value || '';
+  var taskListId = (document.getElementById('fbc_taskListId') || {}).value || '';
+
+  if (!category) { showMessage('Kategori harus dipilih.', 'error'); return; }
+
+  var panelSave = document.getElementById('panelSave');
+  if (panelSave) { panelSave.disabled = true; panelSave.textContent = 'Memuat equipment...'; }
+
+  try {
+    var data = await apiGet('/equipment?category=' + encodeURIComponent(category) + '&limit=9999');
+    var list = data.data || data;
+    var equipmentIds = list.map(function(eq) { return eq.equipmentId || eq.id; }).filter(Boolean);
+
+    if (!equipmentIds.length) {
+      showMessage('Tidak ada equipment untuk kategori ' + category + '.', 'error');
+      return;
+    }
+
+    if (panelSave) panelSave.textContent = 'Menyimpan ' + equipmentIds.length + ' mapping...';
+
+    var reqBody = { equipmentIds: equipmentIds, interval: interval };
+    if (taskListId) reqBody.taskListId = taskListId;
+    var result = await apiPost('/equipment-mappings/bulk', reqBody);
+
+    showMessage(result.message || (result.created + ' mapping baru dibuat.'), 'success');
+    closePanel();
+    loadMappings();
+  } catch (e) {
+    showMessage(e.message || 'Gagal menyimpan bulk mapping.', 'error');
+  } finally {
+    if (panelSave) { panelSave.disabled = false; panelSave.textContent = 'Terapkan Mapping'; }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

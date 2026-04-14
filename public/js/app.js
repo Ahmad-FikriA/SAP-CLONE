@@ -104,6 +104,7 @@ function apiDelete(path) {
 const _NAV = [
   { href: '/',                              label: 'Dashboard',       icon: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z' },
   { href: '/pages/spk.html',               label: 'SPK',             icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z|M14 2v6h6|M9 13h6|M9 17h6' },
+  { href: '/pages/spk-import.html', label: 'Import SAP', icon: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4|M17 8l-5-5-5 5|M12 3v12' },
   { href: '/pages/lembar-kerja.html',      label: 'Lembar Kerja',    icon: 'M9 11l3 3L22 4|M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' },
   { divider: true },
   { href: '/pages/equipment.html',         label: 'Equipment',       icon: 'circle:12,12,3|M19.07 4.93a10 10 0 0 1 0 14.14|M4.93 4.93a10 10 0 0 0 0 14.14' },

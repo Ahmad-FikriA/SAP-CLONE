@@ -3,7 +3,10 @@
 const XLSX = require('xlsx');
 const { Op } = require('sequelize');
 const EquipmentIntervalMapping = require('../models/EquipmentIntervalMapping');
-const PreventiveWeekSchedule = require('../models/PreventiveWeekSchedule');
+const SipilFunclocMapping = require('../models/SipilFunclocMapping');
+const Equipment = require('../models/Equipment');
+const FunctionalLocation = require('../models/FunctionalLocation');
+const { GeneralTaskList } = require('../models/GeneralTaskList');
 const { Spk } = require('../models/Spk');
 
 // ── Planner Group → category name ────────────────────────────────────────────
@@ -114,13 +117,21 @@ function parseExcelBuffer(buffer) {
       const plannerGroupRaw = String(get(row, 'planner group') ?? '').trim();
       const category = PLANNER_GROUP_MAP[plannerGroupRaw] ?? plannerGroupRaw;
 
+      const rawEquipmentId = String(get(row, 'equipment') ?? '').trim();
+      const rawFuncLoc     = String(get(row, 'functional loc.') ?? '').trim();
+
+      // Sipil: equipment column empty but FuncLoc present — building is the subject
+      const isSipil      = !rawEquipmentId && !!rawFuncLoc;
+      const equipmentId  = isSipil ? null : (rawEquipmentId || null);
+
       orderMap.set(orderNumber, {
         orderNumber,
         description: String(get(row, 'description') ?? '').trim(),
         scheduledDate,
         category,
-        equipmentId: String(get(row, 'equipment') ?? '').trim(),
-        functionalLocation: String(get(row, 'functional loc.') ?? '').trim(),
+        equipmentId,
+        functionalLocation: rawFuncLoc,
+        isSipil,
         activitiesModel: [],
       });
     }
@@ -143,80 +154,70 @@ function parseExcelBuffer(buffer) {
  * Async. Mutates each order in-place, adding:
  *   interval, intervalResolution, intervalOptions
  *
- * Uses 2 bulk DB queries total (not N queries).
+ * Resolves solely from equipment_interval_mappings (single bulk query).
+ * We trust SAP's schedule for which equipment is due — no week schedule
+ * cross-reference needed. If equipment has one mapping → auto. Multiple → ambiguous.
  */
 async function resolveIntervals(orders) {
   if (!orders.length) return;
 
-  // Collect all unique equipmentIds
-  const equipmentIds = [...new Set(orders.map(o => o.equipmentId).filter(Boolean))];
+  // ── Sipil orders: look up interval + task list from SipilFunclocMapping ──────
+  const sipilFuncLocs = [...new Set(orders.filter(o => o.isSipil).map(o => o.functionalLocation).filter(Boolean))];
+  const sipilRows = sipilFuncLocs.length
+    ? await SipilFunclocMapping.findAll({ where: { funcLocId: { [Op.in]: sipilFuncLocs } }, attributes: ['funcLocId', 'interval', 'taskListId'] })
+    : [];
+  const sipilMap = Object.fromEntries(sipilRows.map(s => [s.funcLocId, s]));
 
-  // Query 1: all intervals registered for these equipment IDs
+  for (const order of orders.filter(o => o.isSipil)) {
+    const sipil = sipilMap[order.functionalLocation];
+    order.interval           = sipil?.interval || '1wk';  // Sipil is always 1wk
+    order.taskListId         = sipil?.taskListId || null;
+    order.intervalResolution = 'auto';
+    order.intervalOptions    = [order.interval];
+  }
+
+  // ── Regular equipment: look up from EquipmentIntervalMapping ─────────────
+  const equipmentIds = [...new Set(orders.filter(o => !o.isSipil).map(o => o.equipmentId).filter(Boolean))];
+
   const mappings = await EquipmentIntervalMapping.findAll({
     where: { equipmentId: { [Op.in]: equipmentIds } },
-    attributes: ['equipmentId', 'interval'],
+    attributes: ['equipmentId', 'interval', 'taskListId'],
   });
 
-  // Build map: equipmentId → Set of intervals
-  const equipIntervals = {}; // equipmentId → Set<interval>
+  // equipmentId → array of { interval, taskListId }
+  const equipMappings = {};
   for (const m of mappings) {
-    if (!equipIntervals[m.equipmentId]) equipIntervals[m.equipmentId] = new Set();
-    equipIntervals[m.equipmentId].add(m.interval);
+    if (!equipMappings[m.equipmentId]) equipMappings[m.equipmentId] = [];
+    equipMappings[m.equipmentId].push({ interval: m.interval, taskListId: m.taskListId });
   }
 
-  // Collect all (weekNumber, weekYear) pairs needed
-  const weekKeys = new Set();
-  const orderWeekMap = {}; // orderNumber → { weekNumber, weekYear }
-  for (const order of orders) {
-    const { weekNumber, weekYear } = isoToWeek(order.scheduledDate);
-    orderWeekMap[order.orderNumber] = { weekNumber, weekYear };
-    if (weekNumber !== null && weekYear !== null) {
-      weekKeys.add(`${weekYear}:${weekNumber}`);
-    }
-  }
+  for (const order of orders.filter(o => !o.isSipil)) {
+    const entries = equipMappings[order.equipmentId] || [];
+    // Separate fully-mapped (have interval) from partial (task list only, no interval yet)
+    const full    = entries.filter(e => e.interval);
+    const partial = entries.filter(e => !e.interval);
 
-  // Query 2: all schedule rows matching any of the needed week/year combos
-  const weekConditions = [];
-  for (const key of weekKeys) {
-    const [yr, wk] = key.split(':').map(Number);
-    weekConditions.push({ year: yr, weekNumber: wk });
-  }
-
-  let weekIntervals = {}; // `${year}:${weekNumber}` → Set<interval>
-  if (weekConditions.length) {
-    const schedules = await PreventiveWeekSchedule.findAll({
-      where: { [Op.or]: weekConditions },
-      attributes: ['year', 'weekNumber', 'interval'],
-    });
-    for (const s of schedules) {
-      const k = `${s.year}:${s.weekNumber}`;
-      if (!weekIntervals[k]) weekIntervals[k] = new Set();
-      weekIntervals[k].add(s.interval);
-    }
-  }
-
-  // Resolve each order
-  for (const order of orders) {
-    const { weekNumber, weekYear } = orderWeekMap[order.orderNumber];
-    const equipSet = equipIntervals[order.equipmentId] || new Set();
-    const weekKey = weekNumber !== null ? `${weekYear}:${weekNumber}` : null;
-    const schedSet = (weekKey && weekIntervals[weekKey]) ? weekIntervals[weekKey] : new Set();
-
-    // Intersection
-    const matches = [...equipSet].filter(iv => schedSet.has(iv));
-
-    if (matches.length === 1) {
-      order.interval = matches[0];
+    if (full.length === 1) {
+      order.interval           = full[0].interval;
+      order.taskListId         = full[0].taskListId || null;
       order.intervalResolution = 'auto';
-      order.intervalOptions = [matches[0]];
-    } else if (matches.length > 1) {
-      order.interval = null;
+      order.intervalOptions    = full.map(e => e.interval);
+    } else if (full.length > 1) {
+      order.interval           = null;
+      order.taskListId         = null;
       order.intervalResolution = 'ambiguous';
-      order.intervalOptions = matches;
+      order.intervalOptions    = full.map(e => e.interval);
+    } else if (partial.length > 0) {
+      // Task list saved from a previous auto-learn, but interval not yet filled in
+      order.interval           = null;
+      order.taskListId         = partial[0].taskListId || null;
+      order.intervalResolution = 'partial';   // needs interval
+      order.intervalOptions    = [];
     } else {
-      order.interval = null;
+      order.interval           = null;
+      order.taskListId         = null;
       order.intervalResolution = 'unknown';
-      order.intervalOptions = [];
+      order.intervalOptions    = [];
     }
   }
 }
@@ -245,4 +246,109 @@ async function flagExisting(orders) {
   }
 }
 
-module.exports = { parseExcelBuffer, resolveIntervals, flagExisting };
+/**
+ * enrichOrders(orders)
+ * Async. Mutates each order in-place, adding:
+ *   equipmentName    — from Equipment table (null if not found)
+ *   funcLocDesc      — FuncLoc description from FunctionalLocation table
+ *   displayName      — resolved display name (equipmentName, or funcLocDesc for Sipil)
+ *   autoMapped       — true if task list was auto-detected from description (unmapped equipment)
+ *   suggestedTaskList — KTI_XXXX code if auto-detected, null otherwise
+ *
+ * For Sipil orders (isSipil=true):
+ *   - displayName = FuncLoc description (building name)
+ *   - equipmentId stays null
+ *
+ * For unmapped non-Sipil orders (intervalResolution='unknown'):
+ *   - Tries to match description against GeneralTaskList.taskListName
+ *   - If matched, sets autoMapped=true + suggestedTaskList
+ *   - Does NOT save to DB (interval unknown; user fills in Equipment Mappings sheet)
+ */
+async function enrichOrders(orders) {
+  if (!orders.length) return;
+
+  // ── 1. Bulk-fetch equipment names ──────────────────────────────────────────
+  const equipIds = [...new Set(orders.map(o => o.equipmentId).filter(Boolean))];
+  const equipRows = equipIds.length
+    ? await Equipment.findAll({ where: { equipmentId: { [Op.in]: equipIds } }, attributes: ['equipmentId', 'equipmentName'] })
+    : [];
+  const equipNameMap = Object.fromEntries(equipRows.map(e => [e.equipmentId, e.equipmentName]));
+
+  // ── 2. Bulk-fetch FuncLoc descriptions (FunctionalLocation + Sipil building names) ──
+  const funcLocIds = [...new Set(orders.map(o => o.functionalLocation).filter(Boolean))];
+  const flRows = funcLocIds.length
+    ? await FunctionalLocation.findAll({ where: { funcLocId: { [Op.in]: funcLocIds } }, attributes: ['funcLocId', 'description'] })
+    : [];
+  const flDescMap = Object.fromEntries(flRows.map(f => [f.funcLocId, f.description]));
+
+  // Also look up Sipil building names from SipilFunclocMapping (not in FunctionalLocation table)
+  const sipilFuncLocIds = [...new Set(orders.filter(o => o.isSipil).map(o => o.functionalLocation).filter(Boolean))];
+  const sipilNameRows = sipilFuncLocIds.length
+    ? await SipilFunclocMapping.findAll({ where: { funcLocId: { [Op.in]: sipilFuncLocIds } }, attributes: ['funcLocId', 'name'] })
+    : [];
+  for (const s of sipilNameRows) {
+    if (!flDescMap[s.funcLocId]) flDescMap[s.funcLocId] = s.name; // fill gap if not in FunctionalLocation
+  }
+
+  // ── 3. Collect unique descriptions for unmapped equipment (auto-learn) ──────
+  const unmappedDescriptions = [...new Set(
+    orders
+      .filter(o => !o.isSipil && o.intervalResolution === 'unknown' && o.description)
+      .map(o => o.description)
+  )];
+
+  // Bulk-match against GeneralTaskList — partial LIKE per description
+  const taskListMatchMap = {}; // description → taskListId
+  if (unmappedDescriptions.length) {
+    const allTaskLists = await GeneralTaskList.findAll({ attributes: ['taskListId', 'taskListName'] });
+    for (const desc of unmappedDescriptions) {
+      const descUpper = desc.toUpperCase().trim();
+      // Require exact match or that the task list BASE name (before parenthesis)
+      // equals the description exactly — avoid "PREV POMPA" matching "PREV POMPA VAKUM"
+      const match = allTaskLists.find(tl => {
+        const baseName = tl.taskListName.toUpperCase().split('(')[0].trim();
+        return baseName === descUpper || tl.taskListName.toUpperCase() === descUpper;
+      });
+      if (match) taskListMatchMap[desc] = match.taskListId;
+    }
+  }
+
+  // ── 4. Apply to each order ─────────────────────────────────────────────────
+  for (const order of orders) {
+    const funcLocDesc = flDescMap[order.functionalLocation] || null;
+
+    if (order.isSipil) {
+      // Sipil: building name is the display name
+      order.equipmentName  = null;
+      order.funcLocDesc    = funcLocDesc || order.functionalLocation;
+      order.displayName    = funcLocDesc || order.functionalLocation;
+      order.autoMapped     = false;
+      order.suggestedTaskList = null;
+    } else {
+      const equipmentName = equipNameMap[order.equipmentId] || null;
+      order.equipmentName  = equipmentName;
+      order.funcLocDesc    = funcLocDesc;
+      order.displayName    = equipmentName || order.equipmentId;
+
+      if (order.intervalResolution === 'auto' && order.taskListId) {
+        // Fully mapped in DB — task list + interval both known
+        order.autoMapped        = false;
+        order.suggestedTaskList = order.taskListId;
+      } else if (order.intervalResolution === 'partial' && order.taskListId) {
+        // Task list saved from previous import, interval still missing
+        order.autoMapped        = false;
+        order.suggestedTaskList = order.taskListId;
+      } else if (order.intervalResolution === 'unknown' && order.description) {
+        // Unmapped equipment — try to suggest task list from description match
+        const suggested = taskListMatchMap[order.description] || null;
+        order.autoMapped        = !!suggested;
+        order.suggestedTaskList = suggested;
+      } else {
+        order.autoMapped        = false;
+        order.suggestedTaskList = null;
+      }
+    }
+  }
+}
+
+module.exports = { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders };
