@@ -475,11 +475,14 @@ const exportExcel = async (req, res) => {
     else if (year) parts.push(year);
     const filename = parts.join('_') + '.xlsx';
 
-    // ── Stream response ────────────────────────────────────────────────────
+    // ── Send response ──────────────────────────────────────────────────────
+    // Write to buffer first — streaming directly to res can corrupt the file
+    // if the HTTP response is flushed before ExcelJS finishes writing.
+    const buffer = await wb.xlsx.writeBuffer();
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    await wb.xlsx.write(res);
-    res.end();
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
 
   } catch (err) {
     console.error('[export]', err);
