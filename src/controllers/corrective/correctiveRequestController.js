@@ -3,8 +3,10 @@
 const { Op } = require('sequelize');
 const { v4: uuid } = require('uuid');
 const Notification = require('../../models/Notification');
+const User = require('../../models/User');
 const { SpkCorrective, SpkCorrectiveItem, SpkCorrectivePhoto } = require('../../models/associations');
 const { KADIS_ROLE, KADIS_PUSAT_ROLE } = require('../../middleware/correctiveAccess');
+const NotificationService = require('../../services/notificationService');
 
 /**
  * Normalize a date string to YYYY-MM-DD format.
@@ -183,6 +185,23 @@ const create = async (req, res) => {
   
   const fresh = await Notification.findByPk(id, { include: [SPK_INCLUDE] });
   res.status(201).json(fmtRequest(fresh));
+
+  // 🔔 Notify all Planners about new corrective request
+  const planners = await User.findAll({
+    where: { [Op.or]: [
+      { role: 'planner' },
+      { group: { [Op.like]: '%perencanaan%' } },
+    ]},
+    attributes: ['id'],
+  });
+  await NotificationService.notify({
+    module: 'corrective',
+    type: 'new_request',
+    title: 'Laporan Corrective Baru',
+    body: `Laporan baru dari ${reportedBy || 'Kadis'}: ${description || '-'}`,
+    data: { requestId: id, deepLink: 'corrective/request-detail' },
+    recipientIds: planners.map(u => u.id),
+  });
 };
 
 // PUT /api/corrective/requests/:id
@@ -232,6 +251,22 @@ const approveKadisPusat = async (req, res) => {
   
   const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
   res.json(fmtRequest(fresh));
+
+  // 🔔 Notify Teknisi matching the workCenter that SPK is ready
+  const wc = notification.workCenter;
+  const groupMap = { mechanical: 'mekanik', electrical: 'listrik', civil: 'sipil', automation: 'otomasi' };
+  const groupKeyword = groupMap[wc] || wc || '';
+  const teknisiWhere = { role: { [Op.in]: ['teknisi', 'kasie'] } };
+  if (groupKeyword) teknisiWhere.group = { [Op.like]: `%${groupKeyword}%` };
+  const teknisiUsers = await User.findAll({ where: teknisiWhere, attributes: ['id'] });
+  await NotificationService.notify({
+    module: 'corrective',
+    type: 'spk_ready',
+    title: 'SPK Siap Dikerjakan',
+    body: `SPK untuk ${notification.equipmentName || '-'} sudah disetujui dan siap dikerjakan.`,
+    data: { requestId: notification.notificationId, deepLink: 'corrective/request-detail' },
+    recipientIds: teknisiUsers.map(u => u.id),
+  });
 };
 
 // POST /api/corrective/requests/:id/reject
@@ -251,6 +286,23 @@ const rejectKadisPusat = async (req, res) => {
   
   const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
   res.json(fmtRequest(fresh));
+
+  // 🔔 Notify Planners that SPK was rejected
+  const plannerUsers = await User.findAll({
+    where: { [Op.or]: [
+      { role: 'planner' },
+      { group: { [Op.like]: '%perencanaan%' } },
+    ]},
+    attributes: ['id'],
+  });
+  await NotificationService.notify({
+    module: 'corrective',
+    type: 'spk_rejected_pp',
+    title: 'SPK Ditolak oleh Kadis PP',
+    body: `SPK untuk ${notification.equipmentName || '-'} ditolak. Silakan revisi.`,
+    data: { requestId: notification.notificationId, deepLink: 'corrective/request-detail' },
+    recipientIds: plannerUsers.map(u => u.id),
+  });
 };
 
 // DELETE /api/corrective/requests/:id
@@ -300,6 +352,20 @@ const approvePlanner = async (req, res) => {
   
   const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
   res.json(fmtRequest(fresh));
+
+  // 🔔 Notify Kadis PP that a request has been approved and awaits SPK
+  const kadisppUsers = await User.findAll({
+    where: { role: 'kadis', dinas: { [Op.like]: '%pusat perawatan%' } },
+    attributes: ['id'],
+  });
+  await NotificationService.notify({
+    module: 'corrective',
+    type: 'request_approved_planner',
+    title: 'Permintaan Corrective Disetujui',
+    body: `Planner telah menyetujui laporan ${notification.notificationId}. Menunggu pembuatan SPK.`,
+    data: { requestId: notification.notificationId, deepLink: 'corrective/request-detail' },
+    recipientIds: kadisppUsers.map(u => u.id),
+  });
 };
 
 module.exports = { getAll, getOne, create, update, remove, bulkDelete, approveKadisPusat, rejectKadisPusat, approvePlanner };
