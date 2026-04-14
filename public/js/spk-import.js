@@ -317,6 +317,7 @@ function onIntervalChange(selectEl) {
 function updateFooter() {
   var footerInfo = document.getElementById('footerInfo');
   var confirmBtn = document.getElementById('confirmBtn');
+  var printBtn   = document.getElementById('printBtn');
   if (!footerInfo || !confirmBtn) return;
 
   var toImport = _parsedOrders.filter(function (o) { return !o.alreadyExists; });
@@ -329,12 +330,15 @@ function updateFooter() {
 
   if (_parsedOrders.length === 0) {
     confirmBtn.disabled = true;
+    if (printBtn) printBtn.disabled = true;
     var span = document.createElement('span');
     span.style.color = 'var(--text-muted)';
     span.textContent = 'Belum ada file dipilih';
     footerInfo.appendChild(span);
     return;
   }
+
+  if (printBtn) printBtn.disabled = false;
 
   if (pending.length > 0) {
     confirmBtn.disabled = true;
@@ -403,6 +407,125 @@ function confirmImport() {
         updateFooter();
       }
     });
+}
+
+// ══════════════════════════════════════════════════
+// PRINT PREVIEW
+// ══════════════════════════════════════════════════
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function printPreview() {
+  if (!_parsedOrders.length) return;
+
+  var orders = _parsedOrders;
+  var now = new Date();
+  var dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  var totalCount     = orders.length;
+  var newCount       = orders.filter(function(o) { return !o.alreadyExists; }).length;
+  var existingCount  = orders.filter(function(o) { return o.alreadyExists; }).length;
+  var autoCount      = orders.filter(function(o) { return !o.alreadyExists && o.intervalResolution === 'auto'; }).length;
+  var ambiguousCount = orders.filter(function(o) { return !o.alreadyExists && o.intervalResolution === 'ambiguous'; }).length;
+  var unknownCount   = orders.filter(function(o) { return !o.alreadyExists && (o.intervalResolution === 'unknown' || o.intervalResolution === 'partial'); }).length;
+
+  function statusLabel(o) {
+    if (o.alreadyExists)                      return 'Sudah Ada';
+    if (o.intervalResolution === 'auto')      return 'Auto';
+    if (o.intervalResolution === 'ambiguous') return 'Pilih Interval';
+    if (o.intervalResolution === 'partial')   return 'Perlu Interval';
+    return 'Tidak Dikenali';
+  }
+
+  function statusColor(o) {
+    if (o.alreadyExists)                      return '#3949ab';
+    if (o.intervalResolution === 'auto')      return '#1a6e2e';
+    if (o.intervalResolution === 'ambiguous') return '#7a5500';
+    return '#9e2a22';
+  }
+
+  var rows = orders.map(function(o, i) {
+    var actCount    = (o.activitiesModel || []).length;
+    var interval    = o.interval || '\u2014';
+    var displayName = o.displayName || o.equipmentId || o.functionalLocation || '\u2014';
+    var idCode      = o.equipmentId || o.functionalLocation || '';
+    return '<tr>' +
+      '<td style="text-align:center;color:#666">' + (i + 1) + '</td>' +
+      '<td><code style="font-size:11px;background:#f4f4f4;padding:1px 4px;border-radius:3px">' + esc(o.orderNumber || '') + '</code></td>' +
+      '<td>' + esc(o.description || '\u2014') + '</td>' +
+      '<td>' +
+        '<div style="font-weight:500">' + esc(displayName) + '</div>' +
+        (idCode ? '<div style="font-size:10px;color:#888;margin-top:1px">' + esc(idCode) + '</div>' : '') +
+      '</td>' +
+      '<td style="text-align:center">' + esc(o.category || '\u2014') + '</td>' +
+      '<td style="text-align:center;font-weight:600;color:#1B3A5C">' + esc(interval) + '</td>' +
+      '<td style="text-align:center">' + actCount + '</td>' +
+      '<td style="text-align:center;color:' + statusColor(o) + ';font-weight:600">' + statusLabel(o) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  var html = [
+    '<!DOCTYPE html><html lang="id"><head>',
+    '<meta charset="UTF-8"><title>Print Preview \u2014 Import SAP</title>',
+    '<style>',
+    'body{font-family:Arial,sans-serif;font-size:12px;color:#222;margin:0;padding:20px}',
+    '.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1B3A5C;padding-bottom:10px;margin-bottom:16px}',
+    '.hdr-l h1{margin:0 0 2px;font-size:15px;color:#1B3A5C}',
+    '.hdr-l p{margin:0;font-size:11px;color:#555}',
+    '.hdr-r{font-size:11px;color:#555;text-align:right}',
+    '.summary{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}',
+    '.box{border:1px solid #ddd;border-radius:6px;padding:8px 14px;min-width:80px}',
+    '.box .val{font-size:20px;font-weight:700;color:#1B3A5C}',
+    '.box .lbl{font-size:10px;color:#777;margin-top:2px}',
+    'table{width:100%;border-collapse:collapse;font-size:11px}',
+    'thead tr{background:#1B3A5C;color:#fff}',
+    'thead th{padding:7px 8px;text-align:left;white-space:nowrap}',
+    'tbody tr:nth-child(even){background:#f8f9fa}',
+    'tbody td{padding:6px 8px;border-bottom:1px solid #eee;vertical-align:top}',
+    '@media print{body{padding:0}@page{size:A4 landscape;margin:12mm 10mm}thead{display:table-header-group}}',
+    '</style></head><body>',
+    '<div class="hdr">',
+      '<div class="hdr-l"><h1>Daftar SPK Import SAP \u2014 Preventive Maintenance</h1>',
+      '<p>PT Krakatau Tirta Industri &nbsp;|&nbsp; KTI SmartCare</p></div>',
+      '<div class="hdr-r">Tanggal cetak: ' + dateStr + '<br>Total order: ' + totalCount + '</div>',
+    '</div>',
+    '<div class="summary">',
+      '<div class="box"><div class="val">' + totalCount + '</div><div class="lbl">Total Order</div></div>',
+      '<div class="box"><div class="val" style="color:#1a6e2e">' + newCount + '</div><div class="lbl">Order Baru</div></div>',
+      '<div class="box"><div class="val" style="color:#1a6e2e">' + autoCount + '</div><div class="lbl">Auto</div></div>',
+      '<div class="box"><div class="val" style="color:#7a5500">' + ambiguousCount + '</div><div class="lbl">Pilih Interval</div></div>',
+      '<div class="box"><div class="val" style="color:#9e2a22">' + unknownCount + '</div><div class="lbl">Tidak Dikenali</div></div>',
+      '<div class="box"><div class="val" style="color:#3949ab">' + existingCount + '</div><div class="lbl">Sudah Ada</div></div>',
+    '</div>',
+    '<table><thead><tr>',
+      '<th style="width:30px">No</th>',
+      '<th>No. Order SAP</th>',
+      '<th>Deskripsi</th>',
+      '<th>Equipment / Bangunan</th>',
+      '<th style="text-align:center">Kategori</th>',
+      '<th style="text-align:center">Interval</th>',
+      '<th style="text-align:center">Aktivitas</th>',
+      '<th style="text-align:center">Status</th>',
+    '</tr></thead>',
+    '<tbody>' + rows + '</tbody></table>',
+    '<script>window.onload=function(){window.print();}<\/script>',
+    '</body></html>'
+  ].join('');
+
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var url  = URL.createObjectURL(blob);
+  var win  = window.open(url, '_blank');
+  if (win) {
+    win.addEventListener('afterprint', function() {
+      URL.revokeObjectURL(url);
+    });
+  }
 }
 
 // ══════════════════════════════════════════════════

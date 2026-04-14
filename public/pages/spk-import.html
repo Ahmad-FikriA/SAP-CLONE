@@ -362,16 +362,12 @@
     <div class="import-body">
 
       <!-- Upload zone -->
-      <div id="uploadZone"
-        onclick="document.getElementById('fileInput').click()"
-        ondragover="handleDragOver(event)"
-        ondragleave="handleDragLeave(event)"
-        ondrop="handleDrop(event)">
+      <div id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)"
+        ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
         <span class="upload-zone__icon">&#128194;</span>
         <span id="uploadLabel">Klik atau seret file Excel ke sini</span>
         <span class="upload-zone__sub">.xlsx &mdash; maks 10 MB</span>
-        <input type="file" id="fileInput" accept=".xlsx"
-          style="display:none" onchange="handleFileSelect(event)" />
+        <input type="file" id="fileInput" accept=".xlsx" style="display:none" onchange="handleFileSelect(event)" />
       </div>
 
       <!-- Preview section (hidden until file is parsed) -->
@@ -387,7 +383,7 @@
                 <th style="padding:8px 10px;white-space:nowrap">No. Order SAP</th>
                 <th style="padding:8px 10px;min-width:200px">Deskripsi</th>
                 <th style="padding:8px 10px;white-space:nowrap">Tgl Jadwal</th>
-                <th style="padding:8px 10px;min-width:160px">Equipment</th>
+                <th style="padding:8px 10px;min-width:160px">Equipment / Bangunan </th>
                 <th style="padding:8px 10px;white-space:nowrap">Kategori</th>
                 <th style="padding:8px 10px;white-space:nowrap">Interval</th>
                 <th style="padding:8px 10px;min-width:200px">Aktivitas</th>
@@ -408,6 +404,15 @@
       </div>
       <div class="import-footer__actions">
         <button class="btn btn-ghost" onclick="resetImport()">Reset</button>
+        <button class="btn btn-ghost" id="printBtn" onclick="printPreview()" disabled
+          style="display:flex;align-items:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 6 2 18 2 18 9" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect x="6" y="14" width="12" height="8" />
+          </svg>
+          Cetak Preview
+        </button>
         <button class="btn btn-primary" id="confirmBtn" onclick="confirmImport()" disabled>
           Import SPK
         </button>
