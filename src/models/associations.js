@@ -31,6 +31,8 @@ const Notification = require("./Notification");
 const SpkCorrective = require("./SpkCorrective");
 const { SpkCorrectiveItem, SpkCorrectivePhoto } = require("./SpkCorrectiveItem");
 const PushNotification = require("./PushNotification");
+const K3Report = require("./K3Report");
+
 
 // ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
 Plant.hasMany(Equipment, { foreignKey: "plantId", as: "equipment" });
@@ -221,6 +223,10 @@ SuratPelanggaran.belongsTo(InspectionFollowUp, {
 PushNotification.belongsTo(User, { foreignKey: 'recipient_id', as: 'recipient' });
 User.hasMany(PushNotification, { foreignKey: 'recipient_id', as: 'pushNotifications' });
 
+// ── K3 Report ↔ User ─────────────────────────────────────────────────────────
+K3Report.belongsTo(User, { foreignKey: 'dilaporkan_oleh', as: 'pelapor' });
+User.hasMany(K3Report, { foreignKey: 'dilaporkan_oleh', as: 'k3Reports' });
+
 // ── FunctionalLocation (self-referencing tree) ────────────────────────────────
 FunctionalLocation.hasMany(FunctionalLocation, {
   foreignKey: "parentId",
@@ -294,4 +300,5 @@ module.exports = {
   SupervisiJob,
   SupervisiVisit,
   PushNotification,
+  K3Report,
 };
