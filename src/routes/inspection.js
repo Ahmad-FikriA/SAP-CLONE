@@ -46,7 +46,8 @@ const {
 } = require("../controllers/inspection/inspectionRequestController");
 
 const {
-  uploadPhotos,
+  uploadVisitMedia,
+  uploadJobAmendDocuments,
   listJobs,
   getJob,
   createJob,
@@ -55,6 +56,14 @@ const {
   submitVisit,
   listPelanggaran,
 } = require("../controllers/inspection/supervisiController");
+
+const {
+  uploadAmendDocuments,
+  createAmend,
+  updateAmend,
+  deleteAmend,
+  listAmends,
+} = require("../controllers/inspection/supervisiAmendController");
 
 // All inspection routes require authentication
 router.use(verifyToken);
@@ -99,9 +108,14 @@ router.put("/requests/:id/cancel", cancelRequest);
 router.get("/supervisi/jobs", listJobs);
 router.get("/supervisi/jobs/:id", getJob);
 router.post("/supervisi/jobs", createJob);
-router.put("/supervisi/jobs/:id", updateJob);
+router.put("/supervisi/jobs/:id", uploadJobAmendDocuments, updateJob);
 router.get("/supervisi/jobs/:id/visits", listVisits);
-router.post("/supervisi/visits", uploadPhotos, submitVisit);
+router.post("/supervisi/visits", uploadVisitMedia, submitVisit);
 router.get("/supervisi/pelanggaran", listPelanggaran);
+// ── Supervisi Amend ───────────────────────────────────────────────────────────
+router.get("/supervisi/jobs/:jobId/amends", listAmends);
+router.post("/supervisi/jobs/:jobId/amends", uploadAmendDocuments, createAmend);
+router.put("/supervisi/jobs/:jobId/amends/:amendId", uploadAmendDocuments, updateAmend);
+router.delete("/supervisi/jobs/:jobId/amends/:amendId", deleteAmend);
 
 module.exports = router;

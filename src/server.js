@@ -26,6 +26,8 @@ const notificationRoutes = require("./routes/notification");
 const k3SafetyRoutes = require("./routes/k3_safety");
 const errorHandler = require("./middleware/errorHandler");
 const { syncDatabase } = require("./config/syncMode");
+const { ensureSupervisiJobSchema } = require("./models/SupervisiJob");
+const { ensureSupervisiVisitSchema } = require("./models/SupervisiVisit");
 
 // Register all Sequelize model associations (must run before any query)
 require("./models/associations");
@@ -275,6 +277,14 @@ sequelize
   .authenticate()
   .then(() => {
     console.log("Connection to database has been established successfully.");
+    return ensureSupervisiJobSchema();
+  })
+  .then(() => {
+    console.log("Supervisi job schema ensured.");
+    return ensureSupervisiVisitSchema();
+  })
+  .then(() => {
+    console.log("Supervisi visit schema ensured.");
     return syncDatabase(sequelize, "server startup");
   })
   .then(() => {
