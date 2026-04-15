@@ -50,6 +50,12 @@ const SupervisiVisit = sequelize.define(
       defaultValue: [],
       comment: "Array path foto / video hasil kunjungan",
     },
+    documents: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: [],
+      comment: "Array path dokumen pendukung (PDF/Word/Excel)",
+    },
     submittedBy: {
       type: DataTypes.STRING(100),
       allowNull: true,
@@ -66,18 +72,54 @@ const SupervisiVisit = sequelize.define(
       defaultValue: false,
       comment: "true jika tidak hadir tanpa izin",
     },
+    visitLatitude: {
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: true,
+      comment: "Latitude GPS saat Dinas Inspeksi submit kunjungan",
+    },
+    visitLongitude: {
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: true,
+      comment: "Longitude GPS saat Dinas Inspeksi submit kunjungan",
+    },
+    locationId: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: "ID lokasi dari JSON array locations di job",
+    },
+    jarakDariPusat: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      comment: "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
+    },
   },
   {
     tableName: "supervisi_visits",
     timestamps: true,
     indexes: [
       {
-        // Satu visit per hari per job
+        // Satu visit per hari per job per lokasi
         unique: true,
-        fields: ["jobId", "visitDate"],
+        fields: ["jobId", "visitDate", "locationId"],
       },
     ],
   },
 );
 
+async function ensureSupervisiVisitSchema() {
+  const queryInterface = sequelize.getQueryInterface();
+  const tableName = "supervisi_visits";
+  const table = await queryInterface.describeTable(tableName);
+
+  if (!table.documents) {
+    await queryInterface.addColumn(tableName, "documents", {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: [],
+      comment: "Array path dokumen pendukung (PDF/Word/Excel)",
+    });
+  }
+}
+
 module.exports = SupervisiVisit;
+module.exports.ensureSupervisiVisitSchema = ensureSupervisiVisitSchema;

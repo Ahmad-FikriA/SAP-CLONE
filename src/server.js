@@ -25,6 +25,8 @@ const inspectionRoutes = require("./routes/inspection");
 const notificationRoutes = require("./routes/notification");
 const errorHandler = require("./middleware/errorHandler");
 const { syncDatabase } = require("./config/syncMode");
+const { ensureSupervisiJobSchema } = require("./models/SupervisiJob");
+const { ensureSupervisiVisitSchema } = require("./models/SupervisiVisit");
 
 // Register all Sequelize model associations (must run before any query)
 require("./models/associations");
@@ -277,6 +279,14 @@ sequelize
   })
   .then(() => {
     console.log("Database models synced successfully.");
+    return ensureSupervisiJobSchema();
+  })
+  .then(() => {
+    console.log("Supervisi job schema ensured.");
+    return ensureSupervisiVisitSchema();
+  })
+  .then(() => {
+    console.log("Supervisi visit schema ensured.");
   })
   .catch((err) => {
     console.error("Unable to connect to the database:", err);

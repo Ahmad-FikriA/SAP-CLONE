@@ -19,7 +19,10 @@ async function migrate() {
       console.log('⚠️ [Auto-Migration] Terdeteksi skema lama (kolom username).');
       console.log('🔄 [Auto-Migration] Merakit ulang tabel users dengan NIK...');
       
+      // Disable FK checks agar tabel users bisa di-drop meski ada constraint dari tabel lain
+      await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
       await queryInterface.dropTable('users');
+      await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
       
       const User = require('./models/User');
       await User.sync({ force: true });

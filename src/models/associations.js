@@ -136,6 +136,7 @@ SpkCorrectivePhoto.belongsTo(SpkCorrective, { foreignKey: 'spkId', as: 'spk' });
 // ── Supervisi Module ─────────────────────────────────────────────────────────
 const SupervisiJob = require("./SupervisiJob");
 const SupervisiVisit = require("./SupervisiVisit");
+const SupervisiAmend = require("./SupervisiAmend");
 
 SupervisiJob.hasMany(SupervisiVisit, {
   foreignKey: "jobId",
@@ -143,6 +144,16 @@ SupervisiJob.hasMany(SupervisiVisit, {
   onDelete: "CASCADE",
 });
 SupervisiVisit.belongsTo(SupervisiJob, {
+  foreignKey: "jobId",
+  as: "job",
+});
+
+SupervisiJob.hasMany(SupervisiAmend, {
+  foreignKey: "jobId",
+  as: "amends",
+  onDelete: "CASCADE",
+});
+SupervisiAmend.belongsTo(SupervisiJob, {
   foreignKey: "jobId",
   as: "job",
 });
@@ -294,4 +305,5 @@ module.exports = {
   SupervisiJob,
   SupervisiVisit,
   PushNotification,
+  SupervisiAmend,
 };
