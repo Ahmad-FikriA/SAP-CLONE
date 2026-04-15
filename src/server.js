@@ -275,10 +275,6 @@ sequelize
   .authenticate()
   .then(() => {
     console.log("Connection to database has been established successfully.");
-    return syncDatabase(sequelize, "server startup");
-  })
-  .then(() => {
-    console.log("Database models synced successfully.");
     return ensureSupervisiJobSchema();
   })
   .then(() => {
@@ -287,6 +283,10 @@ sequelize
   })
   .then(() => {
     console.log("Supervisi visit schema ensured.");
+    return syncDatabase(sequelize, "server startup");
+  })
+  .then(() => {
+    console.log("Database models synced successfully.");
   })
   .catch((err) => {
     console.error("Unable to connect to the database:", err);

@@ -109,7 +109,24 @@ const SupervisiVisit = sequelize.define(
 async function ensureSupervisiVisitSchema() {
   const queryInterface = sequelize.getQueryInterface();
   const tableName = "supervisi_visits";
-  const table = await queryInterface.describeTable(tableName);
+  let table = null;
+
+  try {
+    table = await queryInterface.describeTable(tableName);
+  } catch (err) {
+    const code = err?.original?.code || err?.parent?.code || err?.code;
+    const message = String(err?.message || "");
+
+    if (
+      code === "ER_NO_SUCH_TABLE" ||
+      code === "ER_BAD_TABLE_ERROR" ||
+      message.includes("doesn't exist")
+    ) {
+      return;
+    }
+
+    throw err;
+  }
 
   if (!table.documents) {
     await queryInterface.addColumn(tableName, "documents", {
@@ -117,6 +134,38 @@ async function ensureSupervisiVisitSchema() {
       allowNull: true,
       defaultValue: [],
       comment: "Array path dokumen pendukung (PDF/Word/Excel)",
+    });
+  }
+
+  if (!table.visitLatitude) {
+    await queryInterface.addColumn(tableName, "visitLatitude", {
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: true,
+      comment: "Latitude GPS saat Dinas Inspeksi submit kunjungan",
+    });
+  }
+
+  if (!table.visitLongitude) {
+    await queryInterface.addColumn(tableName, "visitLongitude", {
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: true,
+      comment: "Longitude GPS saat Dinas Inspeksi submit kunjungan",
+    });
+  }
+
+  if (!table.locationId) {
+    await queryInterface.addColumn(tableName, "locationId", {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: "ID lokasi dari JSON array locations di job",
+    });
+  }
+
+  if (!table.jarakDariPusat) {
+    await queryInterface.addColumn(tableName, "jarakDariPusat", {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      comment: "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
     });
   }
 }

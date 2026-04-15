@@ -125,7 +125,24 @@ const SupervisiJob = sequelize.define(
 async function ensureSupervisiJobSchema() {
   const queryInterface = sequelize.getQueryInterface();
   const tableName = "supervisi_jobs";
-  const table = await queryInterface.describeTable(tableName);
+  let table = null;
+
+  try {
+    table = await queryInterface.describeTable(tableName);
+  } catch (err) {
+    const code = err?.original?.code || err?.parent?.code || err?.code;
+    const message = String(err?.message || "");
+
+    if (
+      code === "ER_NO_SUCH_TABLE" ||
+      code === "ER_BAD_TABLE_ERROR" ||
+      message.includes("doesn't exist")
+    ) {
+      return;
+    }
+
+    throw err;
+  }
 
   if (!table.locations) {
     await queryInterface.addColumn(tableName, "locations", {
