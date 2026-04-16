@@ -23,6 +23,7 @@ const {
 const correctiveRoutes = require("./routes/corrective");
 const inspectionRoutes = require("./routes/inspection");
 const notificationRoutes = require("./routes/notification");
+const k3SafetyRoutes = require("./routes/k3_safety");
 const errorHandler = require("./middleware/errorHandler");
 const { syncDatabase } = require("./config/syncMode");
 const { ensureSupervisiJobSchema } = require("./models/SupervisiJob");
@@ -259,6 +260,7 @@ app.use("/api/task-lists", taskListRouter);
 app.use("/api/equipment-mappings", mappingRouter);
 app.use("/api/preventive-schedule", scheduleRouter);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/k3-safety", k3SafetyRoutes);
 
 // ── SPA fallback: serve index.html for any non-API GET ───────────────────────
 app.get(/^(?!\/api).*$/, (req, res) => {
