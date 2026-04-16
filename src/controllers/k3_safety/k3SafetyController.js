@@ -149,6 +149,11 @@ exports.getAll = async (req, res, next) => {
           model: User,
           as: 'pelapor',
           attributes: ['id', 'name', 'role', 'divisi', 'dinas'],
+        },
+        {
+          model: User,
+          as: 'petugasHse',
+          attributes: ['id', 'name', 'role', 'divisi', 'dinas'],
         }
       ],
       order: [['createdAt', 'DESC']]
@@ -165,7 +170,7 @@ exports.getAll = async (req, res, next) => {
 
 exports.validasiAwal = async (req, res, next) => {
   try {
-    const { action, catatanValidasi } = req.body;
+    const { action, catatanValidasi, assignedTo } = req.body;
     const reportId = req.params.id;
     const role = (req.user.role || '').toLowerCase();
     const divisi = (req.user.divisi || '').toLowerCase();
@@ -187,8 +192,7 @@ exports.validasiAwal = async (req, res, next) => {
 
     if (action === 'approve') {
       report.status = 'menunggu_tindakan_hse';
-      // Store to the relevant field depending on who validated, historically it was catatanKadivPphse
-      // Let's keep it there since we don't have catatanKadisHse column yet
+      if (assignedTo) report.ditugaskanKepada = assignedTo;
       if (catatanValidasi) report.catatanKadivPphse = catatanValidasi;
     } else if (action === 'reject') {
       report.status = 'ditolak_kadis_hse';
@@ -207,21 +211,30 @@ exports.validasiAwal = async (req, res, next) => {
 
     try {
       if (action === 'approve') {
-        // Skenario 2: Validasi Awal Disetujui -> Push ke seluruh Dinas HSE
-        const hseUsers = await User.findAll({
-          where: {
-            divisi: { [Op.like]: '%pphse%' },
-          },
-          attributes: ['id'],
-        });
-        if (hseUsers.length > 0) {
+        // Skenario 2: Validasi Awal Disetujui -> Push ke petugas yang ditugaskan (atau seluruh Dinas HSE jika tidak ada)
+        let recipientIds = [];
+        if (report.ditugaskanKepada) {
+          recipientIds = [report.ditugaskanKepada];
+        } else {
+          const hseUsers = await User.findAll({
+            where: {
+              divisi: { [Op.like]: '%pphse%' },
+            },
+            attributes: ['id'],
+          });
+          recipientIds = hseUsers.map(u => u.id);
+        }
+
+        if (recipientIds.length > 0) {
           await NotificationService.notify({
             module: 'k3_safety',
             type: 'validasi_awal_disetujui',
             title: 'Temuan K3 Valid',
-            body: `Ada temuan K3 butuh segera ditindaklanjuti.`,
+            body: report.ditugaskanKepada 
+              ? 'Anda telah ditugaskan untuk menindaklanjuti temuan K3.' 
+              : 'Ada temuan K3 butuh segera ditindaklanjuti.',
             data: { reportId: report.reportNumber, deepLink: 'k3_safety/detail' },
-            recipientIds: hseUsers.map(u => u.id),
+            recipientIds: recipientIds,
           });
         }
       } else if (action === 'reject') {

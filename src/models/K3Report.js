@@ -98,6 +98,15 @@ const K3Report = sequelize.define('K3Report', {
     allowNull: true,
     field: 'catatan_revisi_perbaikan',
   },
+  ditugaskanKepada: {
+    type: DataTypes.STRING(36),
+    allowNull: true,
+    field: 'ditugaskan_kepada',
+    references: {
+      model: 'users',
+      key: 'id'
+    }
+  },
 }, {
   tableName: 'k3_reports',
   underscored: true,

@@ -237,6 +237,8 @@ User.hasMany(PushNotification, { foreignKey: 'recipient_id', as: 'pushNotificati
 // ── K3 Report ↔ User ─────────────────────────────────────────────────────────
 K3Report.belongsTo(User, { foreignKey: 'dilaporkan_oleh', as: 'pelapor' });
 User.hasMany(K3Report, { foreignKey: 'dilaporkan_oleh', as: 'k3Reports' });
+K3Report.belongsTo(User, { foreignKey: 'ditugaskan_kepada', as: 'petugasHse' });
+User.hasMany(K3Report, { foreignKey: 'ditugaskan_kepada', as: 'tugasK3Reports' });
 
 // ── FunctionalLocation (self-referencing tree) ────────────────────────────────
 FunctionalLocation.hasMany(FunctionalLocation, {
