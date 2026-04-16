@@ -98,6 +98,11 @@ const K3Report = sequelize.define('K3Report', {
     allowNull: true,
     field: 'catatan_revisi_perbaikan',
   },
+  jenisTindakan: {
+    type: DataTypes.ENUM('investigasi', 'perbaikan_langsung'),
+    allowNull: true,
+    field: 'jenis_tindakan',
+  },
   ditugaskanKepada: {
     type: DataTypes.STRING(36),
     allowNull: true,

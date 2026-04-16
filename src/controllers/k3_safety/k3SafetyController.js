@@ -170,7 +170,7 @@ exports.getAll = async (req, res, next) => {
 
 exports.validasiAwal = async (req, res, next) => {
   try {
-    const { action, catatanValidasi, assignedTo } = req.body;
+    const { action, catatanValidasi, assignedTo, jenisTindakan } = req.body;
     const reportId = req.params.id;
     const role = (req.user.role || '').toLowerCase();
     const divisi = (req.user.divisi || '').toLowerCase();
@@ -193,6 +193,7 @@ exports.validasiAwal = async (req, res, next) => {
     if (action === 'approve') {
       report.status = 'menunggu_tindakan_hse';
       if (assignedTo) report.ditugaskanKepada = assignedTo;
+      if (jenisTindakan) report.jenisTindakan = jenisTindakan;
       if (catatanValidasi) report.catatanKadivPphse = catatanValidasi;
     } else if (action === 'reject') {
       report.status = 'ditolak_kadis_hse';
@@ -342,7 +343,11 @@ exports.validasiHasil = async (req, res, next) => {
     }
 
     if (action === 'approve') {
-      report.status = 'menunggu_validasi_akhir_kadiv_pphse';
+      if (report.jenisTindakan === 'perbaikan_langsung') {
+        report.status = 'selesai';
+      } else {
+        report.status = 'menunggu_validasi_akhir_kadiv_pphse';
+      }
     } else if (action === 'reject') {
       report.status = 'perbaikan_ditolak_kadis_hse';
       if (catatan) report.catatanRevisiPerbaikan = catatan;
@@ -360,22 +365,35 @@ exports.validasiHasil = async (req, res, next) => {
 
     try {
       if (action === 'approve') {
-        const kadivPphseUsers = await User.findAll({
-          where: {
-            role: { [Op.in]: ['kadiv', 'kepala divisi'] },
-            divisi: { [Op.in]: ['pphse', 'hse'] },
-          },
-          attributes: ['id'],
-        });
-        if (kadivPphseUsers.length > 0) {
+        if (report.status === 'selesai') {
+          // Skenario 6: Langsung Selesai (Perbaikan Langsung) -> Push ke Pelapor
           await NotificationService.notify({
             module: 'k3_safety',
-            type: 'validasi_hasil_disetujui',
-            title: 'Laporan Butuh Validasi Final',
-            body: `Perbaikan K3 telah disetujui Kadis HSE, mohon Kadiv PPHSE menyelesaikan tiket.`,
+            type: 'laporan_selesai',
+            title: 'Laporan K3 Selesai',
+            body: `Hasil perbaikan telah disetujui Kadis HSE. Laporan Anda kini dinyatakan selesai (Closed).`,
             data: { reportId: report.reportNumber, deepLink: 'k3_safety/detail' },
-            recipientIds: kadivPphseUsers.map(u => u.id),
+            recipientIds: [report.dilaporkanOleh],
           });
+        } else {
+          // Skenario: Investigasi -> Butuh Validasi Final Kadiv PPHSE
+          const kadivPphseUsers = await User.findAll({
+            where: {
+              role: { [Op.in]: ['kadiv', 'kepala divisi'] },
+              divisi: { [Op.in]: ['pphse', 'hse'] },
+            },
+            attributes: ['id'],
+          });
+          if (kadivPphseUsers.length > 0) {
+            await NotificationService.notify({
+              module: 'k3_safety',
+              type: 'validasi_hasil_disetujui',
+              title: 'Laporan Butuh Validasi Final',
+              body: `Perbaikan K3 telah disetujui Kadis HSE, mohon Kadiv PPHSE menyelesaikan tiket.`,
+              data: { reportId: report.reportNumber, deepLink: 'k3_safety/detail' },
+              recipientIds: kadivPphseUsers.map(u => u.id),
+            });
+          }
         }
       } else if (action === 'reject') {
         const hseUsers = await User.findAll({

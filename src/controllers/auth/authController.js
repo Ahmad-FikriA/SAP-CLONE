@@ -41,9 +41,20 @@ const registerFcmToken = async (req, res) => {
       return res.status(400).json({ error: 'fcmToken required' });
     }
     const userId = req.user.userId; // set by verifyToken middleware
-    await User.update({ fcmToken }, { where: { id: userId } });
-    res.json({ success: true });
+    
+    // Explicitly update to ensure model hooks/fields are processed correctly
+    const user = await User.findByPk(userId);
+    if (user) {
+      user.fcmToken = fcmToken;
+      await user.save();
+      console.log(`[AUTH] Successfully updated FCM token for user: ${userId}`);
+      res.json({ success: true, message: 'FCM token updated' });
+    } else {
+      console.error(`[AUTH] User not found for FCM token update: ${userId}`);
+      res.status(404).json({ error: 'User not found' });
+    }
   } catch (err) {
+    console.error(`[AUTH] FCM token update error: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
