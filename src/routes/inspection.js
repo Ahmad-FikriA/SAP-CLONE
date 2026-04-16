@@ -9,6 +9,7 @@ const {
   getSchedule,
   createSchedule,
   updateSchedule,
+  getNextSpkNumber,
 } = require("../controllers/inspection/scheduleController");
 
 const {
@@ -69,6 +70,7 @@ const {
 router.use(verifyToken);
 
 // ── Schedules ────────────────────────────────────────────────────────────────
+router.get("/schedules/next-spk", getNextSpkNumber); // ⚠️ Harus sebelum /:id
 router.get("/schedules", listSchedules);
 router.get("/schedules/:id", getSchedule);
 router.post("/schedules", createSchedule);
