@@ -68,6 +68,9 @@ router.put('/:id/validasi-awal', verifyToken, k3SafetyCtrl.validasiAwal);
 // PUT /api/k3-safety/:id/perbaikan
 router.put('/:id/perbaikan', verifyToken, uploadK3Photos.array('fotoPerbaikan', 2), k3SafetyCtrl.actionPerbaikan);
 
+// PUT /api/k3-safety/:id/validasi-hasil
+router.put('/:id/validasi-hasil', verifyToken, k3SafetyCtrl.validasiHasil);
+
 // PUT /api/k3-safety/:id/validasi-akhir
 router.put('/:id/validasi-akhir', verifyToken, k3SafetyCtrl.validasiAkhir);
 
