@@ -58,6 +58,8 @@ const K3Report = sequelize.define('K3Report', {
       'menunggu_validasi_kadiv_pphse',
       'ditolak_kadiv_pphse',
       'menunggu_tindakan_hse',
+      'menunggu_validasi_akhir_pphse',
+      'perbaikan_ditolak_pphse',
       'disetujui',
       'ditolak',
       'selesai'
@@ -74,6 +76,21 @@ const K3Report = sequelize.define('K3Report', {
     type: DataTypes.TEXT,
     allowNull: true,
     field: 'catatan_kadiv_pphse',
+  },
+  tindakanPerbaikan: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'tindakan_perbaikan',
+  },
+  fotoPerbaikan: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'foto_perbaikan',
+  },
+  catatanRevisiPerbaikan: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'catatan_revisi_perbaikan',
   },
 }, {
   tableName: 'k3_reports',
