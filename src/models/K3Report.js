@@ -55,11 +55,14 @@ const K3Report = sequelize.define('K3Report', {
     type: DataTypes.ENUM(
       'menunggu_review_kadiv_pelapor',
       'menunggu_review_kadiv_pphse',
+      'menunggu_validasi_kadiv_pphse',
+      'ditolak_kadiv_pphse',
+      'menunggu_tindakan_hse',
       'disetujui',
       'ditolak',
       'selesai'
     ),
-    defaultValue: 'menunggu_review_kadiv_pelapor',
+    defaultValue: 'menunggu_validasi_kadiv_pphse',
     field: 'status',
   },
   catatanKadivPelapor: {

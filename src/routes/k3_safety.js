@@ -59,4 +59,10 @@ router.post(
   k3SafetyCtrl.createReport
 );
 
+// GET /api/k3-safety
+router.get('/', verifyToken, k3SafetyCtrl.getAll);
+
+// PUT /api/k3-safety/:id/validasi-awal
+router.put('/:id/validasi-awal', verifyToken, k3SafetyCtrl.validasiAwal);
+
 module.exports = router;
