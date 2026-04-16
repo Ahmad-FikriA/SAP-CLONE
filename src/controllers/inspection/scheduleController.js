@@ -135,4 +135,39 @@ async function updateSchedule(req, res) {
   }
 }
 
-module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule };
+// GET /api/inspection/schedules/next-spk
+async function getNextSpkNumber(req, res) {
+  try {
+    const now = new Date();
+    const yearSuffix = String(now.getFullYear()).slice(-2); // '26' dari 2026
+    const prefix = `SPK-INSP${yearSuffix}-`;
+
+    // Cari nomor SPK tertinggi dengan prefix tahun ini
+    const { Op } = require('sequelize');
+    const lastSchedule = await InspectionSchedule.findOne({
+      where: {
+        nomorPoJo: {
+          [Op.like]: `${prefix}%`,
+        },
+      },
+      order: [['nomorPoJo', 'DESC']],
+    });
+
+    let nextCounter = 1;
+    if (lastSchedule && lastSchedule.nomorPoJo) {
+      const parts = lastSchedule.nomorPoJo.split('-');
+      const lastNum = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(lastNum)) {
+        nextCounter = lastNum + 1;
+      }
+    }
+
+    const nextSpk = `${prefix}${String(nextCounter).padStart(4, '0')}`;
+
+    res.json({ success: true, data: { nextSpk } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, getNextSpkNumber };
