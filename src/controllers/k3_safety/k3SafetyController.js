@@ -61,7 +61,7 @@ exports.createReport = async (req, res, next) => {
         {
           model: User,
           as: 'pelapor',
-          attributes: ['id', 'name', 'jabatan', 'divisi', 'dinas'],
+          attributes: ['id', 'name', 'role', 'divisi', 'dinas'],
         }
       ]
     });
