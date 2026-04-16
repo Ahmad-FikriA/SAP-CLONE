@@ -1,6 +1,6 @@
 'use strict';
 
-const { User } = require('../../models');
+const User = require('../../models/User');
 const K3Report = require('../../models/K3Report');
 const sequelize = require('../../config/database');
 const { Op } = require('sequelize');
