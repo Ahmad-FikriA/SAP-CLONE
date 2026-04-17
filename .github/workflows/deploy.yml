@@ -22,7 +22,10 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           
-          # 2. Ensure the container is rebuilt/restarted with the latest changes
+          # 2. Clear Next.js build cache so env vars are always re-embedded
+          if (Test-Path "web\.next") { Remove-Item -Recurse -Force "web\.next" }
+
+          # 3. Ensure the container is rebuilt/restarted with the latest changes
           docker compose up -d --build
           docker compose restart sap-mock web
 
