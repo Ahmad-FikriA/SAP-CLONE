@@ -6,10 +6,12 @@ import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
-  useEffect(() => { setUser(getUser()); }, []);
-
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Selamat pagi' : hour < 17 ? 'Selamat siang' : 'Selamat sore';
+  const [greeting, setGreeting] = useState('');
+  useEffect(() => {
+    setUser(getUser());
+    const hour = new Date().getHours();
+    setGreeting(hour < 12 ? 'Selamat pagi' : hour < 17 ? 'Selamat siang' : 'Selamat sore');
+  }, []);
 
   return (
     <div className="p-6 space-y-6">
