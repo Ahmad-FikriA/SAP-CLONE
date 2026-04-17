@@ -52,13 +52,13 @@ services:
       retries: 10
 
   web:
-    image: node:20-alpine
+    image: node:24-alpine
     container_name: kti-web
     restart: unless-stopped
     working_dir: /app
     command: sh -c "npm install && npm run dev"
     ports:
-      - "3001:3001"
+      - "3224:3001"
     environment:
       # Must be the PUBLIC address of the backend (what the browser can reach)
       # Change to your server's IP or domain, e.g. http://192.168.1.x:3222
