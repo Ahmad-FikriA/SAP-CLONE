@@ -15,7 +15,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`h-full ${jakarta.variable}`}>
-      <body className={`h-full antialiased bg-gray-50 text-gray-900 ${jakarta.className}`}>
+      <body suppressHydrationWarning className={`h-full antialiased bg-gray-50 text-gray-900 ${jakarta.className}`}>
         {children}
         <Toaster position="top-right" />
       </body>
