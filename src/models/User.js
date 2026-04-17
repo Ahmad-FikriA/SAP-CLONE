@@ -25,6 +25,13 @@ const User = sequelize.define('User', {
 }, {
   tableName: 'users',
   underscored: true,
+  indexes: [
+    { fields: ['role'] },
+    { fields: ['dinas'] },
+    { fields: ['group'] },
+    { fields: ['role', 'dinas'] },   // approval: WHERE role='kadis' AND dinas=?
+    { fields: ['role', 'group'] },   // notifications: WHERE role='teknisi' AND group LIKE ?
+  ],
 });
 
 module.exports = User;

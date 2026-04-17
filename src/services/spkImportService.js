@@ -49,12 +49,31 @@ function normaliseHeader(h) {
   return String(h ?? '').toLowerCase().trim();
 }
 
+// ── SAP Location code → Kadis area ID ────────────────────────────────────────
+// The "Location" column in SAP IW38 exports contains site codes like P-22L006.
+// These are direct KTI plant section codes — map them explicitly.
+const LOCATION_CODE_KADIS_MAP = {
+  'P-22L006': 'kadis_cipasauran_cidanau',  // WTP Cidanau
+  'P-22L007': 'kadis_krenceng',             // WTP Krenceng
+  'P-22L008': 'kadis_airbaku',              // PS I Cidanau / Air Baku
+  'P-22L009': 'kadis_keamanan',             // Pos Keamanan
+};
+
+function detectKadisFromLocationCode(locationCode) {
+  if (!locationCode) return null;
+  // Direct match first
+  if (LOCATION_CODE_KADIS_MAP[locationCode]) return LOCATION_CODE_KADIS_MAP[locationCode];
+  // Fallback: partial prefix match (e.g. new codes with same site prefix)
+  for (const [code, kadisId] of Object.entries(LOCATION_CODE_KADIS_MAP)) {
+    if (locationCode.startsWith(code.slice(0, 6))) return kadisId;
+  }
+  return null;
+}
+
 /**
  * parseExcelBuffer(buffer)
  * Synchronous. Parses a SAP IW38 Excel export buffer.
- * Returns an array of order objects grouped by Order column.
- *
- * Each object:
+ * Returns { orders, locationCode, detectedKadisId } where orders is an array of:
  * {
  *   orderNumber, description, scheduledDate, category,
  *   equipmentId, functionalLocation,
@@ -63,13 +82,14 @@ function normaliseHeader(h) {
  */
 function parseExcelBuffer(buffer) {
   const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false });
+
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
 
   // Convert to row-of-objects array; raw:true keeps numeric date serials
   const rows = XLSX.utils.sheet_to_json(sheet, { raw: true, defval: '' });
 
-  if (!rows.length) return [];
+  if (!rows.length) return { orders: [], locationCode: null, detectedKadisId: null };
 
   // Build a header-normalised key map from the first row's keys
   // (sheet_to_json uses the first row as headers automatically)
@@ -84,6 +104,10 @@ function parseExcelBuffer(buffer) {
     const orig = keyMap[normKey];
     return orig !== undefined ? row[orig] : '';
   };
+
+  // Read the Location code from the first data row (same value on every row in a file)
+  const locationCode  = String(get(rows[0], 'location') ?? '').trim() || null;
+  const detectedKadisId = detectKadisFromLocationCode(locationCode);
 
   // Group rows by Order number
   const orderMap = new Map(); // orderNumber → order object
@@ -146,7 +170,7 @@ function parseExcelBuffer(buffer) {
     }
   }
 
-  return Array.from(orderMap.values());
+  return { orders: Array.from(orderMap.values()), locationCode, detectedKadisId };
 }
 
 /**
@@ -351,4 +375,4 @@ async function enrichOrders(orders) {
   }
 }
 
-module.exports = { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders };
+module.exports = { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders, detectKadisFromLocationCode };

@@ -31,7 +31,7 @@ const preview = async (req, res) => {
     return res.status(400).json({ error: 'No file uploaded. Send an Excel file in the "file" field.' });
   }
 
-  const orders = parseExcelBuffer(req.file.buffer);
+  const { orders, locationCode, detectedKadisId } = parseExcelBuffer(req.file.buffer);
 
   if (orders.length === 0) {
     return res.status(422).json({ error: 'Excel file parsed successfully but contained 0 orders.' });
@@ -41,7 +41,7 @@ const preview = async (req, res) => {
   await flagExisting(orders);
   await enrichOrders(orders);   // adds equipmentName, funcLocDesc, displayName, autoMapped
 
-  res.json({ total: orders.length, orders });
+  res.json({ total: orders.length, orders, locationCode: locationCode || null, detectedKadisId: detectedKadisId || null });
 };
 
 /**

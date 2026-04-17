@@ -8,22 +8,18 @@ const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('../..
 const Equipment = require('../../models/Equipment');
 const { GeneralTaskList, GeneralTaskListActivity } = require('../../models/GeneralTaskList');
 const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping');
-const { LembarKerjaSpk } = require('../../models/LembarKerja'); // kept for destroySpksByNumbers cleanup
 const NotificationService = require('../../services/notificationService');
 const User = require('../../models/User');
 
 /**
  * Delete all child records for the given spkNumbers inside an existing transaction,
  * then delete the SPK rows themselves.
- * Order: LembarKerjaSpk → Submission (children cascade) → SpkActivity → SpkEquipment → Spk
+ * Order: Submission (children cascade) → SpkActivity → SpkEquipment → Spk
  */
 async function destroySpksByNumbers(spkNumbers, transaction) {
   const where = { spkNumber: { [Op.in]: spkNumbers } };
 
-  // 1. lembar_kerja_spk — no DB cascade from spk side
-  await LembarKerjaSpk.destroy({ where, transaction });
-
-  // 2. Submissions — find IDs first so child tables cascade via Sequelize
+  // 1. Submissions — find IDs first so child tables cascade via Sequelize
   const submissions = await Submission.findAll({ attributes: ['id'], where, transaction });
   if (submissions.length) {
     const subIds = submissions.map(s => s.id);
@@ -146,11 +142,21 @@ const getAll = async (req, res) => {
         attributes: ['equipmentId', 'equipmentName', 'functionalLocation'],
         include: [{ model: Equipment, as: 'equipmentDetails', attributes: ['latitude', 'longitude', 'plantName'] }],
       },
-      ...INCLUDE_FULL.slice(1), // keep SpkActivity + LembarKerjaSpk includes unchanged
+      ...INCLUDE_FULL.slice(1),
     ];
   }
 
-  const data = await Spk.findAll({ where, include });
+  const order = [['scheduled_date', 'DESC'], ['spk_number', 'ASC']];
+
+  // Pagination — only active when client explicitly passes ?limit=
+  if (req.query.limit !== undefined) {
+    const limit  = Math.min(parseInt(req.query.limit,  10) || 50, 200);
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const { count, rows } = await Spk.findAndCountAll({ where, include, order, limit, offset });
+    return res.json({ total: count, limit, offset, data: rows.map(fmt) });
+  }
+
+  const data = await Spk.findAll({ where, include, order });
   res.json(data.map(fmt));
 };
 

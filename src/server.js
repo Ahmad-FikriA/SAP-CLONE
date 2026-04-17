@@ -10,7 +10,6 @@ const authRoutes = require("./routes/auth");
 const usersRoutes = require("./routes/users");
 const {
   spkRouter,
-  lkRouter,
   equipmentRouter,
   mapsRouter,
   submissionsRouter,
@@ -245,7 +244,6 @@ app.post('/api/upload/inspection-media', verifyToken, handleInspectionMediaUploa
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/spk", spkRouter);
-app.use("/api/lk", lkRouter);
 app.use("/api/equipment", equipmentRouter);
 app.use("/api/maps", mapsRouter);
 app.use("/api/plants", plantRouter);

@@ -106,7 +106,6 @@ const _NAV = [
   { href: '/pages/spk.html', label: 'SPK/Preventive', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z|M14 2v6h6|M9 13h6|M9 17h6' },
   { href: '/pages/corrective-planner.html', label: 'Corrective Planner', icon: 'M12 20h9|M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z' },
   { href: '/pages/spk-import.html', label: 'Import SAP', icon: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4|M17 8l-5-5-5 5|M12 3v12' },
-  { href: '/pages/lembar-kerja.html', label: 'Lembar Kerja', icon: 'M9 11l3 3L22 4|M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11' },
   { divider: true },
   { href: '/pages/equipment.html', label: 'Equipment', icon: 'circle:12,12,3|M19.07 4.93a10 10 0 0 1 0 14.14|M4.93 4.93a10 10 0 0 0 0 14.14' },
   { href: '/pages/task-lists.html', label: 'Task Lists', icon: 'M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01' },

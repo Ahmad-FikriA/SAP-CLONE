@@ -25,6 +25,13 @@ const Spk = sequelize.define('Spk', {
 }, {
   tableName: 'spk',
   underscored: true,
+  indexes: [
+    { fields: ['status'] },
+    { fields: ['category'] },
+    { fields: ['scheduled_date'] },
+    { fields: ['submitted_by'] },
+    { fields: ['status', 'scheduled_date'] },  // composite: approval tab + date range
+  ],
 });
 
 // ── SPK ↔ Equipment (junction) ───────────────────────────────────────────────
@@ -38,6 +45,10 @@ const SpkEquipment = sequelize.define('SpkEquipment', {
   tableName: 'spk_equipment',
   underscored: true,
   timestamps: false,
+  indexes: [
+    { fields: ['spk_number'] },
+    { fields: ['equipment_id'] },
+  ],
 });
 
 // ── SPK Activities ────────────────────────────────────────────────────────────
@@ -55,6 +66,10 @@ const SpkActivity = sequelize.define('SpkActivity', {
   tableName: 'spk_activities',
   underscored: true,
   timestamps: false,
+  indexes: [
+    { fields: ['spk_number'] },
+    { fields: ['equipment_id'] },
+  ],
 });
 
 module.exports = { Spk, SpkEquipment, SpkActivity };

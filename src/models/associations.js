@@ -11,7 +11,6 @@ const Plant = require("./Plant");
 const FunctionalLocation = require("./FunctionalLocation");
 const Equipment = require("./Equipment");
 const { Spk, SpkEquipment, SpkActivity } = require("./Spk");
-const { LembarKerja, LembarKerjaSpk } = require("./LembarKerja");
 const {
   Submission,
   SubmissionPhoto,
@@ -58,21 +57,6 @@ Spk.hasMany(SpkActivity, {
   onDelete: "CASCADE",
 });
 SpkActivity.belongsTo(Spk, { foreignKey: "spkNumber", as: "spk" });
-
-// ── LembarKerja ↔ LembarKerjaSpk ─────────────────────────────────────────────
-LembarKerja.hasMany(LembarKerjaSpk, {
-  foreignKey: "lkNumber",
-  as: "spkLinks",
-  onDelete: "CASCADE",
-});
-LembarKerjaSpk.belongsTo(LembarKerja, {
-  foreignKey: "lkNumber",
-  as: "lk",
-});
-
-// ── LembarKerjaSpk ↔ Spk (resolve SPK details from junction) ──────────────────
-LembarKerjaSpk.belongsTo(Spk, { foreignKey: "spkNumber", as: "spk" });
-Spk.hasMany(LembarKerjaSpk, { foreignKey: "spkNumber", as: "lkLinks" });
 
 // ── Submission ↔ SubmissionPhoto ──────────────────────────────────────────────
 Submission.hasMany(SubmissionPhoto, {
@@ -270,8 +254,6 @@ module.exports = {
   Spk,
   SpkEquipment,
   SpkActivity,
-  LembarKerja,
-  LembarKerjaSpk,
   Submission,
   SubmissionPhoto,
   SubmissionActivityResult,

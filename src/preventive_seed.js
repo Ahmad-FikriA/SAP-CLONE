@@ -15,7 +15,6 @@ const { syncDatabase } = require('./config/syncMode');
 const Plant = require('./models/Plant');
 const Equipment = require('./models/Equipment');
 const { Spk, SpkEquipment, SpkActivity } = require('./models/Spk');
-const { LembarKerja, LembarKerjaSpk } = require('./models/LembarKerja');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./models/Submission');
 // ↑ Kept for the truncation step (clearing old data on re-seed)
 const FunctionalLocation = require('./models/FunctionalLocation');
@@ -98,8 +97,6 @@ async function main() {
   await Submission.destroy({ where: {} });
   await SpkActivity.destroy({ where: {} });
   await SpkEquipment.destroy({ where: {} });
-  await LembarKerjaSpk.destroy({ where: {} });
-  await LembarKerja.destroy({ where: {} });
   await Spk.destroy({ where: {} });
   await GeneralTaskListActivity.destroy({ where: {} });
   await GeneralTaskList.destroy({ where: {} });

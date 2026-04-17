@@ -18,7 +18,21 @@
       "Bash(\"C:\\\\Users\\\\fik\\\\Projects\\\\SAP-CLONE\\\\docs\\\\superpowers\\\\plans\\\\2026-03-30-equipment-interval-mapping.md\":*)",
       "Bash(python3 -c \":*)",
       "Bash(python3:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(grep -o \"'/[a-z\\\\-]*'\" /c/Users/fik/Projects/SAP-CLONE/public/js/*.js)",
+      "Bash(grep:*)",
+      "Bash(mkdir -p /c/Users/fik/Projects/SAP-CLONE/web)",
+      "Bash(npx create-next-app@latest . --js --tailwind --app --no-src-dir --import-alias \"@/*\" --no-eslint --yes)",
+      "Bash(npx shadcn@latest --version)",
+      "Bash(npx shadcn@latest:*)",
+      "Bash(npm install:*)",
+      "Bash(npm audit:*)",
+      "Bash(npx next:*)",
+      "Bash(git -C C:/Users/fik/Projects/SAP-CLONE status --short)",
+      "Bash(find *)",
+      "Bash(wc -l /c/Users/fik/Projects/SAP-CLONE/web/app/\\\\\\(app\\\\\\)/**/page.js)",
+      "Bash(git *)"
     ]
   }
 }

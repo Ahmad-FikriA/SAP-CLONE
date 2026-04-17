@@ -30,18 +30,20 @@ function fmt(sub) {
   };
 }
 
-// GET /api/submissions?category=Mekanik
+// GET /api/submissions?category=Mekanik&spkNumber=SPK-001
 const getAll = async (req, res) => {
-  const { category } = req.query;
-  let spkNumbers = null;
+  const { category, spkNumber } = req.query;
+  const where = {};
 
-  if (category) {
+  if (spkNumber) {
+    where.spkNumber = spkNumber;
+  } else if (category) {
     const matchingSpks = await Spk.findAll({ where: { category }, attributes: ['spkNumber'] });
-    spkNumbers = matchingSpks.map(s => s.spkNumber);
+    const spkNumbers = matchingSpks.map(s => s.spkNumber);
     if (!spkNumbers.length) return res.json([]);
+    where.spkNumber = spkNumbers;
   }
 
-  const where = spkNumbers ? { spkNumber: spkNumbers } : {};
   const data = await Submission.findAll({ where, include: INCLUDE_FULL, order: [['submittedAt', 'DESC']] });
   res.json(data.map(fmt));
 };

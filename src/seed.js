@@ -8,7 +8,6 @@ const User = require('./models/User');
 const Plant = require('./models/Plant');
 const Equipment = require('./models/Equipment');
 const { Spk, SpkEquipment, SpkActivity } = require('./models/Spk');
-const { LembarKerja, LembarKerjaSpk } = require('./models/LembarKerja');
 const { Submission, SubmissionPhoto, SubmissionActivityResult } = require('./models/Submission');
 const Notification = require('./models/Notification');
 const SpkCorrective = require('./models/SpkCorrective');
@@ -62,7 +61,8 @@ function loadUsersFromExcel() {
       const rawRole  = (row['Jabatan'] || '').trim().toLowerCase();
       // Normalize sub-type roles → base roles to match app's AppRole enum
       const role = rawRole.startsWith('teknisi') ? 'teknisi'
-                 : rawRole.startsWith('kadis')   ? 'kadis'
+                 : rawRole.startsWith('kasie')    ? 'kasie'
+                 : rawRole.startsWith('kadis')    ? 'kadis'
                  : rawRole || 'teknisi';
       const dinas    = row['Dinas']  && row['Dinas']  !== '-' ? String(row['Dinas']).trim()  : null;
       const divisi   = row['Divisi'] && row['Divisi'] !== '-' ? String(row['Divisi']).trim() : '';

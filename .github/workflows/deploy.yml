@@ -24,7 +24,7 @@ jobs:
           
           # 2. Ensure the container is rebuilt/restarted with the latest changes
           docker compose up -d --build
-          docker compose restart sap-mock
+          docker compose restart sap-mock kti-web
 
 
 

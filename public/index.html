@@ -47,7 +47,7 @@
     <div class="page__header">
       <div>
         <div class="page__title">Dashboard</div>
-        <div class="page__subtitle">Selamat datang di KTI SmartCare Admin UI</div>
+        <div class="page__subtitle">Selamat datang di MANTIS PPHSE</div>
       </div>
       <button class="btn btn-secondary" onclick="refreshAll()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -63,13 +63,6 @@
         </div>
         <div class="tile__count" id="countSpk">—</div>
         <div class="tile__label">Total SPK</div>
-      </a>
-      <a class="tile" href="/pages/lembar-kerja.html">
-        <div class="tile__icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        </div>
-        <div class="tile__count" id="countLk">—</div>
-        <div class="tile__label">Total Lembar Kerja</div>
       </a>
       <a class="tile" href="/pages/equipment.html">
         <div class="tile__icon">
@@ -124,15 +117,13 @@
 <script>
   async function loadDashboard() {
     try {
-      const [spk, lk, eq, users, subs] = await Promise.all([
+      const [spk, eq, users, subs] = await Promise.all([
         apiGet('/spk'),
-        apiGet('/lk'),
         apiGet('/equipment'),
         apiGet('/users'),
         apiGet('/submissions')
       ]);
       document.getElementById('countSpk').textContent   = spk.length;
-      document.getElementById('countLk').textContent    = lk.length;
       document.getElementById('countEquip').textContent = eq.length;
       document.getElementById('countUsers').textContent = users.length;
       document.getElementById('countSubs').textContent  = subs.length;

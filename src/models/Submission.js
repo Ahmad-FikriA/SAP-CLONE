@@ -24,6 +24,10 @@ const Submission = sequelize.define('Submission', {
   tableName: 'submissions',
   underscored: true,
   updatedAt: false,
+  indexes: [
+    { fields: ['spk_number'] },
+    { fields: ['submitted_at'] },
+  ],
 });
 
 // ── Submission Photos ─────────────────────────────────────────────────────────
@@ -49,6 +53,9 @@ const SubmissionActivityResult = sequelize.define('SubmissionActivityResult', {
   tableName: 'submission_activity_results',
   underscored: true,
   timestamps: false,
+  indexes: [
+    { fields: ['submission_id'] },
+  ],
 });
 
 module.exports = { Submission, SubmissionPhoto, SubmissionActivityResult };

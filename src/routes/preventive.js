@@ -7,7 +7,6 @@ const { verifyToken } = require('../middleware/auth');
 const excelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const spkController = require('../controllers/preventive/spkController');
-const lembarKerjaController = require('../controllers/preventive/lembarKerjaController');
 const equipmentController = require('../controllers/preventive/equipmentController');
 const mapsController = require('../controllers/preventive/mapsController');
 const plantController = require('../controllers/preventive/plantController');
@@ -35,18 +34,6 @@ spkRouter.post('/:spkNumber/approve-kasie', verifyToken, spkController.approveKa
 spkRouter.post('/:spkNumber/approve-kadis-perawatan', verifyToken, spkController.approveKadisPerawatan);
 spkRouter.post('/:spkNumber/approve-kadis', verifyToken, spkController.approveKadis);
 spkRouter.post('/:spkNumber/sync', verifyToken, spkController.sync);
-
-// ── Lembar Kerja ─────────────────────────────────────────────────────────────
-const lkRouter = express.Router();
-lkRouter.get('/', verifyToken, lembarKerjaController.getAll);
-lkRouter.post('/bulk-delete', verifyToken, lembarKerjaController.bulkDelete);
-lkRouter.get('/:lkNumber', verifyToken, lembarKerjaController.getOne);
-lkRouter.post('/', verifyToken, lembarKerjaController.create);
-lkRouter.put('/:lkNumber', verifyToken, lembarKerjaController.update);
-lkRouter.delete('/:lkNumber', verifyToken, lembarKerjaController.remove);
-lkRouter.post('/:lkNumber/submit', verifyToken, lembarKerjaController.submit);
-lkRouter.post('/:lkNumber/approve', verifyToken, lembarKerjaController.approve);
-lkRouter.post('/:lkNumber/reject', verifyToken, lembarKerjaController.reject);
 
 // ── Equipment ────────────────────────────────────────────────────────────────
 const equipmentRouter = express.Router();
@@ -112,4 +99,4 @@ scheduleRouter.post('/generate',  verifyToken, preventiveScheduleController.gene
 scheduleRouter.post('/toggle',    verifyToken, preventiveScheduleController.toggleCell);
 scheduleRouter.delete('/',        verifyToken, preventiveScheduleController.clearYear);
 
-module.exports = { spkRouter, lkRouter, equipmentRouter, mapsRouter, submissionsRouter, funcLocRouter, taskListRouter, plantRouter, mappingRouter, scheduleRouter };
+module.exports = { spkRouter, equipmentRouter, mapsRouter, submissionsRouter, funcLocRouter, taskListRouter, plantRouter, mappingRouter, scheduleRouter };
