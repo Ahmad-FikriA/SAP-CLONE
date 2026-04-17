@@ -5,6 +5,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: ['mantis.devlabfortirta.cloud'],
   turbopack: {
     root: __dirname,
   },
