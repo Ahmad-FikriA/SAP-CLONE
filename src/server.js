@@ -48,23 +48,6 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ── Static Admin UI ─────────────────────────────────────────────────────────
-// No-cache in dev so every refresh gets the latest files.
-// In production, short maxAge (5 min) with ETag so browsers revalidate quickly.
-const IS_DEV = process.env.NODE_ENV !== "production";
-app.use(
-  express.static(path.join(__dirname, "..", "public"), {
-    etag: true,
-    lastModified: true,
-    maxAge: IS_DEV ? 0 : "5m",
-    setHeaders(res) {
-      if (IS_DEV) {
-        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-        res.setHeader("Pragma", "no-cache");
-      }
-    },
-  }),
-);
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 app.use("/storage", express.static(path.join(__dirname, "..", "storage")));
 
@@ -259,11 +242,6 @@ app.use("/api/equipment-mappings", mappingRouter);
 app.use("/api/preventive-schedule", scheduleRouter);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/k3-safety", k3SafetyRoutes);
-
-// ── SPA fallback: serve index.html for any non-API GET ───────────────────────
-app.get(/^(?!\/api).*$/, (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
-});
 
 // ── Error Handler ────────────────────────────────────────────────────────────
 app.use(errorHandler);
