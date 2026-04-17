@@ -37,7 +37,7 @@ const K3Report = sequelize.define('K3Report', {
     field: 'deskripsi',
   },
   foto: {
-    type: DataTypes.JSON, // or DataTypes.TEXT if JSON is problematic on older MySQL, but mostly supported
+    type: DataTypes.JSON,
     allowNull: true,
     field: 'foto',
     comment: 'Array of photo URLs',
@@ -68,7 +68,12 @@ const K3Report = sequelize.define('K3Report', {
       'perbaikan_ditolak_kadiv_pphse',
       'disetujui',
       'ditolak',
-      'selesai'
+      'selesai',
+      // ── Investigasi Statuses ──
+      'menunggu_verifikasi_investigasi',
+      'investigasi_ditolak_kadis_hse',
+      'menunggu_validasi_kadiv',
+      'investigasi_ditolak_kadiv'
     ),
     defaultValue: 'menunggu_validasi_kadis_hse',
     field: 'status',
@@ -111,6 +116,54 @@ const K3Report = sequelize.define('K3Report', {
       model: 'users',
       key: 'id'
     }
+  },
+  // ── Investigasi Fields ──────────────────────────────────────────────────────
+  investigasiCategory: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'investigasi_category',
+    comment: 'Kecelakaan, Penyakit Akibat Kerja, Kebakaran',
+  },
+  investigasiData: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'investigasi_data',
+    comment: 'Dynamic form data as key-value JSON',
+  },
+  isDraftInvestigasi: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'is_draft_investigasi',
+  },
+  fotoInvestigasi: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'foto_investigasi',
+    comment: 'Array of investigation photo URLs',
+  },
+  dokumenInvestigasi: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'dokumen_investigasi',
+    comment: 'Path to investigation document (PDF/DOC)',
+  },
+  catatanRevisiInvestigasi: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'catatan_revisi_investigasi',
+  },
+  isApprovedKadivPelapor: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'is_approved_kadiv_pelapor',
+  },
+  isApprovedKadivPphse: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'is_approved_kadiv_pphse',
   },
 }, {
   tableName: 'k3_reports',

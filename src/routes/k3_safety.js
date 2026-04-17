@@ -40,20 +40,45 @@ const uploadK3Photos = multer({
   },
 });
 
+// ── Multer Config for Investigasi (photos + document) ────────────────
+const uploadInvestigasi = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB per file
+    files: 3, // Max 2 photos + 1 document
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images for fotoInvestigasi
+    if (file.fieldname === 'fotoInvestigasi') {
+      if (!file.mimetype.startsWith('image/')) {
+        return cb(new Error('Foto harus berupa file gambar'), false);
+      }
+    }
+    // Accept docs for dokumenInvestigasi
+    if (file.fieldname === 'dokumenInvestigasi') {
+      const allowedMimes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+      ];
+      if (!allowedMimes.includes(file.mimetype)) {
+        return cb(new Error('Dokumen harus PDF, DOC, DOCX, atau XLSX'), false);
+      }
+    }
+    cb(null, true);
+  },
+});
+
 // ── K3 Safety Routes ────────────────────────────────────────────────────────────
 
 // POST /api/k3-safety
-// Supports multipart form-data because of multiple images
-// Expects field name "foto" or "images" (using "foto" here based on standard, but flutter can use any, let's use "foto")
-// Let's accept both by using .fields or just .array('foto')? the prompt mentioned 'images' or 'foto'. Let's use 'foto'.
 router.post(
   '/', 
   verifyToken, 
   uploadK3Photos.array('foto', 2), 
   (req, res, next) => {
-    // If flutter decided to send with 'images' instead of 'foto', handle dynamically or ensure standard is 'foto'.
-    // If multer array mapping fails for a different field, it will throw an error or just keep req.files empty.
-    // It's recommended that the client sticks to 'foto'
     next();
   },
   k3SafetyCtrl.createReport
@@ -74,4 +99,25 @@ router.put('/:id/validasi-hasil', verifyToken, k3SafetyCtrl.validasiHasil);
 // PUT /api/k3-safety/:id/validasi-akhir
 router.put('/:id/validasi-akhir', verifyToken, k3SafetyCtrl.validasiAkhir);
 
+// ── Investigasi Routes ──────────────────────────────────────────────────────────
+
+// PUT /api/k3-safety/:id/investigasi
+// Multipart: fotoInvestigasi (max 2 images) + dokumenInvestigasi (max 1 doc)
+router.put(
+  '/:id/investigasi',
+  verifyToken,
+  uploadInvestigasi.fields([
+    { name: 'fotoInvestigasi', maxCount: 2 },
+    { name: 'dokumenInvestigasi', maxCount: 1 },
+  ]),
+  k3SafetyCtrl.submitInvestigasi
+);
+
+// PUT /api/k3-safety/:id/verifikasi-investigasi
+router.put('/:id/verifikasi-investigasi', verifyToken, k3SafetyCtrl.verifikasiInvestigasi);
+
+// PUT /api/k3-safety/:id/validasi-investigasi-kadiv
+router.put('/:id/validasi-investigasi-kadiv', verifyToken, k3SafetyCtrl.validasiInvestigasiKadiv);
+
 module.exports = router;
+
