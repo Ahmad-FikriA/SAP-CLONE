@@ -60,6 +60,7 @@ async function createRequest(req, res) {
       asapMungkin,
       deskripsi,
       mediaPaths,
+      requestedBy,
     } = req.body;
 
     if (!judul || !lokasi || !jenisInspeksi || !kategoriInspeksi) {
@@ -96,7 +97,7 @@ async function createRequest(req, res) {
       asapMungkin: asapMungkin ?? false,
       deskripsi,
       mediaPaths: mediaPaths ?? [],
-      requestedBy: req.user?.nik ?? "unknown",
+      requestedBy: requestedBy ?? (req.user?.nik ?? "unknown"),
       status: "pending",
     });
 

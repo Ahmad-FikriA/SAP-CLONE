@@ -8,7 +8,9 @@ const SAFE = { attributes: { exclude: ['password'] } };
 // GET /api/users
 const getAll = async (req, res) => {
   try {
-    const where = req.query.role ? { role: req.query.role } : {};
+    const where = {};
+    if (req.query.role) where.role = req.query.role;
+    if (req.query.dinas) where.dinas = req.query.dinas;
     const users = await User.findAll({ where, ...SAFE });
     res.json(users);
   } catch (err) {
