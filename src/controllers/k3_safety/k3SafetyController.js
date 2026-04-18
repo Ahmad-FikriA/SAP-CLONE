@@ -497,3 +497,357 @@ exports.validasiAkhir = async (req, res, next) => {
   }
 };
 
+// ── Investigasi Endpoints ─────────────────────────────────────────────────────
+
+/**
+ * PUT /api/k3-safety/:id/investigasi
+ * HSE Staff submits investigation data (multipart/form-data).
+ * Supports draft saving and final submission.
+ */
+exports.submitInvestigasi = async (req, res, next) => {
+  try {
+    const reportId = req.params.id;
+    const divisi = (req.user.divisi || '').toLowerCase();
+
+    // Only HSE staff can submit investigation
+    if (!(divisi === 'pphse' || divisi === 'hse')) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Staf HSE yang dapat mengisi investigasi' });
+    }
+
+    const report = await K3Report.findByPk(reportId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
+    }
+
+    // Allowed statuses for submitting investigation
+    const allowedStatuses = [
+      'menunggu_tindakan_hse',
+      'investigasi_ditolak_kadis_hse',
+      'investigasi_ditolak_kadiv',
+    ];
+    if (!allowedStatuses.includes(report.status)) {
+      return res.status(400).json({ success: false, message: `Laporan tidak dalam tahap tindakan HSE (status: ${report.status})` });
+    }
+
+    const { investigasiCategory, isDraftInvestigasi } = req.body;
+
+    // Parse investigasiData — Flutter sends it as JSON string inside FormData
+    let investigasiData = req.body.investigasiData;
+    if (typeof investigasiData === 'string') {
+      try {
+        investigasiData = JSON.parse(investigasiData);
+      } catch (_) {
+        // If it fails to parse, keep as-is (should not happen)
+      }
+    }
+
+    const isDraft = isDraftInvestigasi === true || isDraftInvestigasi === 'true';
+
+    // Handle foto investigasi
+    let fotos = report.fotoInvestigasi || [];
+    if (req.files) {
+      // Check for 'fotoInvestigasi' field in uploaded files
+      const fotoFiles = Array.isArray(req.files) 
+        ? req.files.filter(f => f.fieldname === 'fotoInvestigasi')
+        : (req.files['fotoInvestigasi'] || []);
+      
+      if (fotoFiles.length > 0) {
+        const newPhotos = fotoFiles.map(file => `uploads/k3_safety/${file.filename}`);
+        fotos = newPhotos; // Replace (not append) photos on each submit
+      }
+    }
+
+    // Handle dokumen investigasi
+    let dokumenPath = report.dokumenInvestigasi;
+    if (req.files) {
+      const docFiles = Array.isArray(req.files)
+        ? req.files.filter(f => f.fieldname === 'dokumenInvestigasi')
+        : (req.files['dokumenInvestigasi'] || []);
+      
+      if (docFiles.length > 0) {
+        dokumenPath = `uploads/k3_safety/${docFiles[0].filename}`;
+      }
+    }
+
+    // Update report fields
+    report.investigasiCategory = investigasiCategory || report.investigasiCategory;
+    report.investigasiData = investigasiData || report.investigasiData;
+    report.isDraftInvestigasi = isDraft;
+    report.fotoInvestigasi = fotos;
+    report.dokumenInvestigasi = dokumenPath;
+
+    // Status transition
+    if (isDraft) {
+      // Draft: keep status but mark as draft
+      // Don't change status — stays at menunggu_tindakan_hse (or ditolak_*)
+    } else {
+      // Final submission: move to verifikasi
+      report.status = 'menunggu_verifikasi_investigasi';
+      // Reset rejection notes on resubmit
+      report.catatanRevisiInvestigasi = null;
+    }
+
+    await report.save();
+
+    // Re-fetch with associations
+    const updated = await K3Report.findByPk(reportId, {
+      include: [
+        { model: User, as: 'pelapor', attributes: ['id', 'name', 'role', 'divisi', 'dinas'] },
+        { model: User, as: 'petugasHse', attributes: ['id', 'name', 'role', 'divisi', 'dinas'] },
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      message: isDraft ? 'Draft investigasi disimpan' : 'Investigasi berhasil disubmit',
+      data: updated,
+    });
+
+    // Push notification (only for final submission)
+    if (!isDraft) {
+      try {
+        const kadisHseUsers = await User.findAll({
+          where: {
+            role: { [Op.in]: ['kadis', 'kepala dinas', 'kadiv', 'kepala divisi'] },
+            dinas: { [Op.like]: '%hse%' },
+          },
+          attributes: ['id'],
+        });
+        if (kadisHseUsers.length > 0) {
+          await NotificationService.notify({
+            module: 'k3_safety',
+            type: 'investigasi_disubmit',
+            title: 'Investigasi K3 Selesai',
+            body: `Staf HSE telah menyelesaikan investigasi (${investigasiCategory || '-'}), butuh verifikasi.`,
+            data: { reportId: report.reportNumber, deepLink: 'k3_safety/detail' },
+            recipientIds: kadisHseUsers.map(u => u.id),
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send push notification', e);
+      }
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/k3-safety/:id/verifikasi-investigasi
+ * Kadis HSE verifies investigation results.
+ * approve → menunggu_validasi_kadiv
+ * reject  → investigasi_ditolak_kadis_hse
+ */
+exports.verifikasiInvestigasi = async (req, res, next) => {
+  try {
+    const { action, catatan } = req.body;
+    const reportId = req.params.id;
+    const role = (req.user.role || '').toLowerCase();
+    const divisi = (req.user.divisi || '').toLowerCase();
+
+    // Only Kadis HSE
+    if (!(role.includes('kadiv') || role.includes('kepala divisi') || role.includes('kadis') || role.includes('kepala dinas')) || !(divisi === 'pphse' || divisi === 'hse')) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Kepala Dinas HSE yang dapat memverifikasi investigasi' });
+    }
+
+    const report = await K3Report.findByPk(reportId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
+    }
+
+    if (report.status !== 'menunggu_verifikasi_investigasi') {
+      return res.status(400).json({ success: false, message: 'Laporan belum ada di tahap verifikasi investigasi' });
+    }
+
+    if (action === 'approve') {
+      report.status = 'menunggu_validasi_kadiv';
+      // Reset approval flags for parallel validation
+      report.isApprovedKadivPelapor = false;
+      report.isApprovedKadivPphse = false;
+    } else if (action === 'reject') {
+      report.status = 'investigasi_ditolak_kadis_hse';
+      report.catatanRevisiInvestigasi = catatan || 'Ditolak tanpa catatan';
+    } else {
+      return res.status(400).json({ success: false, message: 'Action tidak valid. Gunakan approve atau reject' });
+    }
+
+    await report.save();
+
+    // Re-fetch with associations
+    const updated = await K3Report.findByPk(reportId, {
+      include: [
+        { model: User, as: 'pelapor', attributes: ['id', 'name', 'role', 'divisi', 'dinas'] },
+        { model: User, as: 'petugasHse', attributes: ['id', 'name', 'role', 'divisi', 'dinas'] },
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Verifikasi investigasi berhasil (${action})`,
+      data: updated,
+    });
+
+    try {
+      if (action === 'approve') {
+        // Push to both Kadiv Pelapor + Kadiv PPHSE for parallel validation
+        const kadivUsers = await User.findAll({
+          where: {
+            role: { [Op.in]: ['kadiv', 'kepala divisi'] },
+          },
+          attributes: ['id'],
+        });
+        if (kadivUsers.length > 0) {
+          await NotificationService.notify({
+            module: 'k3_safety',
+            type: 'investigasi_terverifikasi',
+            title: 'Investigasi K3 Butuh Validasi Kadiv',
+            body: `Kadis HSE telah memverifikasi investigasi K3, mohon Kadiv tinjau dan setujui.`,
+            data: { reportId: report.reportNumber, deepLink: 'k3_safety/detail' },
+            recipientIds: kadivUsers.map(u => u.id),
+          });
+        }
+      } else if (action === 'reject') {
+        // Push back to assigned HSE staff
+        let recipientIds = [];
+        if (report.ditugaskanKepada) {
+          recipientIds = [report.ditugaskanKepada];
+        } else {
+          const hseUsers = await User.findAll({
+            where: { divisi: { [Op.like]: '%pphse%' } },
+            attributes: ['id'],
+          });
+          recipientIds = hseUsers.map(u => u.id);
+        }
+        if (recipientIds.length > 0) {
+          await NotificationService.notify({
+            module: 'k3_safety',
+            type: 'investigasi_ditolak',
+            title: 'Investigasi K3 Ditolak',
+            body: `Investigasi ditolak oleh Kadis HSE: ${catatan || 'Tanpa catatan'}. Silakan revisi.`,
+            data: { reportId: report.reportNumber, deepLink: 'k3_safety/detail' },
+            recipientIds: recipientIds,
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to send push notification', e);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/k3-safety/:id/validasi-investigasi-kadiv
+ * Parallel validation by Kadiv Pelapor and Kadiv PPHSE.
+ * Both must approve for the report to be marked 'selesai'.
+ */
+exports.validasiInvestigasiKadiv = async (req, res, next) => {
+  try {
+    const { action, kadivType, catatan } = req.body;
+    const reportId = req.params.id;
+    const role = (req.user.role || '').toLowerCase();
+
+    // Only Kadiv level can do this
+    if (!(role.includes('kadiv') || role.includes('kepala divisi'))) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Kadiv yang dapat melakukan validasi ini' });
+    }
+
+    if (!kadivType || !['pelapor', 'pphse'].includes(kadivType)) {
+      return res.status(400).json({ success: false, message: 'kadivType harus "pelapor" atau "pphse"' });
+    }
+
+    const report = await K3Report.findByPk(reportId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
+    }
+
+    if (report.status !== 'menunggu_validasi_kadiv') {
+      return res.status(400).json({ success: false, message: 'Laporan belum ada di tahap validasi Kadiv' });
+    }
+
+    if (action === 'approve') {
+      if (kadivType === 'pelapor') {
+        report.isApprovedKadivPelapor = true;
+      } else {
+        report.isApprovedKadivPphse = true;
+      }
+
+      // Check if both have approved
+      const bothApproved = report.isApprovedKadivPelapor && report.isApprovedKadivPphse;
+      if (bothApproved) {
+        report.status = 'selesai';
+      }
+      // Otherwise, stay at menunggu_validasi_kadiv
+
+    } else if (action === 'reject') {
+      report.status = 'investigasi_ditolak_kadiv';
+      report.catatanRevisiInvestigasi = catatan || 'Ditolak tanpa catatan';
+      // Reset flags on rejection
+      report.isApprovedKadivPelapor = false;
+      report.isApprovedKadivPphse = false;
+    } else {
+      return res.status(400).json({ success: false, message: 'Action tidak valid. Gunakan approve atau reject' });
+    }
+
+    await report.save();
+
+    // Re-fetch with associations
+    const updated = await K3Report.findByPk(reportId, {
+      include: [
+        { model: User, as: 'pelapor', attributes: ['id', 'name', 'role', 'divisi', 'dinas'] },
+        { model: User, as: 'petugasHse', attributes: ['id', 'name', 'role', 'divisi', 'dinas'] },
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      message: action === 'approve'
+        ? (report.status === 'selesai' ? 'Investigasi disetujui & laporan selesai' : `Kadiv ${kadivType} telah menyetujui`)
+        : 'Investigasi ditolak',
+      data: updated,
+    });
+
+    try {
+      if (action === 'approve' && report.status === 'selesai') {
+        // Both approved → notify pelapor
+        await NotificationService.notify({
+          module: 'k3_safety',
+          type: 'laporan_selesai',
+          title: 'Laporan K3 Selesai',
+          body: `Investigasi K3 Anda telah disetujui oleh kedua Kadiv dan dinyatakan selesai.`,
+          data: { reportId: report.reportNumber, deepLink: 'k3_safety/detail' },
+          recipientIds: [report.dilaporkanOleh],
+        });
+      } else if (action === 'reject') {
+        // Push back to assigned HSE staff
+        let recipientIds = [];
+        if (report.ditugaskanKepada) {
+          recipientIds = [report.ditugaskanKepada];
+        } else {
+          const hseUsers = await User.findAll({
+            where: { divisi: { [Op.like]: '%pphse%' } },
+            attributes: ['id'],
+          });
+          recipientIds = hseUsers.map(u => u.id);
+        }
+        if (recipientIds.length > 0) {
+          await NotificationService.notify({
+            module: 'k3_safety',
+            type: 'investigasi_ditolak_kadiv',
+            title: 'Investigasi Ditolak Kadiv',
+            body: `Investigasi ditolak oleh Kadiv ${kadivType}: ${catatan || 'Tanpa catatan'}. Silakan revisi.`,
+            data: { reportId: report.reportNumber, deepLink: 'k3_safety/detail' },
+            recipientIds: recipientIds,
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to send push notification', e);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+
