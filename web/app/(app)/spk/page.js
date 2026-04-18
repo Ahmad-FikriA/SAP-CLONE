@@ -5,9 +5,11 @@ import { toast } from 'sonner';
 import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api';
 import { StatusBadge, CategoryBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CATEGORIES, STATUS_LABELS } from '@/lib/constants';
+import { formatDate, formatDateShort } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Trash2, Wrench, Upload, Plus, X, RotateCcw, Pencil } from 'lucide-react';
+import { RefreshCw, Trash2, Wrench, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 const STATUS_OPTIONS = ['pending', 'in_progress', 'completed', 'approved', 'rejected'];
@@ -70,6 +72,11 @@ export default function SpkPage() {
   const [loadingIntervals, setLoadingIntervals] = useState(false);
   const [saving, setSaving]         = useState(false);
   const actIdxRef = useRef(0);
+
+  // Detail view
+  const [detailSpk, setDetailSpk]   = useState(null);
+  const [detailSubs, setDetailSubs] = useState([]);
+  const [loadingSubs, setLoadingSubs] = useState(false);
 
   useEffect(() => { load(); }, [category]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -161,6 +168,17 @@ export default function SpkPage() {
       if (ivs.length) setSelectedInterval(ivs[0]);
     } catch { setActiveIntervals([]); }
     finally { setLoadingIntervals(false); }
+  }
+
+  async function openDetail(spk) {
+    setDetailSpk(spk);
+    setDetailSubs([]);
+    setLoadingSubs(true);
+    try {
+      const data = await apiGet(`/submissions?spkNumber=${spk.spkNumber}`);
+      setDetailSubs(Array.isArray(data) ? data : []);
+    } catch { setDetailSubs([]); }
+    finally { setLoadingSubs(false); }
   }
 
   function onWeekChange(year, week) {
@@ -334,8 +352,9 @@ export default function SpkPage() {
               ) : displayed.length === 0 ? (
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Tidak ada data</td></tr>
               ) : displayed.map((s) => (
-                <tr key={s.spkNumber} className="hover:bg-gray-50">
-                  <td className="pl-4 pr-2 py-3">
+                <tr key={s.spkNumber} onClick={() => openDetail(s)}
+                  className="hover:bg-gray-50 cursor-pointer">
+                  <td className="pl-4 pr-2 py-3" onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" checked={selected.includes(s.spkNumber)}
                       onChange={() => toggleSelect(s.spkNumber)} className="rounded border-gray-300" />
                   </td>
@@ -345,8 +364,11 @@ export default function SpkPage() {
                   <td className="px-3 py-3 text-gray-500 text-xs">{s.interval}</td>
                   <td className="px-3 py-3"><StatusBadge status={s.status} /></td>
                   <td className="px-3 py-3 text-gray-500 text-xs">{(s.equipmentModels || []).length}</td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1.5">
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => openDetail(s)}>
+                        <Eye size={11} /> Detail
+                      </Button>
                       <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => openEdit(s)}>
                         <Pencil size={11} /> Edit
                       </Button>
@@ -539,12 +561,171 @@ export default function SpkPage() {
         </div>
       )}
 
+      {/* ── SPK Detail Dialog ─────────────────────────────────────────── */}
+      <Dialog open={!!detailSpk} onOpenChange={(open) => !open && setDetailSpk(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2 flex-wrap">
+              <DialogTitle className="font-mono">{detailSpk?.spkNumber}</DialogTitle>
+              {detailSpk?.category && <CategoryBadge category={detailSpk.category} />}
+              {detailSpk?.status && <StatusBadge status={detailSpk.status} />}
+            </div>
+            {detailSpk?.description && (
+              <p className="text-sm text-gray-500 mt-1">{detailSpk.description}</p>
+            )}
+          </DialogHeader>
+
+          {detailSpk && (
+            <div className="space-y-6 mt-2">
+              {/* Info grid */}
+              <div className="grid grid-cols-3 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <SpkField label="Interval" value={detailSpk.interval || '—'} />
+                <SpkField label="Scheduled Date" value={detailSpk.scheduledDate ? formatDateShort(detailSpk.scheduledDate) : '—'} />
+                <SpkField label="Minggu ke-" value={detailSpk.weekNumber ? `W${detailSpk.weekNumber} / ${detailSpk.weekYear}` : '—'} />
+                <SpkField label="Durasi Aktual" value={detailSpk.durationActual != null ? `${detailSpk.durationActual} menit` : '—'} />
+                <SpkField label="Submitted By" value={detailSpk.submittedBy || '—'} />
+                <SpkField label="Submitted At" value={detailSpk.submittedAt ? formatDate(detailSpk.submittedAt) : '—'} />
+                {detailSpk.orderNumber && <SpkField label="Order Number" value={detailSpk.orderNumber} />}
+              </div>
+
+              {/* Evaluasi */}
+              {detailSpk.evaluasi && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Evaluasi</p>
+                  <p className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">{detailSpk.evaluasi}</p>
+                </div>
+              )}
+
+              {/* Equipment */}
+              {detailSpk.equipmentModels?.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                    Equipment ({detailSpk.equipmentModels.length})
+                  </p>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          {['Equipment ID', 'Nama', 'Functional Location', 'Plant'].map((h) => (
+                            <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {detailSpk.equipmentModels.map((eq) => (
+                          <tr key={eq.equipmentId}>
+                            <td className="px-3 py-2 font-mono font-semibold text-gray-800">{eq.equipmentId}</td>
+                            <td className="px-3 py-2 text-gray-700">{eq.equipmentName || '—'}</td>
+                            <td className="px-3 py-2 text-gray-500">{eq.functionalLocation || '—'}</td>
+                            <td className="px-3 py-2 text-gray-500">{eq.plantName || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Activities */}
+              {detailSpk.activitiesModel?.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                    Aktivitas ({detailSpk.activitiesModel.length})
+                  </p>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          {['No.', 'Operasi', 'Plan (mnt)', 'Aktual (mnt)', 'Hasil', 'Verified'].map((h) => (
+                            <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {detailSpk.activitiesModel.map((a) => (
+                          <tr key={a.activityNumber}>
+                            <td className="px-3 py-2 font-mono text-gray-500">{a.activityNumber}</td>
+                            <td className="px-3 py-2 text-gray-700 max-w-[220px]">{a.operationText}</td>
+                            <td className="px-3 py-2 text-gray-500">{a.durationPlan ?? '—'}</td>
+                            <td className="px-3 py-2 text-gray-500">{a.durationActual ?? '—'}</td>
+                            <td className="px-3 py-2 text-gray-500 max-w-[160px] truncate">{a.resultComment || '—'}</td>
+                            <td className="px-3 py-2">
+                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${a.isVerified ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
+                                {a.isVerified ? '✓ Ya' : '—'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Submission history */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                  Riwayat Submission {!loadingSubs && `(${detailSubs.length})`}
+                </p>
+                {loadingSubs ? (
+                  <p className="text-xs text-gray-400 py-3">Memuat...</p>
+                ) : detailSubs.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-3">Belum ada submission untuk SPK ini.</p>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          {['Work Start', 'Work Finish', 'Durasi (mnt)', 'Foto', 'Lokasi'].map((h) => (
+                            <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {detailSubs.map((sub) => (
+                          <tr key={sub.id}>
+                            <td className="px-3 py-2 text-gray-600">{sub.workStart ? formatDate(sub.workStart) : '—'}</td>
+                            <td className="px-3 py-2 text-gray-600">{formatDate(sub.submittedAt)}</td>
+                            <td className="px-3 py-2 text-gray-500">{sub.durationActual ?? '—'}</td>
+                            <td className="px-3 py-2 text-gray-500">{(sub.photoPaths || []).length}</td>
+                            <td className="px-3 py-2">
+                              {sub.latitude != null ? (
+                                <a href={`https://maps.google.com/?q=${sub.latitude},${sub.longitude}`}
+                                  target="_blank" rel="noreferrer"
+                                  className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                                  onClick={(e) => e.stopPropagation()}>
+                                  <MapPin size={10} />
+                                  {parseFloat(sub.latitude).toFixed(4)}, {parseFloat(sub.longitude).toFixed(4)}
+                                </a>
+                              ) : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}
         title={`Hapus SPK ${deleteTarget?.spkNumber}?`} description="Aksi ini tidak dapat diurungkan."
         onConfirm={handleDelete} confirmLabel="Hapus" destructive />
       <ConfirmDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}
         title={`Hapus ${selected.length} SPK?`} description="Aksi ini tidak dapat diurungkan."
         onConfirm={handleBulkDelete} confirmLabel="Hapus Semua" destructive />
+    </div>
+  );
+}
+
+function SpkField({ label, value }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
+      <p className="text-sm font-medium text-gray-800 mt-0.5">{value}</p>
     </div>
   );
 }

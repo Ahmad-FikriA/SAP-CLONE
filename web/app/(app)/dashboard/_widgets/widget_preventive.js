@@ -14,7 +14,7 @@ const Charts = dynamic(() => import('./_preventive_charts'), { ssr: false, loadi
 // ── Colour tokens ──────────────────────────────────────────────────────────
 const STATUS_META = {
   pending:     { label: 'Pending',    color: '#FBBF24' },
-  in_progress: { label: 'On Progress',color: '#3B82F6' },
+  in_progress: { label: 'Dalam Pengerjaan',color: '#3B82F6' },
   completed:   { label: 'Selesai',    color: '#10B981' },
   approved:    { label: 'Disetujui', color: '#059669' },
   rejected:    { label: 'Ditolak',    color: '#EF4444' },

@@ -57,5 +57,10 @@ export async function apiBlob(path) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || `HTTP ${res.status}`);
   }
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('spreadsheet') && !contentType.includes('octet-stream')) {
+    const err = await res.json().catch(() => ({ error: 'Response bukan file Excel' }));
+    throw new Error(err.error || 'Response bukan file Excel');
+  }
   return res.blob();
 }

@@ -255,7 +255,7 @@ const submit = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
 
-  const { durationActual, activityResultsModel = [], photoPaths = [], evaluasi, latitude, longitude } = req.body;
+  const { durationActual, activityResultsModel = [], photoPaths = [], evaluasi, latitude, longitude, workStart } = req.body;
   const subId = `SUB-${uuid().slice(0, 8).toUpperCase()}`;
 
   const t = await sequelize.transaction();
@@ -265,6 +265,7 @@ const submit = async (req, res) => {
       id: subId, spkNumber: spk.spkNumber, durationActual: durationActual ?? null,
       evaluasi: evaluasi || null, latitude: latitude ?? 0, longitude: longitude ?? 0,
       submittedAt: new Date(),
+      workStart: workStart ? new Date(workStart) : null,
     }, { transaction: t });
 
     // Photos

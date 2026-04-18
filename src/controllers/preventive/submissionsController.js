@@ -13,20 +13,44 @@ const User = require('../../models/User');
 const INCLUDE_FULL = [
   { model: SubmissionPhoto, as: 'photos', attributes: ['photoPath'] },
   { model: SubmissionActivityResult, as: 'activityResults', attributes: ['activityNumber', 'resultComment', 'isNormal', 'isVerified'] },
+  {
+    model: Spk,
+    as: 'spk',
+    attributes: ['category', 'description', 'submittedBy', 'scheduledDate'],
+    include: [{ model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan'] }],
+    required: false,
+  },
 ];
 
 function fmt(sub) {
   const j = sub.toJSON();
+  const spk = j.spk || {};
+
+  const actMap = {};
+  (spk.activitiesModel || []).forEach(a => { actMap[a.activityNumber] = a; });
+
   return {
     id: j.id,
     spkNumber: j.spkNumber,
+    spkCategory: spk.category || null,
+    spkDescription: spk.description || null,
+    spkSubmittedBy: spk.submittedBy || null,
+    spkScheduledDate: spk.scheduledDate || null,
+    workStart: j.workStart,
+    submittedAt: j.submittedAt,
     durationActual: j.durationActual,
     evaluasi: j.evaluasi,
     latitude: j.latitude,
     longitude: j.longitude,
-    submittedAt: j.submittedAt,
     photoPaths: (j.photos || []).map(p => p.photoPath),
-    activityResultsModel: j.activityResults || [],
+    activityResultsModel: (j.activityResults || []).map(r => ({
+      activityNumber: r.activityNumber,
+      operationText: actMap[r.activityNumber]?.operationText || null,
+      durationPlan: actMap[r.activityNumber]?.durationPlan || null,
+      resultComment: r.resultComment,
+      isNormal: r.isNormal,
+      isVerified: r.isVerified,
+    })),
   };
 }
 
@@ -119,7 +143,7 @@ function borderRange(ws, startRow, endRow, startCol, endCol, border = BORDER_THI
 // Query params: month (1-12), year, category
 const exportExcel = async (req, res) => {
   try {
-    const { from, to, month, year, category } = req.query;
+    const { from, to, month, year, week, category } = req.query;
 
     // ── Build date filter ──────────────────────────────────────────────────
     const where = {};
@@ -131,6 +155,18 @@ const exportExcel = async (req, res) => {
         toDate.setHours(23, 59, 59, 999);
         where.submittedAt[Op.lte] = toDate;
       }
+    } else if (week) {
+      // ISO week: find Monday of the given week number in the given year
+      const y = parseInt(year) || new Date().getFullYear();
+      const w = parseInt(week);
+      // Jan 4 is always in week 1 (ISO 8601)
+      const jan4 = new Date(y, 0, 4);
+      const monday = new Date(jan4);
+      monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (w - 1) * 7);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+      where.submittedAt = { [Op.between]: [monday, sunday] };
     } else if (month || year) {
       const y = parseInt(year) || new Date().getFullYear();
       if (month) {
@@ -210,17 +246,19 @@ const exportExcel = async (req, res) => {
 
     // Periode label for header
     let periodeLabel = '';
-    if (month && year) {
+    if (week && year) {
+      periodeLabel = `Minggu ${week} - ${year}`;
+    } else if (month && year) {
       const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
       periodeLabel = `${months[parseInt(month) - 1]} ${year}`;
     } else if (year) {
       periodeLabel = `Tahun ${year}`;
     }
 
-    // Columns: A=Order/ActNo, B=Description/OpText, C=Interval, D=Equipment, E=Func.Loc(name), F=Lat, G=Long, H=Result Comment, I=Dur.Actual, J=Dur.Plan, K=Verifikasi
-    // Col indices: 1=A ... 11=K
-    const COL = { ORDER: 1, DESC: 2, INTERVAL: 3, EQUIP: 4, FUNCLOC: 5, LAT: 6, LON: 7, RESULT: 8, DUR_ACT: 9, DUR_PLAN: 10, VERIFY: 11 };
-    const LAST_COL = 11;
+    // Columns: A=Order/ActNo, B=Description/OpText, C=Interval, D=Equipment, E=Func.Loc(name), F=Result Comment, G=Dur.Actual, H=Dur.Plan, I=Verifikasi
+    // Col indices: 1=A ... 9=I
+    const COL = { ORDER: 1, DESC: 2, INTERVAL: 3, EQUIP: 4, FUNCLOC: 5, RESULT: 6, DUR_ACT: 7, DUR_PLAN: 8, VERIFY: 9 };
+    const LAST_COL = 9;
 
     for (const sub of submissions) {
       const sj = sub.toJSON();
@@ -272,14 +310,14 @@ const exportExcel = async (req, res) => {
       let row = 1;
 
       // ── Row 1: Title + Periode ────────────────────────────────────────────
-      ws.mergeCells(row, 1, row, 7);
+      ws.mergeCells(row, 1, row, 5);
       const titleCell = ws.getCell(row, 1);
       titleCell.value = 'LEMBAR KERJA PREVENTIVE MAINTENANCE';
       titleCell.font = { bold: true, size: 13 };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-      ws.mergeCells(row, 8, row, LAST_COL);
-      const periodeCell = ws.getCell(row, 8);
+      ws.mergeCells(row, 6, row, LAST_COL);
+      const periodeCell = ws.getCell(row, 6);
       periodeCell.value = periodeLabel ? `Periode : ${periodeLabel}` : '';
       periodeCell.font = { size: 10 };
       periodeCell.alignment = { horizontal: 'right', vertical: 'middle' };
@@ -287,9 +325,9 @@ const exportExcel = async (req, res) => {
       row++;
 
       // ── Row 2: SPK number + Lembar info ──────────────────────────────────
-      ws.mergeCells(row, 1, row, 7);
+      ws.mergeCells(row, 1, row, LAST_COL);
       const spkCell = ws.getCell(row, 1);
-      spkCell.value = `No. SPK: ${sj.spkNumber}  |  Kategori: ${spk.category}  |  Dilaksanakan oleh: ${resolveName(spk.submittedBy)}  |  Submit: ${fmtTs(sj.submittedAt)}`;
+      spkCell.value = `No. SPK: ${sj.spkNumber}  |  Kategori: ${spk.category}  |  Dilaksanakan oleh: ${resolveName(spk.submittedBy)}  |  Work Start: ${fmtTs(sj.workStart)}  |  Work Finish: ${fmtTs(sj.submittedAt)}`;
       spkCell.font = { size: 9, color: { argb: 'FF555555' } };
       spkCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
@@ -299,7 +337,7 @@ const exportExcel = async (req, res) => {
       // ── Row 3: Column headers ─────────────────────────────────────────────
       const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B3A5C' } };
       const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
-      const headers = ['Order / No. Aktivitas', 'Deskripsi / Uraian Pekerjaan', 'Interval', 'Equipment', 'Lokasi', 'Latitude', 'Longitude', 'Result Comment', 'Durasi Aktual (mnt)', 'Durasi Rencana (mnt)', 'Verifikasi'];
+      const headers = ['Order / No. Aktivitas', 'Deskripsi / Uraian Pekerjaan', 'Interval', 'Equipment', 'Lokasi', 'Result Comment', 'Durasi Aktual (mnt)', 'Durasi Rencana (mnt)', 'Verifikasi'];
       for (let c = 1; c <= LAST_COL; c++) {
         const cell = ws.getCell(row, c);
         cell.value = headers[c - 1];
@@ -343,8 +381,6 @@ const exportExcel = async (req, res) => {
             spk.intervalPeriod || '-',
             grp.name,
             grp.funcLocName,
-            grp.lat,
-            grp.lon,
             ar.resultComment || '',
             sj.durationActual ?? '-',
             spkAct?.durationPlan ?? '-',
@@ -356,10 +392,6 @@ const exportExcel = async (req, res) => {
             cell.font = { size: 10 };
             cell.border = BORDER_THIN;
             cell.alignment = { vertical: 'middle', wrapText: c === COL.DESC || c === COL.RESULT };
-            if (c === COL.LAT || c === COL.LON) {
-              cell.numFmt = '0.0000000';
-              cell.alignment = { horizontal: 'right', vertical: 'middle' };
-            }
             if (c === COL.VERIFY) {
               cell.font = { size: 12, bold: true, color: { argb: ar.isNormal ? 'FF16A34A' : 'FFDC2626' } };
               cell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -470,10 +502,15 @@ const exportExcel = async (req, res) => {
       ws.getRow(row).height = 16;
     }
 
+    if (wb.worksheets.length === 0) {
+      return res.status(404).json({ error: 'Tidak ada data SPK yang disetujui untuk filter yang dipilih' });
+    }
+
     // ── Build filename ─────────────────────────────────────────────────────
     const parts = ['LK_Preventive'];
     if (category) parts.push(category);
-    if (month && year) parts.push(`${year}-${String(month).padStart(2, '0')}`);
+    if (week && year) parts.push(`${year}-W${String(week).padStart(2, '0')}`);
+    else if (month && year) parts.push(`${year}-${String(month).padStart(2, '0')}`);
     else if (year) parts.push(year);
     const filename = parts.join('_') + '.xlsx';
 

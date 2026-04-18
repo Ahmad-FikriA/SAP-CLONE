@@ -60,6 +60,10 @@ Spk.hasMany(SpkActivity, {
 });
 SpkActivity.belongsTo(Spk, { foreignKey: "spkNumber", as: "spk" });
 
+// ── Submission ↔ Spk ─────────────────────────────────────────────────────────
+Submission.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk', constraints: false });
+Spk.hasMany(Submission, { foreignKey: 'spkNumber', as: 'submissions', constraints: false });
+
 // ── Submission ↔ SubmissionPhoto ──────────────────────────────────────────────
 Submission.hasMany(SubmissionPhoto, {
   foreignKey: "submissionId",

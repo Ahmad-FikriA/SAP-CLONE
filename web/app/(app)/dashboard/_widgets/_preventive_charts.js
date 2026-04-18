@@ -98,7 +98,7 @@ export default function PreventiveCharts({ statusData, catData, weeklyData, tota
                     <Cell key={i} fill={entry.color} fillOpacity={1} />
                   ))}
                 </Bar>
-                <Bar dataKey="total" name="Total" fill="#e5e7eb" stackId="b" radius={[0, 3, 3, 0]} />
+                <Bar dataKey="total" name="Total" fill="#94a3b8" stackId="b" radius={[0, 3, 3, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

@@ -197,9 +197,6 @@ export default function SpkImportPage() {
           <div className="flex flex-wrap items-center gap-2">
             {[
               { label: 'Total', value: total, cls: 'bg-gray-100 text-gray-700' },
-              { label: 'Siap Import', value: readyCount, cls: 'bg-green-100 text-green-700' },
-              { label: 'Auto', value: auto, cls: 'bg-blue-100 text-blue-700' },
-              { label: 'Pilih Interval', value: ambiguous + unknown, cls: 'bg-yellow-100 text-yellow-700' },
               { label: 'Sudah Ada', value: exists, cls: 'bg-gray-100 text-gray-500' },
             ].map((s) => (
               <span key={s.label} className={`px-3 py-1 rounded-full text-xs font-semibold ${s.cls}`}>
@@ -323,9 +320,6 @@ export default function SpkImportPage() {
                   <tr>
                     <td colSpan={2} style={{ border: TITLE_BORDER, borderTop: 'none', padding: '5px 8px', fontSize: '8.5pt' }}>
                       <span style={{ marginRight: '20px' }}>Total: <strong>{total} order</strong></span>
-                      <span style={{ marginRight: '20px' }}>Siap Import: <strong>{readyCount}</strong></span>
-                      <span style={{ marginRight: '20px' }}>Auto: <strong>{auto}</strong></span>
-                      <span style={{ marginRight: '20px' }}>Pilih Interval: <strong>{ambiguous + unknown}</strong></span>
                       <span>Sudah Ada: <strong>{exists}</strong></span>
                     </td>
                   </tr>
@@ -367,7 +361,7 @@ export default function SpkImportPage() {
                       ...(activities.length > 0
                         ? activities.map((act, aIdx) => (
                           <tr key={`act-${oIdx}-${aIdx}`} style={{ backgroundColor: oIdx % 2 === 0 ? '#ffffff' : '#f9fbff' }}>
-                            <td style={{ border: BORDER, padding: '4px 5px', fontSize: '8pt', color: '#555', textAlign: 'center' }}>{act.stepNumber || (aIdx + 1)}</td>
+                            <td style={{ border: BORDER, padding: '4px 5px', fontSize: '8pt', color: '#555', textAlign: 'center' }}>{act.activityNumber || act.stepNumber || String((aIdx + 1) * 10).padStart(4, '0')}</td>
                             <td style={{ border: BORDER, padding: '4px 5px', fontSize: '8pt' }}>{act.operationText || act.description || '—'}</td>
                             <td style={{ border: BORDER, padding: '4px 5px', fontSize: '8pt', textAlign: 'center' }}>{interval}</td>
                             <td style={{ border: BORDER, padding: '4px 5px', fontSize: '8pt' }}>{eqName}</td>

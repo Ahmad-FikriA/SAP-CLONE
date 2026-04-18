@@ -20,6 +20,7 @@ const Submission = sequelize.define('Submission', {
     validate: { min: -180, max: 180 } 
   },
   submittedAt:    { type: DataTypes.DATE,           allowNull: false, field: 'submitted_at' },
+  workStart:      { type: DataTypes.DATE,           allowNull: true,  field: 'work_start' },
 }, {
   tableName: 'submissions',
   underscored: true,
