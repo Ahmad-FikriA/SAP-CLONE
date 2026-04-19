@@ -523,7 +523,7 @@ const approveKadisPerawatan = async (req, res) => {
         module: 'preventive',
         type: 'spk_approved_kadis_perawatan',
         title: 'SPK Menunggu Persetujuan Kadis',
-        body: `SPK ${spk.spkNumber} telah disetujui Kadis Perawatan dan menunggu Kadis`,
+        body: `SPK ${spk.spkNumber} telah disetujui Kadis Perawatan dan menunggu persetujuan Kadis ${plantName ?? ''}`.trim(),
         data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
         recipientIds: kadisUsers.map((u) => u.id),
       });
