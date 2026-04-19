@@ -433,18 +433,19 @@ const CATEGORY_GROUP_MAP = {
   Otomasi: 'Otomasi',
 };
 
-// Kadis funcloc routing map — keyed by dinas (bukan role variant)
-const KADIS_FUNCLOC_MAP = [
-  { pattern: /PS I Cidanau|PS II Waduk/i,  dinas: 'Pengolahan Air Baku' },
-  { pattern: /WTP Cidanau|Cipasauran/i,     dinas: 'Pengolahan Air Cipasauran & Cidanau' },
-  { pattern: /Decanter|WTP Krenceng/i,      dinas: 'Pengolahan Air Kerenceng' },
-  { pattern: /Pos Keamanan/i,               dinas: 'Operasi Keamanan' },
+// Plant name → Kadis dinas routing map
+// plantName comes from Equipment.plantName (set during SAP import), not the raw funcloc code.
+const PLANT_KADIS_MAP = [
+  { pattern: /Cidanau|Cipasauran|WTP Cidanau/i, dinas: 'Pengolahan Air Cipasauran & Cidanau' },
+  { pattern: /Waduk|Re-use/i,                    dinas: 'Pengolahan Air Baku' },
+  { pattern: /Krenceng/i,                         dinas: 'Pengolahan Air Kerenceng' },
+  { pattern: /Keamanan/i,                         dinas: 'Operasi Keamanan' },
 ];
 
-function getExpectedKadisDinas(functionalLocation) {
-  if (!functionalLocation) return null;
-  for (const entry of KADIS_FUNCLOC_MAP) {
-    if (entry.pattern.test(functionalLocation)) return entry.dinas;
+function getExpectedKadisDinas(plantName) {
+  if (!plantName) return null;
+  for (const entry of PLANT_KADIS_MAP) {
+    if (entry.pattern.test(plantName)) return entry.dinas;
   }
   return null;
 }
@@ -509,16 +510,12 @@ const approveKadisPerawatan = async (req, res) => {
     kadisPerawatanApprovedAt: new Date(),
   });
 
-  // Notify the correct Kadis using KADIS_FUNCLOC_MAP
-  const spkWithEquip = await Spk.findOne({
-    where: { spkNumber: spk.spkNumber },
-    include: [{ model: SpkEquipment, as: 'equipmentModels' }],
-  });
-  const funcLoc = spkWithEquip?.equipmentModels?.[0]?.functionalLocation ?? '';
-  const kadisEntry = KADIS_FUNCLOC_MAP.find((e) => e.pattern.test(funcLoc));
-  if (kadisEntry) {
+  // Notify the correct Kadis using plant name routing
+  const plantName = spk.equipmentModels?.[0]?.equipmentDetails?.plantName ?? null;
+  const expectedDinasForNotif = getExpectedKadisDinas(plantName);
+  if (expectedDinasForNotif) {
     const kadisUsers = await User.findAll({
-      where: { role: 'kadis', dinas: kadisEntry.dinas },
+      where: { role: 'kadis', dinas: expectedDinasForNotif },
       attributes: ['id'],
     });
     if (kadisUsers.length > 0) {
@@ -551,9 +548,9 @@ const approveKadis = async (req, res) => {
     return res.status(403).json({ error: 'Only Kadis can approve this step' });
   }
 
-  // Validate Kadis funcloc routing by dinas
-  const funclocs = (spk.equipmentModels || []).map(e => e.functionalLocation).filter(Boolean);
-  const expectedDinas = funclocs.length > 0 ? getExpectedKadisDinas(funclocs[0]) : null;
+  // Validate Kadis routing by plant name (read from equipment, not raw funcloc code)
+  const plantName = spk.equipmentModels?.[0]?.equipmentDetails?.plantName ?? null;
+  const expectedDinas = getExpectedKadisDinas(plantName);
   if (expectedDinas && !dinas.toLowerCase().includes(expectedDinas.toLowerCase())) {
     return res.status(403).json({ error: `SPK ini memerlukan persetujuan Kadis dengan dinas '${expectedDinas}'` });
   }
