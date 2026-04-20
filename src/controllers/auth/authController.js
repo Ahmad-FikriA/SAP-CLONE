@@ -2,6 +2,7 @@
 
 const jwt  = require('jsonwebtoken');
 const User = require('../../models/User');
+const { buildAccessProfile } = require('../../services/accessProfile');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'kti-mock-secret-dev';
 
@@ -13,6 +14,8 @@ const login = async (req, res) => {
 
   const user = await User.findOne({ where: { nik, password } });
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+  const accessProfile = buildAccessProfile(user);
 
   const token = jwt.sign(
     {
@@ -30,7 +33,17 @@ const login = async (req, res) => {
 
   res.json({
     token,
-    user: { id: user.id, name: user.name, nik: user.nik, role: user.role, dinas: user.dinas, divisi: user.divisi, email: user.email, group: user.group },
+    user: {
+      id: user.id,
+      name: user.name,
+      nik: user.nik,
+      role: user.role,
+      dinas: user.dinas,
+      divisi: user.divisi,
+      email: user.email,
+      group: user.group,
+      accessProfile,
+    },
   });
 };
 

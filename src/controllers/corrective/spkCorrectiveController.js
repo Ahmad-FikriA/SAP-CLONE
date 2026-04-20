@@ -168,7 +168,7 @@ const create = async (req, res) => {
       priority: priority || 'medium',
       equipmentId: equipmentId || notification.equipmentId,
       location: location || notification.functionalLocation,
-      requestedFinishDate,
+      requestedFinishDate: requestedFinishDate || null,
       damageClassification,
       jobDescription,
       workCenter: workCenter || notification.workCenter,

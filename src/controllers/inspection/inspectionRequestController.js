@@ -2,6 +2,7 @@
 
 const InspectionRequest = require("../../models/InspectionRequest");
 const InspectionSchedule = require("../../models/InspectionSchedule");
+const { buildAccessProfile } = require("../../services/accessProfile");
 
 /**
  * InspectionRequest Controller
@@ -9,16 +10,49 @@ const InspectionSchedule = require("../../models/InspectionSchedule");
  * Planner bisa review, approve (→ buat jadwal otomatis), atau reject.
  */
 
+function normalizeNik(value) {
+  return String(value || "").trim();
+}
+
+function canViewAllRequests(user) {
+  const profile = buildAccessProfile(user || {});
+  const appRole = profile?.appRole;
+  const flags = profile?.flags || {};
+
+  return (
+    appRole === "kasie" || Boolean(flags.isInspectionPlanner || flags.isPlanner)
+  );
+}
+
 // GET /api/inspection/requests
 async function listRequests(req, res) {
   try {
     const where = {};
+    const requesterNik = normalizeNik(req.user?.nik);
+    const hasGlobalAccess = canViewAllRequests(req.user);
+    const requestedByQuery = normalizeNik(req.query.requestedBy);
 
     // Filter by status
     if (req.query.status) where.status = req.query.status;
 
     // Filter by requestedBy (User lihat punya sendiri)
-    if (req.query.requestedBy) where.requestedBy = req.query.requestedBy;
+    if (requestedByQuery) {
+      if (!hasGlobalAccess && requestedByQuery !== requesterNik) {
+        return res.status(403).json({
+          success: false,
+          message: "Anda hanya dapat melihat permintaan milik akun sendiri.",
+        });
+      }
+      where.requestedBy = requestedByQuery;
+    } else if (!hasGlobalAccess) {
+      if (!requesterNik) {
+        return res.status(403).json({
+          success: false,
+          message: "Akun tidak memiliki identitas NIK yang valid.",
+        });
+      }
+      where.requestedBy = requesterNik;
+    }
 
     const data = await InspectionRequest.findAll({
       where,
@@ -34,12 +68,22 @@ async function listRequests(req, res) {
 // GET /api/inspection/requests/:id
 async function getRequest(req, res) {
   try {
+    const requesterNik = normalizeNik(req.user?.nik);
+    const hasGlobalAccess = canViewAllRequests(req.user);
+
     const request = await InspectionRequest.findByPk(req.params.id);
 
     if (!request) {
       return res
         .status(404)
         .json({ success: false, message: "Request not found." });
+    }
+
+    if (!hasGlobalAccess && normalizeNik(request.requestedBy) !== requesterNik) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses ke permintaan ini.",
+      });
     }
 
     res.json({ success: true, message: "Request retrieved.", data: request });
@@ -62,6 +106,16 @@ async function createRequest(req, res) {
       mediaPaths,
       requestedBy,
     } = req.body;
+
+    const requesterNik = normalizeNik(req.user?.nik);
+    const requestedByBody = normalizeNik(requestedBy);
+
+    if (requestedByBody && requesterNik && requestedByBody !== requesterNik) {
+      return res.status(403).json({
+        success: false,
+        message: "requestedBy harus sama dengan akun yang sedang login.",
+      });
+    }
 
     if (!judul || !lokasi || !jenisInspeksi || !kategoriInspeksi) {
       return res.status(400).json({
@@ -97,7 +151,7 @@ async function createRequest(req, res) {
       asapMungkin: asapMungkin ?? false,
       deskripsi,
       mediaPaths: mediaPaths ?? [],
-      requestedBy: requestedBy ?? (req.user?.nik ?? "unknown"),
+      requestedBy: requesterNik || requestedByBody || "unknown",
       status: "pending",
     });
 
@@ -112,7 +166,7 @@ async function createRequest(req, res) {
 }
 
 // PUT /api/inspection/requests/:id/approve
-// Body: { notes?, scheduledDate?, assignedTo?, title?, unitKerja?, nomorPoJo? }
+// Body: { notes?, scheduledDate?, assignedTo?, title?, nomorPoJo? }
 async function approveRequest(req, res) {
   try {
     const request = await InspectionRequest.findByPk(req.params.id);
@@ -130,8 +184,7 @@ async function approveRequest(req, res) {
       });
     }
 
-    const { notes, scheduledDate, assignedTo, title, unitKerja, nomorPoJo } =
-      req.body;
+    const { notes, scheduledDate, assignedTo, title, nomorPoJo } = req.body;
     const plannerNotes =
       typeof notes === "string" && notes.trim().length > 0
         ? notes.trim()
@@ -152,7 +205,6 @@ async function approveRequest(req, res) {
     const schedule = await InspectionSchedule.create({
       type: request.jenisInspeksi === "k3" ? "k3" : "rutin",
       title: title || request.judul,
-      unitKerja: unitKerja || null,
       location: request.lokasi,
       scheduledDate: finalDate,
       createdBy: req.user?.nik ?? "planner",

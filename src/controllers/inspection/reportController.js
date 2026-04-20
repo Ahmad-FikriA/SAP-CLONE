@@ -7,9 +7,66 @@ const {
 const InspectionSchedule = require("../../models/InspectionSchedule");
 const InspectionFollowUp = require("../../models/InspectionFollowUp");
 const sequelize = require("../../config/database");
+const { buildAccessProfile } = require("../../services/accessProfile");
 
 const FOLLOW_UP_TARGET_DINAS_HSE = "dinas_hse";
 const FOLLOW_UP_TARGET_DINAS_PERAWATAN = "dinas_perawatan";
+
+function normalizeNik(value) {
+  return String(value || "").trim();
+}
+
+function canViewAllReports(user) {
+  const profile = buildAccessProfile(user || {});
+  const appRole = profile?.appRole;
+  const flags = profile?.flags || {};
+
+  return (
+    appRole === "kasie" ||
+    appRole === "kadis" ||
+    appRole === "kadiv" ||
+    Boolean(
+      flags.isInspectionPlanner ||
+        flags.isInspectionApprover ||
+        flags.isInspectionMonitor,
+    )
+  );
+}
+
+function normalizeReportStatus(status, fallback = "draft") {
+  if (status === "submitted") return "submitted";
+  if (status === "draft") return "draft";
+  return fallback;
+}
+
+function parsePhotoRecords(photos, reportId) {
+  if (!Array.isArray(photos)) return [];
+
+  return photos
+    .map((photo) => {
+      if (typeof photo === "string") {
+        const cleanPath = photo.trim();
+        if (!cleanPath) return null;
+        return {
+          reportId,
+          photoPath: cleanPath,
+          caption: null,
+        };
+      }
+
+      if (!photo || typeof photo !== "object") return null;
+
+      const cleanPath = String(photo.photoPath || "").trim();
+      if (!cleanPath) return null;
+
+      return {
+        reportId,
+        photoPath: cleanPath,
+        caption: photo.caption || null,
+      };
+    })
+    .filter(Boolean);
+}
 
 /**
  * Report Controller — Submit, list, approve/reject inspection reports.
@@ -19,9 +76,30 @@ const FOLLOW_UP_TARGET_DINAS_PERAWATAN = "dinas_perawatan";
 async function listReports(req, res) {
   try {
     const where = {};
+    const requesterNik = normalizeNik(req.user?.nik);
+    const hasGlobalAccess = canViewAllReports(req.user);
+    const requestedSubmittedBy = normalizeNik(req.query.submittedBy);
 
     if (req.query.status) where.status = req.query.status;
-    if (req.query.submittedBy) where.submittedBy = req.query.submittedBy;
+
+    if (requestedSubmittedBy) {
+      if (!hasGlobalAccess && requestedSubmittedBy !== requesterNik) {
+        return res.status(403).json({
+          success: false,
+          message: "Anda hanya dapat melihat laporan milik akun sendiri.",
+        });
+      }
+      where.submittedBy = requestedSubmittedBy;
+    } else if (!hasGlobalAccess) {
+      if (!requesterNik) {
+        return res.status(403).json({
+          success: false,
+          message: "Akun tidak memiliki identitas NIK yang valid.",
+        });
+      }
+      where.submittedBy = requesterNik;
+    }
+
     if (req.query.hasKerusakan !== undefined) {
       where.hasKerusakan = req.query.hasKerusakan === "true";
     }
@@ -47,6 +125,9 @@ async function listReports(req, res) {
 // GET /api/inspection/reports/:id
 async function getReport(req, res) {
   try {
+    const requesterNik = normalizeNik(req.user?.nik);
+    const hasGlobalAccess = canViewAllReports(req.user);
+
     const report = await InspectionReport.findByPk(req.params.id, {
       include: [
         { association: "schedule" },
@@ -59,6 +140,13 @@ async function getReport(req, res) {
       return res
         .status(404)
         .json({ success: false, message: "Report not found." });
+    }
+
+    if (!hasGlobalAccess && normalizeNik(report.submittedBy) !== requesterNik) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses ke laporan ini.",
+      });
     }
 
     res.json({ success: true, message: "Report retrieved.", data: report });
@@ -85,7 +173,11 @@ async function createReport(req, res) {
       kategoriK3,
       signaturePath,
       photos,
+      status,
     } = req.body;
+
+    const reportStatus = normalizeReportStatus(status, "submitted");
+    const isSubmitted = reportStatus === "submitted";
 
     // Verify schedule exists
     const schedule = await InspectionSchedule.findByPk(scheduleId, {
@@ -111,25 +203,25 @@ async function createReport(req, res) {
         kriteria,
         kategoriK3: kategoriK3 || null,
         signaturePath: signaturePath || null,
-        status: "submitted",
+        status: reportStatus,
         submittedBy: req.user.nik,
-        submittedAt: new Date(),
+        submittedAt: isSubmitted ? new Date() : null,
       },
       { transaction: t },
     );
 
     // Save photos if provided
-    if (photos && photos.length > 0) {
-      const photoRecords = photos.map((p) => ({
-        reportId: report.id,
-        photoPath: p.photoPath || p,
-        caption: p.caption || null,
-      }));
+    const photoRecords = parsePhotoRecords(photos, report.id);
+    if (photoRecords.length > 0) {
       await InspectionReportPhoto.bulkCreate(photoRecords, { transaction: t });
     }
 
-    // Update schedule status
-    await schedule.update({ status: "completed" }, { transaction: t });
+    // Update schedule status according to report state.
+    if (isSubmitted) {
+      await schedule.update({ status: "completed" }, { transaction: t });
+    } else if (["scheduled", "in_progress"].includes(schedule.status)) {
+      await schedule.update({ status: "in_progress" }, { transaction: t });
+    }
 
     await t.commit();
 
@@ -139,8 +231,126 @@ async function createReport(req, res) {
 
     res.status(201).json({
       success: true,
-      message: "Report submitted successfully.",
+      message: isSubmitted
+        ? "Report submitted successfully."
+        : "Draft report saved successfully.",
       data: created,
+    });
+  } catch (err) {
+    await t.rollback();
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+// PUT /api/inspection/reports/:id
+async function updateReport(req, res) {
+  const t = await sequelize.transaction();
+
+  try {
+    const report = await InspectionReport.findByPk(req.params.id, {
+      include: [{ association: "schedule" }],
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+
+    if (!report) {
+      await t.rollback();
+      return res
+        .status(404)
+        .json({ success: false, message: "Report not found." });
+    }
+
+    if (normalizeNik(report.submittedBy) !== normalizeNik(req.user?.nik)) {
+      await t.rollback();
+      return res.status(403).json({
+        success: false,
+        message: "Anda hanya dapat mengubah laporan milik sendiri.",
+      });
+    }
+
+    if (["approved", "rejected"].includes(report.status)) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Laporan yang sudah diputuskan tidak dapat diubah.",
+      });
+    }
+
+    const updatePayload = {};
+    const mutableFields = [
+      "inspectorName",
+      "inspectionDate",
+      "location",
+      "findings",
+      "kerusakanDetail",
+      "kriteria",
+      "kategoriK3",
+      "signaturePath",
+    ];
+
+    mutableFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updatePayload[field] = req.body[field];
+      }
+    });
+
+    if (req.body.tools !== undefined) {
+      updatePayload.tools = Array.isArray(req.body.tools) ? req.body.tools : [];
+    }
+
+    if (req.body.hasKerusakan !== undefined) {
+      updatePayload.hasKerusakan = Boolean(req.body.hasKerusakan);
+    }
+
+    const nextStatus =
+      req.body.status !== undefined
+        ? normalizeReportStatus(req.body.status, report.status)
+        : report.status;
+
+    updatePayload.status = nextStatus;
+    updatePayload.submittedBy = normalizeNik(req.user?.nik) || report.submittedBy;
+    updatePayload.submittedAt =
+      nextStatus === "submitted"
+        ? report.submittedAt || new Date()
+        : null;
+
+    await report.update(updatePayload, { transaction: t });
+
+    if (req.body.photos !== undefined) {
+      await InspectionReportPhoto.destroy({
+        where: { reportId: report.id },
+        transaction: t,
+      });
+
+      const photoRecords = parsePhotoRecords(req.body.photos, report.id);
+      if (photoRecords.length > 0) {
+        await InspectionReportPhoto.bulkCreate(photoRecords, {
+          transaction: t,
+        });
+      }
+    }
+
+    if (report.schedule) {
+      if (nextStatus === "submitted") {
+        await report.schedule.update({ status: "completed" }, { transaction: t });
+      } else if (["scheduled", "in_progress"].includes(report.schedule.status)) {
+        await report.schedule.update({ status: "in_progress" }, { transaction: t });
+      }
+    }
+
+    await t.commit();
+
+    const updated = await InspectionReport.findByPk(report.id, {
+      include: [{ association: "schedule" }, { association: "photos" }],
+    });
+
+    res.json({
+      success: true,
+      message:
+        nextStatus === "submitted"
+          ? "Report submitted successfully."
+          : "Draft report saved successfully.",
+      data: updated,
     });
   } catch (err) {
     await t.rollback();
@@ -254,6 +464,7 @@ module.exports = {
   listReports,
   getReport,
   createReport,
+  updateReport,
   approveReport,
   rejectReport,
 };

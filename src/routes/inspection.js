@@ -16,6 +16,7 @@ const {
   listReports,
   getReport,
   createReport,
+  updateReport,
   approveReport,
   rejectReport,
 } = require("../controllers/inspection/reportController");
@@ -80,6 +81,7 @@ router.put("/schedules/:id", updateSchedule);
 router.get("/reports", listReports);
 router.get("/reports/:id", getReport);
 router.post("/reports", createReport);
+router.put("/reports/:id", updateReport);
 router.put("/reports/:id/approve", approveReport);
 router.put("/reports/:id/reject", rejectReport);
 

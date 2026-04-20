@@ -73,7 +73,6 @@ async function createSchedule(req, res) {
     const {
       type,
       title,
-      unitKerja,
       location,
       scheduledDate,
       scheduledEndDate,
@@ -91,7 +90,6 @@ async function createSchedule(req, res) {
     const schedule = await InspectionSchedule.create({
       type: type || "rutin",
       title,
-      unitKerja,
       location,
       scheduledDate,
       scheduledEndDate,
