@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+tes
+
 ## Commands
 
 ```bash
@@ -30,6 +32,7 @@ URI=mysql://user:password@host:3306/dbname
 **KTI SmartCare SAP Mock** — Express.js REST API backend with a Fiori-styled web admin UI, backed by MySQL via Sequelize ORM.
 
 ### Request flow
+
 ```
 HTTP Request
   → src/middleware/auth.js (JWT verification via verifyToken)
@@ -40,12 +43,12 @@ HTTP Request
 
 ### Domain split
 
-| Domain | Routes prefix | Controllers path |
-|--------|--------------|-----------------|
+| Domain                 | Routes prefix                                                                                                            | Controllers path              |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
 | Preventive maintenance | `/api/spk`, `/api/lk`, `/api/equipment`, `/api/maps`, `/api/submissions`, `/api/functional-locations`, `/api/task-lists` | `src/controllers/preventive/` |
-| Corrective maintenance | `/api/corrective/requests`, `/api/corrective/parse-excel` | `src/controllers/corrective/` |
-| Auth | `/api/auth` | `src/controllers/auth/` |
-| Users | `/api/users` | `src/controllers/users/` |
+| Corrective maintenance | `/api/corrective/requests`, `/api/corrective/parse-excel`                                                                | `src/controllers/corrective/` |
+| Auth                   | `/api/auth`                                                                                                              | `src/controllers/auth/`       |
+| Users                  | `/api/users`                                                                                                             | `src/controllers/users/`      |
 
 All preventive routes are defined together in `src/routes/preventive.js` and export named routers. Corrective routes live in `src/routes/corrective.js`.
 
@@ -54,6 +57,7 @@ All preventive routes are defined together in `src/routes/preventive.js` and exp
 Models live in `src/models/`. **All associations must be defined in `src/models/associations.js`**, which is imported once at startup in `server.js`. Never define cross-model associations inside individual model files.
 
 Key models and their junction tables:
+
 - `Spk` → `SpkEquipment` (junction), `SpkActivity`
 - `LembarKerja` → `LembarKerjaSpk` (junction linking LK to SPK)
 - `Submission` → `SubmissionPhoto`, `SubmissionActivityResult`
