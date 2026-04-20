@@ -34,15 +34,15 @@ function normalizeSupervisiGroupLabel(value) {
   if (!normalized) return null;
 
   if (
-    normalized === "Group supervisi Sipil dan Perpipaan" ||
-    normalized === "Group supervisi Sipil dan Perpipaan"
+    normalized === "group supervisi sipil dan perpipaan" ||
+    normalized === "group supervisi sipil dan perpipaan"
   ) {
     return SUPERVISI_GROUP_PERPIPAAN;
   }
 
   if (
-    normalized === "Group supervisi Mekanikal Elektrik dan Instrumen" ||
-    normalized === "Group supervisi Mekanikal Elektrik dan Instrumen"
+    normalized === "group supervisi mekanikal elektrik dan instrumen" ||
+    normalized === "group supervisi mekanikal elektrik dan instrumen"
   ) {
     return SUPERVISI_GROUP_MEKATRONIK;
   }

@@ -193,6 +193,22 @@ async function ensureSupervisiJobSchema() {
     });
   }
 
+  if (!table.latitude) {
+    await queryInterface.addColumn(tableName, "latitude", {
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: true,
+      comment: "Latitude lokasi proyek",
+    });
+  }
+
+  if (!table.longitude) {
+    await queryInterface.addColumn(tableName, "longitude", {
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: true,
+      comment: "Longitude lokasi proyek",
+    });
+  }
+
   if (!table.radius) {
     await queryInterface.addColumn(tableName, "radius", {
       type: DataTypes.DECIMAL(10, 2),
