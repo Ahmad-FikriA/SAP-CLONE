@@ -75,7 +75,7 @@ const Notification = sequelize.define('Notification', {
     defaultValue: 'draft',
   },
   approvalStatus: {
-    type: DataTypes.ENUM('pending', 'menunggu_review_awal_kadis_pp', 'ditolak_kadis_pp_awal', 'approved', 'rejected', 'spk_masuk', 'spk_issued', 'eksekusi', 'menunggu_review_kadis_pp', 'menunggu_review_kadis_pelapor'),
+    type: DataTypes.ENUM('pending', 'menunggu_review_awal_kadis_pp', 'ditolak_kadis_pp_awal', 'approved', 'rejected', 'spk_masuk', 'spk_issued', 'eksekusi', 'menunggu_review_kadis_pp', 'menunggu_review_kadis_pelapor', 'selesai'),
     allowNull: true,
     defaultValue: 'pending',
     field: 'approval_status',

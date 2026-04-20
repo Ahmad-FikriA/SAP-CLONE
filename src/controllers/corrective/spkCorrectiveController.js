@@ -153,9 +153,9 @@ const create = async (req, res) => {
   // Generate spkId if not provided
   const spkId = req.body.spkId || `SPK-C-${uuid().slice(0, 8).toUpperCase()}`;
 
-  // Calculate total planned hour
-  const totalPlannedHour = plannedWorker && plannedHourPerWorker
-    ? plannedWorker * plannedHourPerWorker
+  // Calculate total planned hour (allow 0 values)
+  const totalPlannedHour = (plannedWorker !== undefined && plannedHourPerWorker !== undefined)
+    ? Number(plannedWorker) * Number(plannedHourPerWorker)
     : null;
 
   const t = await sequelize.transaction();
@@ -168,7 +168,7 @@ const create = async (req, res) => {
       priority: priority || 'medium',
       equipmentId: equipmentId || notification.equipmentId,
       location: location || notification.functionalLocation,
-      requestedFinishDate,
+      requestedFinishDate: requestedFinishDate || null,
       damageClassification,
       jobDescription,
       workCenter: workCenter || notification.workCenter,
@@ -352,9 +352,9 @@ const updateByTeknisi = async (req, res) => {
     apdItems,
   } = req.body;
 
-  // Calculate total actual hour
-  const totalActualHour = actualWorker && actualHourPerWorker
-    ? actualWorker * actualHourPerWorker
+  // Calculate total actual hour (allow 0 values)
+  const totalActualHour = (actualWorker !== undefined && actualHourPerWorker !== undefined)
+    ? Number(actualWorker) * Number(actualHourPerWorker)
     : spk.totalActualHour;
 
   const t = await sequelize.transaction();
@@ -485,9 +485,9 @@ const approveKadisPelapor = async (req, res) => {
       kadisPelaporApprovedAt: now,
     }, { transaction: t });
 
-    // Update notification status to closed
+    // Update notification status to closed and sync approvalStatus
     await Notification.update(
-      { status: 'closed' },
+      { status: 'closed', approvalStatus: 'selesai' },
       { where: { notificationId: spk.notificationId }, transaction: t }
     );
 
@@ -497,9 +497,14 @@ const approveKadisPelapor = async (req, res) => {
     res.json(fmtSpk(fresh));
 
     // 🔔 Notify Teknisi that the job is fully approved and closed
-    const wc = spk.workCenter;
-    const groupMap = { mechanical: 'mekanik', electrical: 'listrik', civil: 'sipil', automation: 'otomasi' };
-    const groupKeyword = groupMap[wc] || wc || '';
+    const wc = (spk.workCenter || '').toLowerCase();
+    const groupMap = { 
+      'mechanical': 'mekanik', 'mekanik': 'mekanik',
+      'electrical': 'listrik', 'listrik': 'listrik', 'elektrik': 'listrik',
+      'civil': 'sipil', 'sipil': 'sipil',
+      'automation': 'otomasi', 'otomasi': 'otomasi' 
+    };
+    const groupKeyword = groupMap[wc] || wc;
     const teknisiWhere = { role: { [Op.in]: ['teknisi', 'kasie'] } };
     if (groupKeyword) teknisiWhere.group = { [Op.like]: `%${groupKeyword}%` };
     const teknisiUsers = await User.findAll({ where: teknisiWhere, attributes: ['id'] });
@@ -543,6 +548,41 @@ const reject = async (req, res) => {
 
   const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
   res.json(fmtSpk(fresh));
+
+  // 🔔 Notify Teknisi and Planner about rejection
+  try {
+    const wc = (spk.workCenter || '').toLowerCase();
+    const groupMap = {
+      'mechanical': 'mekanik', 'mekanik': 'mekanik',
+      'electrical': 'listrik', 'listrik': 'listrik', 'elektrik': 'listrik',
+      'civil': 'sipil', 'sipil': 'sipil',
+      'automation': 'otomasi', 'otomasi': 'otomasi'
+    };
+    const groupKeyword = groupMap[wc] || wc;
+
+    // Find technicians in this work center
+    const recipients = await User.findAll({
+      where: {
+        [Op.or]: [
+          { role: 'teknisi', group: { [Op.like]: `%${groupKeyword}%` } },
+          { role: 'kasie', group: { [Op.like]: `%${groupKeyword}%` } },
+          { group: { [Op.like]: '%perencanaan%' } }, // Always notify planner
+        ]
+      },
+      attributes: ['id']
+    });
+
+    await NotificationService.notify({
+      module: 'corrective',
+      type: 'job_rejected',
+      title: 'Pekerjaan Ditolak',
+      body: `Pekerjaan SPK ${spk.id} ditolak. Catatan: ${req.body.notes || '-'}`,
+      data: { requestId: spk.notificationId, deepLink: 'corrective/request-detail' },
+      recipientIds: recipients.map(u => u.id),
+    });
+  } catch (err) {
+    console.error('[FCM Rejection Error]', err);
+  }
 };
 
 // GET /api/corrective/spk/history
@@ -606,8 +646,8 @@ const updateByPlanner = async (req, res) => {
     items,
   } = req.body;
 
-  const totalPlannedHour = plannedWorker && plannedHourPerWorker
-    ? plannedWorker * plannedHourPerWorker
+  const totalPlannedHour = (plannedWorker !== undefined && plannedHourPerWorker !== undefined)
+    ? Number(plannedWorker) * Number(plannedHourPerWorker)
     : spk.totalPlannedHour;
 
   const t = await sequelize.transaction();
