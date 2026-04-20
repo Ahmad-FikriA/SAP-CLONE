@@ -563,7 +563,7 @@ export default function SpkPage() {
 
       {/* ── SPK Detail Dialog ─────────────────────────────────────────── */}
       <Dialog open={!!detailSpk} onOpenChange={(open) => !open && setDetailSpk(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2 flex-wrap">
               <DialogTitle className="font-mono">{detailSpk?.spkNumber}</DialogTitle>
