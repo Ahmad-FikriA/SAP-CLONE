@@ -218,9 +218,14 @@ export default function CorrectivePage() {
   }
 
   function openSpkPanel(req) {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    
     setSpkForm({
       ...EMPTY_SPK_FORM,
       notificationId: req.id,
+      orderNumber: `ORD-${dateStr}-${rand}`,
       equipmentId: req.equipment || '',
       location: req.functionalLocation || '',
       jobDescription: [req.description, req.longText].filter(Boolean).join('\n'),
@@ -486,7 +491,8 @@ export default function CorrectivePage() {
                 <Section title="Foto Lapangan">
                   <div className="flex flex-wrap gap-2">
                     {selectedRequest.images.filter(Boolean).map((p, i) => {
-                      const src = p.startsWith('/') ? p : '/' + p;
+                      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+                      const src = p.startsWith('http') ? p : p.startsWith('uploads/') ? `${baseUrl}/${p}` : `${baseUrl}/uploads/${p}`;
                       return (
                         <img key={i} src={src} alt="Photo" onClick={() => window.open(src, '_blank')}
                           className="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80" />
@@ -561,11 +567,15 @@ export default function CorrectivePage() {
               {selectedSpk.photos?.length > 0 && (
                 <Section title="Foto Dokumentasi">
                   <div className="flex flex-wrap gap-2">
-                    {selectedSpk.photos.map((p, i) => (
-                      <img key={i} src={`/${p.photoPath}`} alt={p.photoType}
-                        onClick={() => window.open(`/${p.photoPath}`, '_blank')}
-                        className="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80" />
-                    ))}
+                    {selectedSpk.photos.map((p, i) => {
+                      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+                      const src = p.photoPath.startsWith('http') ? p.photoPath : p.photoPath.startsWith('uploads/') ? `${baseUrl}/${p.photoPath}` : `${baseUrl}/uploads/${p.photoPath}`;
+                      return (
+                        <img key={i} src={src} alt={p.photoType}
+                          onClick={() => window.open(src, '_blank')}
+                          className="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80" />
+                      );
+                    })}
                   </div>
                 </Section>
               )}
@@ -598,7 +608,7 @@ export default function CorrectivePage() {
           <div className="space-y-3 text-sm">
             <SpkField label="Notification ID" value={spkForm.notificationId} onChange={(v) => setSpkForm((f) => ({ ...f, notificationId: v }))} disabled />
             <div className="grid grid-cols-2 gap-3">
-              <SpkField label="Order Number" value={spkForm.orderNumber} onChange={(v) => setSpkForm((f) => ({ ...f, orderNumber: v }))} />
+              <SpkField label="Order Number" value={spkForm.orderNumber} onChange={(v) => setSpkForm((f) => ({ ...f, orderNumber: v }))} disabled />
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Prioritas *</label>
                 <select value={spkForm.priority} onChange={(e) => setSpkForm((f) => ({ ...f, priority: e.target.value }))}
