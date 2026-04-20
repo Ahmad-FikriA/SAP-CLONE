@@ -50,6 +50,7 @@ const SubmissionActivityResult = sequelize.define('SubmissionActivityResult', {
   resultComment:  { type: DataTypes.TEXT,        allowNull: true,  field: 'result_comment' },
   isNormal:       { type: DataTypes.BOOLEAN,     allowNull: false, defaultValue: true,  field: 'is_normal' },
   isVerified:     { type: DataTypes.BOOLEAN,     allowNull: false, defaultValue: false, field: 'is_verified' },
+  measurementValue: { type: DataTypes.DOUBLE, allowNull: true, field: 'measurement_value' },
 }, {
   tableName: 'submission_activity_results',
   underscored: true,

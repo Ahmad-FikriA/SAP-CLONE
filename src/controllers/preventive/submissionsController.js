@@ -12,12 +12,12 @@ const User = require('../../models/User');
 
 const INCLUDE_FULL = [
   { model: SubmissionPhoto, as: 'photos', attributes: ['photoPath'] },
-  { model: SubmissionActivityResult, as: 'activityResults', attributes: ['activityNumber', 'resultComment', 'isNormal', 'isVerified'] },
+  { model: SubmissionActivityResult, as: 'activityResults', attributes: ['activityNumber', 'resultComment', 'isNormal', 'isVerified', 'measurementValue'] },
   {
     model: Spk,
     as: 'spk',
     attributes: ['category', 'description', 'submittedBy', 'scheduledDate'],
-    include: [{ model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan'] }],
+    include: [{ model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan', 'measurementUnit'] }],
     required: false,
   },
 ];
@@ -50,6 +50,8 @@ function fmt(sub) {
       resultComment: r.resultComment,
       isNormal: r.isNormal,
       isVerified: r.isVerified,
+      measurementValue: r.measurementValue ?? null,
+      measurementUnit: actMap[r.activityNumber]?.measurementUnit || null,
     })),
   };
 }

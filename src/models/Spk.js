@@ -62,6 +62,9 @@ const SpkActivity = sequelize.define('SpkActivity', {
   durationPlan:   { type: DataTypes.DECIMAL(6,2), allowNull: true,  field: 'duration_plan' },
   durationActual: { type: DataTypes.DECIMAL(6,2), allowNull: true,  field: 'duration_actual' },
   isVerified:     { type: DataTypes.BOOLEAN,      allowNull: false, defaultValue: false, field: 'is_verified' },
+  measurementType:  { type: DataTypes.STRING(100),   allowNull: true, field: 'measurement_type' },
+  measurementUnit:  { type: DataTypes.STRING(50),    allowNull: true, field: 'measurement_unit' },
+  measurementValue: { type: DataTypes.DOUBLE, allowNull: true, field: 'measurement_value' },
 }, {
   tableName: 'spk_activities',
   underscored: true,

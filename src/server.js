@@ -27,6 +27,11 @@ const errorHandler = require("./middleware/errorHandler");
 const { syncDatabase } = require("./config/syncMode");
 const { ensureSupervisiJobSchema } = require("./models/SupervisiJob");
 const { ensureSupervisiVisitSchema } = require("./models/SupervisiVisit");
+const {
+  ensureGeneralTaskListActivitySchema,
+  ensureSpkActivitySchema,
+  ensureSubmissionActivityResultSchema,
+} = require("./models/ensureMeasurementSchema");
 
 // Register all Sequelize model associations (must run before any query)
 require("./models/associations");
@@ -261,6 +266,18 @@ sequelize
   })
   .then(() => {
     console.log("Supervisi visit schema ensured.");
+    return ensureGeneralTaskListActivitySchema();
+  })
+  .then(() => {
+    console.log("General task list activity measurement schema ensured.");
+    return ensureSpkActivitySchema();
+  })
+  .then(() => {
+    console.log("SPK activity measurement schema ensured.");
+    return ensureSubmissionActivityResultSchema();
+  })
+  .then(() => {
+    console.log("Submission activity result measurement schema ensured.");
     return syncDatabase(sequelize, "server startup");
   })
   .then(() => {

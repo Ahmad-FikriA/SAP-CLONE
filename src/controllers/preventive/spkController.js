@@ -45,7 +45,7 @@ const INCLUDE_FULL = [
   },
   {
     model: SpkActivity, as: 'activitiesModel',
-    attributes: ['activityNumber', 'equipmentId', 'operationText', 'resultComment', 'durationPlan', 'durationActual', 'isVerified'],
+    attributes: ['activityNumber', 'equipmentId', 'operationText', 'resultComment', 'durationPlan', 'durationActual', 'isVerified', 'measurementType', 'measurementUnit', 'measurementValue'],
   },
 ];
 
@@ -164,7 +164,22 @@ const getAll = async (req, res) => {
 const getOne = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
-  res.json(fmt(spk));
+
+  // Include submission photo paths so approvers can see technician's documentation
+  let photoUrls = [];
+  const submission = await Submission.findOne({
+    where: { spkNumber: spk.spkNumber },
+    attributes: ['id'],
+  });
+  if (submission) {
+    const photos = await SubmissionPhoto.findAll({
+      where: { submissionId: submission.id },
+      attributes: ['photoPath'],
+    });
+    photoUrls = photos.map(p => p.photoPath);
+  }
+
+  res.json({ ...fmt(spk), photoUrls });
 };
 
 // POST /api/spk
@@ -276,11 +291,12 @@ const submit = async (req, res) => {
       await SubmissionActivityResult.create({
         submissionId: subId, activityNumber: r.activityNumber,
         resultComment: r.resultComment || null, isNormal: r.isNormal ?? true, isVerified: r.isVerified ?? false,
+        measurementValue: r.measurementValue ?? null,
       }, { transaction: t });
 
       // Update activity on the SPK row
       await SpkActivity.update(
-        { resultComment: r.resultComment ?? null, isVerified: r.isVerified ?? false, durationActual: r.durationActual ?? null },
+        { resultComment: r.resultComment ?? null, isVerified: r.isVerified ?? false, durationActual: r.durationActual ?? null, measurementValue: r.measurementValue ?? null },
         { where: { spkNumber: spk.spkNumber, activityNumber: r.activityNumber }, transaction: t }
       );
     }
@@ -391,6 +407,8 @@ const generateFromTaskList = async (req, res) => {
           activityNumber: `ACT-${String(actNum++).padStart(3, '0')}`,
           equipmentId: eq.equipmentId,
           operationText: step.operationText,
+          measurementType: step.measurementType ?? null,
+          measurementUnit: step.measurementUnit ?? null,
           durationPlan: 0.5,    // default plan duration
         }, { transaction: t });
       }
@@ -687,6 +705,8 @@ const batchGenerate = async (req, res) => {
           activityNumber: `ACT-${String(actNum++).padStart(3, '0')}`,
           equipmentId,
           operationText: step.operationText,
+          measurementType: step.measurementType ?? null,
+          measurementUnit: step.measurementUnit ?? null,
           durationPlan: 0.5,
         }, { transaction: t });
       }

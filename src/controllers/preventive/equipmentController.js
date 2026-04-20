@@ -4,6 +4,9 @@ const path = require('path');
 const fs   = require('fs');
 const { Op } = require('sequelize');
 const Equipment = require('../../models/Equipment');
+const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
+const { Submission, SubmissionActivityResult } = require('../../models/Submission');
+const User = require('../../models/User');
 
 const MAPS_DIR = path.join(__dirname, '..', '..', '..', 'data', 'maps');
 
@@ -212,4 +215,66 @@ const importExcel = async (req, res) => {
   });
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, bulkUpdate, remove, importExcel };
+// GET /api/equipment/:equipmentId/measurement-history
+const getMeasurementHistory = async (req, res) => {
+  const { equipmentId } = req.params;
+
+  const spkEquipRows = await SpkEquipment.findAll({
+    where: { equipmentId },
+    attributes: ['spkNumber'],
+  });
+  const spkNumbers = [...new Set(spkEquipRows.map(r => r.spkNumber))];
+  if (!spkNumbers.length) return res.json([]);
+
+  const results = await SubmissionActivityResult.findAll({
+    where: { measurementValue: { [Op.not]: null } },
+    include: [{
+      model: Submission,
+      as: 'submission',
+      attributes: ['submittedAt', 'spkNumber'],
+      where: { spkNumber: { [Op.in]: spkNumbers } },
+      required: true,
+      include: [{
+        model: Spk,
+        as: 'spk',
+        attributes: ['submittedBy'],
+        required: true,
+      }],
+    }],
+    order: [[{ model: Submission, as: 'submission' }, 'submittedAt', 'DESC']],
+  });
+
+  const userIds = [...new Set(results.map(r => r.submission?.spk?.submittedBy).filter(Boolean))];
+  const users = userIds.length
+    ? await User.findAll({ where: { id: { [Op.in]: userIds } }, attributes: ['id', 'name'] })
+    : [];
+  const userMap = Object.fromEntries(users.map(u => [u.id, u.name]));
+
+  const actNums = [...new Set(results.map(r => r.activityNumber))];
+  const spkActivities = await SpkActivity.findAll({
+    where: { spkNumber: { [Op.in]: spkNumbers }, activityNumber: { [Op.in]: actNums } },
+    attributes: ['spkNumber', 'activityNumber', 'operationText', 'measurementType', 'measurementUnit'],
+  });
+  const actMap = {};
+  for (const a of spkActivities) actMap[`${a.spkNumber}:${a.activityNumber}`] = a;
+
+  const rows = results.map(r => {
+    const sub = r.submission;
+    const spk = sub?.spk;
+    const act = actMap[`${sub?.spkNumber}:${r.activityNumber}`];
+    return {
+      submittedAt: sub?.submittedAt,
+      spkNumber: sub?.spkNumber,
+      technicianName: userMap[spk?.submittedBy] || spk?.submittedBy || '—',
+      activityNumber: r.activityNumber,
+      operationText: act?.operationText || r.activityNumber,
+      measurementValue: r.measurementValue !== null ? Number(r.measurementValue) : null,
+      measurementUnit: act?.measurementUnit || null,
+      measurementType: act?.measurementType || null,
+    };
+  });
+
+  res.json(rows);
+};
+
+module.exports = { getAll, getOne, create, update, bulkDelete, bulkUpdate, remove, importExcel, getMeasurementHistory };

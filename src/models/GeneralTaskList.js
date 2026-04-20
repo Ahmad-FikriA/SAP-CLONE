@@ -52,6 +52,16 @@ const GeneralTaskListActivity = sequelize.define('GeneralTaskListActivity', {
         allowNull: false,
         field: 'operation_text',
     },
+    measurementType: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        field: 'measurement_type',
+    },
+    measurementUnit: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        field: 'measurement_unit',
+    },
 }, {
     tableName: 'general_task_list_activities',
     underscored: true,

@@ -15,6 +15,29 @@ import { cn } from '@/lib/utils';
 
 const PHOTO_BASE = (process.env.NEXT_PUBLIC_API_URL || '');
 
+function detectMeasurementUnit(operationText) {
+  if (!operationText) return null;
+  const t = operationText;
+  const l = t.toLowerCase();
+  if (t.includes('°C') || t.includes('ºC')) return '°C';
+  if (t.includes('mm/s')) return 'mm/s';
+  if (t.includes('m3/h')) return 'm3/h';
+  if (/bar/i.test(t)) return 'bar';
+  if (t.includes('NTU')) return 'NTU';
+  if (t.includes('pH')) return 'pH';
+  if (/\bOhm\b/i.test(t)) return 'Ohm';
+  if (/[.\s]\s*%/.test(t)) return '%';
+  if (/[.(]\s*A\s*[).]|\.\.\s*A\b/.test(t)) return 'A';
+  if (/[.(]\s*V\s*[).]|\.\.\s*V\b/.test(t)) return 'V';
+  if (l.includes('temperatur') || l.includes('suhu')) return '°C';
+  if (l.includes('vibrasi') || l.includes('vibration')) return 'mm/s';
+  if (l.includes('tekanan') || l.includes('pressure')) return 'bar';
+  if (l.includes('ampere') || l.includes('arus')) return 'A';
+  if (l.includes('tegangan') || l.includes('voltage')) return 'V';
+  if (l.includes('turbid') || l.includes('kekeruhan')) return 'NTU';
+  return null;
+}
+
 const PENDING_STATUSES = {
   kasie:  ['awaiting_kasie'],
   kadis:  ['awaiting_kadis_perawatan', 'awaiting_kadis'],
@@ -340,6 +363,7 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick }) {
                   <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Uraian Pekerjaan</th>
                   <th className="text-right py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rencana</th>
                   <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Komentar Hasil</th>
+                  <th className="text-right py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nilai Ukur</th>
                   <th className="text-center py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                 </tr>
               </thead>
@@ -353,6 +377,12 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick }) {
                       <td className="py-2 pr-4 text-right text-gray-500">{act.durationPlan ? `${act.durationPlan} mnt` : '—'}</td>
                       <td className="py-2 pr-4 text-gray-600 max-w-[200px]">
                         {res?.resultComment || <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="py-2 pr-4 text-right font-mono text-sm text-gray-700">
+                        {res?.measurementValue != null ? (() => {
+                          const unit = res.measurementUnit || detectMeasurementUnit(act.operationText);
+                          return `${res.measurementValue}${unit ? ' ' + unit : ''}`;
+                        })() : <span className="text-gray-300">—</span>}
                       </td>
                       <td className="py-2 text-center">
                         {res ? (

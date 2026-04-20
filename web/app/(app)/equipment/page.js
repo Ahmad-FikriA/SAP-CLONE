@@ -8,7 +8,8 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { MapPin, Plus, RefreshCw, Upload } from 'lucide-react';
+import { MapPin, Plus, RefreshCw, Upload, BarChart2 } from 'lucide-react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
 const MapWithMarkers = dynamic(() => import('@/components/map/EquipmentMap'), { ssr: false });
@@ -224,6 +225,11 @@ export default function EquipmentPage() {
                         <MapPin size={11} /> Pin
                       </Button>
                     )}
+                    <Link href={`/equipment/history?id=${eq.equipmentId}`}>
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1" title="Riwayat pengukuran">
+                        <BarChart2 size={11} /> Riwayat
+                      </Button>
+                    </Link>
                     <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(eq)}>Edit</Button>
                     <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTarget(eq)}>Hapus</Button>
                   </div>

@@ -58,6 +58,8 @@ exports.create = async (req, res, next) => {
                     taskListId,
                     stepNumber: a.stepNumber != null ? a.stepNumber : (i + 1),
                     operationText: a.operationText,
+                    measurementType: a.measurementType || null,
+                    measurementUnit: a.measurementUnit || null,
                 })),
                 { transaction: t }
             );
@@ -96,6 +98,8 @@ exports.update = async (req, res, next) => {
                         taskListId: tl.taskListId,
                         stepNumber: a.stepNumber != null ? a.stepNumber : (i + 1),
                         operationText: a.operationText,
+                        measurementType: a.measurementType || null,
+                        measurementUnit: a.measurementUnit || null,
                     })),
                     { transaction: t }
                 );

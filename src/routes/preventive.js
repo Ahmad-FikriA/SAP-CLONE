@@ -41,6 +41,7 @@ equipmentRouter.get('/', verifyToken, equipmentController.getAll);
 equipmentRouter.post('/bulk-delete', verifyToken, equipmentController.bulkDelete);
 equipmentRouter.post('/bulk-update', verifyToken, equipmentController.bulkUpdate);
 equipmentRouter.post('/import-excel', verifyToken, excelUpload.single('file'), equipmentController.importExcel);
+equipmentRouter.get('/:equipmentId/measurement-history', verifyToken, equipmentController.getMeasurementHistory);
 equipmentRouter.get('/:equipmentId', verifyToken, equipmentController.getOne);
 equipmentRouter.post('/', verifyToken, equipmentController.create);
 equipmentRouter.put('/:equipmentId', verifyToken, equipmentController.update);
