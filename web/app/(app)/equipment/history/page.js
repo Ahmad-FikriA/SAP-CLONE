@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { apiGet } from '@/lib/api';
@@ -66,7 +66,7 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
-export default function EquipmentHistoryPage() {
+function EquipmentHistoryContent() {
   const params = useSearchParams();
   const router = useRouter();
   const equipmentId = params.get('id');
@@ -227,5 +227,13 @@ export default function EquipmentHistoryPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function EquipmentHistoryPage() {
+  return (
+    <Suspense>
+      <EquipmentHistoryContent />
+    </Suspense>
   );
 }
