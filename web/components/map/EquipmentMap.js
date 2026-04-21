@@ -79,7 +79,7 @@ export default function EquipmentMap({ equipment, plants, plantId, onMapReady, o
 
       if (mapRef.current || !containerRef.current) return;
 
-      const map = L.map(containerRef.current).setView([-6.2, 106.8], 13);
+      const map = L.map(containerRef.current).setView([-6.013935, 106.022401], 15);
       mapRef.current = map;
 
       const satellite = L.tileLayer(
