@@ -49,8 +49,20 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // ── Middleware ──────────────────────────────────────────────────────────────
-app.options('*', cors());
-app.use(cors());
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    // and any devlabfortirta.cloud subdomain
+    if (!origin || origin.endsWith('.devlabfortirta.cloud') || origin === 'http://localhost:3001') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+};
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
