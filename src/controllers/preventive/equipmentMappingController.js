@@ -65,21 +65,28 @@ const bulkCreate = async (req, res) => {
 
   let created = 0;
   const skipped = [];
+  const errors = [];
 
   for (const equipmentId of equipmentIds) {
-    const existing = await EquipmentIntervalMapping.findOne({ where: { equipmentId, interval } });
-    if (existing) {
+    try {
+      const existing = await EquipmentIntervalMapping.findOne({ where: { equipmentId, interval } });
+      if (existing) {
+        skipped.push(equipmentId);
+        continue;
+      }
+      await EquipmentIntervalMapping.create({ equipmentId, interval, taskListId });
+      created++;
+    } catch (err) {
       skipped.push(equipmentId);
-      continue;
+      errors.push(`${equipmentId}: ${err.message}`);
     }
-    await EquipmentIntervalMapping.create({ equipmentId, interval, taskListId });
-    created++;
   }
 
   res.status(201).json({
-    message: `${created} mapping dibuat, ${skipped.length} dilewati (sudah ada).`,
+    message: `${created} mapping dibuat, ${skipped.length} dilewati (sudah ada atau error).`,
     created,
     skipped,
+    ...(errors.length && { errors }),
   });
 };
 
