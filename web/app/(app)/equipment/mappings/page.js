@@ -24,12 +24,27 @@ export default function MappingsPage() {
   const [mappingForm, setMappingForm] = useState({ equipmentId: '', interval: '', taskListId: '' });
   const [deleteMapping, setDeleteMapping] = useState(null);
 
+  // Mapping table filters
+  const [mapSearch, setMapSearch] = useState('');
+  const [mapInterval, setMapInterval] = useState('');
+  const [mapTaskList, setMapTaskList] = useState('');
+
+  // Equipment searchable combobox (in Add Mapping dialog)
+  const [eqSearch, setEqSearch] = useState('');
+  const [eqDropdownOpen, setEqDropdownOpen] = useState(false);
+  const eqDropdownRef = useRef(null);
+
   // Bulk mapping
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkInterval, setBulkInterval] = useState('');
   const [bulkTaskListId, setBulkTaskListId] = useState('');
   const [bulkSearch, setBulkSearch] = useState('');
   const [bulkSelected, setBulkSelected] = useState([]);
+
+  // Pagination
+  const [mapPage, setMapPage] = useState(1);
+  const [tlPage, setTlPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   // Task list search + import
   const [tlSearch, setTlSearch] = useState('');
@@ -42,6 +57,19 @@ export default function MappingsPage() {
   const [deleteTl, setDeleteTl] = useState(null);
 
   useEffect(() => { loadAll(); }, []);
+  useEffect(() => { setMapPage(1); }, [mapSearch, mapInterval, mapTaskList]);
+  useEffect(() => { setTlPage(1); }, [tlSearch]);
+
+  // Close equipment combobox on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (eqDropdownRef.current && !eqDropdownRef.current.contains(e.target)) {
+        setEqDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   async function loadAll() {
     setLoading(true);
@@ -57,6 +85,25 @@ export default function MappingsPage() {
     } catch (e) { toast.error('Gagal memuat: ' + e.message); }
     finally { setLoading(false); }
   }
+
+  // ── Derived filtered lists ─────────────────────────────────────────────────
+  const filteredMappings = mappings.filter((m) => {
+    const eq = equipment.find((e) => e.equipmentId === m.equipmentId);
+    const q = mapSearch.toLowerCase();
+    const matchSearch = !q || m.equipmentId.toLowerCase().includes(q) || (eq?.equipmentName || '').toLowerCase().includes(q);
+    const matchInterval = !mapInterval || m.interval === mapInterval;
+    const matchTl = !mapTaskList || (m.taskListId || '').toLowerCase().includes(mapTaskList.toLowerCase());
+    return matchSearch && matchInterval && matchTl;
+  });
+
+  const filteredEqForDialog = equipment.filter((eq) => {
+    const q = eqSearch.toLowerCase();
+    return !q || eq.equipmentId.toLowerCase().includes(q) || eq.equipmentName.toLowerCase().includes(q);
+  });
+
+  const mapTotalPages = Math.max(1, Math.ceil(filteredMappings.length / PAGE_SIZE));
+  const mapPageSafe = Math.min(mapPage, mapTotalPages);
+  const pagedMappings = filteredMappings.slice((mapPageSafe - 1) * PAGE_SIZE, mapPageSafe * PAGE_SIZE);
 
   // ── Mapping actions ────────────────────────────────────────────────────────
   async function addMapping() {
@@ -152,6 +199,10 @@ export default function MappingsPage() {
     return !q || tl.taskListId.toLowerCase().includes(q) || tl.taskListName.toLowerCase().includes(q);
   });
 
+  const tlTotalPages = Math.max(1, Math.ceil(filteredTaskLists.length / PAGE_SIZE));
+  const tlPageSafe = Math.min(tlPage, tlTotalPages);
+  const pagedTaskLists = filteredTaskLists.slice((tlPageSafe - 1) * PAGE_SIZE, tlPageSafe * PAGE_SIZE);
+
   function addActivity() {
     setTlForm((f) => ({ ...f, activities: [...f.activities, { stepNumber: f.activities.length + 1, operationText: '' }] }));
   }
@@ -197,23 +248,44 @@ export default function MappingsPage() {
             <Button size="sm" onClick={() => setAddMappingOpen(true)} className="gap-1.5"><Plus size={13} /> Tambah Mapping</Button>
             <Button variant="outline" size="sm" onClick={() => { setBulkSelected([]); setBulkOpen(true); }}>Bulk Mapping</Button>
           </div>
+
+          {/* Filter bar */}
+          <div className="flex gap-2 flex-wrap items-center">
+            <input value={mapSearch} onChange={(e) => setMapSearch(e.target.value)}
+              placeholder="Cari equipment ID atau nama..."
+              className="flex-1 min-w-48 max-w-sm px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+            <select value={mapInterval} onChange={(e) => setMapInterval(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+              <option value="">Semua interval</option>
+              {INTERVALS.map((iv) => <option key={iv} value={iv}>{iv}</option>)}
+            </select>
+            <input value={mapTaskList} onChange={(e) => setMapTaskList(e.target.value)}
+              placeholder="Filter task list..."
+              className="w-40 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+            <span className="text-xs text-gray-400">{filteredMappings.length} dari {mappings.length}</span>
+          </div>
+
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {['Equipment', 'Interval', 'Task List', 'Activities', 'Aksi'].map((h) => (
+                  {['Equipment', 'Interval', 'Task List', 'Aktivitas', 'Aksi'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loading ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Memuat...</td></tr>
-                  : mappings.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Belum ada mapping</td></tr>
-                  : mappings.map((m) => {
+                  : filteredMappings.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{mappings.length === 0 ? 'Belum ada mapping' : 'Tidak ada hasil'}</td></tr>
+                  : pagedMappings.map((m) => {
                     const tl = taskLists.find((t) => t.taskListId === m.taskListId);
+                    const eq = equipment.find((e) => e.equipmentId === m.equipmentId);
                     return (
                       <tr key={m.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-800">{m.equipmentId}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-mono text-xs font-semibold text-gray-800">{m.equipmentId}</div>
+                          {eq && <div className="text-xs text-gray-400 mt-0.5 max-w-xs truncate">{eq.equipmentName}</div>}
+                        </td>
                         <td className="px-4 py-3 text-gray-600">{m.interval}</td>
                         <td className="px-4 py-3 text-gray-500 text-xs">{m.taskListId || '—'}</td>
                         <td className="px-4 py-3 text-gray-500 text-xs">{tl ? tl.activities?.length + ' aktivitas' : '—'}</td>
@@ -226,6 +298,15 @@ export default function MappingsPage() {
               </tbody>
             </table>
           </div>
+          {!loading && mapTotalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+              <span className="text-xs text-gray-500">Halaman {mapPageSafe} dari {mapTotalPages}</span>
+              <div className="flex gap-1.5">
+                <Button variant="outline" size="sm" className="h-7 text-xs" disabled={mapPageSafe <= 1} onClick={() => setMapPage((p) => p - 1)}>‹ Prev</Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs" disabled={mapPageSafe >= mapTotalPages} onClick={() => setMapPage((p) => p + 1)}>Next ›</Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -253,7 +334,7 @@ export default function MappingsPage() {
               <tbody className="divide-y divide-gray-100">
                 {loading ? <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Memuat...</td></tr>
                   : filteredTaskLists.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Belum ada task list</td></tr>
-                  : filteredTaskLists.map((tl) => (
+                  : pagedTaskLists.map((tl) => (
                     <tr key={tl.taskListId} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-800">{tl.taskListId}</td>
                       <td className="px-4 py-3 text-gray-700">{tl.taskListName}</td>
@@ -270,22 +351,49 @@ export default function MappingsPage() {
                   ))}
               </tbody>
             </table>
+          {!loading && tlTotalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+              <span className="text-xs text-gray-500">Halaman {tlPageSafe} dari {tlTotalPages}</span>
+              <div className="flex gap-1.5">
+                <Button variant="outline" size="sm" className="h-7 text-xs" disabled={tlPageSafe <= 1} onClick={() => setTlPage((p) => p - 1)}>‹ Prev</Button>
+                <Button variant="outline" size="sm" className="h-7 text-xs" disabled={tlPageSafe >= tlTotalPages} onClick={() => setTlPage((p) => p + 1)}>Next ›</Button>
+              </div>
+            </div>
+          )}
           </div>
         </div>
       )}
 
       {/* Add mapping dialog */}
-      <Dialog open={addMappingOpen} onOpenChange={setAddMappingOpen}>
+      <Dialog open={addMappingOpen} onOpenChange={(open) => { setAddMappingOpen(open); if (!open) { setEqSearch(''); setEqDropdownOpen(false); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Tambah Mapping</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Equipment</label>
-              <select value={mappingForm.equipmentId} onChange={(e) => setMappingForm({ ...mappingForm, equipmentId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="">Pilih equipment...</option>
-                {equipment.map((eq) => <option key={eq.equipmentId} value={eq.equipmentId}>{eq.equipmentId} — {eq.equipmentName}</option>)}
-              </select>
+              <div className="relative" ref={eqDropdownRef}>
+                <input
+                  value={mappingForm.equipmentId
+                    ? `${mappingForm.equipmentId} — ${equipment.find((e) => e.equipmentId === mappingForm.equipmentId)?.equipmentName || ''}`
+                    : eqSearch}
+                  onChange={(e) => { setEqSearch(e.target.value); setMappingForm({ ...mappingForm, equipmentId: '' }); setEqDropdownOpen(true); }}
+                  onFocus={() => setEqDropdownOpen(true)}
+                  placeholder="Cari equipment..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+                {eqDropdownOpen && filteredEqForDialog.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {filteredEqForDialog.slice(0, 50).map((eq) => (
+                      <button key={eq.equipmentId} type="button"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-blue-50 text-left"
+                        onClick={() => { setMappingForm({ ...mappingForm, equipmentId: eq.equipmentId }); setEqSearch(''); setEqDropdownOpen(false); }}>
+                        <span className="font-mono text-xs font-semibold text-gray-800 shrink-0">{eq.equipmentId}</span>
+                        <span className="text-xs text-gray-400 truncate">{eq.equipmentName}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Interval</label>
