@@ -55,6 +55,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+app.use("/api/uploads", express.static(path.join(__dirname, "..", "uploads"))); // nginx-proxied alias
 app.use("/storage", express.static(path.join(__dirname, "..", "storage")));
 
 // ── Photo Upload Configuration ───────────────────────────────────────────────
@@ -67,14 +68,24 @@ const storage = multer.diskStorage({
 
 // 2MB file size limit for corrective maintenance photos
 const CORRECTIVE_PHOTO_MAX_SIZE = 2 * 1024 * 1024; // 2MB
+// 5MB limit for preventive photos (watermarked + compressed by Flutter)
+const PREVENTIVE_PHOTO_MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 const upload = multer({
   storage,
-  limits: {
-    fileSize: CORRECTIVE_PHOTO_MAX_SIZE,
-  },
+  limits: { fileSize: CORRECTIVE_PHOTO_MAX_SIZE },
   fileFilter: (req, file, cb) => {
-    // Accept only image files
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'), false);
+    }
+    cb(null, true);
+  },
+});
+
+const preventiveUpload = multer({
+  storage,
+  limits: { fileSize: PREVENTIVE_PHOTO_MAX_SIZE },
+  fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) {
       return cb(new Error('Only image files are allowed'), false);
     }
@@ -203,14 +214,14 @@ function handleInspectionMediaUpload(req, res, next) {
 
 const { verifyToken } = require("./middleware/auth");
 
-// Generic photo upload endpoint
+// Preventive maintenance photo upload endpoint (5MB, served under /api/uploads/)
 app.post(
   "/api/upload/photo",
   verifyToken,
-  upload.single("photo"),
+  preventiveUpload.single("photo"),
   (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-    res.json({ path: `uploads/${req.file.filename}` });
+    res.json({ path: `api/uploads/${req.file.filename}` });
   },
 );
 
