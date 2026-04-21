@@ -8,11 +8,12 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { MapPin, Plus, RefreshCw, Upload, BarChart2 } from 'lucide-react';
+import { MapPin, Plus, RefreshCw, Upload, BarChart2, Download, QrCode } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
 const MapWithMarkers = dynamic(() => import('@/components/map/EquipmentMap'), { ssr: false });
+const QRCode = dynamic(() => import('react-qr-code'), { ssr: false });
 
 const PAGE_SIZE = 20;
 const EMPTY_FORM = { equipmentId: '', equipmentName: '', functionalLocation: '', funcLocId: '', category: '', plantId: '', latitude: '', longitude: '' };
@@ -30,6 +31,7 @@ export default function EquipmentPage() {
   const [editingId, setEditingId]   = useState(null);
   const [form, setForm]             = useState(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [qrTarget, setQrTarget] = useState(null); // equipment shown in QR dialog
   const fileRef = useRef(null);
   const mapCallbackRef = useRef(null);  // refreshes markers
   const flyToRef = useRef(null);        // pans map to a coordinate
@@ -125,6 +127,30 @@ export default function EquipmentPage() {
     } catch (e) { toast.error(e.message); }
   }
 
+  async function exportCoordinates() {
+    try {
+      const data = await apiGet('/equipment?limit=9999');
+      const items = data.data || data;
+      const withCoords = items.filter((eq) => eq.latitude != null && eq.longitude != null);
+      if (!withCoords.length) { toast.error('Tidak ada equipment dengan koordinat'); return; }
+      const header = ['equipmentId', 'equipmentName', 'category', 'functionalLocation', 'plantId', 'latitude', 'longitude'];
+      const rows = withCoords.map((eq) => [
+        eq.equipmentId, eq.equipmentName, eq.category || '',
+        eq.functionalLocation || eq.funcLocId || '', eq.plantId || '',
+        eq.latitude, eq.longitude,
+      ]);
+      const csv = [header, ...rows]
+        .map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'equipment-koordinat.csv'; a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${withCoords.length} equipment diekspor`);
+    } catch (e) { toast.error('Gagal ekspor: ' + e.message); }
+  }
+
   async function importExcel(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -154,6 +180,9 @@ export default function EquipmentPage() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => load(0)}><RefreshCw size={13} /></Button>
+          <Button variant="outline" size="sm" onClick={exportCoordinates} className="gap-1.5">
+            <Download size={13} /> Export Koordinat
+          </Button>
           <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
             <Upload size={13} /> Import Excel
           </Button>
@@ -225,6 +254,9 @@ export default function EquipmentPage() {
                         <MapPin size={11} /> Pin
                       </Button>
                     )}
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setQrTarget(eq)} title="Tampilkan QR Code">
+                      <QrCode size={11} /> QR
+                    </Button>
                     <Link href={`/equipment/history?id=${eq.equipmentId}`}>
                       <Button variant="outline" size="sm" className="h-7 text-xs gap-1" title="Riwayat pengukuran">
                         <BarChart2 size={11} /> Riwayat
@@ -300,6 +332,30 @@ export default function EquipmentPage() {
       <ConfirmDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}
         title={`Hapus ${deleteTarget?.equipmentId}?`} description="Aksi ini tidak dapat diurungkan."
         onConfirm={handleDelete} confirmLabel="Hapus" destructive />
+
+      {/* QR Code dialog — technician scans from screen if physical barcode is missing */}
+      <Dialog open={!!qrTarget} onOpenChange={(o) => !o && setQrTarget(null)}>
+        <DialogContent className="max-w-xs text-center">
+          <DialogHeader>
+            <DialogTitle className="text-base">QR Code Equipment</DialogTitle>
+          </DialogHeader>
+          {qrTarget && (
+            <div className="flex flex-col items-center gap-4 py-2">
+              <div className="bg-white p-4 rounded-xl border border-gray-200 inline-block">
+                <QRCode value={String(qrTarget.equipmentId)} size={220} bgColor="#ffffff" fgColor="#1a1a2e" />
+              </div>
+              <div>
+                <p className="font-mono font-bold text-gray-800 text-sm">{qrTarget.equipmentId}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{qrTarget.equipmentName}</p>
+              </div>
+              <p className="text-xs text-gray-400">Arahkan kamera aplikasi ke QR code di atas</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setQrTarget(null)}>Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
