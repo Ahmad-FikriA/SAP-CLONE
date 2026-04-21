@@ -84,7 +84,7 @@ export default function SpkPage() {
     setLoading(true);
     try {
       const data = await apiGet('/spk' + (category ? `?category=${category}` : ''));
-      setSpkList(data);
+      setSpkList(Array.isArray(data) ? data : []);
       setSelected([]);
     } catch (e) { toast.error('Gagal memuat: ' + e.message); }
     finally { setLoading(false); }
