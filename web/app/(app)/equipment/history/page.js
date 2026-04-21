@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { apiGet } from '@/lib/api';
-import { RefreshCw, BarChart2, ArrowLeft } from 'lucide-react';
+import { RefreshCw, BarChart2, ArrowLeft, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -94,6 +94,30 @@ function EquipmentHistoryContent() {
     }
   }
 
+  function exportCsv() {
+    if (!enriched.length) return;
+    const name = equip ? `${equip.equipmentId}-${equip.equipmentName}` : equipmentId;
+    const header = ['Tanggal', 'No. SPK', 'Teknisi', 'Aktivitas', 'Nilai Ukur', 'Satuan'];
+    const rows = enriched.map(r => [
+      fmtDate(r.submittedAt),
+      r.spkNumber,
+      r.technicianName,
+      r.operationText,
+      r.measurementValue ?? '',
+      r.measUnit,
+    ]);
+    const csv = [header, ...rows]
+      .map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `riwayat-pengukuran-${name}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const enriched = useMemo(() => history.map(r => {
     const meas = r.measurementType
       ? { label: r.measurementType, unit: r.measurementUnit }
@@ -137,6 +161,11 @@ function EquipmentHistoryContent() {
         <Button variant="outline" size="sm" onClick={load} disabled={loading}>
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
+        {enriched.length > 0 && (
+          <Button variant="outline" size="sm" onClick={exportCsv} className="gap-1.5">
+            <Download size={14} /> Export CSV
+          </Button>
+        )}
       </div>
 
       {/* Equipment info card */}

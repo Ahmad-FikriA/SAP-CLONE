@@ -283,7 +283,7 @@ export default function SpkApprovalPage() {
             <X size={24} />
           </button>
           <img
-            src={`${PHOTO_BASE}/${lightbox}`}
+            src={`/${lightbox.replace(/^\//, '')}`}
             alt="Foto lapangan"
             className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
             onClick={e => e.stopPropagation()}
@@ -436,7 +436,7 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick }) {
                 className="aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-colors"
               >
                 <img
-                  src={`${PHOTO_BASE}/${path}`}
+                  src={`/${path.replace(/^\//, '')}`}
                   alt={`Foto ${i + 1}`}
                   className="w-full h-full object-cover"
                   onError={e => { e.target.style.display = 'none'; }}
