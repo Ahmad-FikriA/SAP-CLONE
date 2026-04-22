@@ -245,7 +245,14 @@ export default function SpkImportPage() {
                     <td className="px-3 py-2.5 font-mono font-semibold text-gray-800">{o.orderNumber || o.sapOrderNumber}</td>
                     <td className="px-3 py-2.5 text-gray-700 max-w-[180px] truncate">{o.description}</td>
                     <td className="px-3 py-2.5 text-gray-500">
-                      <div className="font-medium">{o.displayName || o.equipmentName || o.equipmentId || o.functionalLocation || '—'}</div>
+                      <div className="font-medium flex items-center gap-1.5">
+                        {o.displayName || o.equipmentName || o.equipmentId || o.functionalLocation || '—'}
+                        {o.equipmentExists === false && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-600 shrink-0">
+                            Tidak di DB
+                          </span>
+                        )}
+                      </div>
                       {(o.equipmentId || o.functionalLocation) && (o.displayName || o.equipmentName) && (
                         <div className="text-xs text-gray-400 mt-0.5">{o.equipmentId || o.functionalLocation}</div>
                       )}

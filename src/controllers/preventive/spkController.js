@@ -40,7 +40,7 @@ async function destroySpksByNumbers(spkNumbers, transaction) {
 const INCLUDE_FULL = [
   {
     model: SpkEquipment, as: 'equipmentModels',
-    attributes: ['equipmentId', 'equipmentName', 'functionalLocation'],
+    attributes: ['equipmentId', 'equipmentName', 'functionalLocation', 'plantName'],
     include: [{ model: Equipment, as: 'equipmentDetails', attributes: ['latitude', 'longitude', 'plantName'] }],
   },
   {
@@ -92,7 +92,7 @@ function fmt(spk) {
       equipmentId: em.equipmentId,
       equipmentName: em.equipmentName,
       functionalLocation: em.functionalLocation,
-      plantName: em.equipmentDetails?.plantName ?? null,
+      plantName: em.equipmentDetails?.plantName ?? em.plantName ?? null,
       latitude: em.equipmentDetails?.latitude ?? null,
       longitude: em.equipmentDetails?.longitude ?? null,
     })),

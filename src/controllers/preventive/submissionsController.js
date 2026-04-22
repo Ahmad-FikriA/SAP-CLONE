@@ -110,6 +110,11 @@ function fmtTs(ts) {
   return new Date(ts).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 }
 
+function fmtTime(ts) {
+  if (!ts) return '-';
+  return new Date(ts).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+}
+
 // Shared border style
 const BORDER_THIN = {
   top: { style: 'thin' },
@@ -257,10 +262,9 @@ const exportExcel = async (req, res) => {
       periodeLabel = `Tahun ${year}`;
     }
 
-    // Columns: A=Order/ActNo, B=Description/OpText, C=Interval, D=Equipment, E=Func.Loc(name), F=Result Comment, G=Dur.Actual, H=Dur.Plan, I=Verifikasi
-    // Col indices: 1=A ... 9=I
-    const COL = { ORDER: 1, DESC: 2, INTERVAL: 3, EQUIP: 4, FUNCLOC: 5, RESULT: 6, DUR_ACT: 7, DUR_PLAN: 8, VERIFY: 9 };
-    const LAST_COL = 9;
+    // Columns: A=Order/ActNo, B=Description/OpText, C=Interval, D=Equipment, E=Func.Loc, F=Result Comment, G=Dur.Actual, H=Dur.Plan, I=Work Start, J=Work Finish, K=Start Time, L=Finish Time, M=Verifikasi
+    const COL = { ORDER: 1, DESC: 2, INTERVAL: 3, EQUIP: 4, FUNCLOC: 5, RESULT: 6, DUR_ACT: 7, DUR_PLAN: 8, WORK_START: 9, WORK_FINISH: 10, START_TIME: 11, FINISH_TIME: 12, VERIFY: 13 };
+    const LAST_COL = 13;
 
     for (const sub of submissions) {
       const sj = sub.toJSON();
@@ -300,46 +304,38 @@ const exportExcel = async (req, res) => {
         { width: 34 }, // B: Description/OpText
         { width: 10 }, // C: Interval
         { width: 22 }, // D: Equipment
-        { width: 22 }, // E: Func.Loc (name)
-        { width: 12 }, // F: Latitude
-        { width: 12 }, // G: Longitude
-        { width: 30 }, // H: Result Comment
-        { width: 14 }, // I: Dur Actual
-        { width: 12 }, // J: Dur Plan
-        { width: 10 }, // K: Verifikasi
+        { width: 22 }, // E: Func.Loc
+        { width: 30 }, // F: Result Comment
+        { width: 14 }, // G: Dur Actual
+        { width: 12 }, // H: Dur Plan
+        { width: 14 }, // I: Work Start
+        { width: 14 }, // J: Work Finish
+        { width: 12 }, // K: Start Time
+        { width: 12 }, // L: Finish Time
+        { width: 10 }, // M: Verifikasi
       ];
 
       let row = 1;
 
-      // ── Row 1: Title + Periode ────────────────────────────────────────────
-      ws.mergeCells(row, 1, row, 5);
-      const titleCell = ws.getCell(row, 1);
-      titleCell.value = 'LEMBAR KERJA PREVENTIVE MAINTENANCE';
-      titleCell.font = { bold: true, size: 13 };
-      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-      ws.mergeCells(row, 6, row, LAST_COL);
-      const periodeCell = ws.getCell(row, 6);
-      periodeCell.value = periodeLabel ? `Periode : ${periodeLabel}` : '';
-      periodeCell.font = { size: 10 };
-      periodeCell.alignment = { horizontal: 'right', vertical: 'middle' };
-      ws.getRow(row).height = 22;
-      row++;
-
-      // ── Row 2: SPK number + Lembar info ──────────────────────────────────
-      ws.mergeCells(row, 1, row, LAST_COL);
+      // ── Row 1: SPK info (SAP-style compact header) ────────────────────────
+      ws.mergeCells(row, 1, row, 6);
       const spkCell = ws.getCell(row, 1);
-      spkCell.value = `No. SPK: ${sj.spkNumber}  |  Kategori: ${spk.category}  |  Dilaksanakan oleh: ${resolveName(spk.submittedBy)}  |  Work Start: ${fmtTs(sj.workStart)}  |  Work Finish: ${fmtTs(sj.submittedAt)}`;
-      spkCell.font = { size: 9, color: { argb: 'FF555555' } };
+      spkCell.value = `No. SPK: ${sj.spkNumber}  |  Kategori: ${spk.category}  |  Pelaksana: ${resolveName(spk.submittedBy)}  |  Work Start: ${fmtTs(sj.workStart)}  |  Work Finish: ${fmtTs(sj.submittedAt)}`;
+      spkCell.font = { size: 9, color: { argb: 'FF333333' } };
       spkCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
-
+      ws.mergeCells(row, 7, row, LAST_COL);
+      const periodeCell = ws.getCell(row, 7);
+      periodeCell.value = periodeLabel ? `Periode: ${periodeLabel}` : '';
+      periodeCell.font = { size: 9, color: { argb: 'FF333333' } };
+      periodeCell.alignment = { horizontal: 'right', vertical: 'middle' };
+      ws.getRow(row).height = 18;
       row++;
 
-      // ── Row 3: Column headers ─────────────────────────────────────────────
-      const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B3A5C' } };
-      const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
-      const headers = ['Order / No. Aktivitas', 'Deskripsi / Uraian Pekerjaan', 'Interval', 'Equipment', 'Lokasi', 'Result Comment', 'Durasi Aktual (mnt)', 'Durasi Rencana (mnt)', 'Verifikasi'];
+      // ── Row 2: Column headers — SAP-style yellow ──────────────────────────
+      const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF99' } };
+      const headerFont = { bold: true, color: { argb: 'FF000000' }, size: 10 };
+      const headers = ['Order / No. Aktivitas', 'Deskripsi / Uraian Pekerjaan', 'Interval', 'Equipment', 'Lokasi', 'Result Comment', 'Durasi Aktual (mnt)', 'Durasi Rencana (mnt)', 'Work Start', 'Work Finish', 'Start Time', 'Finish Time', 'Verifikasi'];
       for (let c = 1; c <= LAST_COL; c++) {
         const cell = ws.getCell(row, c);
         cell.value = headers[c - 1];
@@ -386,6 +382,10 @@ const exportExcel = async (req, res) => {
             ar.resultComment || '',
             sj.durationActual ?? '-',
             spkAct?.durationPlan ?? '-',
+            fmtDate(sj.workStart),
+            fmtDate(sj.submittedAt),
+            fmtTime(sj.workStart),
+            fmtTime(sj.submittedAt),
             ar.isNormal ? '✓' : '✗',
           ];
           for (let c = 1; c <= LAST_COL; c++) {

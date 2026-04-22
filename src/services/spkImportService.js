@@ -6,6 +6,7 @@ const EquipmentIntervalMapping = require('../models/EquipmentIntervalMapping');
 const SipilFunclocMapping = require('../models/SipilFunclocMapping');
 const Equipment = require('../models/Equipment');
 const FunctionalLocation = require('../models/FunctionalLocation');
+const Plant = require('../models/Plant');
 const { GeneralTaskList } = require('../models/GeneralTaskList');
 const { Spk } = require('../models/Spk');
 
@@ -155,6 +156,7 @@ function parseExcelBuffer(buffer) {
         category,
         equipmentId,
         functionalLocation: rawFuncLoc,
+        locationCode,
         isSipil,
         activitiesModel: [],
       });
@@ -298,6 +300,13 @@ async function enrichOrders(orders) {
     : [];
   const equipNameMap = Object.fromEntries(equipRows.map(e => [e.equipmentId, e.equipmentName]));
 
+  // ── 1b. Bulk-fetch plant names by locationCode (plantId from SAP "Location" col) ──
+  const locationCodes = [...new Set(orders.map(o => o.locationCode).filter(Boolean))];
+  const plantRows = locationCodes.length
+    ? await Plant.findAll({ where: { plantId: { [Op.in]: locationCodes } }, attributes: ['plantId', 'plantName'] })
+    : [];
+  const plantNameMap = Object.fromEntries(plantRows.map(p => [p.plantId, p.plantName]));
+
   // ── 2. Bulk-fetch FuncLoc descriptions (FunctionalLocation + Sipil building names) ──
   const funcLocIds = [...new Set(orders.map(o => o.functionalLocation).filter(Boolean))];
   const flRows = funcLocIds.length
@@ -341,18 +350,22 @@ async function enrichOrders(orders) {
   for (const order of orders) {
     const funcLocDesc = flDescMap[order.functionalLocation] || null;
 
+    order.plantName = plantNameMap[order.locationCode] ?? null;
+
     if (order.isSipil) {
       // Sipil: building name is the display name
-      order.equipmentName  = null;
-      order.funcLocDesc    = funcLocDesc || order.functionalLocation;
-      order.displayName    = funcLocDesc || order.functionalLocation;
-      order.autoMapped     = false;
+      order.equipmentName   = null;
+      order.equipmentExists = true; // N/A for Sipil — no equipment record expected
+      order.funcLocDesc     = funcLocDesc || order.functionalLocation;
+      order.displayName     = funcLocDesc || order.functionalLocation;
+      order.autoMapped      = false;
       order.suggestedTaskList = null;
     } else {
       const equipmentName = equipNameMap[order.equipmentId] || null;
-      order.equipmentName  = equipmentName;
-      order.funcLocDesc    = funcLocDesc;
-      order.displayName    = equipmentName || order.equipmentId;
+      order.equipmentName   = equipmentName;
+      order.equipmentExists = order.equipmentId ? Object.prototype.hasOwnProperty.call(equipNameMap, order.equipmentId) : true;
+      order.funcLocDesc     = funcLocDesc;
+      order.displayName     = equipmentName || order.equipmentId;
 
       if (order.intervalResolution === 'auto' && order.taskListId) {
         // Fully mapped in DB — task list + interval both known

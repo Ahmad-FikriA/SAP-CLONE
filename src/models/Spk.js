@@ -41,6 +41,7 @@ const SpkEquipment = sequelize.define('SpkEquipment', {
   equipmentId:       { type: DataTypes.STRING(20), allowNull: false,  field: 'equipment_id' },
   equipmentName:     { type: DataTypes.STRING(150), allowNull: true,  field: 'equipment_name' },
   functionalLocation:{ type: DataTypes.STRING(200), allowNull: true,  field: 'functional_location' },
+  plantName:         { type: DataTypes.STRING(150), allowNull: true,  field: 'plant_name' },
 }, {
   tableName: 'spk_equipment',
   underscored: true,

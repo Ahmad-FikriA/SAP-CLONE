@@ -13,7 +13,8 @@ import { cn } from '@/lib/utils';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const PHOTO_BASE = (process.env.NEXT_PUBLIC_API_URL || '');
+// Strip trailing /api so we get the server root (e.g. https://pphsekti.devlabfortirta.cloud)
+const UPLOADS_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '');
 
 function detectMeasurementUnit(operationText) {
   if (!operationText) return null;
@@ -283,7 +284,7 @@ export default function SpkApprovalPage() {
             <X size={24} />
           </button>
           <img
-            src={`/${lightbox.replace(/^\//, '')}`}
+            src={`${UPLOADS_BASE}/${lightbox.replace(/^\//, '')}`}
             alt="Foto lapangan"
             className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
             onClick={e => e.stopPropagation()}
@@ -436,7 +437,7 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick }) {
                 className="aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-colors"
               >
                 <img
-                  src={`/${path.replace(/^\//, '')}`}
+                  src={`${UPLOADS_BASE}/${path.replace(/^\//, '')}`}
                   alt={`Foto ${i + 1}`}
                   className="w-full h-full object-cover"
                   onError={e => { e.target.style.display = 'none'; }}

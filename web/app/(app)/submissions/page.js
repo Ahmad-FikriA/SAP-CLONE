@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { CategoryBadge } from '@/components/shared/StatusBadge';
 import { RefreshCw, Download, MapPin } from 'lucide-react';
 
+const UPLOADS_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '');
+
 const MONTHS = [
   { value: '', label: 'Semua Bulan' },
   { value: '1', label: 'Januari' }, { value: '2', label: 'Februari' },
@@ -281,10 +283,10 @@ export default function SubmissionsPage() {
                   </p>
                   <div className="grid grid-cols-3 gap-2">
                     {detail.photoPaths.map((path, i) => (
-                      <a key={i} href={`/${path.replace(/^\//, '')}`} target="_blank" rel="noreferrer"
+                      <a key={i} href={`${UPLOADS_BASE}/${path.replace(/^\//, '')}`} target="_blank" rel="noreferrer"
                         className="block aspect-square rounded-lg overflow-hidden border border-gray-200 hover:opacity-80 transition-opacity">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/${path.replace(/^\//, '')}`} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                        <img src={`${UPLOADS_BASE}/${path.replace(/^\//, '')}`} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
                       </a>
                     ))}
                   </div>

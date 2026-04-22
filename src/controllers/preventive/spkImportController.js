@@ -148,9 +148,10 @@ const confirm = async (req, res) => {
         if (spkEqId) {
           await SpkEquipment.create({
             spkNumber,
-            equipmentId:       spkEqId,
-            equipmentName:     spkEqName,
+            equipmentId:        spkEqId,
+            equipmentName:      spkEqName,
             functionalLocation: order.functionalLocation ?? null,
+            plantName:          order.plantName ?? null,
           }, { transaction: t });
         }
 
