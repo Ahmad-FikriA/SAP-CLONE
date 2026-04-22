@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const { v4: uuid } = require('uuid');
 const Notification = require('../../models/Notification');
 const User = require('../../models/User');
-const { SpkCorrective, SpkCorrectiveItem, SpkCorrectivePhoto } = require('../../models/associations');
+const { SpkCorrectiveItem, SpkCorrectivePhoto } = require('../../models/associations');
 const { KADIS_ROLE, KADIS_PUSAT_ROLE } = require('../../middleware/correctiveAccess');
 const NotificationService = require('../../services/notificationService');
 
@@ -107,14 +107,7 @@ function fmtRequest(notif) {
   };
 }
 
-const SPK_INCLUDE = {
-  model: SpkCorrective,
-  as: 'spkCorrective',
-  include: [
-    { model: SpkCorrectiveItem, as: 'items' },
-    { model: SpkCorrectivePhoto, as: 'photos' }
-  ]
-};
+const SPK_INCLUDE = []; // Disabled old SPK include
 
 // GET /api/corrective/requests
 const getAll = async (req, res) => {
@@ -134,7 +127,6 @@ const getAll = async (req, res) => {
   
   const data = await Notification.findAll({
     where,
-    include: [SPK_INCLUDE],
     order: [['submittedAt', 'DESC']],
   });
   
@@ -143,9 +135,7 @@ const getAll = async (req, res) => {
 
 // GET /api/corrective/requests/:id
 const getOne = async (req, res) => {
-  const notification = await Notification.findByPk(req.params.id, {
-    include: [SPK_INCLUDE],
-  });
+  const notification = await Notification.findByPk(req.params.id);
   
   if (!notification) return res.status(404).json({ error: 'Notification not found' });
   res.json(fmtRequest(notification));

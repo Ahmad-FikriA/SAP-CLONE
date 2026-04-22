@@ -27,8 +27,7 @@ const {
 const EquipmentIntervalMapping = require("./EquipmentIntervalMapping");
 const PreventiveWeekSchedule = require("./PreventiveWeekSchedule");
 const Notification = require("./Notification");
-const SpkCorrective = require("./SpkCorrective");
-const { SpkCorrectiveItem, SpkCorrectivePhoto } = require("./SpkCorrectiveItem");
+
 const PushNotification = require("./PushNotification");
 const K3Report = require("./K3Report");
 
@@ -111,17 +110,7 @@ Equipment.hasMany(Notification, { foreignKey: 'equipmentId', as: 'notifications'
 Notification.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });
 
 // ── SPK Corrective Relations ─────────────────────────────────────────────────
-// Notification ||--|| SpkCorrective (one-to-one)
-Notification.hasOne(SpkCorrective, { foreignKey: 'notificationId', as: 'spkCorrective', onDelete: 'CASCADE' });
-SpkCorrective.belongsTo(Notification, { foreignKey: 'notificationId', as: 'notification' });
-
-// SpkCorrective ||--o{ SpkCorrectiveItem
-SpkCorrective.hasMany(SpkCorrectiveItem, { foreignKey: 'spkId', as: 'items', onDelete: 'CASCADE' });
-SpkCorrectiveItem.belongsTo(SpkCorrective, { foreignKey: 'spkId', as: 'spk' });
-
-// SpkCorrective ||--o{ SpkCorrectivePhoto
-SpkCorrective.hasMany(SpkCorrectivePhoto, { foreignKey: 'spkId', as: 'photos', onDelete: 'CASCADE' });
-SpkCorrectivePhoto.belongsTo(SpkCorrective, { foreignKey: 'spkId', as: 'spk' });
+// (Deprecated SpkCorrective tables have been dropped)
 
 // ── Supervisi Module ─────────────────────────────────────────────────────────
 const SupervisiJob = require("./SupervisiJob");
@@ -283,9 +272,7 @@ module.exports = {
   CorrectiveRequest,
   CorrectiveRequestImage,
   Notification,
-  SpkCorrective,
-  SpkCorrectiveItem,
-  SpkCorrectivePhoto,
+
   InspectionSchedule,
   InspectionReport,
   InspectionReportPhoto,
