@@ -38,6 +38,7 @@ spkRouter.post('/:spkNumber/sync', verifyToken, spkController.sync);
 // ── Equipment ────────────────────────────────────────────────────────────────
 const equipmentRouter = express.Router();
 equipmentRouter.get('/', verifyToken, equipmentController.getAll);
+equipmentRouter.post('/sync-sipil', verifyToken, equipmentController.syncSipilFuncloc);
 equipmentRouter.post('/bulk-delete', verifyToken, equipmentController.bulkDelete);
 equipmentRouter.post('/bulk-update', verifyToken, equipmentController.bulkUpdate);
 equipmentRouter.post('/import-excel', verifyToken, excelUpload.single('file'), equipmentController.importExcel);

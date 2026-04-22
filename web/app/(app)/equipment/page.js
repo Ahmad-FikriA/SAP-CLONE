@@ -8,7 +8,7 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { MapPin, Plus, RefreshCw, Upload, BarChart2, Download, QrCode } from 'lucide-react';
+import { MapPin, Plus, RefreshCw, Upload, BarChart2, Download, QrCode, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -32,6 +32,7 @@ export default function EquipmentPage() {
   const [form, setForm]             = useState(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [qrTarget, setQrTarget] = useState(null); // equipment shown in QR dialog
+  const [syncingSipil, setSyncingSipil] = useState(false);
   const fileRef = useRef(null);
   const mapCallbackRef = useRef(null);  // refreshes markers
   const flyToRef = useRef(null);        // pans map to a coordinate
@@ -164,6 +165,19 @@ export default function EquipmentPage() {
     } catch (err) { toast.error('Import gagal: ' + err.message); }
   }
 
+  async function syncSipilFuncloc() {
+    setSyncingSipil(true);
+    try {
+      const data = await apiPost('/equipment/sync-sipil', {});
+      toast.success(data.message);
+      load(0);
+    } catch (e) {
+      toast.error('Sync gagal: ' + e.message);
+    } finally {
+      setSyncingSipil(false);
+    }
+  }
+
   // Called by map when user clicks — fills form lat/lng
   const onMapCoord = useCallback((lat, lng) => {
     setForm((f) => ({ ...f, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }));
@@ -185,6 +199,12 @@ export default function EquipmentPage() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
             <Upload size={13} /> Import Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={syncSipilFuncloc} disabled={syncingSipil} className="gap-1.5">
+            <Building2 size={13} /> {syncingSipil ? 'Menyinkronkan...' : 'Sync Funcloc Sipil'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={syncSipilFuncloc} disabled={syncingSipil} className="gap-1.5">
+            <Building2 size={13} /> {syncingSipil ? 'Menyinkronkan...' : 'Sync Funcloc Sipil'}
           </Button>
           <input ref={fileRef} type="file" accept=".xlsx" onChange={importExcel} className="hidden" />
           <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus size={14} /> Tambah</Button>

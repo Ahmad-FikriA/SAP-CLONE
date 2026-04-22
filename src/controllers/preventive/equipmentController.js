@@ -9,6 +9,8 @@ const { Submission, SubmissionActivityResult } = require('../../models/Submissio
 const User = require('../../models/User');
 
 const MAPS_DIR = path.join(__dirname, '..', '..', '..', 'data', 'maps');
+const SIPIL_FUNCLOC_JSON = path.join(__dirname, '..', '..', '..', 'data', 'sipil_funcloc_mappings.json');
+const SipilFunclocMapping = require('../../models/SipilFunclocMapping');
 
 // GET /api/equipment
 // Query: ?category=Mekanik  ?search=pompa  ?limit=50  ?offset=0  ?funcLocId=A-A1-01
@@ -279,4 +281,45 @@ const getMeasurementHistory = async (req, res) => {
   res.json(rows);
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, bulkUpdate, remove, importExcel, getMeasurementHistory };
+// POST /api/equipment/sync-sipil
+// Reads data/sipil_funcloc_mappings.json and upserts every entry into:
+//   1. equipment table  (category=Sipil, equipmentId=funcLocId)
+//   2. sipil_funcloc_mappings table (for SPK importer interval/taskList resolution)
+const syncSipilFuncloc = async (req, res) => {
+  if (!fs.existsSync(SIPIL_FUNCLOC_JSON)) {
+    return res.status(404).json({ error: 'sipil_funcloc_mappings.json not found in data/' });
+  }
+
+  const entries = JSON.parse(fs.readFileSync(SIPIL_FUNCLOC_JSON, 'utf8'));
+  if (!Array.isArray(entries) || !entries.length) {
+    return res.status(400).json({ error: 'JSON file is empty or not an array' });
+  }
+
+  let synced = 0;
+  for (const entry of entries) {
+    const { funcLocId, name, taskListId, interval, location } = entry;
+    if (!funcLocId || !name) continue;
+
+    await Equipment.upsert({
+      equipmentId:        funcLocId,
+      equipmentName:      name,
+      category:           'Sipil',
+      functionalLocation: location || null,
+      funcLocId:          funcLocId,
+    });
+
+    await SipilFunclocMapping.upsert({
+      funcLocId,
+      name,
+      taskListId: taskListId || null,
+      interval:   interval || '1wk',
+      location:   location || null,
+    });
+
+    synced++;
+  }
+
+  res.json({ message: `${synced} funcloc Sipil berhasil disinkronisasi ke equipment`, synced });
+};
+
+module.exports = { getAll, getOne, create, update, bulkDelete, bulkUpdate, remove, importExcel, getMeasurementHistory, syncSipilFuncloc };
