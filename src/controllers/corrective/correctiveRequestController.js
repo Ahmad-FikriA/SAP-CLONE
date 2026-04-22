@@ -52,13 +52,29 @@ function fmtRequest(notif) {
   const materials = (spk.items || []).filter(i => i.itemType === 'material').map(i => i.itemName);
   const tools = (spk.items || []).filter(i => i.itemType === 'tool').map(i => i.itemName);
   
+  // Determine equipment and location
+  // If SPK exists, prioritize the planner's selected functional location and equipment.
+  // The planner's equipment name could be parsed from location if location format is "FuncLoc | EquipName"
+  let finalFuncLoc = n.functionalLocation;
+  let finalEq = n.equipmentName || n.equipment;
+
+  if (spk.spkId && spk.location) {
+    if (spk.location.includes(' | ')) {
+      const parts = spk.location.split(' | ');
+      finalFuncLoc = parts[0].trim();
+      finalEq = parts[1].trim();
+    } else {
+      finalFuncLoc = spk.location;
+    }
+  }
+  
   return {
     id: n.notificationId || n.id,
     notificationDate: n.notificationDate,
     notificationType: n.notificationType,
     description: n.description,
-    functionalLocation: n.functionalLocation,
-    equipment: n.equipmentName || n.equipment, 
+    functionalLocation: finalFuncLoc,
+    equipment: finalEq, 
     requiredStart: n.requiredStart,
     requiredEnd: n.requiredEnd,
     reportedBy: n.reportedBy,
