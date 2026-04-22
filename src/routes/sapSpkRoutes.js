@@ -1,0 +1,49 @@
+const express = require("express");
+const router = express.Router();
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const sapSpkController = require("../../controllers/corrective/sapSpkController");
+const auth = require("../../middleware/auth");
+
+// Configure multer storage
+const uploadDir = path.join(__dirname, "../../uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ storage });
+
+// Routes
+router.get("/", auth, sapSpkController.getSapSpkList);
+
+// Upload Excel endpoint
+router.post(
+  "/upload-excel",
+  auth,
+  upload.single("excelFile"),
+  sapSpkController.uploadExcel
+);
+
+// Teknisi Execute SPK (Upload Photo Before and After)
+router.put(
+  "/:order_number/execute",
+  auth,
+  upload.fields([
+    { name: "photoBefore", maxCount: 1 },
+    { name: "photoAfter", maxCount: 1 },
+  ]),
+  sapSpkController.executeSapSpk
+);
+
+module.exports = router;

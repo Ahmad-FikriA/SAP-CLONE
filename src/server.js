@@ -20,6 +20,7 @@ const {
   scheduleRouter,
 } = require("./routes/preventive");
 const correctiveRoutes = require("./routes/corrective");
+const sapSpkRoutes = require("./routes/sapSpkRoutes");
 const inspectionRoutes = require("./routes/inspection");
 const notificationRoutes = require("./routes/notification");
 const k3SafetyRoutes = require("./routes/k3_safety");
@@ -265,6 +266,7 @@ app.use("/api/maps", mapsRouter);
 app.use("/api/plants", plantRouter);
 app.use("/api/submissions", submissionsRouter);
 app.use("/api/corrective", correctiveRoutes);
+app.use("/api/corrective/sap-spk", sapSpkRoutes);
 app.use("/api/inspection", inspectionRoutes);
 app.use("/api/functional-locations", funcLocRouter);
 app.use("/api/task-lists", taskListRouter);
