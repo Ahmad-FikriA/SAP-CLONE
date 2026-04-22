@@ -194,7 +194,7 @@ export default function EquipmentPage() {
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <input value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari ID atau nama..." className="flex-1 max-w-sm px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+          placeholder="Cari ID, nama, atau funcloc..." className="flex-1 max-w-sm px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
         <select value={category} onChange={(e) => setCategory(e.target.value)}
           className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
           <option value="">Semua Kategori</option>

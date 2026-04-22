@@ -19,8 +19,10 @@ const getAll = async (req, res) => {
   if (req.query.funcLocId) where.funcLocId = { [Op.like]: `${req.query.funcLocId}%` };
   if (req.query.search) {
     where[Op.or] = [
-      { equipmentId: { [Op.like]: `%${req.query.search}%` } },
-      { equipmentName: { [Op.like]: `%${req.query.search}%` } },
+      { equipmentId:        { [Op.like]: `%${req.query.search}%` } },
+      { equipmentName:      { [Op.like]: `%${req.query.search}%` } },
+      { functionalLocation: { [Op.like]: `%${req.query.search}%` } },
+      { funcLocId:          { [Op.like]: `%${req.query.search}%` } },
     ];
   }
 
