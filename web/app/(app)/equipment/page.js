@@ -186,9 +186,6 @@ export default function EquipmentPage() {
           <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
             <Upload size={13} /> Import Excel
           </Button>
-          <Button variant="outline" size="sm" onClick={syncSipilFuncloc} disabled={syncingSipil} className="gap-1.5">
-            <Building2 size={13} /> {syncingSipil ? 'Menyinkronkan...' : 'Sync Funcloc Sipil'}
-          </Button>
           <input ref={fileRef} type="file" accept=".xlsx" onChange={importExcel} className="hidden" />
           <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus size={14} /> Tambah</Button>
         </div>
