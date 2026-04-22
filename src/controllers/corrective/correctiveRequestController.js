@@ -82,7 +82,7 @@ function fmtRequest(notif) {
     submittedBy: n.submittedBy,
     submittedAt: n.submittedAt,
     status: n.status,
-    approvalStatus: n.approvalStatus || 'pending',
+    approvalStatus: n.status === 'closed' ? 'selesai' : (n.approvalStatus || 'pending'),
     workCenter: spk.workCenter || n.workCenter,
     images,
     

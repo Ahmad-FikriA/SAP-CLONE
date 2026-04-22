@@ -489,9 +489,9 @@ const approveKadisPelapor = async (req, res) => {
       kadisPelaporApprovedAt: now,
     }, { transaction: t });
 
-    // Update notification status to closed and sync approvalStatus
+    // Update notification status to closed
     await Notification.update(
-      { status: 'closed', approvalStatus: 'selesai' },
+      { status: 'closed' },
       { where: { notificationId: spk.notificationId }, transaction: t }
     );
 
