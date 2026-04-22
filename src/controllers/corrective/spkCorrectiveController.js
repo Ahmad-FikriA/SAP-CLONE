@@ -136,6 +136,10 @@ const create = async (req, res) => {
     plannedWorker,
     plannedHourPerWorker,
     items = [],
+    // Support new payload from Flutter dropdowns
+    equipment,
+    functionalLocation,
+    equipmentName,
   } = req.body;
 
   // Validate notification exists
@@ -166,7 +170,7 @@ const create = async (req, res) => {
       spkNumber: spkNumber || spkId,
       orderNumber,
       priority: priority || 'medium',
-      equipmentId: equipmentId || notification.equipmentId,
+      equipmentId: equipment || equipmentId || notification.equipmentId,
       location: location || notification.functionalLocation,
       requestedFinishDate: requestedFinishDate || null,
       damageClassification,
@@ -644,6 +648,9 @@ const updateByPlanner = async (req, res) => {
     plannedWorker,
     plannedHourPerWorker,
     items,
+    equipment,
+    functionalLocation,
+    equipmentName,
   } = req.body;
 
   const totalPlannedHour = (plannedWorker !== undefined && plannedHourPerWorker !== undefined)
@@ -655,7 +662,7 @@ const updateByPlanner = async (req, res) => {
     await spk.update({
       orderNumber: orderNumber !== undefined ? orderNumber : spk.orderNumber,
       priority: priority !== undefined ? priority : spk.priority,
-      equipmentId: equipmentId !== undefined ? equipmentId : spk.equipmentId,
+      equipmentId: equipment || equipmentId !== undefined ? (equipment || equipmentId) : spk.equipmentId,
       location: location !== undefined ? location : spk.location,
       requestedFinishDate: requestedFinishDate !== undefined ? requestedFinishDate : spk.requestedFinishDate,
       damageClassification: damageClassification !== undefined ? damageClassification : spk.damageClassification,
