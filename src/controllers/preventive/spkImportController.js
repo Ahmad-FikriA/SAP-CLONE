@@ -153,6 +153,19 @@ const confirm = async (req, res) => {
             functionalLocation: order.functionalLocation ?? null,
             plantName:          order.plantName ?? null,
           }, { transaction: t });
+
+          // Upsert Sipil funcLoc into equipment table so map pinning + QR verification work
+          if (order.isSipil) {
+            await Equipment.upsert({
+              equipmentId:        spkEqId,
+              equipmentName:      spkEqName ?? spkEqId,
+              category:           'Sipil',
+              functionalLocation: order.functionalLocation ?? null,
+              funcLocId:          order.functionalLocation ?? null,
+              plantId:            order.locationCode ?? null,
+              plantName:          order.plantName ?? null,
+            }, { transaction: t });
+          }
         }
 
         // 3. SpkActivity rows — one per item in activitiesModel
