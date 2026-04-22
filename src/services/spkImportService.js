@@ -158,16 +158,21 @@ function parseExcelBuffer(buffer) {
         functionalLocation: rawFuncLoc,
         locationCode,
         isSipil,
+        systemStatus: String(get(row, 'system status') ?? '').trim() || null,
+        costCenter:   String(get(row, 'cost center') ?? '').trim() || null,
+        operWorkCtr:  String(get(row, 'oper.workcenter') ?? '').trim() || null,
         activitiesModel: [],
       });
     }
 
     // Add activity if it has an activity number and op text
     const operationText = String(get(row, 'op. short text') ?? '').trim();
+    const controlKey    = String(get(row, 'control key') ?? '').trim() || null;
     if (activityRaw) {
       orderMap.get(orderNumber).activitiesModel.push({
         activityNumber: activityRaw,
         operationText,
+        controlKey,
       });
     }
   }

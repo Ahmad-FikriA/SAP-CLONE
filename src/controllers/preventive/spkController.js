@@ -109,6 +109,7 @@ const getAll = async (req, res) => {
   }
   const where = req.query.category ? { category: req.query.category } : {};
   if (req.query.status) where.status = req.query.status;
+  if (req.query.submittedBy) where.submittedBy = req.query.submittedBy;
   if (req.query.from) where.scheduledDate = { ...where.scheduledDate, [Op.gte]: req.query.from };
   if (req.query.to)   where.scheduledDate = { ...where.scheduledDate, [Op.lte]: req.query.to };
 
@@ -480,6 +481,15 @@ const approveKasie = async (req, res) => {
   const validKasieRoles = ['supervisor', 'kepala_seksi', 'kasie'];
   if (!validKasieRoles.includes(role)) {
     return res.status(403).json({ error: 'Only Kasie/Supervisor can approve this step' });
+  }
+
+  // Kasie can only approve SPKs matching their discipline (group field)
+  const requiredGroup = CATEGORY_GROUP_MAP[spk.category];
+  const userGroup = req.user?.group || '';
+  if (requiredGroup && !userGroup.toLowerCase().includes(requiredGroup.toLowerCase())) {
+    return res.status(403).json({
+      error: `SPK kategori ${spk.category} hanya dapat disetujui oleh Kasie ${spk.category}`,
+    });
   }
 
   await spk.update({

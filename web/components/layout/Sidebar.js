@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, Wrench, Upload, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
-  ChevronLeft, ChevronRight, ClipboardCheck,
+  ChevronLeft, ChevronRight, ClipboardCheck, BarChart2,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser } from '@/lib/auth';
@@ -23,6 +23,7 @@ const NAV = [
   { href: '/equipment', label: 'Equipment', Icon: Radio },
   { href: '/maps', label: 'Maps', Icon: Map },
   { href: '/users', label: 'Users', Icon: Users },
+  { href: '/users/track-record', label: 'Track Record', Icon: BarChart2, roles: ['admin'] },
   { href: '/equipment/mappings', label: 'Task Mapping', Icon: Link2 },
   { href: '/interval-planner', label: 'Interval Planner', Icon: Calendar },
   { divider: true },

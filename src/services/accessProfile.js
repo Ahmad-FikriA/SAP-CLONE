@@ -3,19 +3,21 @@
 const SUPERVISI_SCHEDULER_NIK = "10000262";
 const SUPERVISI_MONITOR_NIK = "10000191";
 const INSPECTION_APPROVAL_NIK = "10000262";
-const INSPECTION_EXECUTOR_NIK = "10000375";
-const INSPECTION_PLANNER_NIK = "10000275";
+const INSPECTION_PLANNER_NIK = "10000262";
+const INSPECTION_EXECUTOR_NIK_1 = "10000375";
+const INSPECTION_EXECUTOR_NIK_2 = "10000275";
 const INSPECTION_MONITOR_NIK = "10000191";
 
 const SUPERVISI_DENIED_NIKS = new Set([
-  INSPECTION_EXECUTOR_NIK,
-  INSPECTION_PLANNER_NIK,
+  INSPECTION_EXECUTOR_NIK_1,
+  INSPECTION_EXECUTOR_NIK_2,
 ]);
 
 const INSPECTION_ROLE_OVERRIDE_NIKS = new Set([
   INSPECTION_APPROVAL_NIK,
-  INSPECTION_EXECUTOR_NIK,
   INSPECTION_PLANNER_NIK,
+  INSPECTION_EXECUTOR_NIK_1,
+  INSPECTION_EXECUTOR_NIK_2,
   INSPECTION_MONITOR_NIK,
 ]);
 
@@ -87,7 +89,7 @@ function buildAccessProfile(user) {
 
   const isTeknisiType = role === "teknisi" || role === "petugas";
   const isDinasPerawatan = containsText(dinas, "perawatan");
-  const isPlanner = nik === INSPECTION_PLANNER_NIK || containsText(group, "perencanaan");
+  const isPlanner = containsText(group, "perencanaan");
   const isKadisPP =
     role === "kadis" &&
     (containsText(dinas, "pusat perawatan") ||
@@ -114,11 +116,13 @@ function buildAccessProfile(user) {
   const isInspectionApprover =
     nik === INSPECTION_APPROVAL_NIK || (role === "kadis" && inDinasInspeksiRaw);
   const isInspectionExecutor =
-    nik === INSPECTION_EXECUTOR_NIK ||
+    nik === INSPECTION_EXECUTOR_NIK_1 || nik === INSPECTION_EXECUTOR_NIK_2 ||
     (isTeknisiType && inDinasInspeksiRaw && inGroupInspeksiRaw);
   const isInspectionPlanner =
-    nik === INSPECTION_PLANNER_NIK ||
-    (role === "kasie" && inDinasInspeksiRaw && inGroupInspeksiRaw);
+    nik !== INSPECTION_EXECUTOR_NIK_1 &&
+    nik !== INSPECTION_EXECUTOR_NIK_2 &&
+    (nik === INSPECTION_PLANNER_NIK ||
+      (role === "kasie" && inDinasInspeksiRaw && inGroupInspeksiRaw));
   const isInspectionMonitor = nik === INSPECTION_MONITOR_NIK || role === "kadiv";
   const isInspectionPerawatan = !hasInspectionRoleOverride && isDinasPerawatan;
   const isDinasInspeksi = !isInspectionExecutor && inDinasInspeksiRaw;

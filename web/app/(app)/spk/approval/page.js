@@ -80,6 +80,7 @@ function CategoryBadge({ category }) {
 
 export default function SpkApprovalPage() {
   const [user, setUser]       = useState(null);
+  const [userMap, setUserMap] = useState({});
   const [spks, setSpks]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);     // selected SPK (list item)
@@ -90,6 +91,12 @@ export default function SpkApprovalPage() {
   const [lightbox, setLightbox] = useState(null);      // photo path string
 
   useEffect(() => { setUser(getUser()); }, []);
+
+  useEffect(() => {
+    apiGet('/users').then(users => {
+      setUserMap(Object.fromEntries(users.map(u => [u.id, u.name || u.nik])));
+    }).catch(() => {});
+  }, []);
 
   const load = useCallback(async (u) => {
     const role = u?.role;
@@ -246,6 +253,7 @@ export default function SpkApprovalPage() {
             canApprove={canApprove}
             onApprove={() => setConfirmOpen(true)}
             onPhotoClick={(path) => setLightbox(path)}
+            userMap={userMap}
           />
         ) : null}
       </div>
@@ -297,7 +305,7 @@ export default function SpkApprovalPage() {
 
 // ── Detail Panel ──────────────────────────────────────────────────────────────
 
-function DetailPanel({ detail, canApprove, onApprove, onPhotoClick }) {
+function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {} }) {
   const { spk, submission } = detail;
   const activities = spk.activitiesModel || [];
   const results    = submission?.activityResultsModel || [];
@@ -329,7 +337,7 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick }) {
 
         <div className="grid grid-cols-3 gap-4 text-sm">
           <Info label="Interval" value={spk.interval || '—'} />
-          <Info label="Disubmit oleh" value={spk.submittedBy || '—'} />
+          <Info label="Disubmit oleh" value={userMap[spk.submittedBy] || spk.submittedBy || '—'} />
           <Info label="Waktu Submit" value={formatDate(spk.submittedAt)} />
         </div>
       </div>
@@ -453,25 +461,25 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick }) {
         <div className="space-y-2 text-sm">
           <ApprovalRow
             label="Submit"
-            by={spk.submittedBy}
+            by={userMap[spk.submittedBy] || spk.submittedBy}
             at={spk.submittedAt}
             done={!!spk.submittedAt}
           />
           <ApprovalRow
-            label="Kasie"
-            by={spk.kasieApprovedBy}
+            label={`Kasie ${spk.category || ''}`}
+            by={userMap[spk.kasieApprovedBy] || spk.kasieApprovedBy}
             at={spk.kasieApprovedAt}
             done={!!spk.kasieApprovedAt}
           />
           <ApprovalRow
             label="Kadis Perawatan"
-            by={spk.kadisPerawatanApprovedBy}
+            by={userMap[spk.kadisPerawatanApprovedBy] || spk.kadisPerawatanApprovedBy}
             at={spk.kadisPerawatanApprovedAt}
             done={!!spk.kadisPerawatanApprovedAt}
           />
           <ApprovalRow
-            label="Kadis"
-            by={spk.kadisApprovedBy}
+            label={`Kadis${spk.equipmentModels?.[0]?.plantName ? ` — ${spk.equipmentModels[0].plantName}` : ''}`}
+            by={userMap[spk.kadisApprovedBy] || spk.kadisApprovedBy}
             at={spk.kadisApprovedAt}
             done={!!spk.kadisApprovedAt}
           />
@@ -510,7 +518,7 @@ function ApprovalRow({ label, by, at, done }) {
       )}>
         {done && <CheckCircle size={10} className="text-white" />}
       </div>
-      <span className="w-32 text-gray-600 font-medium">{label}</span>
+      <span className="w-48 text-gray-600 font-medium">{label}</span>
       {done ? (
         <span className="text-gray-500">{by || '—'} · {formatDate(at)}</span>
       ) : (

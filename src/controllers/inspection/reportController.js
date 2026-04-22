@@ -36,7 +36,24 @@ function canViewAllReports(user) {
 function normalizeReportStatus(status, fallback = "draft") {
   if (status === "submitted") return "submitted";
   if (status === "draft") return "draft";
+  if (status === "revisions_required") return "revisions_required";
   return fallback;
+}
+
+function canMutateReport(report, userNik) {
+  const requesterNik = normalizeNik(userNik);
+  if (!requesterNik) return false;
+
+  const reportSubmittedBy = normalizeNik(report?.submittedBy);
+  if (reportSubmittedBy) {
+    return reportSubmittedBy === requesterNik;
+  }
+
+  const scheduleCreatedBy = normalizeNik(report?.schedule?.createdBy);
+  const scheduleAssignedTo = normalizeNik(report?.schedule?.assignedTo);
+  return (
+    scheduleCreatedBy === requesterNik || scheduleAssignedTo === requesterNik
+  );
 }
 
 function parsePhotoRecords(photos, reportId) {
@@ -190,14 +207,31 @@ async function createReport(req, res) {
         .json({ success: false, message: "Schedule not found." });
     }
 
+    // Draft should be savable at any time without field requirements.
+    const normalizedInspectorName =
+      typeof inspectorName === "string" && inspectorName.trim().length > 0
+        ? inspectorName.trim()
+        : String(req.user?.name || req.user?.nik || "Inspector").trim();
+    const normalizedInspectionDate =
+      typeof inspectionDate === "string" && inspectionDate.trim().length > 0
+        ? inspectionDate.trim()
+        : new Date().toISOString().slice(0, 10);
+    const normalizedLocation =
+      typeof location === "string" && location.trim().length > 0
+        ? location.trim()
+        : String(schedule.location || schedule.title || "-");
+
     const report = await InspectionReport.create(
       {
         scheduleId,
-        inspectorName,
-        inspectionDate,
-        location,
-        tools: tools || [],
-        findings,
+        inspectorName: normalizedInspectorName,
+        inspectionDate: normalizedInspectionDate,
+        location: normalizedLocation,
+        tools: Array.isArray(tools) ? tools : [],
+        findings:
+          typeof findings === "string" && findings.trim().length > 0
+            ? findings.trim()
+            : null,
         hasKerusakan: hasKerusakan || false,
         kerusakanDetail,
         kriteria,
@@ -260,7 +294,7 @@ async function updateReport(req, res) {
         .json({ success: false, message: "Report not found." });
     }
 
-    if (normalizeNik(report.submittedBy) !== normalizeNik(req.user?.nik)) {
+    if (!canMutateReport(report, req.user?.nik)) {
       await t.rollback();
       return res.status(403).json({
         success: false,
@@ -268,11 +302,12 @@ async function updateReport(req, res) {
       });
     }
 
-    if (["approved", "rejected"].includes(report.status)) {
+    // Block mutation only for truly-approved reports
+    if (report.status === "approved") {
       await t.rollback();
       return res.status(400).json({
         success: false,
-        message: "Laporan yang sudah diputuskan tidak dapat diubah.",
+        message: "Laporan yang sudah disetujui tidak dapat diubah.",
       });
     }
 
@@ -438,24 +473,49 @@ async function approveReport(req, res) {
 
 // PUT /api/inspection/reports/:id/reject
 async function rejectReport(req, res) {
+  const t = await sequelize.transaction();
+
   try {
-    const report = await InspectionReport.findByPk(req.params.id);
+    const report = await InspectionReport.findByPk(req.params.id, {
+      include: [{ association: "schedule" }],
+      transaction: t,
+    });
 
     if (!report) {
+      await t.rollback();
       return res
         .status(404)
         .json({ success: false, message: "Report not found." });
     }
 
+    // Set status to revisions_required so the executor still sees it
+    // and can open/edit the same report record for rework.
     await report.update({
-      status: "rejected",
+      status: "revisions_required",
       approvedBy: req.user.nik,
       approvalDate: new Date(),
       approvalNotes: req.body.notes || null,
+    }, { transaction: t });
+
+    // Revert schedule back to in_progress so it re-appears in the
+    // executor's active schedule list.
+    if (report.schedule) {
+      await report.schedule.update({ status: "in_progress" }, { transaction: t });
+    }
+
+    await t.commit();
+
+    const updated = await InspectionReport.findByPk(report.id, {
+      include: [{ association: "schedule" }, { association: "photos" }],
     });
 
-    res.json({ success: true, message: "Report rejected.", data: report });
+    res.json({
+      success: true,
+      message: "Report dikembalikan ke eksekutor untuk revisi.",
+      data: updated,
+    });
   } catch (err) {
+    await t.rollback();
     res.status(500).json({ success: false, message: err.message });
   }
 }

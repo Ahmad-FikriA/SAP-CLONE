@@ -66,6 +66,7 @@ mapsRouter.put('/:plantId', verifyToken, mapsController.save);
 const submissionsRouter = express.Router();
 submissionsRouter.get('/', verifyToken, submissionsController.getAll);
 submissionsRouter.get('/export', verifyToken, submissionsController.exportExcel);
+submissionsRouter.get('/export-iw49', verifyToken, submissionsController.exportIW49);
 submissionsRouter.post('/bulk-delete', verifyToken, submissionsController.bulkDelete);
 submissionsRouter.get('/:id', verifyToken, submissionsController.getOne);
 submissionsRouter.delete('/:id', verifyToken, submissionsController.remove);

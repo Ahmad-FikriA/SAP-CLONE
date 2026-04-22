@@ -682,13 +682,13 @@ async function submitVisit(req, res) {
     }
 
     let jarakDariPusat = null;
-    const vLat = visitLatitude ? parseFloat(visitLatitude) : null;
-    const vLon = visitLongitude ? parseFloat(visitLongitude) : null;
+    const vLat = parseNullableFloat(visitLatitude);
+    const vLon = parseNullableFloat(visitLongitude);
     const normalizedLocationId = locationId ? String(locationId).trim() : null;
 
     // ── Geofence calculation (hanya saat hadir) ──────────────────────────────
     if (status === "hadir") {
-      if (!vLat || !vLon || isNaN(vLat) || isNaN(vLon)) {
+      if (vLat === null || vLon === null || isNaN(vLat) || isNaN(vLon)) {
         return res.status(400).json({
           success: false,
           message: "Koordinat GPS wajib dikirim saat hadir. Pastikan lokasi aktif.",

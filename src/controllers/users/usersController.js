@@ -1,7 +1,9 @@
 'use strict';
 
 const { Op } = require('sequelize');
+const sequelize = require('../../config/database');
 const User = require('../../models/User');
+const { Spk } = require('../../models/Spk');
 
 const SAFE = { attributes: { exclude: ['password'] } };
 
@@ -79,5 +81,58 @@ const remove = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, update, bulkDelete, remove };
+// GET /api/users/stats
+const getStats = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'role', 'group', 'dinas'],
+      order: [['name', 'ASC']],
+    });
+
+    const spkCounts = await Spk.findAll({
+      where: { submittedBy: { [Op.not]: null } },
+      attributes: [
+        'submittedBy',
+        'status',
+        [sequelize.fn('COUNT', sequelize.col('spk_number')), 'count'],
+      ],
+      group: ['submitted_by', 'status'],
+      raw: true,
+    });
+
+    const latestSubs = await Spk.findAll({
+      where: { submittedBy: { [Op.not]: null }, submittedAt: { [Op.not]: null } },
+      attributes: [
+        'submittedBy',
+        [sequelize.fn('MAX', sequelize.col('submitted_at')), 'lastSubmittedAt'],
+      ],
+      group: ['submitted_by'],
+      raw: true,
+    });
+
+    const statsMap = {};
+    for (const row of spkCounts) {
+      if (!statsMap[row.submittedBy]) statsMap[row.submittedBy] = { total: 0, approved: 0 };
+      statsMap[row.submittedBy].total += parseInt(row.count);
+      if (row.status === 'approved') statsMap[row.submittedBy].approved += parseInt(row.count);
+    }
+    const lastSubMap = Object.fromEntries(latestSubs.map(r => [r.submittedBy, r.lastSubmittedAt]));
+
+    res.json(users.map(u => ({
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      group: u.group,
+      dinas: u.dinas,
+      totalSpk: statsMap[u.id]?.total || 0,
+      approvedSpk: statsMap[u.id]?.approved || 0,
+      lastSubmittedAt: lastSubMap[u.id] || null,
+    })));
+  } catch (err) {
+    console.error('[Users] getStats error:', err.message);
+    res.status(500).json({ error: 'Gagal mengambil statistik users' });
+  }
+};
+
+module.exports = { getAll, create, update, bulkDelete, remove, getStats };
 

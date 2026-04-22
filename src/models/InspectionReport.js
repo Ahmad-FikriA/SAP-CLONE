@@ -84,9 +84,10 @@ const InspectionReport = sequelize.define(
       comment: "Path file tanda tangan digital inspector",
     },
     status: {
-      type: DataTypes.ENUM("draft", "submitted", "approved", "rejected"),
+      type: DataTypes.ENUM("draft", "submitted", "approved", "rejected", "revisions_required"),
       allowNull: false,
       defaultValue: "draft",
+      comment: "draft | submitted | approved | rejected | revisions_required (returned for rework)",
     },
     submittedBy: {
       type: DataTypes.STRING(100),
@@ -99,7 +100,7 @@ const InspectionReport = sequelize.define(
     approvedBy: {
       type: DataTypes.STRING(100),
       allowNull: true,
-      comment: "Kepala Dinas yang approve/reject",
+      comment: "Planner/Approver yang approve, reject, atau kembalikan untuk revisi",
     },
     approvalDate: {
       type: DataTypes.DATE,

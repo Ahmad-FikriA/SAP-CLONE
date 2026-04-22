@@ -31,6 +31,7 @@ const {
   ensureGeneralTaskListActivitySchema,
   ensureSpkActivitySchema,
   ensureSubmissionActivityResultSchema,
+  ensureInspectionScheduleRecurringSchema,
 } = require("./models/ensureMeasurementSchema");
 
 // Register all Sequelize model associations (must run before any query)
@@ -302,6 +303,10 @@ sequelize
   })
   .then(() => {
     console.log("Submission activity result measurement schema ensured.");
+    return ensureInspectionScheduleRecurringSchema();
+  })
+  .then(() => {
+    console.log("Inspection schedule recurring schema ensured.");
     return syncDatabase(sequelize, "server startup");
   })
   .then(() => {

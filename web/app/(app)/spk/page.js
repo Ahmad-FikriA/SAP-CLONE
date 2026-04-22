@@ -55,6 +55,9 @@ export default function SpkPage() {
   const [selected, setSelected]     = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [weekFilter, setWeekFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
 
   // Side panel
   const [panelOpen, setPanelOpen]   = useState(false);
@@ -278,7 +281,25 @@ export default function SpkPage() {
     finally { setSaving(false); }
   }
 
-  const displayed = statusFilter ? spkList.filter((s) => s.status === statusFilter) : spkList;
+  const displayed = spkList.filter((s) => {
+    if (statusFilter && s.status !== statusFilter) return false;
+    if (weekFilter && String(s.weekNumber) !== weekFilter) return false;
+    if (yearFilter && String(s.weekYear) !== yearFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchSpk  = s.spkNumber?.toLowerCase().includes(q);
+      const matchDesc = s.description?.toLowerCase().includes(q);
+      const matchEq   = (s.equipmentModels || []).some(
+        (e) => e.equipmentId?.toLowerCase().includes(q) || e.equipmentName?.toLowerCase().includes(q)
+      );
+      if (!matchSpk && !matchDesc && !matchEq) return false;
+    }
+    return true;
+  });
+
+  // Collect unique week numbers and years from current list for filter dropdowns
+  const weekOptions  = [...new Set(spkList.map((s) => s.weekNumber).filter(Boolean))].sort((a, b) => a - b);
+  const yearOptions  = [...new Set(spkList.map((s) => s.weekYear).filter(Boolean))].sort((a, b) => b - a);
 
   // Equipment list for panel (grouped mapped/unmapped in create mode)
   const filteredEq = allEquipment.filter((eq) => {
@@ -312,6 +333,11 @@ export default function SpkPage() {
 
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
+          <input
+            value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari SPK, deskripsi, equipment..."
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white min-w-[220px] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          />
           <select value={category} onChange={(e) => setCategory(e.target.value)}
             className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
             <option value="">Semua Kategori</option>
@@ -322,6 +348,24 @@ export default function SpkPage() {
             <option value="">Semua Status</option>
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>)}
           </select>
+          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}
+            className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+            <option value="">Semua Tahun</option>
+            {yearOptions.map((y) => <option key={y} value={String(y)}>{y}</option>)}
+          </select>
+          <select value={weekFilter} onChange={(e) => setWeekFilter(e.target.value)}
+            className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+            <option value="">Semua Minggu</option>
+            {weekOptions.map((w) => <option key={w} value={String(w)}>Minggu {w}</option>)}
+          </select>
+          {(search || statusFilter || weekFilter || yearFilter || category) && (
+            <button
+              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); setCategory(''); }}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+            >
+              <X size={12} /> Reset Filter
+            </button>
+          )}
           {selected.length > 0 && (
             <div className="flex items-center gap-2 ml-auto bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
               <span className="text-sm text-red-700 font-medium">{selected.length} dipilih</span>
@@ -363,7 +407,23 @@ export default function SpkPage() {
                   <td className="px-3 py-3"><CategoryBadge category={s.category} /></td>
                   <td className="px-3 py-3 text-gray-500 text-xs">{s.interval}</td>
                   <td className="px-3 py-3"><StatusBadge status={s.status} /></td>
-                  <td className="px-3 py-3 text-gray-500 text-xs">{(s.equipmentModels || []).length}</td>
+                  <td className="px-3 py-3">
+                    {(s.equipmentModels || []).length === 0 ? (
+                      <span className="text-gray-400 text-xs">—</span>
+                    ) : (
+                      <div className="flex flex-col gap-0.5">
+                        {(s.equipmentModels || []).slice(0, 2).map((eq) => (
+                          <span key={eq.equipmentId} className="text-xs text-gray-700 leading-tight">
+                            <span className="font-mono text-gray-500">{eq.equipmentId}</span>
+                            {eq.equipmentName && <span className="text-gray-600"> — {eq.equipmentName}</span>}
+                          </span>
+                        ))}
+                        {(s.equipmentModels || []).length > 2 && (
+                          <span className="text-[10px] text-gray-400">+{(s.equipmentModels || []).length - 2} lainnya</span>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1.5">
                       <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => openDetail(s)}>
