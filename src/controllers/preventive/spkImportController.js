@@ -131,11 +131,14 @@ const confirm = async (req, res) => {
         // 1. Spk header
         await Spk.create({
           spkNumber,
-          description: order.description ?? null,
+          description:   order.description ?? null,
           intervalPeriod: order.interval,
-          category: order.category,
+          category:      order.category,
           scheduledDate: order.scheduledDate ?? null,
-          status: 'pending',
+          status:        'pending',
+          systemStatus:  order.systemStatus ?? null,
+          costCenter:    order.costCenter ?? null,
+          operWorkCtr:   order.operWorkCtr ?? null,
         }, { transaction: t });
 
         // 2. SpkEquipment row (one per order in SAP IW38 import)
@@ -175,6 +178,7 @@ const confirm = async (req, res) => {
             spkNumber,
             activityNumber: act.activityNumber,
             equipmentId:    spkEqId ?? null,
+            controlKey:     act.controlKey ?? null,
             operationText:  act.operationText ?? null,
             durationPlan:   null, // SAP Excel doesn't carry duration per activity
           }, { transaction: t });

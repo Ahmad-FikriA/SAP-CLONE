@@ -55,15 +55,22 @@ function filterSubs(subs, { year, month, week, category }) {
 
 export default function SubmissionsPage() {
   const [subs, setSubs] = useState([]);
+  const [userMap, setUserMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [month, setMonth] = useState('');
   const [category, setCategory] = useState('');
   const [week, setWeek] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [exportingIW49, setExportingIW49] = useState(false);
   const [detail, setDetail] = useState(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    apiGet('/users').then(users => {
+      setUserMap(Object.fromEntries(users.map(u => [u.id, u.name || u.nik])));
+    }).catch(() => {});
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -97,6 +104,29 @@ export default function SubmissionsPage() {
       toast.error('Export gagal: ' + e.message);
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function exportIW49() {
+    setExportingIW49(true);
+    try {
+      const params = new URLSearchParams();
+      if (year) params.set('year', year);
+      if (week) params.set('week', week);
+      else if (month) params.set('month', month);
+      if (category) params.set('category', category);
+      const blob = await apiBlob(`/submissions/export-iw49?${params}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `IW49_Confirmation-${year || 'all'}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('IW49 berhasil diunduh');
+    } catch (e) {
+      toast.error('Export IW49 gagal: ' + e.message);
+    } finally {
+      setExportingIW49(false);
     }
   }
 
@@ -152,7 +182,10 @@ export default function SubmissionsPage() {
           </select>
         </div>
         <Button size="sm" onClick={exportExcel} disabled={exporting} className="gap-1.5">
-          <Download size={14} /> {exporting ? 'Mengekspor...' : 'Export Excel'}
+          <Download size={14} /> {exporting ? 'Mengekspor...' : 'Export LK'}
+        </Button>
+        <Button size="sm" variant="outline" onClick={exportIW49} disabled={exportingIW49} className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50">
+          <Download size={14} /> {exportingIW49 ? 'Mengekspor...' : 'Export IW49 (SAP)'}
         </Button>
       </div>
 
@@ -210,7 +243,7 @@ export default function SubmissionsPage() {
                 <InfoField label="Work Start" value={detail.workStart ? formatDate(detail.workStart) : '—'} />
                 <InfoField label="Work Finish" value={formatDate(detail.submittedAt)} />
                 <InfoField label="Durasi Aktual" value={detail.durationActual != null ? `${detail.durationActual} menit` : '—'} />
-                <InfoField label="Dilaksanakan Oleh" value={detail.spkSubmittedBy || '—'} />
+                <InfoField label="Dilaksanakan Oleh" value={userMap[detail.spkSubmittedBy] || detail.spkSubmittedBy || '—'} />
               </div>
 
               {/* Evaluasi */}

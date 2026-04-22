@@ -115,6 +115,16 @@ function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
 }
 
+// SAP expects HH:MM:SS with colon separators
+function fmtTimeSAP(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const pad = (n) => String(n).padStart(2, '0');
+  const hours   = pad(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false }).replace('24', '00'));
+  const minutes = pad(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta', minute: 'numeric' }));
+  return `${hours}:${minutes}:00`;
+}
+
 // Shared border style
 const BORDER_THIN = {
   top: { style: 'thin' },
@@ -531,4 +541,217 @@ const exportExcel = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getOne, bulkDelete, remove, exportExcel };
+// GET /api/submissions/export-iw49 — flat SAP IW49 confirmation table
+// Query params: same as exportExcel (from, to, month, year, week, category)
+const exportIW49 = async (req, res) => {
+  try {
+    const { from, to, month, year, week, category } = req.query;
+
+    // ── Build date filter (same logic as exportExcel) ──────────────────────
+    const where = {};
+    if (from || to) {
+      where.submittedAt = {};
+      if (from) where.submittedAt[Op.gte] = new Date(from);
+      if (to) {
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+        where.submittedAt[Op.lte] = toDate;
+      }
+    } else if (week) {
+      const y = parseInt(year) || new Date().getFullYear();
+      const w = parseInt(week);
+      const jan4 = new Date(y, 0, 4);
+      const monday = new Date(jan4);
+      monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (w - 1) * 7);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+      where.submittedAt = { [Op.between]: [monday, sunday] };
+    } else if (month || year) {
+      const y = parseInt(year) || new Date().getFullYear();
+      if (month) {
+        const m = parseInt(month);
+        where.submittedAt = { [Op.between]: [new Date(y, m - 1, 1), new Date(y, m, 0, 23, 59, 59, 999)] };
+      } else {
+        where.submittedAt = { [Op.between]: [new Date(y, 0, 1), new Date(y, 11, 31, 23, 59, 59, 999)] };
+      }
+    }
+
+    const submissions = await Submission.findAll({
+      where,
+      include: [{
+        model: SubmissionActivityResult, as: 'activityResults',
+        attributes: ['activityNumber', 'resultComment'],
+      }],
+      order: [['submittedAt', 'ASC']],
+    });
+    if (!submissions.length) {
+      return res.status(404).json({ error: 'Tidak ada data untuk filter yang dipilih' });
+    }
+
+    // ── Fetch approved SPKs with description + activities ─────────────────
+    const spkNumbers = [...new Set(submissions.map(s => s.spkNumber))];
+    const approvedSpks = await Spk.findAll({
+      where: { spkNumber: spkNumbers, status: 'approved', ...(category ? { category } : {}) },
+      attributes: ['spkNumber', 'description', 'systemStatus', 'costCenter', 'operWorkCtr'],
+      include: [{
+        model: SpkActivity, as: 'activitiesModel',
+        attributes: ['activityNumber', 'controlKey', 'operationText', 'durationPlan'],
+      }],
+    });
+    const spkMap = new Map(approvedSpks.map(s => {
+      const j = s.toJSON();
+      const actMap = new Map((j.activitiesModel || []).map(a => [a.activityNumber, a]));
+      return [j.spkNumber, {
+        description:  j.description,
+        systemStatus: j.systemStatus,
+        costCenter:   j.costCenter,
+        operWorkCtr:  j.operWorkCtr,
+        actMap,
+      }];
+    }));
+
+    // ── Build workbook ─────────────────────────────────────────────────────
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'KTI SmartCare';
+    wb.created = new Date();
+
+    const ws = wb.addWorksheet('IW49 Confirmation');
+    ws.columns = [
+      { width: 20 }, // A:  Order
+      { width: 28 }, // B:  Description
+      { width: 22 }, // C:  System Status
+      { width: 14 }, // D:  Cost Center
+      { width: 14 }, // E:  Control Key
+      { width: 16 }, // F:  Oper Work Ctr
+      { width: 12 }, // G:  Activity
+      { width: 32 }, // H:  Op. Short Text
+      { width: 18 }, // I:  Normal Duration
+      { width: 20 }, // J:  Norm. Duration Unit
+      { width: 16 }, // K:  Duration Plan
+      { width: 16 }, // L:  Unit for Work
+      { width: 16 }, // M:  Posting Date
+      { width: 18 }, // N:  Duration Actual (hr)
+      { width: 16 }, // O:  Actual Work (hr)
+      { width: 36 }, // P:  Confirmation Text
+      { width: 30 }, // Q:  Reason of Variance
+      { width: 16 }, // R:  Work Start
+      { width: 16 }, // S:  Work Finish
+      { width: 14 }, // T:  Start Time
+      { width: 14 }, // U:  Finish Time
+    ];
+
+    const IW49_HEADERS = [
+      'Order', 'Description', 'System Status', 'Cost Center', 'Control Key',
+      'Oper Work Ctr', 'Activity', 'Op. Short Text',
+      'Normal Duration', 'Norm. Duration Unit', 'Duration Plan', 'Unit for Work',
+      'Posting Date', 'Duration Actual (hr)', 'Actual Work (hr)',
+      'Confirmation Text', 'Reason of Variance',
+      'Work Start', 'Work Finish', 'Start Time', 'Finish Time',
+    ];
+
+    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B3A5C' } };
+    const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+    const headerRow = ws.getRow(1);
+    IW49_HEADERS.forEach((h, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = h;
+      cell.font = headerFont;
+      cell.fill = headerFill;
+      cell.border = BORDER_THIN;
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    });
+    headerRow.height = 32;
+
+    let dataRow = 2;
+    for (const sub of submissions) {
+      const sj = sub.toJSON();
+      const spk = spkMap.get(sj.spkNumber);
+      if (!spk) continue; // skip non-approved
+
+      // durationActual stored in minutes → convert to hours (2 dp)
+      const durationActualHr = sj.durationActual != null
+        ? Math.round((sj.durationActual / 60) * 100) / 100
+        : null;
+
+      const postingDate   = fmtDate(sj.submittedAt);
+      const workStartDate = fmtDate(sj.workStart);
+      const workFinishDate = fmtDate(sj.submittedAt);
+      const startTime     = fmtTimeSAP(sj.workStart);
+      const finishTime    = fmtTimeSAP(sj.submittedAt);
+
+      const activities = sj.activityResults || [];
+
+      // One row per activity result; fallback to a single row if none recorded
+      const rows = activities.length ? activities : [{ activityNumber: '', resultComment: '' }];
+
+      for (const ar of rows) {
+        const spkAct = spk.actMap.get(ar.activityNumber);
+
+        // durationPlan stored in minutes → convert to hours (2 dp)
+        const durationPlanHr = spkAct?.durationPlan != null
+          ? Math.round((spkAct.durationPlan / 60) * 100) / 100
+          : null;
+
+        const vals = [
+          sj.spkNumber,                        // Order
+          spk.description || '',               // Description
+          spk.systemStatus || '',              // System Status
+          spk.costCenter || '',                // Cost Center
+          spkAct?.controlKey || '',            // Control Key (per-activity from SAP)
+          spk.operWorkCtr || '',               // Oper Work Ctr
+          ar.activityNumber || '',             // Activity
+          spkAct?.operationText || '',         // Op. Short Text
+          durationPlanHr,             // Normal Duration (hr)
+          'HR',                       // Norm. Duration Unit
+          durationPlanHr,             // Duration Plan (hr) — same, 1-person baseline
+          'HR',                       // Unit for Work
+          postingDate,                // Posting Date
+          durationActualHr,           // Duration Actual (hr)
+          durationActualHr,           // Actual Work (hr)
+          ar.resultComment || '',     // Confirmation Text
+          '',                         // Reason of Variance
+          workStartDate,              // Work Start
+          workFinishDate,             // Work Finish
+          startTime,                  // Start Time
+          finishTime,                 // Finish Time
+        ];
+
+        const wsRow = ws.getRow(dataRow);
+        vals.forEach((v, i) => {
+          const cell = wsRow.getCell(i + 1);
+          cell.value = v ?? '';
+          cell.font = { size: 10 };
+          cell.border = BORDER_THIN;
+          cell.alignment = { vertical: 'middle' };
+        });
+        wsRow.height = 16;
+        dataRow++;
+      }
+    }
+
+    if (dataRow === 2) {
+      return res.status(404).json({ error: 'Tidak ada data SPK yang disetujui untuk filter yang dipilih' });
+    }
+
+    // ── Filename ───────────────────────────────────────────────────────────
+    const parts = ['IW49_Confirmation'];
+    if (category) parts.push(category);
+    if (week && year) parts.push(`${year}-W${String(week).padStart(2, '0')}`);
+    else if (month && year) parts.push(`${year}-${String(month).padStart(2, '0')}`);
+    else if (year) parts.push(year);
+    const filename = parts.join('_') + '.xlsx';
+
+    const buffer = await wb.xlsx.writeBuffer();
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+
+  } catch (err) {
+    console.error('[export-iw49]', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Gagal membuat file export IW49' });
+  }
+};
+
+module.exports = { getAll, getOne, bulkDelete, remove, exportExcel, exportIW49 };
