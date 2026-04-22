@@ -20,7 +20,12 @@ function canViewAllRequests(user) {
   const flags = profile?.flags || {};
 
   return (
-    appRole === "kasie" || Boolean(flags.isInspectionPlanner || flags.isPlanner)
+    appRole === "kasie" ||
+    Boolean(
+      flags.isInspectionPlanner ||
+      flags.isPlanner ||
+      flags.isInspectionApprover,
+    )
   );
 }
 
@@ -31,6 +36,9 @@ async function listRequests(req, res) {
     const requesterNik = normalizeNik(req.user?.nik);
     const hasGlobalAccess = canViewAllRequests(req.user);
     const requestedByQuery = normalizeNik(req.query.requestedBy);
+
+    // 🔍 DEBUG — hapus setelah masalah teridentifikasi
+    console.log(`[listRequests] nik=${requesterNik} hasGlobalAccess=${hasGlobalAccess} requestedByQuery="${requestedByQuery}" status="${req.query.status || ''}"`);
 
     // Filter by status
     if (req.query.status) where.status = req.query.status;
@@ -59,6 +67,7 @@ async function listRequests(req, res) {
       order: [["createdAt", "DESC"]],
     });
 
+    console.log(`[listRequests] returning ${data.length} records, where=${JSON.stringify(where)}`);
     res.json({ success: true, message: "Requests retrieved.", data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -107,16 +116,6 @@ async function createRequest(req, res) {
       requestedBy,
     } = req.body;
 
-    const requesterNik = normalizeNik(req.user?.nik);
-    const requestedByBody = normalizeNik(requestedBy);
-
-    if (requestedByBody && requesterNik && requestedByBody !== requesterNik) {
-      return res.status(403).json({
-        success: false,
-        message: "requestedBy harus sama dengan akun yang sedang login.",
-      });
-    }
-
     if (!judul || !lokasi || !jenisInspeksi || !kategoriInspeksi) {
       return res.status(400).json({
         success: false,
@@ -142,6 +141,13 @@ async function createRequest(req, res) {
       });
     }
 
+    const requesterNik = normalizeNik(req.user?.nik);
+    const requestedByBody = normalizeNik(requestedBy);
+
+    // Ambil requesterNik yang valid dari token JWT (paling aman).
+    // Jika tidak ada, gunakan body payload (untuk backward compatibility).
+    const finalRequestedBy = requesterNik || requestedByBody || "unknown";
+
     const request = await InspectionRequest.create({
       judul,
       lokasi,
@@ -151,7 +157,7 @@ async function createRequest(req, res) {
       asapMungkin: asapMungkin ?? false,
       deskripsi,
       mediaPaths: mediaPaths ?? [],
-      requestedBy: requesterNik || requestedByBody || "unknown",
+      requestedBy: finalRequestedBy,
       status: "pending",
     });
 
@@ -246,15 +252,15 @@ async function rejectRequest(req, res) {
         .json({ success: false, message: "Request not found." });
     }
 
-    if (request.status !== "pending") {
+    if (request.status !== "pending" && request.status !== "revisions_required") {
       return res.status(400).json({
         success: false,
-        message: `Request sudah di-${request.status}.`,
+        message: `Request sudah di-${request.status} dan tidak dapat diproses lagi.`,
       });
     }
 
     await request.update({
-      status: "rejected",
+      status: "revisions_required",
       approvedBy: req.user?.nik,
       approvedAt: new Date(),
       notes: req.body.notes,
@@ -262,7 +268,7 @@ async function rejectRequest(req, res) {
 
     res.json({
       success: true,
-      message: "Permintaan inspeksi ditolak.",
+      message: "Permintaan inspeksi dikembalikan untuk diperbaiki oleh pemohon.",
       data: request,
     });
   } catch (err) {

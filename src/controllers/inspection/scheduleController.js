@@ -168,4 +168,74 @@ async function getNextSpkNumber(req, res) {
   }
 }
 
-module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, getNextSpkNumber };
+// POST /api/inspection/schedules/recurring
+async function createRecurringSchedules(req, res) {
+  try {
+    const { baseSchedule, recurringType, startDate, endDate } = req.body;
+    
+    if (!baseSchedule || !recurringType || !startDate || !endDate) {
+      return res.status(400).json({ success: false, message: "Missing required parameters." });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const groupId = `REC-${Date.now()}`;
+    const schedulesToCreate = [];
+    
+    let currentDate = new Date(start);
+    let instanceNumber = 1;
+    
+    let intervalMonths = 1;
+    switch (recurringType) {
+      case 'monthly': intervalMonths = 1; break;
+      case 'bimonthly': intervalMonths = 2; break;
+      case 'quarterly': intervalMonths = 3; break;
+      case 'semester': intervalMonths = 6; break;
+      case 'yearly': intervalMonths = 12; break;
+      default: intervalMonths = 1;
+    }
+
+    while (currentDate <= end) {
+      // Create a copy of the base date
+      const scheduledDate = new Date(currentDate);
+      
+      const schedule = {
+        type: baseSchedule.type || "rutin",
+        title: `${baseSchedule.title} #${instanceNumber}`,
+        unitKerja: baseSchedule.unitKerja,
+        location: baseSchedule.location,
+        scheduledDate: scheduledDate,
+        createdBy: req.user.nik || baseSchedule.createdBy,
+        assignedTo: baseSchedule.assignedTo,
+        kategoriTeknisi: baseSchedule.kategoriTeknisi,
+        kategoriK3: baseSchedule.kategoriK3,
+        vendorInfo: baseSchedule.vendorInfo,
+        nomorPoJo: baseSchedule.nomorPoJo,
+        triggerSource: baseSchedule.triggerSource || "planner",
+        isRecurring: true,
+        recurringGroupId: groupId,
+        recurringType: recurringType,
+        recurringEndDate: end,
+        recurringInstance: instanceNumber
+      };
+      
+      schedulesToCreate.push(schedule);
+
+      // Advance by interval
+      currentDate.setMonth(currentDate.getMonth() + intervalMonths);
+      instanceNumber++;
+    }
+
+    const createdSchedules = await InspectionSchedule.bulkCreate(schedulesToCreate);
+
+    res.status(201).json({
+      success: true,
+      message: `${createdSchedules.length} recurring schedules created successfully.`,
+      data: createdSchedules,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, getNextSpkNumber, createRecurringSchedules };

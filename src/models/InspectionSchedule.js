@@ -113,6 +113,32 @@ const InspectionSchedule = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    isRecurring: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: "Flag whether this is a recurring schedule",
+    },
+    recurringGroupId: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: "Group ID linking all schedules in a recurring series",
+    },
+    recurringType: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: "Type of recurrence (e.g., monthly, bimonthly, quarterly, semester, yearly)",
+    },
+    recurringEndDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      comment: "End date of the recurring series",
+    },
+    recurringInstance: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "The instance number in the recurring series (e.g., 1, 2, 3)",
+    },
   },
   {
     tableName: "inspection_schedules",
