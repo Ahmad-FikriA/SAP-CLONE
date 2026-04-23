@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { RefreshCw, Upload, FileSpreadsheet, Inbox, AlertCircle, FileText, Wrench, CheckCircle2, Trash2 } from 'lucide-react';
+import { RefreshCw, Upload, FileSpreadsheet, Inbox, AlertCircle, AlertTriangle, FileText, Wrench, CheckCircle2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const APPROVAL_LABELS = {
@@ -642,8 +642,8 @@ export default function CorrectivePage() {
           </div>
           
           {selectedSpk && (
-            <div className="p-6 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Section title="Informasi Utama">
                   <Row label="Order Number" value={<span className="font-mono">{selectedSpk.order_number}</span>} />
                   <Row label="Deskripsi" value={selectedSpk.description} />
@@ -657,6 +657,9 @@ export default function CorrectivePage() {
                   <Row label="Location" value={selectedSpk.location} />
                   <Row label="Work Center" value={selectedSpk.work_center} />
                 </Section>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Section title="Perencanaan">
                   <Row label="Plan Duration" value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || ''}`} />
                   <Row label="Normal Dur" value={`${selectedSpk.normal_dur || 0} ${selectedSpk.normal_dur_un || ''}`} />
@@ -666,15 +669,12 @@ export default function CorrectivePage() {
                   <Row label="Cost Center" value={selectedSpk.cost_center} />
                   <Row label="Control Key" value={selectedSpk.ctrl_key} />
                 </Section>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Section title="Jadwal & Aktual SAP">
                   <Row label="Tgl Posting" value={fmtDate(selectedSpk.posting_date)} />
                   <Row label="Work Start" value={fmtDate(selectedSpk.work_start)} />
                   <Row label="Work Finish" value={fmtDate(selectedSpk.work_finish)} />
-                  <Row label="Start Waktu" value={selectedSpk.start_time} />
-                  <Row label="Finish Waktu" value={selectedSpk.finish_time} />
+                  <Row label="Start Time" value={selectedSpk.start_time} />
+                  <Row label="Finish Time" value={selectedSpk.finish_time} />
                   <Row label="Durasi Aktual" value={`${selectedSpk.dur_act || 0} ${selectedSpk.normal_dur_un || ''}`} />
                   <Row label="Actual Work" value={`${selectedSpk.actual_work || 0} ${selectedSpk.unit_for_work || ''}`} />
                   <Row label="Reason of Var" value={selectedSpk.reason_of_var} />
@@ -861,9 +861,9 @@ function Section({ title, children }) {
 
 function Row({ label, value }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 min-w-0">
-      <span className="text-xs font-medium text-slate-500 w-full sm:w-28 shrink-0">{label}</span>
-      <span className="text-sm text-slate-800 font-medium break-words flex-1 min-w-0">{value || '-'}</span>
+    <div className="min-w-0">
+      <dt className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">{label}</dt>
+      <dd className="text-sm text-slate-800 font-medium break-words">{value || '-'}</dd>
     </div>
   );
 }
