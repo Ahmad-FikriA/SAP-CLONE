@@ -30,8 +30,11 @@ const SapSpkCorrective = sequelize.define(
     start_time: DataTypes.TIME,
     finish_time: DataTypes.TIME,
     report_by: DataTypes.STRING,
+    maint_activ_type: DataTypes.STRING,
+    location: DataTypes.STRING,
     equipment_name: DataTypes.STRING,
     functional_location: DataTypes.STRING,
+    actual_work: DataTypes.DECIMAL(10, 2),
     
     // Custom Fields
     status: {

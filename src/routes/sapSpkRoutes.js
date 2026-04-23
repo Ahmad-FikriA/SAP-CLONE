@@ -27,12 +27,19 @@ const upload = multer({ storage });
 // Routes
 router.get("/", verifyToken, sapSpkController.getSapSpkList);
 
-// Upload Excel endpoint
+// Upload Excel endpoint (Returns Preview)
 router.post(
   "/upload-excel",
   verifyToken,
   upload.single("excelFile"),
   sapSpkController.uploadExcel
+);
+
+// Bulk Insert endpoint (Confirms Upload)
+router.post(
+  "/bulk-insert",
+  verifyToken,
+  sapSpkController.bulkInsertSapSpk
 );
 
 // Teknisi Execute SPK (Upload Photo Before and After)

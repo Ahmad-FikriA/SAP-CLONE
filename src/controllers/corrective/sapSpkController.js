@@ -23,7 +23,9 @@ const getSapSpkList = async (req, res) => {
 const uploadExcel = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ status: "error", message: "No Excel file uploaded" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "No Excel file uploaded" });
     }
 
     const workbook = new exceljs.Workbook();
@@ -32,7 +34,9 @@ const uploadExcel = async (req, res) => {
     // Get the first worksheet
     const worksheet = workbook.worksheets[0];
     if (!worksheet) {
-      return res.status(400).json({ status: "error", message: "Excel file is empty" });
+      return res
+        .status(400)
+        .json({ status: "error", message: "Excel file is empty" });
     }
 
     // Identify Headers
@@ -57,28 +61,41 @@ const uploadExcel = async (req, res) => {
     const colMap = {
       order_number: findCol(["order"]),
       description: findCol(["description"]),
-      sys_status: findCol(["sys", "status"]),
+      sys_status: findCol(["sys", "status", "system status"]),
       cost_center: findCol(["cost center"]),
-      ctrl_key: findCol(["ctrlkey", "ctrl key"]),
-      confirm_number: findCol(["confirm"]),
-      work_center: findCol(["work center", "workcenter"]),
+      ctrl_key: findCol(["control key", "ctrl key", "ctrlkey"]),
+      confirm_number: findCol(["confirm", "confirmation"]),
+      work_center: findCol(["work center", "workcenter", "oper.work center"]),
       activity: findCol(["activity"]),
-      short_text: findCol(["short text"]),
-      normal_dur: findCol(["normal dur."]),
-      normal_dur_un: findCol(["normal dur. un"]), // May clash, just fallback
-      dur_plan: findCol(["dur. plan", "dur plan"]),
+      short_text: findCol(["short text", "op. short text"]),
+      normal_dur: findCol(["normal dur", "norm dur", "normal duration"]),
+      normal_dur_un: findCol([
+        "duratn un",
+        "dur un",
+        "dur. un",
+        "norm.duratn un",
+        "norm.duratn un.",
+      ]),
+      dur_plan: findCol(["duration plan", "dur plan", "dur. plan"]),
       unit_for_work: findCol(["unit for work", "un."]),
-      dur_act: findCol(["dur. act", "dur act"]),
+      dur_act: findCol(["duration actual", "dur act", "dur. act"]),
       posting_date: findCol(["posting date"]),
-      conf_text: findCol(["conf. text", "conf text"]),
-      reason_of_var: findCol(["reason of var"]),
+      conf_text: findCol(["confirmation text", "conf text", "conf. text"]),
+      reason_of_var: findCol(["reason of var", "reason of variance"]),
       work_start: findCol(["work start"]),
       work_finish: findCol(["work finish"]),
       start_time: findCol(["start time"]),
       finish_time: findCol(["finish time"]),
-      report_by: findCol(["report. by", "report by"]),
+      report_by: findCol(["reported by", "report by", "report. by"]),
       equipment_name: findCol(["equipment"]),
-      functional_location: findCol(["functional loc", "functional location"]),
+      functional_location: findCol([
+        "functional loc",
+        "functional location",
+        "functional loc.",
+      ]),
+      maint_activ_type: findCol(["maintactivtype", "maint activ type", "maint. activ. type"]),
+      actual_work: findCol(["actual work"]),
+      location: findCol(["location"]),
     };
 
     if (!colMap.order_number) {
@@ -133,11 +150,48 @@ const uploadExcel = async (req, res) => {
         report_by: getVal("report_by"),
         equipment_name: getVal("equipment_name"),
         functional_location: getVal("functional_location"),
+        maint_activ_type: getVal("maint_activ_type"),
+        actual_work: parseFloat(getVal("actual_work")) || null,
+        location: getVal("location"),
       });
     });
 
-    // Use Sequelize bulkCreate with updateOnDuplicate to UPSERT
-    await SapSpkCorrective.bulkCreate(rowsToUpsert, {
+    // Delete uploaded file after processing
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    // Return the preview data without saving to DB
+    res.status(200).json({
+      status: "success",
+      message: `Successfully parsed ${rowsToUpsert.length} SPK records from Excel`,
+      data: {
+        previewData: rowsToUpsert,
+      },
+    });
+  } catch (error) {
+    console.error("Error uploading Excel:", error);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+// 2b. Bulk Insert SPK (Confirm Upload)
+const bulkInsertSapSpk = async (req, res) => {
+  try {
+    const { spks } = req.body;
+    if (!spks || !Array.isArray(spks)) {
+      return res
+        .status(400)
+        .json({
+          status: "error",
+          message: "Invalid payload, expected array of spks",
+        });
+    }
+
+    await SapSpkCorrective.bulkCreate(spks, {
       updateOnDuplicate: [
         "description",
         "sys_status",
@@ -162,24 +216,19 @@ const uploadExcel = async (req, res) => {
         "report_by",
         "equipment_name",
         "functional_location",
+        "maint_activ_type",
+        "actual_work",
+        "location",
       ],
     });
 
-    // Delete uploaded file after processing
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-
     res.status(200).json({
       status: "success",
-      message: `Successfully processed ${rowsToUpsert.length} SPK records from Excel`,
-      data: rowsToUpsert.length,
+      message: `Successfully saved ${spks.length} SPK records to database`,
+      data: spks.length,
     });
   } catch (error) {
-    console.error("Error uploading Excel:", error);
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
+    console.error("Error bulk inserting SAP SPKs:", error);
     res.status(500).json({ status: "error", message: error.message });
   }
 };
@@ -199,14 +248,18 @@ const executeSapSpk = async (req, res) => {
   try {
     const spk = await SapSpkCorrective.findByPk(order_number);
     if (!spk) {
-      return res.status(404).json({ status: "error", message: "SPK not found" });
+      return res
+        .status(404)
+        .json({ status: "error", message: "SPK not found" });
     }
 
     const updates = {
       actual_materials,
       actual_tools,
       actual_personnel: actual_personnel ? parseInt(actual_personnel) : null,
-      total_actual_hour: total_actual_hour ? parseFloat(total_actual_hour) : null,
+      total_actual_hour: total_actual_hour
+        ? parseFloat(total_actual_hour)
+        : null,
       execution_nik,
       job_result_description,
       status: "menunggu_review_kadis_pp",
@@ -240,7 +293,9 @@ const deleteSapSpk = async (req, res) => {
     const { order_number } = req.params;
     const deleted = await SapSpkCorrective.destroy({ where: { order_number } });
     if (deleted) {
-      res.status(200).json({ status: "success", message: "SPK deleted successfully" });
+      res
+        .status(200)
+        .json({ status: "success", message: "SPK deleted successfully" });
     } else {
       res.status(404).json({ status: "error", message: "SPK not found" });
     }
@@ -254,7 +309,12 @@ const deleteSapSpk = async (req, res) => {
 const deleteAllSapSpk = async (req, res) => {
   try {
     await SapSpkCorrective.destroy({ where: {} });
-    res.status(200).json({ status: "success", message: "All SAP SPKs deleted successfully" });
+    res
+      .status(200)
+      .json({
+        status: "success",
+        message: "All SAP SPKs deleted successfully",
+      });
   } catch (error) {
     console.error("Error deleting all SAP SPKs:", error);
     res.status(500).json({ status: "error", message: error.message });
@@ -264,6 +324,7 @@ const deleteAllSapSpk = async (req, res) => {
 module.exports = {
   getSapSpkList,
   uploadExcel,
+  bulkInsertSapSpk,
   executeSapSpk,
   deleteSapSpk,
   deleteAllSapSpk,

@@ -93,6 +93,8 @@ export default function CorrectivePage() {
 
   // Upload Excel
   const [uploading, setUploading] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [savingExcel, setSavingExcel] = useState(false);
   const fileInputRef = useRef(null);
 
   // Confirm dialog
@@ -167,18 +169,46 @@ export default function CorrectivePage() {
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
-      const data = await res.json();
-      if (data.status === 'success') {
-        toast.success(data.message);
-        loadAll();
+      const resData = await res.json();
+      if (resData.status === 'success') {
+        toast.success(resData.message);
+        setPreviewData(resData.data.previewData);
       } else {
-        toast.error(data.message || 'Gagal mengupload file');
+        toast.error(resData.message || 'Gagal mengupload file');
       }
     } catch (err) {
       toast.error('Terjadi kesalahan saat upload');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!previewData || previewData.length === 0) return;
+    setSavingExcel(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/sap-spk/bulk-insert`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ spks: previewData })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(data.message);
+        setPreviewData(null);
+        loadAll();
+      } else {
+        toast.error(data.message || 'Gagal menyimpan data');
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat menyimpan data');
+    } finally {
+      setSavingExcel(false);
     }
   };
 
@@ -709,6 +739,57 @@ export default function CorrectivePage() {
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="ghost" onClick={() => setConfirmState(null)} disabled={confirming}>Batal</Button>
             <Button onClick={runConfirm} disabled={confirming}>{confirming ? 'Memproses...' : 'Ya, Lanjutkan'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Excel Dialog */}
+      <Dialog open={!!previewData} onOpenChange={(open) => {
+        if (!open && !savingExcel) setPreviewData(null);
+      }}>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col overflow-hidden bg-white/95 backdrop-blur-xl border-slate-200/60 shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="px-6 py-5 border-b border-slate-100 bg-white/50">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <FileSpreadsheet className="text-blue-600" /> Preview Data Excel SAP
+            </DialogTitle>
+            <p className="text-sm text-slate-500 mt-1">Ditemukan {previewData?.length || 0} baris SPK. Silakan periksa kembali sebelum menyimpan.</p>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto p-0">
+            <Table>
+              <TableHeader className="bg-slate-50/80 sticky top-0 shadow-sm z-10">
+                <TableRow>
+                  <TableHead>Order Number</TableHead>
+                  <TableHead>Deskripsi</TableHead>
+                  <TableHead>System Status</TableHead>
+                  <TableHead>Work Center</TableHead>
+                  <TableHead>Dur. Plan</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {previewData?.slice(0, 100).map((row, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-mono text-xs font-semibold">{row.order_number}</TableCell>
+                    <TableCell className="text-sm truncate max-w-[200px]" title={row.description}>{row.description || '-'}</TableCell>
+                    <TableCell className="text-sm truncate max-w-[150px]" title={row.sys_status}>{row.sys_status || '-'}</TableCell>
+                    <TableCell className="text-sm">{row.work_center || '-'}</TableCell>
+                    <TableCell className="text-sm">{row.dur_plan || 0} {row.normal_dur_un || ''}</TableCell>
+                  </TableRow>
+                ))}
+                {previewData?.length > 100 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-sm text-slate-500 bg-slate-50/50 italic py-3">
+                      ... dan {previewData.length - 100} baris lainnya
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2">
+            <Button variant="ghost" onClick={() => setPreviewData(null)} disabled={savingExcel}>Batal</Button>
+            <Button onClick={handleConfirmUpload} disabled={savingExcel}>
+              {savingExcel ? 'Menyimpan...' : 'Simpan Data'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

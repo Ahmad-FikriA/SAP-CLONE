@@ -58,11 +58,11 @@ router.post('/requests', verifyToken, requireKadis, uploadCorrective.array('phot
 // Rules: Kadis Pelapor can only update own; Planner can update; others read-only
 router.put('/requests/:id', verifyToken, canViewNotification, reqCtrl.update);
 
+// DELETE /api/corrective/requests
+router.delete('/requests', verifyToken, requirePlanner, reqCtrl.deleteAll);
+
 // DELETE /api/corrective/requests/:id
 router.delete('/requests/:id', verifyToken, canViewNotification, reqCtrl.remove);
-
-// DELETE /api/corrective/requests
-router.delete('/requests', verifyToken, reqCtrl.deleteAll);
 
 // POST /api/corrective/requests/bulk-delete
 router.post('/requests/bulk-delete', verifyToken, reqCtrl.bulkDelete);

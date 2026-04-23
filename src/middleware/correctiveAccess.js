@@ -46,8 +46,8 @@ const canViewNotification = async (req, res, next) => {
     
     const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
     
-    // Planner and Kadis Pusat can view all
-    if (role === 'planner' || isPlannerGroup || role === KADIS_PUSAT_ROLE) {
+    // Planner, Admin, and Kadis Pusat can view all
+    if (role === 'planner' || isPlannerGroup || role === 'admin' || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
