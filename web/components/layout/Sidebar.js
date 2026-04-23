@@ -7,7 +7,7 @@ import {
   LayoutDashboard, FileText, Wrench, Upload, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
   ChevronLeft, ChevronRight, ClipboardCheck, BarChart2, ClipboardList,
-  MapPin, CalendarRange,
+  MapPin, CalendarRange, ShieldCheck,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser } from '@/lib/auth';
@@ -19,6 +19,7 @@ const NAV = [
   { href: '/spk', label: 'SPK / Preventive', Icon: FileText },
   { href: '/spk/approval', label: 'Persetujuan SPK', Icon: ClipboardCheck, roles: ['kasie', 'kadis', 'admin'] },
   { href: '/corrective', label: 'Corrective Planner', Icon: Wrench },
+  { href: '/hse',       label: 'HSE Command Center', Icon: ShieldCheck },
   { href: '/spk/import', label: 'Import SAP', Icon: Upload },
   { divider: true },
   { href: '/equipment', label: 'Equipment', Icon: Radio },

@@ -33,6 +33,9 @@ import {
   CheckCircle2,
   Trash2,
   Edit2,
+  Activity,
+  Clock,
+  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -478,14 +481,19 @@ export default function CorrectivePage() {
   ];
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
-            Corrective Planner
-          </h2>
-          <p className="text-slate-500 mt-1 text-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-1.5 bg-blue-600 rounded-lg">
+              <LayoutDashboard size={16} className="text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+              Corrective Planner
+            </h2>
+          </div>
+          <p className="text-slate-500 text-sm ml-9">
             Kelola laporan notifikasi dan integrasikan ekspor SPK dari SAP.
           </p>
         </div>
@@ -497,33 +505,13 @@ export default function CorrectivePage() {
             accept=".xlsx, .xls"
             onChange={handleFileUpload}
           />
-          {tab === "spk" && spks.length > 0 && (
-            <Button
-              variant="destructive"
-              className="shadow-sm"
-              onClick={deleteAllSpks}
-            >
-              <Trash2 size={16} className="mr-2" />
-              Hapus Semua
-            </Button>
-          )}
-          {tab === "history" && history.length > 0 && (
-            <Button
-              variant="destructive"
-              className="shadow-sm"
-              onClick={deleteAllSpks}
-            >
-              <Trash2 size={16} className="mr-2" />
-              Hapus Semua
-            </Button>
-          )}
           <Button
             variant="default"
-            className="shadow-sm"
+            className="shadow-md bg-blue-600 hover:bg-blue-700"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >
-            <FileSpreadsheet size={16} className="mr-2" />
+            <Upload size={16} className="mr-2" />
             {uploading ? "Mengunggah..." : "Upload Excel SAP"}
           </Button>
           <Button
@@ -531,10 +519,73 @@ export default function CorrectivePage() {
             size="icon"
             onClick={loadAll}
             disabled={loading}
-            className="shrink-0 bg-white shadow-sm"
+            className="shrink-0 bg-white shadow-sm hover:bg-slate-50"
           >
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+            <Inbox size={24} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Total Laporan
+            </p>
+            <p className="text-2xl font-extrabold text-slate-900 truncate">
+              {requests.length}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
+          <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+            <Clock size={24} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Butuh Approval
+            </p>
+            <p className="text-2xl font-extrabold text-slate-900 truncate">
+              {requests.filter((r) => r.approvalStatus === "pending").length}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
+          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+            <FileText size={24} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              SPK Aktif
+            </p>
+            <p className="text-2xl font-extrabold text-slate-900 truncate">
+              {spks.length}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
+          <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+            <Activity size={24} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Sedang Dikerjakan
+            </p>
+            <p className="text-2xl font-extrabold text-slate-900 truncate">
+              {
+                spks.filter(
+                  (s) => s.status === "eksekusi" || s.sys_status?.includes("EXEC"),
+                ).length
+              }
+            </p>
+          </div>
         </div>
       </div>
 

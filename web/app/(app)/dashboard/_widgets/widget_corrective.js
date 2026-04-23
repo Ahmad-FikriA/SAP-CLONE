@@ -14,21 +14,21 @@ const PRIORITY_COLORS = {
 };
 
 const SPK_STATUS_LABELS = {
-  draft:                 'Draft',
-  eksekusi:              'Eksekusi',
-  awaiting_kadis_pusat:  'Review Kadis PP',
-  awaiting_kadis_pelapor:'Review Pelapor',
-  completed:             'Selesai',
-  rejected:              'Ditolak',
+  baru_import: "Baru",
+  eksekusi: "Eksekusi",
+  menunggu_review_kadis_pp: "Review Kadis PP",
+  menunggu_review_kadis_pelapor: "Review Pelapor",
+  selesai: "Selesai",
+  ditolak: "Ditolak",
 };
 
 const SPK_STATUS_COLORS = {
-  draft:                  'bg-gray-100 text-gray-600',
-  eksekusi:               'bg-orange-100 text-orange-700',
-  awaiting_kadis_pusat:   'bg-purple-100 text-purple-700',
-  awaiting_kadis_pelapor: 'bg-indigo-100 text-indigo-700',
-  completed:              'bg-green-100 text-green-700',
-  rejected:               'bg-red-100 text-red-600',
+  baru_import: "bg-blue-100 text-blue-700",
+  eksekusi: "bg-orange-100 text-orange-700",
+  menunggu_review_kadis_pp: "bg-purple-100 text-purple-700",
+  menunggu_review_kadis_pelapor: "bg-indigo-100 text-indigo-700",
+  selesai: "bg-green-100 text-green-700",
+  ditolak: "bg-red-100 text-red-600",
 };
 
 function fmtDate(iso) {
@@ -47,8 +47,8 @@ export function WidgetCorrective() {
     setError(null);
     try {
       const [reqData, spkData] = await Promise.all([
-        apiGet('/corrective/requests'),
-        apiGet('/corrective/spk'),
+        apiGet("/corrective/requests"),
+        apiGet("/corrective/sap-spk"),
       ]);
       setRequests(Array.isArray(reqData) ? reqData : []);
       setSpks(Array.isArray(spkData) ? spkData : []);
@@ -61,11 +61,19 @@ export function WidgetCorrective() {
 
   useEffect(() => { load(); }, []);
 
-  const openRequests  = requests.filter((r) => r.status === 'submitted').length;
-  const approvedReqs  = requests.filter((r) => r.status === 'approved' && !r.spkId).length;
-  const activeSpks    = spks.filter((s) => s.status !== 'completed' && s.status !== 'rejected');
-  const completedSpks = spks.filter((s) => s.status === 'completed').length;
-  const recentSpks    = [...activeSpks].slice(0, 4);
+  const openRequests = requests.filter(
+    (r) => r.approvalStatus === "pending",
+  ).length;
+  const approvedReqs = requests.filter(
+    (r) => r.approvalStatus === "approved",
+  ).length;
+  const activeSpks = spks.filter(
+    (s) => s.status !== "selesai" && s.status !== "ditolak",
+  );
+  const completedSpks = spks.filter((s) => s.status === "selesai").length;
+  const recentSpks = [...activeSpks]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
@@ -117,9 +125,11 @@ export function WidgetCorrective() {
                 {recentSpks.map((spk) => (
                   <div key={spk.spkId} className="flex items-center gap-2 py-1">
                     <span className="font-mono text-xs font-semibold text-gray-700 w-28 truncate shrink-0">
-                      {spk.spkNumber || spk.spkId}
+                      {spk.order_number}
                     </span>
-                    <span className="text-xs text-gray-400 shrink-0">{fmtDate(spk.createdDate)}</span>
+                    <span className="text-xs text-gray-400 shrink-0">
+                      {fmtDate(spk.created_at)}
+                    </span>
                     <span className={`ml-auto px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${SPK_STATUS_COLORS[spk.status] || 'bg-gray-100 text-gray-600'}`}>
                       {SPK_STATUS_LABELS[spk.status] || spk.status}
                     </span>

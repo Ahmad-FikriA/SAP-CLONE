@@ -32,20 +32,39 @@ export function WidgetSummary() {
       setLoading(true);
       try {
         const [spkData, corrData, eqData, usrData] = await Promise.allSettled([
-          apiGet('/spk'),
-          apiGet('/corrective/spk'),
-          apiGet('/equipment?limit=1'),
-          apiGet('/users'),
+          apiGet("/spk"),
+          apiGet("/corrective/sap-spk"),
+          apiGet("/equipment?limit=1"),
+          apiGet("/users"),
         ]);
 
-        const spkList = spkData.status === 'fulfilled' ? (Array.isArray(spkData.value) ? spkData.value : []) : [];
-        const corrList = corrData.status === 'fulfilled' ? (Array.isArray(corrData.value) ? corrData.value : []) : [];
-        const eqTotal = eqData.status === 'fulfilled' ? (eqData.value?.total ?? (Array.isArray(eqData.value?.data) ? null : null)) : null;
-        const usrList = usrData.status === 'fulfilled' ? (Array.isArray(usrData.value) ? usrData.value : []) : [];
+        const spkList =
+          spkData.status === "fulfilled"
+            ? Array.isArray(spkData.value)
+              ? spkData.value
+              : []
+            : [];
+        const corrList =
+          corrData.status === "fulfilled"
+            ? Array.isArray(corrData.value)
+              ? corrData.value
+              : []
+            : [];
+        const eqTotal =
+          eqData.status === "fulfilled"
+            ? eqData.value?.total ??
+              (Array.isArray(eqData.value?.data) ? null : null)
+            : null;
+        const usrList =
+          usrData.status === "fulfilled"
+            ? Array.isArray(usrData.value)
+              ? usrData.value
+              : []
+            : [];
 
         setStats({
           spk: spkList.length,
-          corrective: corrList.filter((s) => s.status !== 'completed' && s.status !== 'rejected').length,
+          corrective: corrList.filter((s) => s.status !== "selesai" && s.status !== "ditolak").length,
           equipment: eqTotal,
           users: usrList.length,
         });
