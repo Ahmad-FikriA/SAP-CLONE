@@ -215,13 +215,31 @@ export default function CorrectivePage() {
     }
   };
 
-  async function approvePlanner(id) {
-    confirmAction('Terima Laporan', 'Terima dan setujui laporan ini?', async () => {
-      await apiPost(`/corrective/requests/${id}/approve-planner`);
-      toast.success('Laporan berhasil diterima!');
+  // Approve with SAP Flow
+  const [approveSapState, setApproveSapState] = useState(null);
+  const [sapOrderNumberInput, setSapOrderNumberInput] = useState('');
+
+  function triggerApprovePlanner(id) {
+    setSapOrderNumberInput('');
+    setApproveSapState({ id });
+  }
+
+  async function submitApprovePlanner() {
+    if (!approveSapState || !sapOrderNumberInput.trim()) return;
+    setConfirming(true);
+    try {
+      await apiPost(`/corrective/requests/${approveSapState.id}/approve-planner`, { 
+        sapOrderNumber: sapOrderNumberInput.trim() 
+      });
+      toast.success('Laporan berhasil diterima & disinkronisasikan!');
+      setApproveSapState(null);
       setSelectedRequest(null);
       loadAll();
-    });
+    } catch (e) {
+      toast.error(e.message || 'Gagal menerima laporan');
+    } finally {
+      setConfirming(false);
+    }
   }
 
   async function deleteAllRequests() {
@@ -437,7 +455,7 @@ export default function CorrectivePage() {
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end items-center gap-1">
                       {req.status === 'submitted' && req.approvalStatus === 'pending' ? (
-                        <Button size="sm" className="h-8 shadow-sm" onClick={() => approvePlanner(req.id)}>Terima</Button>
+                        <Button size="sm" className="h-8 shadow-sm" onClick={() => triggerApprovePlanner(req.id)}>Terima</Button>
                       ) : (
                         <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedRequest(req)}>Detail</Button>
                       )}
@@ -557,6 +575,9 @@ export default function CorrectivePage() {
               {/* Row 1: Key info cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <InfoCard label="Notification ID" value={selectedRequest.id} mono />
+                {selectedRequest.sapOrderNumber && (
+                  <InfoCard label="SAP Order Number" value={selectedRequest.sapOrderNumber} mono className="bg-blue-50 border-blue-200" />
+                )}
                 <InfoCard label="Tipe Notifikasi" value={selectedRequest.notificationType} />
                 <InfoCard label="Work Center" value={selectedRequest.workCenter} />
                 <InfoCard label="Dilaporkan Oleh" value={selectedRequest.reportedBy} />
@@ -603,9 +624,41 @@ export default function CorrectivePage() {
           <div className="bg-slate-50/80 px-8 py-5 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0">
             <Button variant="outline" onClick={() => setSelectedRequest(null)}>Tutup</Button>
             {selectedRequest?.status === 'submitted' && selectedRequest?.approvalStatus === 'pending' && (
-              <Button onClick={() => { setSelectedRequest(null); approvePlanner(selectedRequest.id); }} className="shadow-sm">Terima Laporan</Button>
+              <Button onClick={() => { setSelectedRequest(null); triggerApprovePlanner(selectedRequest.id); }} className="shadow-sm">Terima Laporan</Button>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve with SAP Dialog */}
+      <Dialog open={!!approveSapState} onOpenChange={(o) => !o && setApproveSapState(null)}>
+        <DialogContent className="max-w-md p-0 rounded-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-500 p-6 text-white text-center">
+            <Wrench className="w-12 h-12 mx-auto mb-3 opacity-90" />
+            <DialogTitle className="text-xl font-bold">Sinkronisasi SPK SAP</DialogTitle>
+          </div>
+          <div className="p-6 space-y-4 bg-slate-50">
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-blue-800 leading-relaxed">
+              Silakan buat SPK di sistem SAP terlebih dahulu berdasarkan laporan ini. 
+              Kemudian, masukkan <strong className="font-bold">No. Order SPK</strong> yang di-generate oleh SAP di bawah ini untuk menghubungkan laporan dengan SPK.
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 ml-1">No. Order SPK SAP <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                placeholder="Contoh: 2210063999"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-mono shadow-sm bg-white"
+                value={sapOrderNumberInput}
+                onChange={(e) => setSapOrderNumberInput(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="px-6 py-4 bg-white border-t border-slate-100 flex items-center justify-end gap-2">
+            <Button variant="ghost" onClick={() => setApproveSapState(null)} disabled={confirming}>Batal</Button>
+            <Button onClick={submitApprovePlanner} disabled={confirming || !sapOrderNumberInput.trim()} className="shadow-sm">
+              {confirming ? 'Menyimpan...' : 'Terima & Sinkronkan'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

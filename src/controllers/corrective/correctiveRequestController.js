@@ -96,6 +96,7 @@ function fmtRequest(notif) {
     approvalStatus:
       n.status === "closed" ? "selesai" : n.approvalStatus || "pending",
     workCenter: spk.workCenter || n.workCenter,
+    sapOrderNumber: n.sapOrderNumber,
     images,
 
     // SPK mapped fields
@@ -417,6 +418,11 @@ const deleteAll = async (req, res) => {
 
 // POST /api/corrective/requests/:id/approve-planner
 const approvePlanner = async (req, res) => {
+  const { sapOrderNumber } = req.body;
+  if (!sapOrderNumber) {
+    return res.status(400).json({ error: "No. Order SPK SAP wajib diisi" });
+  }
+
   const notification = await Notification.findByPk(req.params.id);
 
   if (!notification)
@@ -432,6 +438,7 @@ const approvePlanner = async (req, res) => {
   }
 
   await notification.update({
+    sapOrderNumber,
     status: "approved",
     approvalStatus: "approved",
   });

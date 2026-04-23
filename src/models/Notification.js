@@ -86,6 +86,12 @@ const Notification = sequelize.define('Notification', {
     allowNull: true,
     field: 'work_center',
   },
+  // Nomor SPK SAP yang diisi Planner saat menerima laporan
+  sapOrderNumber: {
+    type: DataTypes.STRING(30),
+    allowNull: true,
+    field: 'sap_order_number',
+  },
   // Kadis Pelapor - yang membuat laporan/notification ini
   kadisPelaporId: {
     type: DataTypes.STRING(20),
