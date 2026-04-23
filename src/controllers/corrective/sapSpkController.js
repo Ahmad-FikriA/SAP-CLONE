@@ -393,15 +393,93 @@ const bulkInsertSapSpk = async (req, res) => {
   }
 };
 
-// 3. Teknisi Execute SPK
+// ── Reason of Variance Codes (dropdown options for teknisi) ──────────────────
+const REASON_OF_VARIANCE_CODES = {
+  '0001': 'Machine malfunction',
+  '0002': 'Operating error',
+  '0003': 'Defective material',
+  '0004': 'Object running',
+  '0005': 'Object breakdown',
+  '0006': 'Bad weather',
+  '0007': 'Duplicate WO',
+  '0008': 'No fault found',
+  '0009': 'Others',
+};
+
+// 3a. Teknisi Claim SPK (Photo Before + Lock)
+const claimSapSpk = async (req, res) => {
+  const { order_number } = req.params;
+
+  try {
+    const spk = await SapSpkCorrective.findByPk(order_number);
+    if (!spk) {
+      return res
+        .status(404)
+        .json({ status: "error", message: "SPK not found" });
+    }
+
+    // Only allow claim on fresh SPKs
+    if (spk.status !== "baru_import") {
+      // If already claimed by this user, allow re-upload of photo
+      if (spk.status === "eksekusi" && spk.execution_nik === req.user.nik) {
+        const updates = { claimed_at: new Date() };
+        if (req.file) {
+          updates.photo_before = req.file.filename;
+        }
+        await spk.update(updates);
+        return res.status(200).json({
+          status: "success",
+          message: "Photo before updated",
+          data: spk,
+        });
+      }
+
+      return res.status(409).json({
+        status: "error",
+        message: spk.execution_nik
+          ? `SPK sudah diklaim oleh ${spk.execution_name || spk.execution_nik}`
+          : "SPK tidak dalam status baru",
+      });
+    }
+
+    const updates = {
+      execution_nik: req.user.nik,
+      execution_name: req.user.name || req.user.nik,
+      claimed_at: new Date(),
+      status: "eksekusi",
+    };
+
+    if (req.file) {
+      updates.photo_before = req.file.filename;
+    }
+
+    await spk.update(updates);
+
+    res.status(200).json({
+      status: "success",
+      message: "SPK berhasil diklaim. Silakan lanjutkan eksekusi.",
+      data: spk,
+    });
+  } catch (error) {
+    console.error("Error claiming SAP SPK:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+// 3b. Teknisi Complete SPK (Form + Photo After)
 const executeSapSpk = async (req, res) => {
   const { order_number } = req.params;
   const {
+    conf_text,
+    reason_of_var,
+    work_start,
+    work_finish,
+    start_time,
+    finish_time,
     actual_materials,
     actual_tools,
     actual_personnel,
-    total_actual_hour,
-    execution_nik,
+    actual_work,
     job_result_description,
   } = req.body;
 
@@ -413,38 +491,78 @@ const executeSapSpk = async (req, res) => {
         .json({ status: "error", message: "SPK not found" });
     }
 
+    // ── Ownership check: only the claimer can complete ──
+    if (spk.execution_nik !== req.user.nik) {
+      return res.status(403).json({
+        status: "error",
+        message: `Hanya ${spk.execution_name || spk.execution_nik} yang dapat melengkapi SPK ini.`,
+      });
+    }
+
+    if (spk.status !== "eksekusi") {
+      return res.status(400).json({
+        status: "error",
+        message: `SPK tidak dalam status eksekusi (status saat ini: ${spk.status})`,
+      });
+    }
+
+    // ── Validate reason_of_var code ──
+    if (reason_of_var && !REASON_OF_VARIANCE_CODES[reason_of_var]) {
+      return res.status(400).json({
+        status: "error",
+        message: `Kode reason of variance tidak valid: ${reason_of_var}. Gunakan 0001-0009.`,
+      });
+    }
+
+    // ── Auto-compute total_actual_hour ──
+    const personnel = actual_personnel ? parseInt(actual_personnel) : null;
+    const workHours = actual_work ? parseFloat(actual_work) : null;
+    const computedTotalHour =
+      personnel && workHours ? parseFloat((personnel * workHours).toFixed(2)) : null;
+
     const updates = {
+      conf_text,
+      reason_of_var,
+      work_start: work_start || null,
+      work_finish: work_finish || null,
+      start_time: start_time || null,
+      finish_time: finish_time || null,
       actual_materials,
       actual_tools,
-      actual_personnel: actual_personnel ? parseInt(actual_personnel) : null,
-      total_actual_hour: total_actual_hour
-        ? parseFloat(total_actual_hour)
-        : null,
-      execution_nik,
+      actual_personnel: personnel,
+      actual_work: workHours,
+      total_actual_hour: computedTotalHour,
       job_result_description,
       status: "menunggu_review_kadis_pp",
     };
 
-    if (req.files) {
-      if (req.files.photoBefore && req.files.photoBefore[0]) {
-        updates.photo_before = req.files.photoBefore[0].filename;
-      }
-      if (req.files.photoAfter && req.files.photoAfter[0]) {
-        updates.photo_after = req.files.photoAfter[0].filename;
-      }
+    // Photo after
+    if (req.file) {
+      updates.photo_after = req.file.filename;
+    } else if (req.files && req.files.photoAfter && req.files.photoAfter[0]) {
+      updates.photo_after = req.files.photoAfter[0].filename;
     }
 
     await spk.update(updates);
 
     res.status(200).json({
       status: "success",
-      message: "SPK updated and sent for Kadis PP review",
+      message: "SPK berhasil dilengkapi dan dikirim untuk review Kadis PP",
       data: spk,
     });
   } catch (error) {
     console.error("Error executing SAP SPK:", error);
     res.status(500).json({ status: "error", message: error.message });
   }
+};
+
+// 3c. Get Reason of Variance codes (for frontend dropdown)
+const getReasonOfVarianceCodes = (req, res) => {
+  const codes = Object.entries(REASON_OF_VARIANCE_CODES).map(([code, label]) => ({
+    code,
+    label: `${code} - ${label}`,
+  }));
+  res.status(200).json({ status: "success", data: codes });
 };
 
 // 4. Delete Single SPK
@@ -479,11 +597,166 @@ const deleteAllSapSpk = async (req, res) => {
   }
 };
 
+// ── 4. Approval Flows ──────────────────────────────────────────────────────────
+
+// 4a. Kadis PP Approve
+const approveKadisPp = async (req, res) => {
+  const { order_number } = req.params;
+  try {
+    const spk = await SapSpkCorrective.findByPk(order_number, {
+      include: ["notification"]
+    });
+    
+    if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
+    if (spk.status !== "menunggu_review_kadis_pp") {
+      return res.status(400).json({ status: "error", message: `Status SPK saat ini: ${spk.status}. Harus menunggu_review_kadis_pp.` });
+    }
+
+    await spk.update({
+      status: "menunggu_review_kadis_pelapor",
+      kadis_pusat_approved_by: req.user.name || req.user.nik,
+      kadis_pusat_approved_at: new Date(),
+    });
+
+    // Notify Kadis Pelapor (if notification exists)
+    if (spk.notification && spk.notification.kadisPelaporId) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "review_kadis_pelapor",
+        targetId: [spk.notification.kadisPelaporId],
+        title: "Review Pekerjaan Selesai",
+        body: `Pekerjaan SPK ${spk.orderNumber} telah selesai. Mohon review pekerjaan ini.`,
+        data: { id: spk.notification.id, spkId: spk.orderNumber },
+      });
+    }
+
+    res.json({ status: "success", message: "Disetujui. Diteruskan ke Kadis Pelapor.", data: spk });
+  } catch (error) {
+    console.error("Error approve Kadis PP:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+// 4b. Kadis PP Reject
+const rejectKadisPp = async (req, res) => {
+  const { order_number } = req.params;
+  const { rejection_note } = req.body;
+  if (!rejection_note) return res.status(400).json({ status: "error", message: "Catatan penolakan harus diisi" });
+
+  try {
+    const spk = await SapSpkCorrective.findByPk(order_number);
+    if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
+    
+    await spk.update({
+      status: "eksekusi", // Kembali ke teknisi
+      rejected_by: req.user.name || req.user.nik,
+      rejected_at: new Date(),
+      rejection_note,
+    });
+
+    // Notify Teknisi
+    if (spk.execution_nik) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "spk_rejected",
+        targetNik: [spk.execution_nik],
+        title: "Laporan SPK Ditolak Kadis PP",
+        body: `SPK ${spk.orderNumber} ditolak: ${rejection_note}. Mohon perbaiki laporan/pekerjaan.`,
+        data: { spkId: spk.orderNumber },
+      });
+    }
+
+    res.json({ status: "success", message: "Ditolak. SPK dikembalikan ke teknisi.", data: spk });
+  } catch (error) {
+    console.error("Error reject Kadis PP:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+// 4c. Kadis Pelapor Approve
+const approveKadisPelapor = async (req, res) => {
+  const { order_number } = req.params;
+  try {
+    const spk = await SapSpkCorrective.findByPk(order_number);
+    
+    if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
+    if (spk.status !== "menunggu_review_kadis_pelapor") {
+      return res.status(400).json({ status: "error", message: `Status SPK saat ini: ${spk.status}. Harus menunggu_review_kadis_pelapor.` });
+    }
+
+    await spk.update({
+      status: "selesai",
+      kadis_pelapor_approved_by: req.user.name || req.user.nik,
+      kadis_pelapor_approved_at: new Date(),
+    });
+
+    // Notify Teknisi that it's completely done
+    if (spk.execution_nik) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "spk_completed",
+        targetNik: [spk.execution_nik],
+        title: "SPK Selesai",
+        body: `SPK ${spk.orderNumber} telah disetujui sepenuhnya oleh pelapor.`,
+        data: { spkId: spk.orderNumber },
+      });
+    }
+
+    res.json({ status: "success", message: "SPK selesai sepenuhnya.", data: spk });
+  } catch (error) {
+    console.error("Error approve Kadis Pelapor:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+// 4d. Kadis Pelapor Reject
+const rejectKadisPelapor = async (req, res) => {
+  const { order_number } = req.params;
+  const { rejection_note } = req.body;
+  if (!rejection_note) return res.status(400).json({ status: "error", message: "Catatan penolakan harus diisi" });
+
+  try {
+    const spk = await SapSpkCorrective.findByPk(order_number);
+    if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
+    
+    await spk.update({
+      status: "eksekusi", // Kembali ke teknisi
+      rejected_by: req.user.name || req.user.nik,
+      rejected_at: new Date(),
+      rejection_note,
+    });
+
+    // Notify Teknisi
+    if (spk.execution_nik) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "spk_rejected",
+        targetNik: [spk.execution_nik],
+        title: "Laporan SPK Ditolak Pelapor",
+        body: `SPK ${spk.orderNumber} ditolak pelapor: ${rejection_note}. Mohon perbaiki.`,
+        data: { spkId: spk.orderNumber },
+      });
+    }
+
+    res.json({ status: "success", message: "Ditolak. SPK dikembalikan ke teknisi.", data: spk });
+  } catch (error) {
+    console.error("Error reject Kadis Pelapor:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
 module.exports = {
   getSapSpkList,
   uploadExcel,
   bulkInsertSapSpk,
+  claimSapSpk,
   executeSapSpk,
+  getReasonOfVarianceCodes,
+  approveKadisPp,
+  rejectKadisPp,
+  approveKadisPelapor,
+  rejectKadisPelapor,
   deleteSapSpk,
   deleteAllSapSpk,
 };
+

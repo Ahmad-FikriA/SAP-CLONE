@@ -24,10 +24,13 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Routes
+// ── List SPKs ────────────────────────────────────────────────────────────────
 router.get("/", verifyToken, sapSpkController.getSapSpkList);
 
-// Upload Excel endpoint (Returns Preview)
+// ── Reason of Variance codes (for dropdown) ──────────────────────────────────
+router.get("/reason-codes", verifyToken, sapSpkController.getReasonOfVarianceCodes);
+
+// ── Upload Excel endpoint (Returns Preview) ──────────────────────────────────
 router.post(
   "/upload-excel",
   verifyToken,
@@ -35,26 +38,40 @@ router.post(
   sapSpkController.uploadExcel
 );
 
-// Bulk Insert endpoint (Confirms Upload)
+// ── Bulk Insert endpoint (Confirms Upload) ───────────────────────────────────
 router.post(
   "/bulk-insert",
   verifyToken,
   sapSpkController.bulkInsertSapSpk
 );
 
-// Teknisi Execute SPK (Upload Photo Before and After)
+// ── Step 1: Claim SPK (Photo Before + Lock to NIK) ──────────────────────────
+router.post(
+  "/:order_number/claim",
+  verifyToken,
+  upload.single("photoBefore"),
+  sapSpkController.claimSapSpk
+);
+
+// ── Step 2: Complete SPK (Form + Photo After — only by claimer) ──────────────
 router.put(
   "/:order_number/execute",
   verifyToken,
-  upload.fields([
-    { name: "photoBefore", maxCount: 1 },
-    { name: "photoAfter", maxCount: 1 },
-  ]),
+  upload.single("photoAfter"),
   sapSpkController.executeSapSpk
 );
 
-// Delete Endpoints
+// ── Step 3: Approval Kadis PP ────────────────────────────────────────────────
+router.post("/:order_number/approve-kadis-pp", verifyToken, sapSpkController.approveKadisPp);
+router.post("/:order_number/reject-kadis-pp", verifyToken, sapSpkController.rejectKadisPp);
+
+// ── Step 4: Approval Kadis Pelapor ───────────────────────────────────────────
+router.post("/:order_number/approve-kadis-pelapor", verifyToken, sapSpkController.approveKadisPelapor);
+router.post("/:order_number/reject-kadis-pelapor", verifyToken, sapSpkController.rejectKadisPelapor);
+
+// ── Delete Endpoints ─────────────────────────────────────────────────────────
 router.delete("/", verifyToken, sapSpkController.deleteAllSapSpk);
 router.delete("/:order_number", verifyToken, sapSpkController.deleteSapSpk);
 
 module.exports = router;
+

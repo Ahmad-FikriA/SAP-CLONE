@@ -35,20 +35,34 @@ function toDateOnly(raw) {
   return null;
 }
 
-function fmtRequest(notif) {
+/**
+ * Format a Notification record into the API response shape.
+ * @param {Object} notif - Notification model instance or plain object.
+ * @param {Object|null} sapSpk - Matched SapSpkCorrective record (if any).
+ */
+function fmtRequest(notif, sapSpk) {
   const n = notif.toJSON ? notif.toJSON() : notif;
   const spk = n.spkCorrective || {};
+  // SAP SPK data (from SapSpkCorrective table, matched via sapOrderNumber)
+  const sap = sapSpk ? (sapSpk.toJSON ? sapSpk.toJSON() : sapSpk) : null;
 
   const images = [];
   if (n.photo1) images.push(n.photo1);
   if (n.photo2) images.push(n.photo2);
 
-  const beforeImages = (spk.photos || [])
-    .filter((p) => p.photoType === "before")
-    .map((p) => p.photoPath);
-  const afterImages = (spk.photos || [])
-    .filter((p) => p.photoType === "after")
-    .map((p) => p.photoPath);
+  const beforeImages = [];
+  const afterImages = [];
+
+  // Legacy SpkCorrective photos (if association still exists)
+  if (spk.photos) {
+    spk.photos.filter((p) => p.photoType === "before").forEach((p) => beforeImages.push(p.photoPath));
+    spk.photos.filter((p) => p.photoType === "after").forEach((p) => afterImages.push(p.photoPath));
+  }
+  // SAP SPK photos
+  if (sap) {
+    if (sap.photo_before) beforeImages.push(`uploads/corrective/${sap.photo_before}`);
+    if (sap.photo_after) afterImages.push(`uploads/corrective/${sap.photo_after}`);
+  }
 
   const materials = (spk.items || [])
     .filter((i) => i.itemType === "material")
@@ -70,41 +84,48 @@ function fmtRequest(notif) {
     }
   }
 
+  // SAP data can override functional location / equipment if available
+  if (sap) {
+    if (sap.functional_location) finalFuncLoc = sap.functional_location;
+    if (sap.equipment_name) finalEq = sap.equipment_name;
+  }
+
   return {
     id: n.notificationId || n.id,
     notificationDate: n.notificationDate,
     notificationType: n.notificationType,
-    description: n.description,
+    description: sap?.description || n.description,
     functionalLocation: finalFuncLoc,
     equipment: finalEq,
-    requiredStart: n.requiredStart,
-    requiredEnd: n.requiredEnd,
-    reportedBy: n.reportedBy,
+    requiredStart: sap?.work_start || n.requiredStart,
+    requiredEnd: sap?.work_finish || n.requiredEnd,
+    reportedBy: sap?.report_by || n.reportedBy,
     longText: n.longText,
     submittedBy: n.submittedBy,
     submittedAt: n.submittedAt,
     status: n.status,
     approvalStatus:
       n.status === "closed" ? "selesai" : n.approvalStatus || "pending",
-    workCenter: spk.workCenter || n.workCenter,
+    workCenter: sap?.work_center || spk.workCenter || n.workCenter,
     sapOrderNumber: n.sapOrderNumber,
     rejectionReason: n.rejectionReason,
     images,
     spkId: spk.spkId,
-    spkNumber: spk.spkNumber,
+    spkNumber: spk.spkNumber || n.sapOrderNumber,
     priority: spk.priority,
-    targetDate: spk.requestedFinishDate,
+    targetDate: sap?.work_finish || spk.requestedFinishDate,
     classification: spk.damageClassification,
-    personnelCount: spk.plannedWorker,
-    estimatedDuration: spk.totalPlannedHour,
-    instructions: spk.jobDescription,
+    numOfWork: sap?.num_of_work || spk.plannedWorker,
+    personnelCount: sap?.num_of_work || spk.plannedWorker,
+    estimatedDuration: sap?.dur_plan != null ? Number(sap.dur_plan) : (spk.totalPlannedHour || null),
+    instructions: sap?.short_text || spk.jobDescription,
     beforeImages,
     afterImages,
     materials,
     tools,
-    actualPersonnelCount: spk.actualWorker,
-    actualDuration: spk.totalActualHour,
-    executionResultText: spk.jobResultDescription,
+    actualPersonnelCount: sap?.actual_personnel || spk.actualWorker,
+    actualDuration: sap?.total_actual_hour != null ? Number(sap.total_actual_hour) : (spk.totalActualHour || null),
+    executionResultText: sap?.job_result_description || spk.jobResultDescription,
   };
 }
 
@@ -130,7 +151,21 @@ const getAll = async (req, res) => {
       order: [["submittedAt", "DESC"]],
     });
 
-    res.json(data.map(fmtRequest));
+    // Look up matching SAP SPK records for all notifications that have sapOrderNumber
+    const sapOrderNumbers = data
+      .map((n) => n.sapOrderNumber)
+      .filter(Boolean);
+    let sapSpkMap = {};
+    if (sapOrderNumbers.length > 0) {
+      const sapSpks = await SapSpkCorrective.findAll({
+        where: { order_number: { [Op.in]: sapOrderNumbers } },
+      });
+      sapSpkMap = Object.fromEntries(
+        sapSpks.map((s) => [s.order_number, s])
+      );
+    }
+
+    res.json(data.map((n) => fmtRequest(n, sapSpkMap[n.sapOrderNumber] || null)));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -142,7 +177,14 @@ const getOne = async (req, res) => {
     const notification = await Notification.findByPk(req.params.id);
     if (!notification)
       return res.status(404).json({ error: "Notification not found" });
-    res.json(fmtRequest(notification));
+
+    // Look up matching SAP SPK record
+    let sapSpk = null;
+    if (notification.sapOrderNumber) {
+      sapSpk = await SapSpkCorrective.findByPk(notification.sapOrderNumber);
+    }
+
+    res.json(fmtRequest(notification, sapSpk));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

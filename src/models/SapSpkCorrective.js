@@ -52,15 +52,29 @@ const SapSpkCorrective = sequelize.define(
       ),
       defaultValue: "baru_import",
     },
-    actual_materials: DataTypes.TEXT,
-    actual_tools: DataTypes.TEXT,
-    actual_personnel: DataTypes.INTEGER,
-    total_actual_hour: DataTypes.DECIMAL(10, 2),
+
+    // ── Claim / Ownership Lock ────────────────────────────────────────────
     execution_nik: DataTypes.STRING,
-    job_result_description: DataTypes.TEXT,
+    execution_name: DataTypes.STRING,
+    claimed_at: DataTypes.DATE,
     photo_before: DataTypes.STRING,
     photo_after: DataTypes.STRING,
-    
+
+    // ── Technician Execution Fields (filled on complete) ──────────────────
+    actual_conf_text: DataTypes.TEXT,          // Deskripsi perbaikan setelah
+    actual_reason_of_var: DataTypes.STRING,    // Kode 0001-0009
+    actual_work_start: DataTypes.DATEONLY,     // Tanggal mulai kerja aktual
+    actual_work_finish: DataTypes.DATEONLY,    // Tanggal selesai kerja aktual
+    actual_start_time: DataTypes.TIME,         // Jam mulai aktual (HH:mm:ss)
+    actual_finish_time: DataTypes.TIME,        // Jam selesai aktual (HH:mm:ss)
+    actual_materials: DataTypes.TEXT,
+    actual_tools: DataTypes.TEXT,
+    actual_personnel: DataTypes.INTEGER,       // Jumlah pekerja aktual
+    actual_work: DataTypes.DECIMAL(10, 2),     // Jam kerja per orang (override SAP)
+    total_actual_hour: DataTypes.DECIMAL(10, 2), // Auto: actual_personnel × actual_work
+    job_result_description: DataTypes.TEXT,
+
+    // ── Approval Tracking ─────────────────────────────────────────────────
     kadis_pusat_approved_by: DataTypes.STRING,
     kadis_pusat_approved_at: DataTypes.DATE,
     kadis_pelapor_approved_by: DataTypes.STRING,
