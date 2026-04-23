@@ -412,7 +412,59 @@ const deleteAll = async (req, res) => {
     });
     res.json({ message: `Berhasil menghapus ${count} notifikasi.` });
   } catch (error) {
-    console.error("Error deleting all requests:", error);
+    console.error("Error rejecting request:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /api/corrective/requests/:id/update-sap-number
+const updateSapNumber = async (req, res) => {
+  try {
+    const { sapOrderNumber } = req.body;
+
+    if (!sapOrderNumber || !/^\d{10}$/.test(sapOrderNumber)) {
+      return res
+        .status(400)
+        .json({ error: "No. Order SPK SAP harus 10 digit angka" });
+    }
+
+    const notification = await Notification.findByPk(req.params.id);
+    if (!notification) {
+      return res.status(404).json({ error: "Notifikasi tidak ditemukan" });
+    }
+
+    await notification.update({ sapOrderNumber });
+
+    // Check if SPK already exists in SAP table
+    const spkExists = await SapSpkCorrective.findByPk(sapOrderNumber);
+    if (spkExists) {
+      // Update status to reflect that SPK is now in the system
+      await notification.update({ approvalStatus: "spk_issued" });
+
+      // Notify Pelapor
+      if (notification.kadisPelaporId) {
+        const pelaporUser = await User.findByPk(notification.kadisPelaporId, {
+          attributes: ["nik"],
+        });
+        if (pelaporUser?.nik) {
+          await NotificationService.notify({
+            module: "corrective",
+            targetNik: pelaporUser.nik,
+            title: "SPK Corrective Ditemukan",
+            body: `Laporan ${notification.notificationId} telah cocok dengan SPK SAP ${sapOrderNumber}. Progres kini dapat dipantau.`,
+            data: {
+              id: notification.id,
+              type: "corrective_notification_approved",
+              sapOrderNumber: sapOrderNumber,
+            },
+          });
+        }
+      }
+    }
+
+    res.json({ success: true, data: fmtRequest(notification) });
+  } catch (error) {
+    console.error("Error updating SAP number:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -422,6 +474,12 @@ const approvePlanner = async (req, res) => {
   const { sapOrderNumber } = req.body;
   if (!sapOrderNumber) {
     return res.status(400).json({ error: "No. Order SPK SAP wajib diisi" });
+  }
+
+  if (!/^\d{10}$/.test(sapOrderNumber)) {
+    return res
+      .status(400)
+      .json({ error: "No. Order SPK SAP harus 10 digit angka" });
   }
 
   const notification = await Notification.findByPk(req.params.id);
@@ -443,6 +501,12 @@ const approvePlanner = async (req, res) => {
     status: "approved",
     approvalStatus: "approved",
   });
+
+  // If SPK already exists in SAP table, update status to spk_issued
+  const spkExists = await SapSpkCorrective.findByPk(sapOrderNumber);
+  if (spkExists) {
+    await notification.update({ approvalStatus: "spk_issued" });
+  }
 
   const fresh = await Notification.findByPk(
     notification.notificationId || notification.id,

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { apiGet, apiPost } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ import {
   Wrench,
   CheckCircle2,
   Trash2,
+  Edit2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -282,7 +284,12 @@ export default function CorrectivePage() {
 
   function triggerApprovePlanner(id) {
     setSapOrderNumberInput("");
-    setApproveSapState({ id });
+    setApproveSapState({ id, isEdit: false });
+  }
+
+  function triggerEditSapNumber(req) {
+    setSapOrderNumberInput(req.sapOrderNumber || "");
+    setApproveSapState({ id: req.id, isEdit: true });
   }
 
   function triggerRejectPlanner(id) {
@@ -319,22 +326,31 @@ export default function CorrectivePage() {
     );
   }
 
-  async function submitApprovePlanner() {
-    if (!approveSapState || !sapOrderNumberInput.trim()) return;
+  async function confirmApproveSap() {
+    if (!/^\d{10}$/.test(sapOrderNumberInput)) {
+      toast.error("Nomor SAP harus 10 digit angka!");
+      return;
+    }
+
     setConfirming(true);
     try {
-      await apiPost(
-        `/corrective/requests/${approveSapState.id}/approve-planner`,
-        {
-          sapOrderNumber: sapOrderNumberInput.trim(),
-        },
+      const endpoint = approveSapState.isEdit
+        ? `/corrective/requests/${approveSapState.id}/update-sap-number`
+        : `/corrective/requests/${approveSapState.id}/approve-planner`;
+
+      await apiPost(endpoint, {
+        sapOrderNumber: sapOrderNumberInput,
+      });
+
+      toast.success(
+        approveSapState.isEdit
+          ? "Nomor SAP berhasil diperbarui"
+          : "Laporan berhasil diterima",
       );
-      toast.success("Laporan berhasil diterima & disinkronisasikan!");
       setApproveSapState(null);
-      setSelectedRequest(null);
       loadAll();
-    } catch (e) {
-      toast.error(e.message || "Gagal menerima laporan");
+    } catch (error) {
+      toast.error(error.message || "Gagal memproses data");
     } finally {
       setConfirming(false);
     }
@@ -607,12 +623,12 @@ export default function CorrectivePage() {
           <Table>
             <TableHeader className="bg-slate-50/80">
               <TableRow>
-                <TableHead className="w-[100px]">ID Laporan</TableHead>
+                <TableHead>ID Laporan</TableHead>
                 <TableHead>Info Waktu & Pelapor</TableHead>
                 <TableHead>Lokasi & Equipment</TableHead>
-                <TableHead>Tipe</TableHead>
+                <TableHead>No. SAP SPK</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableHead className="text-right pr-16">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -666,8 +682,24 @@ export default function CorrectivePage() {
                         {req.functionalLocation || "—"}
                       </div>
                     </TableCell>
-                    <TableCell className="text-slate-600">
-                      {req.notificationType || "—"}
+                    <TableCell>
+                      <div className="flex items-center gap-2 group">
+                        <span className="font-mono text-xs text-slate-600">
+                          {req.sapOrderNumber || "—"}
+                        </span>
+                        {req.approvalStatus === "approved" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerEditSapNumber(req);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-all"
+                            title="Edit Nomor SAP"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <StatusBadge
@@ -722,10 +754,10 @@ export default function CorrectivePage() {
               <TableRow>
                 <TableHead>Order Number</TableHead>
                 <TableHead>Tanggal Posting</TableHead>
-                <TableHead>Equipment</TableHead>
+                <TableHead>Equipment & Lokasi</TableHead>
                 <TableHead>Jam / Pekerja</TableHead>
                 <TableHead>Status SAP</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableHead className="text-right pr-16">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -757,29 +789,39 @@ export default function CorrectivePage() {
                     <TableCell className="text-slate-600 font-medium">
                       {fmtDate(spk.posting_date)}
                     </TableCell>
-                    <TableCell
-                      className="text-slate-600 truncate max-w-[200px]"
-                      title={spk.equipment_name}
-                    >
-                      {spk.equipment_name || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <span className="flex items-center gap-1 text-xs">
-                          <Wrench size={12} /> {spk.actual_personnel || 0} org
-                        </span>
-                        <span className="flex items-center gap-1 text-xs">
-                          <AlertCircle size={12} /> {spk.total_actual_hour || 0}{" "}
-                          jam
-                        </span>
+                    <TableCell className="max-w-[200px]">
+                      <div
+                        className="font-medium text-slate-800 truncate"
+                        title={spk.equipment_name}
+                      >
+                        {spk.equipment_name || "—"}
+                      </div>
+                      <div
+                        className="text-[11px] text-slate-500 truncate"
+                        title={spk.functional_location}
+                      >
+                        {spk.functional_location || "—"}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <StatusBadge
-                        value={spk.status}
-                        colorMap={SAP_STATUS_COLORS}
-                        labelMap={SAP_STATUS_LABELS}
-                      />
+                      <div className="flex flex-col gap-1 text-slate-600">
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-1 text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-medium">
+                            Plan: {spk.num_of_work || "—"} org
+                          </span>
+                          <span className="flex items-center gap-1 text-[10px] bg-blue-50 px-1.5 py-0.5 rounded text-blue-600 font-bold">
+                            Act: {spk.actual_personnel || 0} org
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                          <AlertCircle size={10} /> {spk.total_actual_hour || 0} jam total
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-[11px] font-bold text-slate-700 font-mono tracking-tight leading-none">
+                        {spk.sys_status || "—"}
+                      </span>
                     </TableCell>
                     <TableCell
                       className="text-right"
@@ -1059,55 +1101,80 @@ export default function CorrectivePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Approve with SAP Dialog */}
       <Dialog
         open={!!approveSapState}
         onOpenChange={(o) => !o && setApproveSapState(null)}
       >
-        <DialogContent showCloseButton={false} className="max-w-md p-0 rounded-2xl overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-500 p-6 text-white text-center">
-            <Wrench className="w-12 h-12 mx-auto mb-3 opacity-90" />
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-md p-0 rounded-2xl overflow-hidden"
+        >
+          <div
+            className={cn(
+              "p-6 text-white text-center",
+              approveSapState?.isEdit
+                ? "bg-gradient-to-r from-slate-700 to-slate-600"
+                : "bg-gradient-to-r from-blue-600 to-blue-500",
+            )}
+          >
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+              <FileText className="text-white" size={24} />
+            </div>
             <DialogTitle className="text-xl font-bold">
-              Sinkronisasi SPK SAP
+              {approveSapState?.isEdit ? "Update Nomor SAP" : "Terima Laporan"}
             </DialogTitle>
+            <p className="text-blue-50/80 text-sm mt-1">
+              {approveSapState?.isEdit
+                ? "Sesuaikan nomor order SAP jika ada kesalahan"
+                : "Masukkan nomor order SPK dari SAP untuk melanjutkan"}
+            </p>
           </div>
-          <div className="p-6 space-y-4 bg-slate-50">
-            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-blue-800 leading-relaxed">
-              Silakan buat SPK di sistem SAP terlebih dahulu berdasarkan laporan
-              ini. Kemudian, masukkan{" "}
-              <strong className="font-bold">No. Order SPK</strong> yang
-              di-generate oleh SAP di bawah ini untuk menghubungkan laporan
-              dengan SPK.
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">
-                No. Order SPK SAP <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: 2210063999"
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-mono shadow-sm bg-white"
-                value={sapOrderNumberInput}
-                onChange={(e) => setSapOrderNumberInput(e.target.value)}
-              />
+
+          <div className="p-8">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700 ml-1">
+                  No. Order SPK SAP
+                </label>
+                <Input
+                  placeholder="Masukkan 10 digit nomor SAP..."
+                  value={sapOrderNumberInput}
+                  onChange={(e) => setSapOrderNumberInput(e.target.value)}
+                  maxLength={10}
+                  className="h-12 text-lg font-mono tracking-widest text-center focus-visible:ring-blue-500"
+                />
+                <p className="text-[11px] text-slate-400 text-center">
+                  Harus tepat 10 digit angka (0-9)
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 h-11"
+                  onClick={() => setApproveSapState(null)}
+                >
+                  Batal
+                </Button>
+                <Button
+                  className={cn(
+                    "flex-1 h-11 shadow-md",
+                    approveSapState?.isEdit
+                      ? "bg-slate-800 hover:bg-slate-900"
+                      : "bg-blue-600 hover:bg-blue-700",
+                  )}
+                  onClick={confirmApproveSap}
+                  disabled={confirming}
+                >
+                  {confirming
+                    ? "Memproses..."
+                    : approveSapState?.isEdit
+                      ? "Update"
+                      : "Konfirmasi"}
+                </Button>
+              </div>
             </div>
           </div>
-          <DialogFooter className="px-6 pt-4 pb-6 bg-white border-t border-slate-100 flex items-center justify-end gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setApproveSapState(null)}
-              disabled={confirming}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={submitApprovePlanner}
-              disabled={confirming || !sapOrderNumberInput.trim()}
-              className="shadow-sm"
-            >
-              {confirming ? "Menyimpan..." : "Terima & Sinkronkan"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

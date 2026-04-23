@@ -4,6 +4,8 @@ const { Op } = require("sequelize");
 const exceljs = require("exceljs");
 const fs = require("fs");
 const path = require("path");
+const User = require("../../models/User");
+const NotificationService = require("../../services/notificationService");
 
 // 1. Get SAP SPK List
 const getSapSpkList = async (req, res) => {
@@ -97,6 +99,7 @@ const uploadExcel = async (req, res) => {
       ]),
       maint_activ_type: findCol(["maintactivtype", "maint activ type", "maint. activ. type"]),
       actual_work: findCol(["actual work"]),
+      num_of_work: findCol(["no. of work", "num of work", "no.of work", "number of work"]),
       location: findCol(["location"]),
     };
 
@@ -154,6 +157,7 @@ const uploadExcel = async (req, res) => {
         functional_location: getVal("functional_location"),
         maint_activ_type: getVal("maint_activ_type"),
         actual_work: parseFloat(getVal("actual_work")) || null,
+        num_of_work: parseInt(getVal("num_of_work")) || null,
         location: getVal("location"),
       });
     });
@@ -263,9 +267,47 @@ const bulkInsertSapSpk = async (req, res) => {
         "functional_location",
         "maint_activ_type",
         "actual_work",
+        "num_of_work",
         "location",
       ],
     });
+
+    // 🔔 Trigger FCM for matching notifications
+    try {
+      const newOrderNumbers = spks.map((s) => s.order_number);
+      const matchingNotifications = await Notification.findAll({
+        where: {
+          sapOrderNumber: { [Op.in]: newOrderNumbers },
+        },
+      });
+
+      for (const notif of matchingNotifications) {
+        if (notif.kadisPelaporId) {
+          const pelaporUser = await User.findByPk(notif.kadisPelaporId, {
+            attributes: ["nik"],
+          });
+          if (pelaporUser?.nik) {
+            // Update status to spk_issued
+            await notif.update({ approvalStatus: "spk_issued" });
+
+            await NotificationService.notify({
+              module: "corrective",
+              targetNik: pelaporUser.nik,
+              title: "SPK Corrective Terbit",
+              body: `SPK SAP untuk laporan ${notif.notificationId} telah tersedia (${notif.sapOrderNumber}). Silakan cek progres di aplikasi.`,
+              data: {
+                id: notif.id,
+                type: "corrective_notification_approved",
+                sapOrderNumber: notif.sapOrderNumber,
+              },
+            });
+          }
+        }
+      }
+    } catch (notifErr) {
+      console.error("Error sending matching notifications:", notifErr);
+      // Don't fail the whole request if notification fails
+    }
 
     res.status(200).json({
       status: "success",

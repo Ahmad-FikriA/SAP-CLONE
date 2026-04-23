@@ -35,6 +35,10 @@ const SapSpkCorrective = sequelize.define(
     equipment_name: DataTypes.STRING,
     functional_location: DataTypes.STRING,
     actual_work: DataTypes.DECIMAL(10, 2),
+    num_of_work: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     
     // Custom Fields
     status: {
