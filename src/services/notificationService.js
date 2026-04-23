@@ -72,31 +72,34 @@ async function notify({ module, type, title, body, data = {}, recipientIds = [] 
   const { User, PushNotification } = getModels();
 
   try {
-    await PushNotification.bulkCreate(
-      normalizedRecipientIds.map((recipientId) => ({
-        module,
-        type,
-        title,
-        body,
-        data,
-        recipientId,
-        isRead: false,
-      }))
-    );
-  } catch (err) {
-    console.error('[NotificationService] Failed to persist notification:', err.message);
-  }
-
-  try {
-    if (!ensureInitialized()) return;
     const { Op } = require('sequelize');
 
-    // 1. Look up FCM tokens for all recipients
-    // recipientIds berisi NIK (bukan primary key id), jadi query by nik
+    // 1. Look up users by NIK (since recipientIds contains NIKs)
     const users = await User.findAll({
       where: { nik: { [Op.in]: normalizedRecipientIds } },
       attributes: ['id', 'nik', 'fcmToken'],
     });
+
+    if (users.length === 0) return;
+
+    // 2. Persist to PushNotification using user.id
+    try {
+      await PushNotification.bulkCreate(
+        users.map((u) => ({
+          module,
+          type,
+          title,
+          body,
+          data,
+          recipientId: u.id,
+          isRead: false,
+        }))
+      );
+    } catch (err) {
+      console.error('[NotificationService] Failed to persist notification:', err.message);
+    }
+
+    if (!ensureInitialized()) return;
 
     const tokens = users.filter((u) => u.fcmToken).map((u) => u.fcmToken);
 

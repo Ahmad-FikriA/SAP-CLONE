@@ -145,6 +145,19 @@ async function updateSchedule(req, res) {
 
     await schedule.update(req.body);
 
+    const recipientNik = String(schedule.assignedTo || INSPECTION_PLANNER_NIK);
+    notify({
+      module: 'inspection',
+      type: 'schedule_updated',
+      title: 'Update Jadwal Inspeksi',
+      body: `Jadwal inspeksi "${schedule.title}" telah diperbarui. Status: ${schedule.status}.`,
+      data: {
+        deepLink: 'inspection/draft',
+        scheduleId: String(schedule.id),
+      },
+      recipientIds: [recipientNik],
+    });
+
     res.json({ success: true, message: "Schedule updated.", data: schedule });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -269,4 +282,68 @@ async function createRecurringSchedules(req, res) {
   }
 }
 
-module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, getNextSpkNumber, createRecurringSchedules };
+// CRON JOB — Send reminders for today and overdue schedules
+async function sendInspectionReminders() {
+  const LABEL = "[Inspection Cron]";
+  try {
+    const { Op } = require("sequelize");
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const activeSchedules = await InspectionSchedule.findAll({
+      where: {
+        status: { [Op.in]: ["scheduled", "in_progress"] },
+        assignedTo: { [Op.not]: null },
+        scheduledDate: { [Op.not]: null },
+      },
+      attributes: ["id", "title", "scheduledDate", "assignedTo", "status"],
+    });
+
+    if (!activeSchedules.length) {
+      console.log(`${LABEL} No active schedules need reminders.`);
+      return;
+    }
+
+    let todayCount = 0;
+    let overdueCount = 0;
+
+    for (const schedule of activeSchedules) {
+      const scheduleDateStr = schedule.scheduledDate;
+
+      if (scheduleDateStr === todayStr) {
+        // Today
+        notify({
+          module: 'inspection',
+          type: 'schedule_reminder_today',
+          title: 'Pengingat Inspeksi Hari Ini',
+          body: `Anda memiliki jadwal inspeksi hari ini: "${schedule.title}".`,
+          data: {
+            deepLink: 'inspection/draft',
+            scheduleId: String(schedule.id),
+          },
+          recipientIds: [String(schedule.assignedTo)],
+        });
+        todayCount++;
+      } else if (scheduleDateStr < todayStr) {
+        // Overdue
+        notify({
+          module: 'inspection',
+          type: 'schedule_reminder_overdue',
+          title: 'Inspeksi Terlewat (Overdue)',
+          body: `Jadwal inspeksi "${schedule.title}" telah terlewat dari tanggal ${scheduleDateStr}. Mohon segera ditindaklanjuti.`,
+          data: {
+            deepLink: 'inspection/draft',
+            scheduleId: String(schedule.id),
+          },
+          recipientIds: [String(schedule.assignedTo)],
+        });
+        overdueCount++;
+      }
+    }
+
+    console.log(`${LABEL} Sent reminders: ${todayCount} today, ${overdueCount} overdue.`);
+  } catch (error) {
+    console.error(`${LABEL} Failed to run reminder cron:`, error.message);
+  }
+}
+
+module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, getNextSpkNumber, createRecurringSchedules, sendInspectionReminders };

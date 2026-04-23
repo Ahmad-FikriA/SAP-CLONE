@@ -375,6 +375,19 @@ async function cancelRequest(req, res) {
           : "[Dibatalkan User]",
     });
 
+    // Notifikasi ke Planner bahwa request dibatalkan
+    notify({
+      module: 'inspection',
+      type: 'request_cancelled',
+      title: 'Permintaan Inspeksi Dibatalkan',
+      body: `Permintaan "${request.judul}" telah dibatalkan oleh pemohon.`,
+      data: {
+        deepLink: 'inspection/permintaan',
+        requestId: String(request.id),
+      },
+      recipientIds: [INSPECTION_PLANNER_NIK],
+    });
+
     res.json({
       success: true,
       message: "Permintaan inspeksi berhasil dibatalkan.",

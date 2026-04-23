@@ -467,6 +467,20 @@ async function updateReport(req, res) {
       include: [{ association: "schedule" }, { association: "photos" }],
     });
 
+    if (nextStatus === "submitted" && report.status !== "submitted") {
+      notify({
+        module: 'inspection',
+        type: 'report_submitted',
+        title: 'Laporan Inspeksi Baru',
+        body: `Laporan inspeksi dari ${req.user?.nik || 'inspektor'} untuk jadwal #${report.scheduleId} menunggu persetujuan Anda.`,
+        data: {
+          deepLink: 'inspection/laporan-masuk',
+          reportId: String(updated.id),
+        },
+        recipientIds: [INSPECTION_APPROVER_NIK],
+      });
+    }
+
     res.json({
       success: true,
       message:

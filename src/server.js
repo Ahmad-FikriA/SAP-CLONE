@@ -36,6 +36,7 @@ const {
 } = require("./models/ensureMeasurementSchema");
 const { ensureInspectionEnums } = require("./migrate_inspection_enums");
 const { markMissedVisitsAsPelanggaran } = require("./controllers/inspection/supervisiController");
+const { sendInspectionReminders } = require("./controllers/inspection/scheduleController");
 const cron = require("node-cron");
 
 // Register all Sequelize model associations (must run before any query)
@@ -328,6 +329,14 @@ sequelize
       timezone: "Asia/Jakarta",
     });
     console.log("[Supervisi Cron] Scheduled daily missed-visit check at 00:01 Asia/Jakarta.");
+
+    // ── Inspeksi: Cron job — kirim pengingat jadwal hari ini dan overdue
+    sendInspectionReminders();
+    // Jadwalkan setiap hari pukul 07:00 server time
+    cron.schedule("0 7 * * *", sendInspectionReminders, {
+      timezone: "Asia/Jakarta",
+    });
+    console.log("[Inspection Cron] Scheduled daily reminders at 07:00 Asia/Jakarta.");
   })
   .catch((err) => {
     console.error("Unable to connect to the database:", err);
