@@ -77,6 +77,9 @@ export const STATUS_LABELS = {
   draft: 'Draft',
   awaiting_kadis_pusat: 'Menunggu Kadis Pusat',
   awaiting_kadis_pelapor: 'Menunggu Kadis Pelapor',
+  // Inspection Schedule statuses
+  scheduled: 'Terjadwal',
+  cancelled: 'Dibatalkan',
 };
 
 export const STATUS_VARIANTS = {
@@ -96,6 +99,9 @@ export const STATUS_VARIANTS = {
   draft: 'pending',
   awaiting_kadis_pusat: 'in_progress',
   awaiting_kadis_pelapor: 'in_progress',
+  // Inspection Schedule statuses
+  scheduled: 'pending',
+  cancelled: 'error',
 };
 
 export const GEOJSON_FEATURE_COLORS = {

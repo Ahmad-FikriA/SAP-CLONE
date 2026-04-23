@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, Wrench, Upload, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
-  ChevronLeft, ChevronRight, ClipboardCheck, BarChart2,
+  ChevronLeft, ChevronRight, ClipboardCheck, BarChart2, ClipboardList,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser } from '@/lib/auth';
@@ -28,6 +28,8 @@ const NAV = [
   { href: '/interval-planner', label: 'Interval Planner', Icon: Calendar },
   { divider: true },
   { href: '/submissions', label: 'Submissions', Icon: Activity },
+  { divider: true },
+  { href: '/inspeksi', label: 'Inspeksi', Icon: ClipboardList },
 ];
 
 export default function Sidebar() {
