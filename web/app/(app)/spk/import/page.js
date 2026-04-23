@@ -13,12 +13,14 @@ import { Printer, X } from 'lucide-react';
 const BASE = process.env.NEXT_PUBLIC_API_URL;
 const INTERVALS = ['1wk', '2wk', '3wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
 
-const RESOLUTION_LABELS = { auto: 'Auto', ambiguous: 'Pilih', unknown: 'Manual', exists: 'Sudah Ada' };
+const RESOLUTION_LABELS = { auto: 'Auto', suggested: 'Saran', ambiguous: 'Pilih', unknown: 'Manual', exists: 'Sudah Ada', partial: 'Partial' };
 const RESOLUTION_COLORS = {
-  auto: 'bg-green-100 text-green-700',
+  auto:      'bg-green-100 text-green-700',
+  suggested: 'bg-blue-100 text-blue-700',
   ambiguous: 'bg-yellow-100 text-yellow-700',
-  unknown: 'bg-orange-100 text-orange-700',
-  exists: 'bg-gray-100 text-gray-500',
+  unknown:   'bg-orange-100 text-orange-700',
+  partial:   'bg-orange-100 text-orange-700',
+  exists:    'bg-gray-100 text-gray-500',
 };
 
 const HEADER_BG    = '#1b3a5c';
@@ -104,8 +106,8 @@ export default function SpkImportPage() {
     setOrders((prev) => { const next = [...prev]; next[idx] = { ...next[idx], interval }; return next; });
   }
 
-  const pendingCount = orders.filter((o) => !o.alreadyExists && o.intervalResolution !== 'auto' && !o.interval).length;
-  const readyCount   = orders.filter((o) => !o.alreadyExists && (o.intervalResolution === 'auto' || o.interval)).length;
+  const pendingCount = orders.filter((o) => !o.alreadyExists && o.intervalResolution !== 'auto' && o.intervalResolution !== 'suggested' && !o.interval).length;
+  const readyCount   = orders.filter((o) => !o.alreadyExists && (o.intervalResolution === 'auto' || o.intervalResolution === 'suggested' || o.interval)).length;
   const total        = orders.length;
   const exists       = orders.filter((o) => o.alreadyExists).length;
   const auto         = orders.filter((o) => !o.alreadyExists && o.intervalResolution === 'auto').length;
@@ -261,14 +263,31 @@ export default function SpkImportPage() {
                     <td className="px-3 py-2.5">
                       {o.alreadyExists ? <span className="text-gray-400">—</span>
                         : o.intervalResolution === 'auto'
-                          ? <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">{o.interval}</span>
-                          : (
+                          ? (
                             <select value={o.interval || ''} onChange={(e) => onIntervalChange(idx, e.target.value)}
-                              className="px-2 py-1 border border-gray-200 rounded text-xs bg-white">
+                              className="px-2 py-1 border border-green-300 rounded text-xs bg-green-50 text-green-800 font-medium">
                               <option value="">Pilih...</option>
-                              {(o.intervalOptions || INTERVALS).map((iv) => <option key={iv} value={iv}>{iv}</option>)}
+                              {INTERVALS.map((iv) => <option key={iv} value={iv}>{iv}</option>)}
                             </select>
-                          )}
+                          )
+                          : o.intervalResolution === 'suggested'
+                            ? (
+                              <div className="flex items-center gap-1.5">
+                                <select value={o.interval || ''} onChange={(e) => onIntervalChange(idx, e.target.value)}
+                                  className="px-2 py-1 border border-blue-300 rounded text-xs bg-blue-50 text-blue-800 font-medium">
+                                  <option value="">Pilih...</option>
+                                  {(o.intervalOptions && o.intervalOptions.length ? o.intervalOptions : INTERVALS).map((iv) => <option key={iv} value={iv}>{iv}</option>)}
+                                </select>
+                                <span className="text-[10px] text-blue-500" title="Disarankan berdasarkan jadwal minggu ini">💡</span>
+                              </div>
+                            )
+                            : (
+                              <select value={o.interval || ''} onChange={(e) => onIntervalChange(idx, e.target.value)}
+                                className="px-2 py-1 border border-gray-200 rounded text-xs bg-white">
+                                <option value="">Pilih...</option>
+                                {(o.intervalOptions || INTERVALS).map((iv) => <option key={iv} value={iv}>{iv}</option>)}
+                              </select>
+                            )}
                     </td>
                     <td className="px-3 py-2.5">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${RESOLUTION_COLORS[o.alreadyExists ? 'exists' : o.intervalResolution] || ''}`}>

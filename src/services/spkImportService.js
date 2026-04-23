@@ -9,6 +9,7 @@ const FunctionalLocation = require('../models/FunctionalLocation');
 const Plant = require('../models/Plant');
 const { GeneralTaskList } = require('../models/GeneralTaskList');
 const { Spk } = require('../models/Spk');
+const PreventiveWeekSchedule = require('../models/PreventiveWeekSchedule');
 
 // ── Planner Group → category name ────────────────────────────────────────────
 const PLANNER_GROUP_MAP = {
@@ -185,9 +186,18 @@ function parseExcelBuffer(buffer) {
  * Async. Mutates each order in-place, adding:
  *   interval, intervalResolution, intervalOptions
  *
- * Resolves solely from equipment_interval_mappings (single bulk query).
- * We trust SAP's schedule for which equipment is due — no week schedule
- * cross-reference needed. If equipment has one mapping → auto. Multiple → ambiguous.
+ * Primary resolution: equipment_interval_mappings (single bulk query).
+ * Secondary resolution (for 'ambiguous' orders only): cross-reference the
+ * preventive_week_schedules table using the order's scheduledDate.
+ *
+ * Resolution states:
+ *   'auto'      — single mapping matched → locked (green badge, no dropdown)
+ *   'suggested' — ambiguous but week schedule narrows it to 1 option →
+ *                 pre-filled dropdown (planner can still override for cross-check)
+ *   'ambiguous' — multiple mappings, week schedule doesn't narrow it down →
+ *                 blank dropdown, planner must pick
+ *   'partial'   — task list known but interval missing → blank dropdown
+ *   'unknown'   — no mapping at all → blank dropdown
  */
 async function resolveIntervals(orders) {
   if (!orders.length) return;
@@ -234,10 +244,13 @@ async function resolveIntervals(orders) {
       order.intervalResolution = 'auto';
       order.intervalOptions    = full.map(e => e.interval);
     } else if (full.length > 1) {
+      // Multiple mappings → ambiguous; week-schedule narrowing happens in pass-2 below
       order.interval           = null;
       order.taskListId         = null;
       order.intervalResolution = 'ambiguous';
       order.intervalOptions    = full.map(e => e.interval);
+      // Stash the full entries so pass-2 can recover the taskListId if it narrows down
+      order._fullEntries       = full;
     } else if (partial.length > 0) {
       // Task list saved from a previous auto-learn, but interval not yet filled in
       order.interval           = null;
@@ -250,6 +263,60 @@ async function resolveIntervals(orders) {
       order.intervalResolution = 'unknown';
       order.intervalOptions    = [];
     }
+  }
+
+  // ── Pass 2: week-schedule narrowing for ambiguous orders ─────────────────
+  // Only run if there are any ambiguous orders that have a scheduledDate.
+  const ambiguousOrders = orders.filter(
+    o => !o.isSipil && o.intervalResolution === 'ambiguous' && o.scheduledDate
+  );
+
+  if (ambiguousOrders.length > 0) {
+    // Build set of (year, weekNumber) pairs from the ambiguous orders' scheduled dates
+    const weekKeys = new Set();
+    for (const order of ambiguousOrders) {
+      const { weekNumber, weekYear } = isoToWeek(order.scheduledDate);
+      if (weekNumber && weekYear) weekKeys.add(`${weekYear}-${weekNumber}`);
+    }
+
+    // Bulk-fetch all active intervals for those weeks in one query
+    const weekScheduleRows = await PreventiveWeekSchedule.findAll({
+      attributes: ['year', 'weekNumber', 'interval'],
+    });
+
+    // Build map: "year-weekNumber" → Set of active intervals
+    const weekActiveMap = {};
+    for (const row of weekScheduleRows) {
+      const key = `${row.year}-${row.weekNumber}`;
+      if (!weekActiveMap[key]) weekActiveMap[key] = new Set();
+      weekActiveMap[key].add(row.interval);
+    }
+
+    // Narrow down each ambiguous order
+    for (const order of ambiguousOrders) {
+      const { weekNumber, weekYear } = isoToWeek(order.scheduledDate);
+      const key = `${weekYear}-${weekNumber}`;
+      const activeIntervals = weekActiveMap[key];
+
+      if (!activeIntervals) continue; // No schedule data for this week — leave as ambiguous
+
+      // Intersect the order's possible intervals with the week's active intervals
+      const matches = order.intervalOptions.filter(iv => activeIntervals.has(iv));
+
+      if (matches.length === 1) {
+        // Week schedule narrows it to exactly one — suggest it, but keep dropdown
+        const suggestedInterval = matches[0];
+        const matchedEntry = (order._fullEntries || []).find(e => e.interval === suggestedInterval);
+        order.interval           = suggestedInterval;
+        order.taskListId         = matchedEntry?.taskListId || null;
+        order.intervalResolution = 'suggested';  // pre-filled dropdown, still editable
+        // intervalOptions stays as-is so planner can still switch to another value
+      }
+      // If matches.length === 0 or > 1, leave as 'ambiguous' (no change)
+    }
+
+    // Clean up internal stash (not needed in API response)
+    for (const order of orders) delete order._fullEntries;
   }
 }
 
