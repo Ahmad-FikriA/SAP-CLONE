@@ -2,6 +2,10 @@
 
 const InspectionSchedule = require("../../models/InspectionSchedule");
 const InspectionRequest = require("../../models/InspectionRequest");
+const { notify } = require("../../services/notificationService");
+
+// NIK Planner sebagai fallback notifikasi jadwal baru jika executor belum ada
+const INSPECTION_PLANNER_NIK = "10000262";
 
 /**
  * Schedule Controller — CRUD for inspection schedules.
@@ -109,6 +113,20 @@ async function createSchedule(req, res) {
       success: true,
       message: "Schedule created successfully.",
       data: schedule,
+    });
+
+    // Kirim notifikasi ke executor yang di-assign (atau Planner jika belum ditentukan)
+    const recipientNik = String(assignedTo || INSPECTION_PLANNER_NIK);
+    notify({
+      module: 'inspection',
+      type: 'schedule_created',
+      title: 'Jadwal Inspeksi Baru',
+      body: `Jadwal inspeksi "${title || schedule.title}" telah dibuat untuk Anda.`,
+      data: {
+        deepLink: 'inspection/draft',
+        scheduleId: String(schedule.id),
+      },
+      recipientIds: [recipientNik],
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -227,6 +245,19 @@ async function createRecurringSchedules(req, res) {
     }
 
     const createdSchedules = await InspectionSchedule.bulkCreate(schedulesToCreate);
+
+    // Notifikasi ke executor bahwa ada jadwal berulang baru
+    const executorNik = String(baseSchedule.assignedTo || INSPECTION_PLANNER_NIK);
+    notify({
+      module: 'inspection',
+      type: 'schedule_recurring_created',
+      title: 'Jadwal Inspeksi Berulang Baru',
+      body: `${createdSchedules.length} jadwal inspeksi berulang "${baseSchedule.title}" telah dibuat untuk Anda.`,
+      data: {
+        deepLink: 'inspection/draft',
+      },
+      recipientIds: [executorNik],
+    });
 
     res.status(201).json({
       success: true,

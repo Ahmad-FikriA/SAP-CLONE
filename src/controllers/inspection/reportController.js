@@ -8,6 +8,10 @@ const InspectionSchedule = require("../../models/InspectionSchedule");
 const InspectionFollowUp = require("../../models/InspectionFollowUp");
 const sequelize = require("../../config/database");
 const { buildAccessProfile } = require("../../services/accessProfile");
+const { notify } = require("../../services/notificationService");
+
+// NIK Approver yang menerima notifikasi laporan baru
+const INSPECTION_APPROVER_NIK = "10000262";
 
 const FOLLOW_UP_TARGET_DINAS_HSE = "dinas_hse";
 const FOLLOW_UP_TARGET_DINAS_PERAWATAN = "dinas_perawatan";
@@ -270,6 +274,21 @@ async function createReport(req, res) {
         : "Draft report saved successfully.",
       data: created,
     });
+
+    // Kirim notifikasi ke Approver saat laporan di-submit (bukan draft)
+    if (isSubmitted) {
+      notify({
+        module: 'inspection',
+        type: 'report_submitted',
+        title: 'Laporan Inspeksi Baru',
+        body: `Laporan inspeksi dari ${req.user?.nik || 'inspektor'} untuk jadwal #${scheduleId} menunggu persetujuan Anda.`,
+        data: {
+          deepLink: 'inspection/laporan-masuk',
+          reportId: String(created.id),
+        },
+        recipientIds: [INSPECTION_APPROVER_NIK],
+      });
+    }
   } catch (err) {
     await t.rollback();
     res.status(500).json({ success: false, message: err.message });
@@ -458,6 +477,23 @@ async function approveReport(req, res) {
       ],
     });
 
+    // Notifikasi ke inspektor bahwa laporannya disetujui
+    if (report.submittedBy) {
+      notify({
+        module: 'inspection',
+        type: 'report_approved',
+        title: 'Laporan Inspeksi Disetujui',
+        body: report.hasKerusakan
+          ? 'Laporan inspeksi Anda disetujui. Tindak lanjut perbaikan telah ditugaskan.'
+          : 'Laporan inspeksi Anda telah disetujui. Tidak ada kerusakan ditemukan.',
+        data: {
+          deepLink: 'inspection/riwayat',
+          reportId: String(report.id),
+        },
+        recipientIds: [String(report.submittedBy)],
+      });
+    }
+
     res.json({
       success: true,
       message: report.hasKerusakan
@@ -508,6 +544,23 @@ async function rejectReport(req, res) {
     const updated = await InspectionReport.findByPk(report.id, {
       include: [{ association: "schedule" }, { association: "photos" }],
     });
+
+    // Notifikasi ke inspektor bahwa laporannya dikembalikan untuk revisi
+    if (report.submittedBy) {
+      notify({
+        module: 'inspection',
+        type: 'report_revisions_required',
+        title: 'Laporan Inspeksi Perlu Direvisi',
+        body: `Laporan inspeksi Anda dikembalikan untuk direvisi.${
+          req.body.notes ? ` Catatan: ${req.body.notes}` : ''
+        }`,
+        data: {
+          deepLink: 'inspection/draft',
+          reportId: String(report.id),
+        },
+        recipientIds: [String(report.submittedBy)],
+      });
+    }
 
     res.json({
       success: true,

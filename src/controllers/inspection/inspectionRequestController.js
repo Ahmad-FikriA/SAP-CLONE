@@ -3,6 +3,10 @@
 const InspectionRequest = require("../../models/InspectionRequest");
 const InspectionSchedule = require("../../models/InspectionSchedule");
 const { buildAccessProfile } = require("../../services/accessProfile");
+const { notify } = require("../../services/notificationService");
+
+// NIK Planner & Approver yang menerima notifikasi request baru
+const INSPECTION_PLANNER_NIK = "10000262";
 
 /**
  * InspectionRequest Controller
@@ -161,6 +165,19 @@ async function createRequest(req, res) {
       status: "pending",
     });
 
+    // Kirim FCM push notification ke Planner
+    notify({
+      module: 'inspection',
+      type: 'request_created',
+      title: 'Permintaan Inspeksi Baru',
+      body: `Permintaan "${judul}" dari ${finalRequestedBy} menunggu persetujuan Anda.`,
+      data: {
+        deepLink: 'inspection/permintaan',
+        requestId: String(request.id),
+      },
+      recipientIds: [INSPECTION_PLANNER_NIK],
+    });
+
     res.status(201).json({
       success: true,
       message: "Permintaan inspeksi berhasil dibuat.",
@@ -230,6 +247,19 @@ async function approveRequest(req, res) {
       scheduleId: schedule.id,
     });
 
+    // Notifikasi ke pemohon bahwa request-nya disetujui
+    notify({
+      module: 'inspection',
+      type: 'request_approved',
+      title: 'Permintaan Inspeksi Disetujui',
+      body: `Permintaan inspeksi Anda untuk "${request.judul}" telah disetujui dan dijadwalkan.`,
+      data: {
+        deepLink: 'inspection/riwayat',
+        requestId: String(request.id),
+      },
+      recipientIds: [String(request.requestedBy)],
+    });
+
     res.json({
       success: true,
       message: "Permintaan inspeksi disetujui. Jadwal otomatis dibuat.",
@@ -264,6 +294,21 @@ async function rejectRequest(req, res) {
       approvedBy: req.user?.nik,
       approvedAt: new Date(),
       notes: req.body.notes,
+    });
+
+    // Notifikasi ke pemohon bahwa request-nya perlu direvisi
+    notify({
+      module: 'inspection',
+      type: 'request_revisions_required',
+      title: 'Permintaan Inspeksi Perlu Revisi',
+      body: `Permintaan inspeksi Anda untuk "${request.judul}" dikembalikan untuk diperbaiki.${
+        req.body.notes ? ` Catatan: ${req.body.notes}` : ''
+      }`,
+      data: {
+        deepLink: 'inspection/permintaan',
+        requestId: String(request.id),
+      },
+      recipientIds: [String(request.requestedBy)],
     });
 
     res.json({
