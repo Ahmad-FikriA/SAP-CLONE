@@ -2,6 +2,10 @@
 
 const InspectionSchedule = require("../../models/InspectionSchedule");
 const InspectionRequest = require("../../models/InspectionRequest");
+const { notify } = require("../../services/notificationService");
+
+// NIK Planner sebagai fallback notifikasi jadwal baru jika executor belum ada
+const INSPECTION_PLANNER_NIK = "10000262";
 
 /**
  * Schedule Controller — CRUD for inspection schedules.
@@ -110,6 +114,20 @@ async function createSchedule(req, res) {
       message: "Schedule created successfully.",
       data: schedule,
     });
+
+    // Kirim notifikasi ke executor yang di-assign (atau Planner jika belum ditentukan)
+    const recipientNik = String(assignedTo || INSPECTION_PLANNER_NIK);
+    notify({
+      module: 'inspection',
+      type: 'schedule_created',
+      title: 'Jadwal Inspeksi Baru',
+      body: `Jadwal inspeksi "${title || schedule.title}" telah dibuat untuk Anda.`,
+      data: {
+        deepLink: 'inspection/draft',
+        scheduleId: String(schedule.id),
+      },
+      recipientIds: [recipientNik],
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -168,4 +186,87 @@ async function getNextSpkNumber(req, res) {
   }
 }
 
-module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, getNextSpkNumber };
+// POST /api/inspection/schedules/recurring
+async function createRecurringSchedules(req, res) {
+  try {
+    const { baseSchedule, recurringType, startDate, endDate } = req.body;
+    
+    if (!baseSchedule || !recurringType || !startDate || !endDate) {
+      return res.status(400).json({ success: false, message: "Missing required parameters." });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const groupId = `REC-${Date.now()}`;
+    const schedulesToCreate = [];
+    
+    let currentDate = new Date(start);
+    let instanceNumber = 1;
+    
+    let intervalMonths = 1;
+    switch (recurringType) {
+      case 'monthly': intervalMonths = 1; break;
+      case 'bimonthly': intervalMonths = 2; break;
+      case 'quarterly': intervalMonths = 3; break;
+      case 'semester': intervalMonths = 6; break;
+      case 'yearly': intervalMonths = 12; break;
+      default: intervalMonths = 1;
+    }
+
+    while (currentDate <= end) {
+      // Create a copy of the base date
+      const scheduledDate = new Date(currentDate);
+      
+      const schedule = {
+        type: baseSchedule.type || "rutin",
+        title: `${baseSchedule.title} #${instanceNumber}`,
+        unitKerja: baseSchedule.unitKerja,
+        location: baseSchedule.location,
+        scheduledDate: scheduledDate,
+        createdBy: req.user.nik || baseSchedule.createdBy,
+        assignedTo: baseSchedule.assignedTo,
+        kategoriTeknisi: baseSchedule.kategoriTeknisi,
+        kategoriK3: baseSchedule.kategoriK3,
+        vendorInfo: baseSchedule.vendorInfo,
+        nomorPoJo: baseSchedule.nomorPoJo,
+        triggerSource: baseSchedule.triggerSource || "planner",
+        isRecurring: true,
+        recurringGroupId: groupId,
+        recurringType: recurringType,
+        recurringEndDate: end,
+        recurringInstance: instanceNumber
+      };
+      
+      schedulesToCreate.push(schedule);
+
+      // Advance by interval
+      currentDate.setMonth(currentDate.getMonth() + intervalMonths);
+      instanceNumber++;
+    }
+
+    const createdSchedules = await InspectionSchedule.bulkCreate(schedulesToCreate);
+
+    // Notifikasi ke executor bahwa ada jadwal berulang baru
+    const executorNik = String(baseSchedule.assignedTo || INSPECTION_PLANNER_NIK);
+    notify({
+      module: 'inspection',
+      type: 'schedule_recurring_created',
+      title: 'Jadwal Inspeksi Berulang Baru',
+      body: `${createdSchedules.length} jadwal inspeksi berulang "${baseSchedule.title}" telah dibuat untuk Anda.`,
+      data: {
+        deepLink: 'inspection/draft',
+      },
+      recipientIds: [executorNik],
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `${createdSchedules.length} recurring schedules created successfully.`,
+      data: createdSchedules,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, getNextSpkNumber, createRecurringSchedules };

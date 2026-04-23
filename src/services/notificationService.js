@@ -46,9 +46,10 @@ async function notify({ module, type, title, body, data = {}, recipientIds = [] 
     const { Op } = require('sequelize');
 
     // 1. Look up FCM tokens for all recipients
+    // recipientIds berisi NIK (bukan primary key id), jadi query by nik
     const users = await User.findAll({
-      where: { id: { [Op.in]: recipientIds } },
-      attributes: ['id', 'fcmToken'],
+      where: { nik: { [Op.in]: recipientIds } },
+      attributes: ['id', 'nik', 'fcmToken'],
     });
 
     const tokens = users.filter((u) => u.fcmToken).map((u) => u.fcmToken);

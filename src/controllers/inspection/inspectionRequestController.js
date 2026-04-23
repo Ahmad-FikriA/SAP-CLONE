@@ -3,6 +3,10 @@
 const InspectionRequest = require("../../models/InspectionRequest");
 const InspectionSchedule = require("../../models/InspectionSchedule");
 const { buildAccessProfile } = require("../../services/accessProfile");
+const { notify } = require("../../services/notificationService");
+
+// NIK Planner & Approver yang menerima notifikasi request baru
+const INSPECTION_PLANNER_NIK = "10000262";
 
 /**
  * InspectionRequest Controller
@@ -20,7 +24,12 @@ function canViewAllRequests(user) {
   const flags = profile?.flags || {};
 
   return (
-    appRole === "kasie" || Boolean(flags.isInspectionPlanner || flags.isPlanner)
+    appRole === "kasie" ||
+    Boolean(
+      flags.isInspectionPlanner ||
+      flags.isPlanner ||
+      flags.isInspectionApprover,
+    )
   );
 }
 
@@ -31,6 +40,9 @@ async function listRequests(req, res) {
     const requesterNik = normalizeNik(req.user?.nik);
     const hasGlobalAccess = canViewAllRequests(req.user);
     const requestedByQuery = normalizeNik(req.query.requestedBy);
+
+    // 🔍 DEBUG — hapus setelah masalah teridentifikasi
+    console.log(`[listRequests] nik=${requesterNik} hasGlobalAccess=${hasGlobalAccess} requestedByQuery="${requestedByQuery}" status="${req.query.status || ''}"`);
 
     // Filter by status
     if (req.query.status) where.status = req.query.status;
@@ -59,6 +71,7 @@ async function listRequests(req, res) {
       order: [["createdAt", "DESC"]],
     });
 
+    console.log(`[listRequests] returning ${data.length} records, where=${JSON.stringify(where)}`);
     res.json({ success: true, message: "Requests retrieved.", data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -107,16 +120,6 @@ async function createRequest(req, res) {
       requestedBy,
     } = req.body;
 
-    const requesterNik = normalizeNik(req.user?.nik);
-    const requestedByBody = normalizeNik(requestedBy);
-
-    if (requestedByBody && requesterNik && requestedByBody !== requesterNik) {
-      return res.status(403).json({
-        success: false,
-        message: "requestedBy harus sama dengan akun yang sedang login.",
-      });
-    }
-
     if (!judul || !lokasi || !jenisInspeksi || !kategoriInspeksi) {
       return res.status(400).json({
         success: false,
@@ -142,6 +145,13 @@ async function createRequest(req, res) {
       });
     }
 
+    const requesterNik = normalizeNik(req.user?.nik);
+    const requestedByBody = normalizeNik(requestedBy);
+
+    // Ambil requesterNik yang valid dari token JWT (paling aman).
+    // Jika tidak ada, gunakan body payload (untuk backward compatibility).
+    const finalRequestedBy = requesterNik || requestedByBody || "unknown";
+
     const request = await InspectionRequest.create({
       judul,
       lokasi,
@@ -151,8 +161,21 @@ async function createRequest(req, res) {
       asapMungkin: asapMungkin ?? false,
       deskripsi,
       mediaPaths: mediaPaths ?? [],
-      requestedBy: requesterNik || requestedByBody || "unknown",
+      requestedBy: finalRequestedBy,
       status: "pending",
+    });
+
+    // Kirim FCM push notification ke Planner
+    notify({
+      module: 'inspection',
+      type: 'request_created',
+      title: 'Permintaan Inspeksi Baru',
+      body: `Permintaan "${judul}" dari ${finalRequestedBy} menunggu persetujuan Anda.`,
+      data: {
+        deepLink: 'inspection/permintaan',
+        requestId: String(request.id),
+      },
+      recipientIds: [INSPECTION_PLANNER_NIK],
     });
 
     res.status(201).json({
@@ -224,6 +247,19 @@ async function approveRequest(req, res) {
       scheduleId: schedule.id,
     });
 
+    // Notifikasi ke pemohon bahwa request-nya disetujui
+    notify({
+      module: 'inspection',
+      type: 'request_approved',
+      title: 'Permintaan Inspeksi Disetujui',
+      body: `Permintaan inspeksi Anda untuk "${request.judul}" telah disetujui dan dijadwalkan.`,
+      data: {
+        deepLink: 'inspection/riwayat',
+        requestId: String(request.id),
+      },
+      recipientIds: [String(request.requestedBy)],
+    });
+
     res.json({
       success: true,
       message: "Permintaan inspeksi disetujui. Jadwal otomatis dibuat.",
@@ -246,23 +282,38 @@ async function rejectRequest(req, res) {
         .json({ success: false, message: "Request not found." });
     }
 
-    if (request.status !== "pending") {
+    if (request.status !== "pending" && request.status !== "revisions_required") {
       return res.status(400).json({
         success: false,
-        message: `Request sudah di-${request.status}.`,
+        message: `Request sudah di-${request.status} dan tidak dapat diproses lagi.`,
       });
     }
 
     await request.update({
-      status: "rejected",
+      status: "revisions_required",
       approvedBy: req.user?.nik,
       approvedAt: new Date(),
       notes: req.body.notes,
     });
 
+    // Notifikasi ke pemohon bahwa request-nya perlu direvisi
+    notify({
+      module: 'inspection',
+      type: 'request_revisions_required',
+      title: 'Permintaan Inspeksi Perlu Revisi',
+      body: `Permintaan inspeksi Anda untuk "${request.judul}" dikembalikan untuk diperbaiki.${
+        req.body.notes ? ` Catatan: ${req.body.notes}` : ''
+      }`,
+      data: {
+        deepLink: 'inspection/permintaan',
+        requestId: String(request.id),
+      },
+      recipientIds: [String(request.requestedBy)],
+    });
+
     res.json({
       success: true,
-      message: "Permintaan inspeksi ditolak.",
+      message: "Permintaan inspeksi dikembalikan untuk diperbaiki oleh pemohon.",
       data: request,
     });
   } catch (err) {

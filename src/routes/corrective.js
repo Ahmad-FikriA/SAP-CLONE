@@ -16,7 +16,7 @@ const {
   KADIS_PELAPOR_FIELDS,
 } = require('../middleware/correctiveAccess');
 const reqCtrl = require('../controllers/corrective/correctiveRequestController');
-const spkCtrl = require('../controllers/corrective/spkCorrectiveController');
+// Deprecated: const spkCtrl = require('../controllers/corrective/spkCorrectiveController');
 
 const router = express.Router();
 
@@ -58,6 +58,9 @@ router.post('/requests', verifyToken, requireKadis, uploadCorrective.array('phot
 // Rules: Kadis Pelapor can only update own; Planner can update; others read-only
 router.put('/requests/:id', verifyToken, canViewNotification, reqCtrl.update);
 
+// DELETE /api/corrective/requests
+router.delete('/requests', verifyToken, requirePlanner, reqCtrl.deleteAll);
+
 // DELETE /api/corrective/requests/:id
 router.delete('/requests/:id', verifyToken, canViewNotification, reqCtrl.remove);
 
@@ -74,53 +77,11 @@ router.post('/requests/:id/approve', verifyToken, reqCtrl.approveKadisPusat);
 // POST /api/corrective/requests/:id/reject
 router.post('/requests/:id/reject', verifyToken, reqCtrl.rejectKadisPusat);
 
-// ── Corrective SPK ────────────────────────────────────────────────────────────
-// GET /api/corrective/spk
-// Rules: Teknisi/Kasie (own work center), Planner (all), Kadis Pusat (all), Kadis Pelapor (own)
-router.get('/spk', verifyToken, spkCtrl.getAll);
-
-// GET /api/corrective/spk/history
-router.get('/spk/history', verifyToken, spkCtrl.getHistory);
-
-// GET /api/corrective/spk/:spkId
-router.get('/spk/:spkId', verifyToken, canViewSpkCorrective, spkCtrl.getOne);
-
-// POST /api/corrective/spk
-// Rules: Only Planner can create SPK from Notification
-router.post('/spk', verifyToken, requirePlanner, spkCtrl.create);
-
-// PUT /api/corrective/spk/:spkId
-// Rules: Only Planner can edit if SPK is still draft
-router.put('/spk/:spkId', verifyToken, requirePlanner, spkCtrl.updateByPlanner);
-
-// DELETE /api/corrective/spk/:spkId
-router.delete('/spk/:spkId', verifyToken, requirePlanner, spkCtrl.remove);
-
-// POST /api/corrective/spk/bulk-delete
-router.post('/spk/bulk-delete', verifyToken, requirePlanner, spkCtrl.bulkDelete);
-
-// ── Teknisi Actions ───────────────────────────────────────────────────────────
-// POST /api/corrective/spk/:spkId/upload-before-photos
-router.post('/spk/:spkId/upload-before-photos', verifyToken, canViewSpkCorrective, uploadCorrective.array('photos', 2), spkCtrl.uploadBeforePhotos);
-
-// POST /api/corrective/spk/:spkId/upload-after-photos
-router.post('/spk/:spkId/upload-after-photos', verifyToken, canViewSpkCorrective, uploadCorrective.array('photos', 2), spkCtrl.uploadAfterPhotos);
-
-// PUT /api/corrective/spk/:spkId/update-by-teknisi
-// Rules: Teknisi can only update specific fields
-router.put('/spk/:spkId/update-by-teknisi', verifyToken, canViewSpkCorrective, validateSpkUpdate(TEKNISI_FIELDS), spkCtrl.updateByTeknisi);
-
-// ── Kadis Pusat Actions ─────────────────────────────────────────────────────
-// POST /api/corrective/spk/:spkId/approve-kadis-pusat
-router.post('/spk/:spkId/approve-kadis-pusat', verifyToken, canViewSpkCorrective, spkCtrl.approveKadisPusat);
-
-// ── Kadis Pelapor Actions ────────────────────────────────────────────────────
-// POST /api/corrective/spk/:spkId/approve-kadis-pelapor
-router.post('/spk/:spkId/approve-kadis-pelapor', verifyToken, canViewSpkCorrective, spkCtrl.approveKadisPelapor);
-
-// ── Reject Actions ───────────────────────────────────────────────────────────
-// POST /api/corrective/spk/:spkId/reject
-router.post('/spk/:spkId/reject', verifyToken, canViewSpkCorrective, spkCtrl.reject);
-
+// ── Corrective SPK (LEGACY - DEPRECATED) ──────────────────────────────────────
+// This entire path is deprecated since the migration to SAP SPK.
+// Returning 410 Gone to prevent the app from crashing due to dropped tables and associations.
+router.use('/spk', (req, res) => {
+  res.status(410).json({ error: 'This endpoint is deprecated. Use SAP SPK workflow (/api/corrective/sap-spk) instead.' });
+});
 
 module.exports = router;

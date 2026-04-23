@@ -1,12 +1,15 @@
-'use strict';
+"use strict";
 
-const { Op } = require('sequelize');
-const { v4: uuid } = require('uuid');
-const Notification = require('../../models/Notification');
-const User = require('../../models/User');
-const { SpkCorrective, SpkCorrectiveItem, SpkCorrectivePhoto } = require('../../models/associations');
-const { KADIS_ROLE, KADIS_PUSAT_ROLE } = require('../../middleware/correctiveAccess');
-const NotificationService = require('../../services/notificationService');
+const { Op } = require("sequelize");
+const { v4: uuid } = require("uuid");
+const Notification = require("../../models/Notification");
+const User = require("../../models/User");
+// Legacy SpkCorrective models have been removed — no longer needed here.
+const {
+  KADIS_ROLE,
+  KADIS_PUSAT_ROLE,
+} = require("../../middleware/correctiveAccess");
+const NotificationService = require("../../services/notificationService");
 
 /**
  * Normalize a date string to YYYY-MM-DD format.
@@ -40,18 +43,26 @@ function toDateOnly(raw) {
 function fmtRequest(notif) {
   const n = notif.toJSON ? notif.toJSON() : notif;
   const spk = n.spkCorrective || {};
-  
+
   // Format images
   const images = [];
   if (n.photo1) images.push(n.photo1);
   if (n.photo2) images.push(n.photo2);
-  
-  const beforeImages = (spk.photos || []).filter(p => p.photoType === 'before').map(p => p.photoPath);
-  const afterImages = (spk.photos || []).filter(p => p.photoType === 'after').map(p => p.photoPath);
-  
-  const materials = (spk.items || []).filter(i => i.itemType === 'material').map(i => i.itemName);
-  const tools = (spk.items || []).filter(i => i.itemType === 'tool').map(i => i.itemName);
-  
+
+  const beforeImages = (spk.photos || [])
+    .filter((p) => p.photoType === "before")
+    .map((p) => p.photoPath);
+  const afterImages = (spk.photos || [])
+    .filter((p) => p.photoType === "after")
+    .map((p) => p.photoPath);
+
+  const materials = (spk.items || [])
+    .filter((i) => i.itemType === "material")
+    .map((i) => i.itemName);
+  const tools = (spk.items || [])
+    .filter((i) => i.itemType === "tool")
+    .map((i) => i.itemName);
+
   // Determine equipment and location
   // If SPK exists, prioritize the planner's selected functional location and equipment.
   // The planner's equipment name could be parsed from location if location format is "FuncLoc | EquipName"
@@ -59,22 +70,22 @@ function fmtRequest(notif) {
   let finalEq = n.equipmentName || n.equipment;
 
   if (spk.spkId && spk.location) {
-    if (spk.location.includes(' | ')) {
-      const parts = spk.location.split(' | ');
+    if (spk.location.includes(" | ")) {
+      const parts = spk.location.split(" | ");
       finalFuncLoc = parts[0].trim();
       finalEq = parts[1].trim();
     } else {
       finalFuncLoc = spk.location;
     }
   }
-  
+
   return {
     id: n.notificationId || n.id,
     notificationDate: n.notificationDate,
     notificationType: n.notificationType,
     description: n.description,
     functionalLocation: finalFuncLoc,
-    equipment: finalEq, 
+    equipment: finalEq,
     requiredStart: n.requiredStart,
     requiredEnd: n.requiredEnd,
     reportedBy: n.reportedBy,
@@ -82,10 +93,11 @@ function fmtRequest(notif) {
     submittedBy: n.submittedBy,
     submittedAt: n.submittedAt,
     status: n.status,
-    approvalStatus: n.status === 'closed' ? 'selesai' : (n.approvalStatus || 'pending'),
+    approvalStatus:
+      n.status === "closed" ? "selesai" : n.approvalStatus || "pending",
     workCenter: spk.workCenter || n.workCenter,
     images,
-    
+
     // SPK mapped fields
     spkId: spk.spkId,
     spkNumber: spk.spkNumber,
@@ -95,7 +107,7 @@ function fmtRequest(notif) {
     personnelCount: spk.plannedWorker,
     estimatedDuration: spk.totalPlannedHour,
     instructions: spk.jobDescription,
-    
+
     // Execution fields
     beforeImages,
     afterImages,
@@ -107,47 +119,39 @@ function fmtRequest(notif) {
   };
 }
 
-const SPK_INCLUDE = {
-  model: SpkCorrective,
-  as: 'spkCorrective',
-  include: [
-    { model: SpkCorrectiveItem, as: 'items' },
-    { model: SpkCorrectivePhoto, as: 'photos' }
-  ]
-};
+// SPK_INCLUDE removed — legacy SpkCorrective tables no longer exist.
 
 // GET /api/corrective/requests
 const getAll = async (req, res) => {
   const { userId, role } = req.user;
   const where = {};
-  
+
   if (req.query.status) where.status = req.query.status;
-  
+
   // Kadis Pelapor can only see own notifications, TAPI Kadis PP bisa lihat semua
   if (role === KADIS_ROLE) {
     const { dinas } = req.user;
-    const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
+    const isKadisPusat =
+      dinas && dinas.toLowerCase().includes("pusat perawatan");
     if (!isKadisPusat) {
       where.kadisPelaporId = userId;
     }
   }
-  
+
   const data = await Notification.findAll({
     where,
-    include: [SPK_INCLUDE],
-    order: [['submittedAt', 'DESC']],
+    order: [["submittedAt", "DESC"]],
   });
-  
+
   res.json(data.map(fmtRequest));
 };
 
 // GET /api/corrective/requests/:id
 const getOne = async (req, res) => {
-  const notification = await Notification.findByPk(req.params.id, {
-    include: [SPK_INCLUDE],
-  });
-  
-  if (!notification) return res.status(404).json({ error: 'Notification not found' });
+  const notification = await Notification.findByPk(req.params.id);
+
+  if (!notification)
+    return res.status(404).json({ error: "Notification not found" });
   res.json(fmtRequest(notification));
 };
 
@@ -166,17 +170,21 @@ const create = async (req, res) => {
     longText,
     workCenter,
   } = req.body;
-  
+
   const { userId, role } = req.user;
-  
+
   const photos = req.files || [];
   if (photos.length < 1 || photos.length > 2) {
-    return res.status(400).json({ error: 'Notification requires 1-2 photos (max 2MB each)' });
+    return res
+      .status(400)
+      .json({ error: "Notification requires 1-2 photos (max 2MB each)" });
   }
-  
-  const photoPaths = photos.map(file => `uploads/corrective/${file.filename}`);
+
+  const photoPaths = photos.map(
+    (file) => `uploads/corrective/${file.filename}`,
+  );
   const id = `NOTIF-${uuid().slice(0, 8).toUpperCase()}`;
-  
+
   await Notification.create({
     notificationId: id, // using correct primary key mapped to id in the payload
     notificationDate: toDateOnly(notificationDate),
@@ -194,29 +202,28 @@ const create = async (req, res) => {
     kadisPelaporId: userId,
     submittedBy: userId,
     submittedAt: new Date(),
-    status: 'submitted',
-    approvalStatus: 'pending',
+    status: "submitted",
+    approvalStatus: "pending",
     workCenter: workCenter || null,
   });
-  
-  const fresh = await Notification.findByPk(id, { include: [SPK_INCLUDE] });
+
+  const fresh = await Notification.findByPk(id);
   res.status(201).json(fmtRequest(fresh));
 
   // 🔔 Notify all Planners about new corrective request
   const planners = await User.findAll({
-    where: { [Op.or]: [
-      { role: 'planner' },
-      { group: { [Op.like]: '%perencanaan%' } },
-    ]},
-    attributes: ['id'],
+    where: {
+      [Op.or]: [{ role: "planner" }, { group: { [Op.like]: "%perencanaan%" } }],
+    },
+    attributes: ["id"],
   });
   await NotificationService.notify({
-    module: 'corrective',
-    type: 'new_request',
-    title: 'Laporan Corrective Baru',
-    body: `Laporan baru dari ${reportedBy || 'Kadis'}: ${description || '-'}`,
-    data: { requestId: id, deepLink: 'corrective/request-detail' },
-    recipientIds: planners.map(u => u.id),
+    module: "corrective",
+    type: "new_request",
+    title: "Laporan Corrective Baru",
+    body: `Laporan baru dari ${reportedBy || "Kadis"}: ${description || "-"}`,
+    data: { requestId: id, deepLink: "corrective/request-detail" },
+    recipientIds: planners.map((u) => u.id),
   });
 };
 
@@ -224,164 +231,247 @@ const create = async (req, res) => {
 const update = async (req, res) => {
   const { userId, role } = req.user;
   const notification = await Notification.findByPk(req.params.id);
-  
-  if (!notification) return res.status(404).json({ error: 'Notification not found' });
-  
-  if (role === 'planner') {
-    return res.status(403).json({ error: 'Planner cannot modify notification fields directly.' });
+
+  if (!notification)
+    return res.status(404).json({ error: "Notification not found" });
+
+  if (role === "planner") {
+    return res
+      .status(403)
+      .json({ error: "Planner cannot modify notification fields directly." });
   }
-  
+
   if (role === KADIS_ROLE) {
-    if (notification.status === 'spk_created' || notification.status === 'closed') {
-      return res.status(400).json({ error: 'Cannot modify notification after SPK is created or closed' });
+    if (
+      notification.status === "spk_created" ||
+      notification.status === "closed"
+    ) {
+      return res.status(400).json({
+        error: "Cannot modify notification after SPK is created or closed",
+      });
     }
   }
-  
+
   // Transform mapped fields and dates for update
   const payload = { ...req.body };
-  if (payload.equipment !== undefined) payload.equipmentName = payload.equipment;
-  if (payload.notificationDate) payload.notificationDate = toDateOnly(payload.notificationDate);
-  if (payload.requiredStart) payload.requiredStart = toDateOnly(payload.requiredStart);
-  if (payload.requiredEnd) payload.requiredEnd = toDateOnly(payload.requiredEnd);
+  if (payload.equipment !== undefined)
+    payload.equipmentName = payload.equipment;
+  if (payload.notificationDate)
+    payload.notificationDate = toDateOnly(payload.notificationDate);
+  if (payload.requiredStart)
+    payload.requiredStart = toDateOnly(payload.requiredStart);
+  if (payload.requiredEnd)
+    payload.requiredEnd = toDateOnly(payload.requiredEnd);
 
   await notification.update(payload);
-  
-  const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
+
+  const fresh = await Notification.findByPk(
+    notification.notificationId || notification.id,
+  );
   res.json(fmtRequest(fresh));
 };
 
 // POST /api/corrective/requests/:id/approve
 const approveKadisPusat = async (req, res) => {
   const notification = await Notification.findByPk(req.params.id);
-  
-  if (!notification) return res.status(404).json({ error: 'Notification not found' });
-  
-  if (notification.approvalStatus !== 'menunggu_review_awal_kadis_pp') {
-    return res.status(400).json({ error: 'Notification is not awaiting awal review' });
+
+  if (!notification)
+    return res.status(404).json({ error: "Notification not found" });
+
+  if (notification.approvalStatus !== "menunggu_review_awal_kadis_pp") {
+    return res
+      .status(400)
+      .json({ error: "Notification is not awaiting awal review" });
   }
-  
+
   await notification.update({
-    status: 'spk_created',
-    approvalStatus: 'spk_issued'
+    status: "spk_created",
+    approvalStatus: "spk_issued",
   });
-  
-  const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
+
+  const fresh = await Notification.findByPk(
+    notification.notificationId || notification.id,
+    { include: [SPK_INCLUDE] },
+  );
   res.json(fmtRequest(fresh));
 
   // 🔔 Notify Teknisi matching the workCenter that SPK is ready
   const wc = notification.workCenter;
-  const groupMap = { mechanical: 'mekanik', electrical: 'listrik', civil: 'sipil', automation: 'otomasi' };
-  const groupKeyword = groupMap[wc] || wc || '';
-  const teknisiWhere = { role: { [Op.in]: ['teknisi', 'kasie'] } };
+  const groupMap = {
+    mechanical: "mekanik",
+    electrical: "listrik",
+    civil: "sipil",
+    automation: "otomasi",
+  };
+  const groupKeyword = groupMap[wc] || wc || "";
+  const teknisiWhere = { role: { [Op.in]: ["teknisi", "kasie"] } };
   if (groupKeyword) teknisiWhere.group = { [Op.like]: `%${groupKeyword}%` };
-  const teknisiUsers = await User.findAll({ where: teknisiWhere, attributes: ['id'] });
+  const teknisiUsers = await User.findAll({
+    where: teknisiWhere,
+    attributes: ["id"],
+  });
   await NotificationService.notify({
-    module: 'corrective',
-    type: 'spk_ready',
-    title: 'SPK Siap Dikerjakan',
-    body: `SPK untuk ${notification.equipmentName || '-'} sudah disetujui dan siap dikerjakan.`,
-    data: { requestId: notification.notificationId, deepLink: 'corrective/request-detail' },
-    recipientIds: teknisiUsers.map(u => u.id),
+    module: "corrective",
+    type: "spk_ready",
+    title: "SPK Siap Dikerjakan",
+    body: `SPK untuk ${notification.equipmentName || "-"} sudah disetujui dan siap dikerjakan.`,
+    data: {
+      requestId: notification.notificationId,
+      deepLink: "corrective/request-detail",
+    },
+    recipientIds: teknisiUsers.map((u) => u.id),
   });
 };
 
 // POST /api/corrective/requests/:id/reject
 const rejectKadisPusat = async (req, res) => {
   const notification = await Notification.findByPk(req.params.id);
-  
-  if (!notification) return res.status(404).json({ error: 'Notification not found' });
-  
-  if (notification.approvalStatus !== 'menunggu_review_awal_kadis_pp') {
-    return res.status(400).json({ error: 'Notification is not awaiting awal review' });
+
+  if (!notification)
+    return res.status(404).json({ error: "Notification not found" });
+
+  if (notification.approvalStatus !== "menunggu_review_awal_kadis_pp") {
+    return res
+      .status(400)
+      .json({ error: "Notification is not awaiting awal review" });
   }
-  
+
   await notification.update({
-    status: 'spk_created',
-    approvalStatus: 'ditolak_kadis_pp_awal'
+    status: "spk_created",
+    approvalStatus: "ditolak_kadis_pp_awal",
   });
-  
-  const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
+
+  const fresh = await Notification.findByPk(
+    notification.notificationId || notification.id,
+    { include: [SPK_INCLUDE] },
+  );
   res.json(fmtRequest(fresh));
 
   // 🔔 Notify Planners that SPK was rejected
   const plannerUsers = await User.findAll({
-    where: { [Op.or]: [
-      { role: 'planner' },
-      { group: { [Op.like]: '%perencanaan%' } },
-    ]},
-    attributes: ['id'],
+    where: {
+      [Op.or]: [{ role: "planner" }, { group: { [Op.like]: "%perencanaan%" } }],
+    },
+    attributes: ["id"],
   });
   await NotificationService.notify({
-    module: 'corrective',
-    type: 'spk_rejected_pp',
-    title: 'SPK Ditolak oleh Kadis PP',
-    body: `SPK untuk ${notification.equipmentName || '-'} ditolak. Silakan revisi.`,
-    data: { requestId: notification.notificationId, deepLink: 'corrective/request-detail' },
-    recipientIds: plannerUsers.map(u => u.id),
+    module: "corrective",
+    type: "spk_rejected_pp",
+    title: "SPK Ditolak oleh Kadis PP",
+    body: `SPK untuk ${notification.equipmentName || "-"} ditolak. Silakan revisi.`,
+    data: {
+      requestId: notification.notificationId,
+      deepLink: "corrective/request-detail",
+    },
+    recipientIds: plannerUsers.map((u) => u.id),
   });
 };
 
 // DELETE /api/corrective/requests/:id
 const remove = async (req, res) => {
   const notification = await Notification.findByPk(req.params.id);
-  if (!notification) return res.status(404).json({ error: 'Notification not found' });
-  
-  if (notification.status === 'spk_created') {
-    return res.status(400).json({ error: 'Cannot delete notification after SPK is created' });
+  if (!notification)
+    return res.status(404).json({ error: "Notification not found" });
+
+  if (notification.status === "spk_created") {
+    return res
+      .status(400)
+      .json({ error: "Cannot delete notification after SPK is created" });
   }
-  
+
   await notification.destroy();
-  res.json({ message: 'Notification deleted' });
+  res.json({ message: "Notification deleted" });
 };
 
 // POST /api/corrective/requests/bulk-delete
 const bulkDelete = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
-    return res.status(400).json({ error: 'ids array required' });
+    return res.status(400).json({ error: "ids array required" });
   }
-  
+
   const count = await Notification.destroy({
     where: {
       notificationId: { [Op.in]: ids },
-      status: { [Op.ne]: 'spk_created' }, 
+      status: { [Op.ne]: "spk_created" },
     },
   });
-  
+
   res.json({ message: `Deleted ${count} notification(s)` });
+};
+
+// DELETE /api/corrective/requests
+const deleteAll = async (req, res) => {
+  try {
+    const count = await Notification.destroy({
+      where: {
+        status: { [Op.ne]: "spk_created" }, // Prevent deleting notifications tied to old SPKs if any
+      },
+    });
+    res.json({ message: `Berhasil menghapus ${count} notifikasi.` });
+  } catch (error) {
+    console.error("Error deleting all requests:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 // POST /api/corrective/requests/:id/approve-planner
 const approvePlanner = async (req, res) => {
   const notification = await Notification.findByPk(req.params.id);
-  
-  if (!notification) return res.status(404).json({ error: 'Notification not found' });
-  
-  if (notification.status !== 'submitted' && notification.approvalStatus !== 'pending') {
-    return res.status(400).json({ error: 'Notification is not currently pending' });
+
+  if (!notification)
+    return res.status(404).json({ error: "Notification not found" });
+
+  if (
+    notification.status !== "submitted" &&
+    notification.approvalStatus !== "pending"
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Notification is not currently pending" });
   }
-  
+
   await notification.update({
-    status: 'approved',
-    approvalStatus: 'approved' 
+    status: "approved",
+    approvalStatus: "approved",
   });
-  
-  const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
+
+  const fresh = await Notification.findByPk(
+    notification.notificationId || notification.id,
+  );
   res.json(fmtRequest(fresh));
 
-  // 🔔 Notify Kadis PP that a request has been approved and awaits SPK
-  const kadisppUsers = await User.findAll({
-    where: { role: 'kadis', dinas: { [Op.like]: '%pusat perawatan%' } },
-    attributes: ['id'],
-  });
-  await NotificationService.notify({
-    module: 'corrective',
-    type: 'request_approved_planner',
-    title: 'Permintaan Corrective Disetujui',
-    body: `Planner telah menyetujui laporan ${notification.notificationId}. Menunggu pembuatan SPK.`,
-    data: { requestId: notification.notificationId, deepLink: 'corrective/request-detail' },
-    recipientIds: kadisppUsers.map(u => u.id),
-  });
+  // 🔔 Notify Pelapor (Kadis Pelapor) that their report has been approved
+  if (notification.kadisPelaporId) {
+    // kadisPelaporId stores the user `id`, but NotificationService queries by `nik`
+    const pelaporUser = await User.findByPk(notification.kadisPelaporId, {
+      attributes: ["nik"],
+    });
+    if (pelaporUser?.nik) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "request_approved_for_reporter",
+        title: "Laporan Anda Telah Disetujui",
+        body: `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah disetujui oleh Planner. Proses selanjutnya menunggu pembuatan SPK.`,
+        data: {
+          requestId: notification.notificationId,
+          deepLink: "corrective/request-detail",
+        },
+        recipientIds: [pelaporUser.nik],
+      });
+    }
+  }
 };
 
-module.exports = { getAll, getOne, create, update, remove, bulkDelete, approveKadisPusat, rejectKadisPusat, approvePlanner };
+module.exports = {
+  getAll,
+  getOne,
+  create,
+  update,
+  remove,
+  bulkDelete,
+  deleteAll,
+  approveKadisPusat,
+  rejectKadisPusat,
+  approvePlanner,
+};

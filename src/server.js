@@ -20,6 +20,7 @@ const {
   scheduleRouter,
 } = require("./routes/preventive");
 const correctiveRoutes = require("./routes/corrective");
+const sapSpkRoutes = require("./routes/sapSpkRoutes");
 const inspectionRoutes = require("./routes/inspection");
 const notificationRoutes = require("./routes/notification");
 const k3SafetyRoutes = require("./routes/k3_safety");
@@ -31,6 +32,7 @@ const {
   ensureGeneralTaskListActivitySchema,
   ensureSpkActivitySchema,
   ensureSubmissionActivityResultSchema,
+  ensureInspectionScheduleRecurringSchema,
 } = require("./models/ensureMeasurementSchema");
 
 // Register all Sequelize model associations (must run before any query)
@@ -264,6 +266,7 @@ app.use("/api/maps", mapsRouter);
 app.use("/api/plants", plantRouter);
 app.use("/api/submissions", submissionsRouter);
 app.use("/api/corrective", correctiveRoutes);
+app.use("/api/corrective/sap-spk", sapSpkRoutes);
 app.use("/api/inspection", inspectionRoutes);
 app.use("/api/functional-locations", funcLocRouter);
 app.use("/api/task-lists", taskListRouter);
@@ -302,6 +305,10 @@ sequelize
   })
   .then(() => {
     console.log("Submission activity result measurement schema ensured.");
+    return ensureInspectionScheduleRecurringSchema();
+  })
+  .then(() => {
+    console.log("Inspection schedule recurring schema ensured.");
     return syncDatabase(sequelize, "server startup");
   })
   .then(() => {

@@ -5,59 +5,59 @@ import { toast } from 'sonner';
 import { apiGet, apiPost } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { RefreshCw, Upload, FileSpreadsheet, Inbox, AlertCircle, AlertTriangle, FileText, Wrench, CheckCircle2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const APPROVAL_LABELS = {
   pending: 'Proses',
   approved: 'Disetujui',
   rejected: 'Ditolak',
-  menunggu_review_awal_kadis_pp: 'Review PP',
-  spk_issued: 'SPK Issued',
-  eksekusi: 'Eksekusi',
-  menunggu_review_kadis_pp: 'Proses TTP',
-  menunggu_review_kadis_pelapor: 'Proses TTP',
 };
 
 const APPROVAL_COLORS = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  approved: 'bg-green-100 text-green-700',
-  rejected: 'bg-red-100 text-red-600',
-  menunggu_review_awal_kadis_pp: 'bg-blue-100 text-blue-700',
-  spk_issued: 'bg-purple-100 text-purple-700',
-  eksekusi: 'bg-orange-100 text-orange-700',
-  menunggu_review_kadis_pp: 'bg-blue-100 text-blue-700',
-  menunggu_review_kadis_pelapor: 'bg-blue-100 text-blue-700',
+  pending: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100',
+  approved: 'bg-green-100 text-green-700 hover:bg-green-100',
+  rejected: 'bg-red-100 text-red-600 hover:bg-red-100',
 };
 
-const STATUS_LABELS = {
+const NOTIF_STATUS_LABELS = {
   submitted: 'Submitted',
   approved: 'Approved',
   rejected: 'Rejected',
-  draft: 'Draft',
+};
+
+const NOTIF_STATUS_COLORS = {
+  submitted: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
+  approved: 'bg-green-100 text-green-700 hover:bg-green-100',
+  rejected: 'bg-red-100 text-red-600 hover:bg-red-100',
+};
+
+const SAP_STATUS_LABELS = {
+  baru_import: 'Tugas Baru',
   eksekusi: 'Eksekusi',
-  awaiting_kadis_pusat: 'Review Kadis PP',
-  awaiting_kadis_pelapor: 'Review Pelapor',
-  completed: 'Selesai',
+  menunggu_review_kadis_pp: 'Review Kadis PP',
+  menunggu_review_kadis_pelapor: 'Review Pelapor',
+  selesai: 'Selesai',
+  ditolak: 'Ditolak',
 };
 
-const STATUS_COLORS = {
-  submitted: 'bg-blue-100 text-blue-700',
-  approved: 'bg-green-100 text-green-700',
-  rejected: 'bg-red-100 text-red-600',
-  draft: 'bg-gray-100 text-gray-600',
-  eksekusi: 'bg-orange-100 text-orange-700',
-  awaiting_kadis_pusat: 'bg-purple-100 text-purple-700',
-  awaiting_kadis_pelapor: 'bg-indigo-100 text-indigo-700',
-  completed: 'bg-green-100 text-green-700',
+const SAP_STATUS_COLORS = {
+  baru_import: 'bg-gray-100 text-gray-600 hover:bg-gray-100',
+  eksekusi: 'bg-orange-100 text-orange-700 hover:bg-orange-100',
+  menunggu_review_kadis_pp: 'bg-purple-100 text-purple-700 hover:bg-purple-100',
+  menunggu_review_kadis_pelapor: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-100',
+  selesai: 'bg-green-100 text-green-700 hover:bg-green-100',
+  ditolak: 'bg-red-100 text-red-600 hover:bg-red-100',
 };
 
-const SPK_STEPS = [
-  { label: 'Draft', key: 'draft' },
+const SAP_SPK_STEPS = [
+  { label: 'Baru', key: 'baru_import' },
   { label: 'Eksekusi', key: 'eksekusi' },
-  { label: 'Review Kadis PP', key: 'awaiting_kadis_pusat' },
-  { label: 'Review Pelapor', key: 'awaiting_kadis_pelapor' },
-  { label: 'Selesai', key: 'completed' },
+  { label: 'Review Kadis PP', key: 'menunggu_review_kadis_pp' },
+  { label: 'Review Pelapor', key: 'menunggu_review_kadis_pelapor' },
+  { label: 'Selesai', key: 'selesai' },
 ];
 
 function fmtDate(iso) {
@@ -65,18 +65,15 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function Badge({ value, colorMap, labelMap }) {
-  const color = colorMap?.[value] || 'bg-gray-100 text-gray-600';
+function StatusBadge({ value, colorMap, labelMap }) {
+  const colorClass = colorMap?.[value] || 'bg-gray-100 text-gray-600';
   const label = labelMap?.[value] || value || '-';
-  return <span className={`px-2 py-0.5 rounded text-xs font-semibold ${color}`}>{label}</span>;
+  return (
+    <Badge className={cn("px-2 py-0.5 text-xs font-semibold border-transparent", colorClass)}>
+      {label}
+    </Badge>
+  );
 }
-
-const EMPTY_SPK_FORM = {
-  notificationId: '', orderNumber: '', priority: 'medium',
-  equipmentId: '', location: '', requestedFinishDate: '',
-  jobDescription: '', workCenter: 'mechanical',
-  plannedWorker: 1, plannedHourPerWorker: 1,
-};
 
 export default function CorrectivePage() {
   const [tab, setTab] = useState('requests');
@@ -89,46 +86,46 @@ export default function CorrectivePage() {
   const [filterNotifStatus, setFilterNotifStatus] = useState('');
   const [filterApprovalStatus, setFilterApprovalStatus] = useState('');
   const [filterSpkStatus, setFilterSpkStatus] = useState('');
-  const [filterSpkPriority, setFilterSpkPriority] = useState('');
 
   // Detail dialogs
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [selectedSpk, setSelectedSpk] = useState(null);
 
-  // SPK create/edit panel
-  const [spkPanelOpen, setSpkPanelOpen] = useState(false);
-  const [spkForm, setSpkForm] = useState(EMPTY_SPK_FORM);
-  const [savingSpk, setSavingSpk] = useState(false);
+  // Upload Excel
+  const [uploading, setUploading] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [skippedData, setSkippedData] = useState(null);
+  const [savingExcel, setSavingExcel] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Confirm dialog
-  const [confirmState, setConfirmState] = useState(null); // { title, message, withNotes, onConfirm }
+  const [confirmState, setConfirmState] = useState(null);
   const [confirmNotes, setConfirmNotes] = useState('');
   const [confirming, setConfirming] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [reqData, spkData, histData] = await Promise.all([
+      const [reqData, sapSpkRes] = await Promise.all([
         apiGet(`/corrective/requests${filterNotifStatus ? `?status=${filterNotifStatus}` : ''}`),
-        apiGet(`/corrective/spk${buildSpkQuery()}`),
-        apiGet('/corrective/spk/history'),
+        apiGet('/corrective/sap-spk'),
       ]);
       setRequests(Array.isArray(reqData) ? reqData : []);
-      setSpks(Array.isArray(spkData) ? spkData : []);
-      setHistory(Array.isArray(histData) ? histData : []);
+      
+      const allSpks = Array.isArray(sapSpkRes?.data) ? sapSpkRes.data : [];
+      let filteredSpks = allSpks;
+      if (filterSpkStatus) {
+        filteredSpks = allSpks.filter(s => s.status === filterSpkStatus);
+      }
+
+      setSpks(filteredSpks.filter((s) => s.status !== 'selesai' && s.status !== 'ditolak'));
+      setHistory(allSpks.filter((s) => s.status === 'selesai' || s.status === 'ditolak'));
     } catch (e) {
       toast.error('Gagal memuat data: ' + e.message);
     } finally {
       setLoading(false);
     }
-  }, [filterNotifStatus, filterSpkStatus, filterSpkPriority]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function buildSpkQuery() {
-    const p = new URLSearchParams();
-    if (filterSpkStatus) p.set('status', filterSpkStatus);
-    if (filterSpkPriority) p.set('priority', filterSpkPriority);
-    return p.toString() ? `?${p}` : '';
-  }
+  }, [filterNotifStatus, filterSpkStatus]);
 
   useEffect(() => {
     loadAll();
@@ -136,15 +133,11 @@ export default function CorrectivePage() {
     return () => clearInterval(interval);
   }, [loadAll]);
 
-  // Client-side approval filter
   const filteredRequests = filterApprovalStatus
     ? requests.filter((r) => r.approvalStatus === filterApprovalStatus)
     : requests;
 
-  const activeSpks = spks.filter((s) => s.status !== 'completed' && s.status !== 'rejected');
-
-  // Confirm helper
-  function confirm(title, message, onConfirm, withNotes = false) {
+  function confirmAction(title, message, onConfirm, withNotes = false) {
     setConfirmNotes('');
     setConfirmState({ title, message, withNotes, onConfirm });
   }
@@ -162,9 +155,68 @@ export default function CorrectivePage() {
     }
   }
 
-  // Actions
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('excelFile', file);
+      
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/sap-spk/upload-excel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const resData = await res.json();
+      if (resData.status === 'success') {
+        toast.success(resData.message);
+        setPreviewData(resData.data.previewData);
+        setSkippedData(resData.data.skippedData);
+      } else {
+        toast.error(resData.message || 'Gagal mengupload file');
+      }
+    } catch (err) {
+      toast.error('Terjadi kesalahan saat upload');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!previewData || previewData.length === 0) return;
+    setSavingExcel(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/sap-spk/bulk-insert`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ spks: previewData })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(data.message);
+        setPreviewData(null);
+        setSkippedData(null);
+        loadAll();
+      } else {
+        toast.error(data.message || 'Gagal menyimpan data');
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat menyimpan data');
+    } finally {
+      setSavingExcel(false);
+    }
+  };
+
   async function approvePlanner(id) {
-    confirm('Terima Laporan', 'Terima dan setujui laporan ini? Status akan berubah menjadi "Approved" dan siap dibuatkan SPK.', async () => {
+    confirmAction('Terima Laporan', 'Terima dan setujui laporan ini?', async () => {
       await apiPost(`/corrective/requests/${id}/approve-planner`);
       toast.success('Laporan berhasil diterima!');
       setSelectedRequest(null);
@@ -172,499 +224,640 @@ export default function CorrectivePage() {
     });
   }
 
-  async function approveKadisPP(id) {
-    confirm('Approve Review Awal Kadis PP', 'SPK akan disetujui dan statusnya berubah menjadi "SPK Issued". Lanjutkan?', async () => {
-      await apiPost(`/corrective/requests/${id}/approve`);
-      toast.success('SPK berhasil disetujui oleh Kadis PP!');
-      setSelectedRequest(null);
-      loadAll();
-    });
-  }
-
-  async function rejectKadisPP(id) {
-    confirm('Tolak Review Awal Kadis PP', 'SPK akan ditolak. Mohon berikan catatan alasan penolakan:', async (notes) => {
-      await apiPost(`/corrective/requests/${id}/reject`, { notes });
-      toast.success('SPK ditolak oleh Kadis PP.');
-      setSelectedRequest(null);
-      loadAll();
-    }, true);
-  }
-
-  async function approveSpkKadisPusat(spkId) {
-    confirm('Approve Kadis PP', 'Lanjutkan penyetujuan SPK?', async () => {
-      await apiPost(`/corrective/spk/${spkId}/approve-kadis-pusat`);
-      toast.success('SPK Disetujui');
-      setSelectedSpk(null);
-      loadAll();
-    });
-  }
-
-  async function approveSpkKadisPelapor(spkId) {
-    confirm('Approve Final', 'Selesaikan dan tutup SPK?', async () => {
-      await apiPost(`/corrective/spk/${spkId}/approve-kadis-pelapor`);
-      toast.success('SPK Selesai');
-      setSelectedSpk(null);
-      loadAll();
-    });
-  }
-
-  async function rejectSpk(spkId) {
-    confirm('Tolak SPK', 'Alasan penolakan:', async (notes) => {
-      await apiPost(`/corrective/spk/${spkId}/reject`, { notes });
-      toast.success('SPK Ditolak');
-      setSelectedSpk(null);
-      loadAll();
-    }, true);
-  }
-
-  function openSpkPanel(req) {
-    const today = new Date();
-    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    
-    setSpkForm({
-      ...EMPTY_SPK_FORM,
-      notificationId: req.id,
-      orderNumber: `ORD-${dateStr}-${rand}`,
-      equipmentId: req.equipment || '',
-      location: req.functionalLocation || '',
-      jobDescription: [req.description, req.longText].filter(Boolean).join('\n'),
-      workCenter: req.workCenter || 'mechanical',
-    });
-    setSelectedRequest(null);
-    setSpkPanelOpen(true);
-  }
-
-  async function saveSpk() {
-    const { notificationId, priority, equipmentId, jobDescription } = spkForm;
-    if (!notificationId || !priority || !equipmentId || !jobDescription) {
-      toast.error('Notifikasi, prioritas, equipment, dan deskripsi wajib diisi.');
-      return;
-    }
-    setSavingSpk(true);
-    try {
-      await apiPost('/corrective/spk', {
-        ...spkForm,
-        plannedWorker: parseInt(spkForm.plannedWorker) || 1,
-        plannedHourPerWorker: parseFloat(spkForm.plannedHourPerWorker) || 1,
+  async function deleteAllRequests() {
+    confirmAction('Hapus Semua Notifikasi', 'Anda yakin ingin menghapus SELURUH data notifikasi yang belum dibuat SPK?', async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/requests`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      toast.success('SPK berhasil dibuat');
-      setSpkPanelOpen(false);
-      loadAll();
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setSavingSpk(false);
-    }
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Berhasil dihapus');
+        loadAll();
+      } else {
+        toast.error(data.error || 'Gagal menghapus');
+      }
+    });
+  }
+
+  async function deleteRequest(id) {
+    confirmAction('Hapus Notifikasi', `Anda yakin ingin menghapus notifikasi ${id}?`, async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/requests/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Berhasil dihapus');
+        loadAll();
+      } else {
+        toast.error(data.error || 'Gagal menghapus');
+      }
+    });
+  }
+
+  async function deleteAllSpks() {
+    confirmAction('Hapus Semua SPK SAP', 'Anda yakin ingin menghapus SELURUH data SPK SAP aktif dan riwayat?', async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/sap-spk`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(data.message);
+        loadAll();
+      } else {
+        toast.error(data.message || 'Gagal menghapus');
+      }
+    });
+  }
+
+  async function deleteSpk(order_number) {
+    confirmAction('Hapus SPK SAP', `Anda yakin ingin menghapus SPK ${order_number}?`, async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/sap-spk/${order_number}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(data.message);
+        loadAll();
+      } else {
+        toast.error(data.message || 'Gagal menghapus');
+      }
+    });
   }
 
   const TABS = [
-    { key: 'requests', label: 'Notifikasi', count: filteredRequests.length },
-    { key: 'spk', label: 'SPK Aktif', count: activeSpks.length },
-    { key: 'history', label: 'History', count: history.length },
+    { key: 'requests', label: 'Notifikasi', icon: Inbox, count: filteredRequests.length },
+    { key: 'spk', label: 'SPK Aktif (SAP)', icon: FileText, count: spks.length },
+    { key: 'history', label: 'History', icon: CheckCircle2, count: history.length },
   ];
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+      {/* Header Area */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-800">Corrective Planner</h2>
-          <p className="text-sm text-gray-500">Manajemen laporan dan SPK corrective maintenance</p>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Corrective Planner</h2>
+          <p className="text-slate-500 mt-1 text-sm">Kelola laporan notifikasi dan integrasikan ekspor SPK dari SAP.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadAll} disabled={loading}>
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept=".xlsx, .xls" 
+            onChange={handleFileUpload} 
+          />
+          {tab === 'spk' && spks.length > 0 && (
+            <Button variant="destructive" className="shadow-sm" onClick={deleteAllSpks}>
+              <Trash2 size={16} className="mr-2" />
+              Hapus Semua
+            </Button>
+          )}
+          {tab === 'history' && history.length > 0 && (
+            <Button variant="destructive" className="shadow-sm" onClick={deleteAllSpks}>
+              <Trash2 size={16} className="mr-2" />
+              Hapus Semua
+            </Button>
+          )}
+          <Button variant="default" className="shadow-sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+            <FileSpreadsheet size={16} className="mr-2" />
+            {uploading ? 'Mengunggah...' : 'Upload Excel SAP'}
+          </Button>
+          <Button variant="outline" size="icon" onClick={loadAll} disabled={loading} className="shrink-0 bg-white shadow-sm">
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          </Button>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200">
-        {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={cn('px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
-              tab === t.key
-                ? 'border-blue-600 text-blue-700'
-                : 'border-transparent text-gray-500 hover:text-gray-700')}>
-            {t.label}
-            <span className={cn('ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-semibold',
-              tab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>
-              {t.count}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Tab: Requests */}
-      {tab === 'requests' && (
-        <div className="space-y-3">
-          <div className="flex gap-2 flex-wrap">
-            <select value={filterNotifStatus} onChange={(e) => setFilterNotifStatus(e.target.value)}
-              className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-              <option value="">Semua Status</option>
-              <option value="submitted">Submitted</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-            <select value={filterApprovalStatus} onChange={(e) => setFilterApprovalStatus(e.target.value)}
-              className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-              <option value="">Semua Approval</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="menunggu_review_awal_kadis_pp">Review Kadis PP</option>
-              <option value="spk_issued">SPK Issued</option>
-            </select>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  {['ID', 'Tanggal / Pelapor', 'Equipment / Lokasi', 'Tipe', 'Deskripsi', 'Status', 'Approval', 'Aksi'].map((h) => (
-                    <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Memuat...</td></tr>
-                ) : filteredRequests.length === 0 ? (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Tidak ada laporan ditemukan</td></tr>
-                ) : filteredRequests.map((req) => (
-                  <tr key={req.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedRequest(req)}>
-                    <td className="px-3 py-3 font-mono text-xs font-semibold text-gray-800">{req.id}</td>
-                    <td className="px-3 py-3">
-                      <div className="text-xs text-gray-700">{fmtDate(req.notificationDate || req.submittedAt)}</div>
-                      <div className="text-xs text-gray-400">{req.reportedBy || ''}</div>
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="text-xs text-gray-700">{req.equipment || '—'}</div>
-                      <div className="text-xs text-gray-400">{req.functionalLocation || '—'}</div>
-                    </td>
-                    <td className="px-3 py-3 text-xs text-gray-600">{req.notificationType || '—'}</td>
-                    <td className="px-3 py-3 text-xs text-gray-600 max-w-[180px] truncate">{req.description || '—'}</td>
-                    <td className="px-3 py-3">
-                      <Badge value={req.status} colorMap={STATUS_COLORS} labelMap={STATUS_LABELS} />
-                    </td>
-                    <td className="px-3 py-3">
-                      <Badge value={req.approvalStatus} colorMap={APPROVAL_COLORS} labelMap={APPROVAL_LABELS} />
-                    </td>
-                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        {req.status === 'submitted' && req.approvalStatus === 'pending' && (
-                          <Button size="sm" className="h-7 text-xs" onClick={() => approvePlanner(req.id)}>Terima</Button>
-                        )}
-                        {req.status === 'approved' && !req.spkId && (
-                          <Button size="sm" className="h-7 text-xs" onClick={() => openSpkPanel(req)}>Generate SPK</Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* Segmented Tabs & Filters */}
+      <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between gap-4 items-center">
+        <div className="flex gap-1 overflow-x-auto w-full md:w-auto p-1 bg-slate-50 rounded-lg">
+          {TABS.map((t) => {
+            const Icon = t.icon;
+            const isActive = tab === t.key;
+            return (
+              <button key={t.key} onClick={() => setTab(t.key)}
+                className={cn('flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all rounded-md whitespace-nowrap',
+                  isActive ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'
+                )}>
+                <Icon size={16} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
+                {t.label}
+                <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold ml-1',
+                  isActive ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600')}>
+                  {t.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      )}
-
-      {/* Tab: Active SPKs */}
-      {tab === 'spk' && (
-        <div className="space-y-3">
-          <div className="flex gap-2 flex-wrap">
+        
+        {/* Dynamic Filters based on active tab */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {tab === 'requests' && filteredRequests.length > 0 && (
+            <Button variant="destructive" className="shadow-sm" onClick={deleteAllRequests}>
+              <Trash2 size={16} className="mr-2" />
+              Hapus Semua
+            </Button>
+          )}
+          {tab === 'requests' && (
+            <>
+              <select value={filterNotifStatus} onChange={(e) => setFilterNotifStatus(e.target.value)}
+                className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all">
+                <option value="">Semua Status Laporan</option>
+                <option value="submitted">Submitted</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <select value={filterApprovalStatus} onChange={(e) => setFilterApprovalStatus(e.target.value)}
+                className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all">
+                <option value="">Semua Approval</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </>
+          )}
+          {tab === 'spk' && (
             <select value={filterSpkStatus} onChange={(e) => setFilterSpkStatus(e.target.value)}
-              className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-              <option value="">Semua Status</option>
-              <option value="draft">Draft</option>
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all">
+              <option value="">Semua Status SPK</option>
+              <option value="baru_import">Baru</option>
               <option value="eksekusi">Eksekusi</option>
-              <option value="awaiting_kadis_pusat">Review Kadis PP</option>
-              <option value="awaiting_kadis_pelapor">Review Pelapor</option>
+              <option value="menunggu_review_kadis_pp">Review Kadis PP</option>
+              <option value="menunggu_review_kadis_pelapor">Review Pelapor</option>
             </select>
-            <select value={filterSpkPriority} onChange={(e) => setFilterSpkPriority(e.target.value)}
-              className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-              <option value="">Semua Prioritas</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  {['SPK Number', 'Order Number', 'Dibuat', 'Equipment', 'Prioritas', 'Status', 'Aksi'].map((h) => (
-                    <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Memuat...</td></tr>
-                ) : activeSpks.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Belum ada SPK aktif</td></tr>
-                ) : activeSpks.map((spk) => (
-                  <tr key={spk.spkId} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedSpk(spk)}>
-                    <td className="px-3 py-3 font-mono text-xs font-semibold text-gray-800">{spk.spkNumber || spk.spkId}</td>
-                    <td className="px-3 py-3 text-xs text-gray-600">{spk.orderNumber || '—'}</td>
-                    <td className="px-3 py-3 text-xs text-gray-600">{fmtDate(spk.createdDate)}</td>
-                    <td className="px-3 py-3 text-xs text-gray-600">{spk.equipmentId || '—'}</td>
-                    <td className="px-3 py-3">
-                      <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700 capitalize">{spk.priority || '—'}</span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <Badge value={spk.status} colorMap={STATUS_COLORS} labelMap={STATUS_LABELS} />
-                    </td>
-                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        {spk.status === 'awaiting_kadis_pusat' && (
-                          <Button size="sm" className="h-7 text-xs" onClick={() => approveSpkKadisPusat(spk.spkId)}>Approve</Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Tab: History */}
-      {tab === 'history' && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {['SPK Number', 'Dibuat', 'Equipment', 'Status', 'Aksi'].map((h) => (
-                  <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+      {/* Main Content Area */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        {tab === 'requests' && (
+          <Table>
+            <TableHeader className="bg-slate-50/80">
+              <TableRow>
+                <TableHead className="w-[100px]">ID Laporan</TableHead>
+                <TableHead>Info Waktu & Pelapor</TableHead>
+                <TableHead>Lokasi & Equipment</TableHead>
+                <TableHead>Tipe</TableHead>
+                <TableHead>Status & Approval</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Memuat...</td></tr>
-              ) : history.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Belum ada riwayat SPK</td></tr>
-              ) : history.map((spk) => (
-                <tr key={spk.spkId} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedSpk(spk)}>
-                  <td className="px-3 py-3 font-mono text-xs font-semibold text-gray-800">{spk.spkNumber || spk.spkId}</td>
-                  <td className="px-3 py-3 text-xs text-gray-600">{fmtDate(spk.createdDate)}</td>
-                  <td className="px-3 py-3 text-xs text-gray-600">{spk.equipmentId || '—'}</td>
-                  <td className="px-3 py-3"><Badge value={spk.status} colorMap={STATUS_COLORS} labelMap={STATUS_LABELS} /></td>
-                  <td className="px-3 py-3">
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); setSelectedSpk(spk); }}>Detail</Button>
-                  </td>
-                </tr>
+                <TableRow><TableCell colSpan={6} className="h-24 text-center text-slate-400">Memuat data...</TableCell></TableRow>
+              ) : filteredRequests.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="h-48 text-center"><EmptyState icon={Inbox} text="Belum ada laporan notifikasi" /></TableCell></TableRow>
+              ) : filteredRequests.map((req) => (
+                <TableRow key={req.id} className="cursor-pointer hover:bg-slate-50/80 transition-colors" onClick={() => setSelectedRequest(req)}>
+                  <TableCell className="font-mono text-xs font-semibold text-slate-700">{req.id}</TableCell>
+                  <TableCell>
+                    <div className="font-medium text-slate-800">{fmtDate(req.notificationDate || req.submittedAt)}</div>
+                    <div className="text-xs text-slate-500">{req.reportedBy || '-'}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-slate-800 truncate max-w-[200px]" title={req.equipment}>{req.equipment || '—'}</div>
+                    <div className="text-xs text-slate-500 truncate max-w-[200px]" title={req.functionalLocation}>{req.functionalLocation || '—'}</div>
+                  </TableCell>
+                  <TableCell className="text-slate-600">{req.notificationType || '—'}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1.5 items-start">
+                      <StatusBadge value={req.status} colorMap={NOTIF_STATUS_COLORS} labelMap={NOTIF_STATUS_LABELS} />
+                      <StatusBadge value={req.approvalStatus} colorMap={APPROVAL_COLORS} labelMap={APPROVAL_LABELS} />
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-end items-center gap-1">
+                      {req.status === 'submitted' && req.approvalStatus === 'pending' ? (
+                        <Button size="sm" className="h-8 shadow-sm" onClick={() => approvePlanner(req.id)}>Terima</Button>
+                      ) : (
+                        <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedRequest(req)}>Detail</Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => deleteRequest(req.id)}>
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </TableBody>
+          </Table>
+        )}
+
+        {tab === 'spk' && (
+          <Table>
+            <TableHeader className="bg-slate-50/80">
+              <TableRow>
+                <TableHead>Order Number</TableHead>
+                <TableHead>Tanggal Posting</TableHead>
+                <TableHead>Equipment</TableHead>
+                <TableHead>Jam / Pekerja</TableHead>
+                <TableHead>Status SAP</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={6} className="h-24 text-center text-slate-400">Memuat data...</TableCell></TableRow>
+              ) : spks.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="h-48 text-center"><EmptyState icon={FileText} text="Belum ada SPK aktif" /></TableCell></TableRow>
+              ) : spks.map((spk) => (
+                <TableRow key={spk.order_number} className="cursor-pointer hover:bg-slate-50/80 transition-colors" onClick={() => setSelectedSpk(spk)}>
+                  <TableCell className="font-mono text-xs font-semibold text-slate-800">{spk.order_number}</TableCell>
+                  <TableCell className="text-slate-600 font-medium">{fmtDate(spk.posting_date)}</TableCell>
+                  <TableCell className="text-slate-600 truncate max-w-[200px]" title={spk.equipment_name}>{spk.equipment_name || '—'}</TableCell>
+                  <TableCell>
+                     <div className="flex items-center gap-2 text-slate-600">
+                        <span className="flex items-center gap-1 text-xs"><Wrench size={12}/> {spk.actual_personnel || 0} org</span>
+                        <span className="flex items-center gap-1 text-xs"><AlertCircle size={12}/> {spk.total_actual_hour || 0} jam</span>
+                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge value={spk.status} colorMap={SAP_STATUS_COLORS} labelMap={SAP_STATUS_LABELS} />
+                  </TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-end items-center gap-1">
+                      <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedSpk(spk)}>Detail</Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => deleteSpk(spk.order_number)}>
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+
+        {tab === 'history' && (
+          <Table>
+            <TableHeader className="bg-slate-50/80">
+              <TableRow>
+                <TableHead>Order Number</TableHead>
+                <TableHead>Tanggal Posting</TableHead>
+                <TableHead>Equipment</TableHead>
+                <TableHead>Status SAP</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={5} className="h-24 text-center text-slate-400">Memuat data...</TableCell></TableRow>
+              ) : history.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="h-48 text-center"><EmptyState icon={CheckCircle2} text="Belum ada riwayat SPK" /></TableCell></TableRow>
+              ) : history.map((spk) => (
+                <TableRow key={spk.order_number} className="cursor-pointer hover:bg-slate-50/80 transition-colors" onClick={() => setSelectedSpk(spk)}>
+                  <TableCell className="font-mono text-xs font-semibold text-slate-800">{spk.order_number}</TableCell>
+                  <TableCell className="text-slate-600 font-medium">{fmtDate(spk.posting_date)}</TableCell>
+                  <TableCell className="text-slate-600 truncate max-w-[200px]">{spk.equipment_name || '—'}</TableCell>
+                  <TableCell>
+                    <StatusBadge value={spk.status} colorMap={SAP_STATUS_COLORS} labelMap={SAP_STATUS_LABELS} />
+                  </TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-end items-center gap-1">
+                      <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedSpk(spk)}>Detail</Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => deleteSpk(spk.order_number)}>
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
       {/* Request Detail Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={(o) => !o && setSelectedRequest(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detail Notifikasi</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-[95vw] lg:max-w-[75vw] max-h-[90vh] overflow-y-auto p-0 rounded-2xl gap-0">
+          <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 px-8 py-6 border-b border-slate-100 sticky top-0 z-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-800">Detail Laporan Notifikasi</DialogTitle>
+                <div className="text-sm font-mono text-slate-400 mt-1">{selectedRequest?.id}</div>
+              </div>
+              <div className="flex gap-2">
+                <StatusBadge value={selectedRequest?.status} colorMap={NOTIF_STATUS_COLORS} labelMap={NOTIF_STATUS_LABELS} />
+                <StatusBadge value={selectedRequest?.approvalStatus} colorMap={APPROVAL_COLORS} labelMap={APPROVAL_LABELS} />
+              </div>
+            </div>
+          </div>
+          
           {selectedRequest && (
-            <div className="space-y-4 text-sm">
-              <Section title="Status">
-                <Row label="Notification ID"><span className="font-mono font-semibold">{selectedRequest.id}</span></Row>
-                <Row label="Status"><Badge value={selectedRequest.status} colorMap={STATUS_COLORS} labelMap={STATUS_LABELS} /></Row>
-                <Row label="Approval"><Badge value={selectedRequest.approvalStatus} colorMap={APPROVAL_COLORS} labelMap={APPROVAL_LABELS} /></Row>
-              </Section>
-              <Section title="Informasi Peralatan">
-                <Row label="Functional Location">{selectedRequest.functionalLocation || '-'}</Row>
-                <Row label="Equipment">{selectedRequest.equipment || '-'}</Row>
-                <Row label="Work Center">{selectedRequest.workCenter || '-'}</Row>
-              </Section>
+            <div className="p-8 space-y-8">
+              {/* Row 1: Key info cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoCard label="Notification ID" value={selectedRequest.id} mono />
+                <InfoCard label="Tipe Notifikasi" value={selectedRequest.notificationType} />
+                <InfoCard label="Work Center" value={selectedRequest.workCenter} />
+                <InfoCard label="Dilaporkan Oleh" value={selectedRequest.reportedBy} />
+              </div>
+
+              {/* Row 2: Equipment & Schedule */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Section title="Informasi Peralatan">
+                  <Row label="Equipment" value={selectedRequest.equipment} />
+                  <Row label="Functional Location" value={selectedRequest.functionalLocation} />
+                </Section>
+                <Section title="Jadwal">
+                  <Row label="Tanggal Lapor" value={fmtDate(selectedRequest.notificationDate || selectedRequest.submittedAt)} />
+                  <Row label="Target Mulai" value={fmtDate(selectedRequest.requiredStart)} />
+                  <Row label="Target Selesai" value={fmtDate(selectedRequest.requiredEnd)} />
+                </Section>
+              </div>
+
+              {/* Row 3: Description */}
               <Section title="Deskripsi Kerusakan">
-                <div className="p-3 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-                  <p className="font-semibold text-gray-800 mb-1">{selectedRequest.description || 'Tanpa judul'}</p>
-                  <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">{selectedRequest.longText || '-'}</p>
-                </div>
-                <div className="flex gap-4 mt-2 text-xs text-gray-600">
-                  <span>Target Mulai: <strong>{fmtDate(selectedRequest.requiredStart)}</strong></span>
-                  <span>Target Selesai: <strong>{fmtDate(selectedRequest.requiredEnd)}</strong></span>
+                <div className="p-5 bg-blue-50/50 rounded-xl border border-blue-100/50">
+                  <p className="font-semibold text-slate-800 mb-2 text-base">{selectedRequest.description || 'Tanpa judul'}</p>
+                  <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{selectedRequest.longText || 'Tidak ada deskripsi panjang.'}</p>
                 </div>
               </Section>
+
+              {/* Row 4: Photos */}
               {(selectedRequest.images || []).length > 0 && (
                 <Section title="Foto Lapangan">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-4">
                     {selectedRequest.images.filter(Boolean).map((p, i) => {
                       const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
                       const src = p.startsWith('http') ? p : p.startsWith('uploads/') ? `${baseUrl}/${p}` : `${baseUrl}/uploads/${p}`;
                       return (
-                        <img key={i} src={src} alt="Photo" onClick={() => window.open(src, '_blank')}
-                          className="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80" />
+                        <img key={i} src={src} alt={`Attachment ${i+1}`} onClick={() => window.open(src, '_blank')}
+                          className="w-36 h-36 object-cover rounded-xl border border-slate-200 cursor-zoom-in hover:shadow-lg transition-all hover:scale-105" />
                       );
                     })}
                   </div>
                 </Section>
               )}
-              <Section title="Metadata">
-                <Row label="Pelapor">{selectedRequest.reportedBy || '-'}</Row>
-                <Row label="Waktu Lapor">{fmtDate(selectedRequest.notificationDate || selectedRequest.submittedAt)}</Row>
-              </Section>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setSelectedRequest(null)}>Tutup</Button>
+          <div className="bg-slate-50/80 px-8 py-5 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0">
+            <Button variant="outline" onClick={() => setSelectedRequest(null)}>Tutup</Button>
             {selectedRequest?.status === 'submitted' && selectedRequest?.approvalStatus === 'pending' && (
-              <Button onClick={() => { setSelectedRequest(null); approvePlanner(selectedRequest.id); }}>Terima Laporan</Button>
+              <Button onClick={() => { setSelectedRequest(null); approvePlanner(selectedRequest.id); }} className="shadow-sm">Terima Laporan</Button>
             )}
-            {selectedRequest?.status === 'approved' && !selectedRequest?.spkId && (
-              <Button onClick={() => openSpkPanel(selectedRequest)}>Generate SPK</Button>
-            )}
-            {selectedRequest?.approvalStatus === 'menunggu_review_awal_kadis_pp' && (
-              <>
-                <Button variant="outline" className="text-red-600" onClick={() => { setSelectedRequest(null); rejectKadisPP(selectedRequest.id); }}>Tolak</Button>
-                <Button onClick={() => { setSelectedRequest(null); approveKadisPP(selectedRequest.id); }}>Approve Kadis PP</Button>
-              </>
-            )}
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* SPK Detail Dialog */}
       <Dialog open={!!selectedSpk} onOpenChange={(o) => !o && setSelectedSpk(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detail SPK Corrective</DialogTitle>
-          </DialogHeader>
-          {selectedSpk && (
-            <div className="space-y-4 text-sm">
-              {/* Status flow */}
-              <div className="flex items-center gap-1 flex-wrap">
-                {SPK_STEPS.map((step, i) => {
-                  const currentIdx = SPK_STEPS.findIndex((s) => s.key === selectedSpk.status);
-                  const done = i < currentIdx;
-                  const active = i === currentIdx;
-                  return (
-                    <div key={step.key} className="flex items-center gap-1">
-                      <span className={cn('px-2 py-1 rounded text-xs font-semibold',
-                        done ? 'bg-green-100 text-green-700' :
-                        active ? 'bg-blue-600 text-white' :
-                        'bg-gray-100 text-gray-400')}>
-                        {step.label}
-                      </span>
-                      {i < SPK_STEPS.length - 1 && <span className="text-gray-300 text-xs">→</span>}
-                    </div>
-                  );
-                })}
+        <DialogContent className="max-w-[95vw] lg:max-w-[80vw] max-h-[90vh] overflow-y-auto p-0 rounded-2xl gap-0">
+          <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 px-8 py-6 border-b border-slate-100 sticky top-0 z-10">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-800">Detail SPK SAP</DialogTitle>
+                <div className="text-sm font-mono text-slate-400 mt-1">{selectedSpk?.order_number}</div>
               </div>
-              <Section title="Informasi Utama">
-                <Row label="SPK Number"><span className="font-mono font-semibold">{selectedSpk.spkNumber || selectedSpk.spkId}</span></Row>
-                <Row label="Work Center">{selectedSpk.workCenter || '-'}</Row>
-                <Row label="Status"><Badge value={selectedSpk.status} colorMap={STATUS_COLORS} labelMap={STATUS_LABELS} /></Row>
-              </Section>
-              <Section title="Perencanaan Sumber Daya">
-                <Row label="Pekerja">{selectedSpk.plannedWorker || 0} orang</Row>
-                <Row label="Estimasi Jam">{selectedSpk.totalPlannedHour || 0} jam</Row>
-              </Section>
-              <Section title="Deskripsi Pekerjaan">
-                <p className="whitespace-pre-wrap text-xs text-gray-700 leading-relaxed">{selectedSpk.jobDescription || '-'}</p>
-              </Section>
-              {selectedSpk.photos?.length > 0 && (
-                <Section title="Foto Dokumentasi">
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSpk.photos.map((p, i) => {
-                      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-                      const src = p.photoPath.startsWith('http') ? p.photoPath : p.photoPath.startsWith('uploads/') ? `${baseUrl}/${p.photoPath}` : `${baseUrl}/uploads/${p.photoPath}`;
-                      return (
-                        <img key={i} src={src} alt={p.photoType}
-                          onClick={() => window.open(src, '_blank')}
-                          className="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80" />
-                      );
-                    })}
+              <StatusBadge value={selectedSpk?.status} colorMap={SAP_STATUS_COLORS} labelMap={SAP_STATUS_LABELS} />
+            </div>
+
+            {/* Progress Stepper */}
+            <div className="flex items-center w-full relative max-w-xl mx-auto">
+              {SAP_SPK_STEPS.map((step, i) => {
+                const currentIdx = SAP_SPK_STEPS.findIndex((s) => s.key === selectedSpk?.status);
+                const done = i < currentIdx;
+                const active = i === currentIdx;
+                return (
+                  <div key={step.key} className="flex-1 relative flex flex-col items-center">
+                    {i !== 0 && (
+                       <div className={cn("absolute top-3 left-[-50%] w-full h-[2px] -z-10", done || active ? "bg-blue-500" : "bg-slate-200")} />
+                    )}
+                    <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-slate-50 transition-colors z-10", 
+                      done ? "bg-blue-500 text-white" : 
+                      active ? "bg-blue-600 text-white ring-blue-100" : "bg-slate-200 text-slate-400"
+                    )}>
+                      {done ? <CheckCircle2 size={14} /> : i + 1}
+                    </div>
+                    <span className={cn("text-xs mt-2 font-medium w-full text-center absolute top-8", 
+                      active ? "text-blue-700" : done ? "text-slate-700" : "text-slate-400"
+                    )}>{step.label}</span>
                   </div>
+                );
+              })}
+            </div>
+            <div className="h-7"></div>
+          </div>
+          
+          {selectedSpk && (
+            <div className="p-8 space-y-8">
+              {/* Row 1: 4-column grid for key info */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoCard label="Order Number" value={selectedSpk.order_number} mono />
+                <InfoCard label="Status SAP" value={selectedSpk.sys_status} />
+                <InfoCard label="Work Center" value={selectedSpk.work_center} />
+                <InfoCard label="Control Key" value={selectedSpk.ctrl_key} />
+              </div>
+
+              {/* Row 2: Description full width */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InfoCard label="Deskripsi" value={selectedSpk.description} />
+                <InfoCard label="Short Text" value={selectedSpk.short_text} />
+              </div>
+
+              {/* Row 3: Sections */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Section title="Lokasi & Peralatan">
+                  <Row label="Equipment" value={selectedSpk.equipment_name} />
+                  <Row label="Functional Loc" value={selectedSpk.functional_location} />
+                  <Row label="Location" value={selectedSpk.location} />
+                  <Row label="Cost Center" value={selectedSpk.cost_center} />
                 </Section>
+                <Section title="Perencanaan">
+                  <Row label="Plan Duration" value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || ''}`} />
+                  <Row label="Normal Duration" value={`${selectedSpk.normal_dur || 0} ${selectedSpk.normal_dur_un || ''}`} />
+                  <Row label="Unit for Work" value={selectedSpk.unit_for_work} />
+                  <Row label="Activity" value={selectedSpk.activity} />
+                  <Row label="Maint. Activ. Type" value={selectedSpk.maint_activ_type} />
+                </Section>
+                <Section title="Jadwal & Aktual SAP">
+                  <Row label="Tgl Posting" value={fmtDate(selectedSpk.posting_date)} />
+                  <Row label="Work Start" value={fmtDate(selectedSpk.work_start)} />
+                  <Row label="Work Finish" value={fmtDate(selectedSpk.work_finish)} />
+                  <Row label="Start Time" value={selectedSpk.start_time} />
+                  <Row label="Finish Time" value={selectedSpk.finish_time} />
+                  <Row label="Durasi Aktual" value={`${selectedSpk.dur_act || 0} ${selectedSpk.normal_dur_un || ''}`} />
+                  <Row label="Actual Work" value={`${selectedSpk.actual_work || 0} ${selectedSpk.unit_for_work || ''}`} />
+                </Section>
+              </div>
+
+              {/* Row 4: Additional info */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoCard label="Confirmation Text" value={selectedSpk.conf_text} />
+                <InfoCard label="Confirm Number" value={selectedSpk.confirm_number} />
+                <InfoCard label="Reason of Var" value={selectedSpk.reason_of_var} />
+                <InfoCard label="Dilaporkan Oleh" value={selectedSpk.report_by} />
+              </div>
+
+              {/* Execution Results */}
+              {(selectedSpk.actual_materials || selectedSpk.actual_tools || selectedSpk.job_result_description || selectedSpk.photo_before || selectedSpk.photo_after) && (
+                <div className="bg-orange-50/50 rounded-2xl border border-orange-100/50 p-5">
+                   <h4 className="text-sm font-bold text-orange-800 mb-4 flex items-center gap-2">
+                     <Wrench size={16} /> Laporan Eksekusi Teknisi
+                   </h4>
+                   
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <MetricCard label="Pekerja Aktual" value={`${selectedSpk.actual_personnel || 0} Orang`} />
+                      <MetricCard label="Jam Aktual" value={`${selectedSpk.total_actual_hour || 0} Jam`} />
+                      <MetricCard label="Eksekutor NIK" value={selectedSpk.execution_nik || '-'} className="col-span-2 md:col-span-2" />
+                   </div>
+
+                   <div className="space-y-4 text-sm text-slate-700">
+                      <div>
+                        <strong className="block text-xs text-slate-500 uppercase tracking-wider mb-1">Material yang Digunakan</strong>
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-200">{selectedSpk.actual_materials || '-'}</div>
+                      </div>
+                      <div>
+                        <strong className="block text-xs text-slate-500 uppercase tracking-wider mb-1">Tools yang Digunakan</strong>
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-200">{selectedSpk.actual_tools || '-'}</div>
+                      </div>
+                      <div>
+                        <strong className="block text-xs text-slate-500 uppercase tracking-wider mb-1">Catatan Hasil Kerja</strong>
+                        <div className="bg-white p-3 rounded-lg border border-slate-200 whitespace-pre-wrap">{selectedSpk.job_result_description || '-'}</div>
+                      </div>
+                   </div>
+
+                   {(selectedSpk.photo_before || selectedSpk.photo_after) && (
+                     <div className="mt-6 pt-6 border-t border-orange-200/50">
+                        <strong className="block text-xs text-slate-500 uppercase tracking-wider mb-3">Foto Dokumentasi</strong>
+                        <div className="flex flex-wrap gap-4">
+                          {selectedSpk.photo_before && (
+                            <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 inline-block">
+                              <img 
+                                src={`${process.env.NEXT_PUBLIC_API_URL}/uploads/${selectedSpk.photo_before}`} 
+                                onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${selectedSpk.photo_before}`, '_blank')}
+                                className="w-36 h-36 object-cover rounded-lg cursor-zoom-in hover:opacity-90" 
+                                alt="Before" 
+                              />
+                              <span className="text-xs font-semibold text-slate-600 block text-center mt-2">Kondisi Awal</span>
+                            </div>
+                          )}
+                          {selectedSpk.photo_after && (
+                            <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 inline-block">
+                              <img 
+                                src={`${process.env.NEXT_PUBLIC_API_URL}/uploads/${selectedSpk.photo_after}`} 
+                                onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${selectedSpk.photo_after}`, '_blank')}
+                                className="w-36 h-36 object-cover rounded-lg cursor-zoom-in hover:opacity-90" 
+                                alt="After" 
+                              />
+                              <span className="text-xs font-semibold text-slate-600 block text-center mt-2">Kondisi Akhir</span>
+                            </div>
+                          )}
+                        </div>
+                     </div>
+                   )}
+                </div>
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setSelectedSpk(null)}>Tutup</Button>
-            {selectedSpk?.status === 'awaiting_kadis_pusat' && (
-              <>
-                <Button variant="outline" className="text-red-600" onClick={() => { setSelectedSpk(null); rejectSpk(selectedSpk.spkId); }}>Tolak</Button>
-                <Button onClick={() => { setSelectedSpk(null); approveSpkKadisPusat(selectedSpk.spkId); }}>Setujui (Kadis PP)</Button>
-              </>
-            )}
-            {selectedSpk?.status === 'awaiting_kadis_pelapor' && (
-              <>
-                <Button variant="outline" className="text-red-600" onClick={() => { setSelectedSpk(null); rejectSpk(selectedSpk.spkId); }}>Tolak</Button>
-                <Button onClick={() => { setSelectedSpk(null); approveSpkKadisPelapor(selectedSpk.spkId); }}>Setujui (Pelapor)</Button>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* SPK Create Panel */}
-      <Dialog open={spkPanelOpen} onOpenChange={setSpkPanelOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Generate SPK Corrective</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 text-sm">
-            <SpkField label="Notification ID" value={spkForm.notificationId} onChange={(v) => setSpkForm((f) => ({ ...f, notificationId: v }))} disabled />
-            <div className="grid grid-cols-2 gap-3">
-              <SpkField label="Order Number" value={spkForm.orderNumber} onChange={(v) => setSpkForm((f) => ({ ...f, orderNumber: v }))} disabled />
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Prioritas *</label>
-                <select value={spkForm.priority} onChange={(e) => setSpkForm((f) => ({ ...f, priority: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </div>
-            </div>
-            <SpkField label="Equipment ID *" value={spkForm.equipmentId} onChange={(v) => setSpkForm((f) => ({ ...f, equipmentId: v }))} />
-            <SpkField label="Functional Location" value={spkForm.location} onChange={(v) => setSpkForm((f) => ({ ...f, location: v }))} />
-            <SpkField label="Target Selesai" value={spkForm.requestedFinishDate} onChange={(v) => setSpkForm((f) => ({ ...f, requestedFinishDate: v }))} type="date" />
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Work Center</label>
-              <select value={spkForm.workCenter} onChange={(e) => setSpkForm((f) => ({ ...f, workCenter: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-                <option value="mechanical">Mechanical</option>
-                <option value="electrical">Electrical</option>
-                <option value="civil">Civil</option>
-                <option value="automation">Automation</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Deskripsi Pekerjaan *</label>
-              <textarea value={spkForm.jobDescription} onChange={(e) => setSpkForm((f) => ({ ...f, jobDescription: e.target.value }))}
-                rows={4} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <SpkField label="Jumlah Pekerja" value={spkForm.plannedWorker} onChange={(v) => setSpkForm((f) => ({ ...f, plannedWorker: v }))} type="number" />
-              <SpkField label="Jam / Pekerja" value={spkForm.plannedHourPerWorker} onChange={(v) => setSpkForm((f) => ({ ...f, plannedHourPerWorker: v }))} type="number" />
-            </div>
+          <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end sticky bottom-0">
+            <Button variant="outline" onClick={() => setSelectedSpk(null)}>Tutup</Button>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setSpkPanelOpen(false)}>Batal</Button>
-            <Button onClick={saveSpk} disabled={savingSpk}>{savingSpk ? 'Menyimpan...' : 'Buat SPK'}</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Confirm Dialog */}
       <Dialog open={!!confirmState} onOpenChange={(o) => !o && setConfirmState(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle>{confirmState?.title}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-gray-600">{confirmState?.message}</p>
-          {confirmState?.withNotes && (
-            <textarea value={confirmNotes} onChange={(e) => setConfirmNotes(e.target.value)}
-              placeholder="Catatan..." rows={3}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 mt-2" />
-          )}
-          <DialogFooter>
+          <div className="py-2 space-y-4">
+            <p className="text-sm text-slate-600">{confirmState?.message}</p>
+            {confirmState?.withNotes && (
+              <textarea value={confirmNotes} onChange={(e) => setConfirmNotes(e.target.value)}
+                placeholder="Tambahkan catatan jika perlu..." rows={3}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-slate-50" />
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="ghost" onClick={() => setConfirmState(null)} disabled={confirming}>Batal</Button>
-            <Button onClick={runConfirm} disabled={confirming}>{confirming ? 'Memproses...' : 'Konfirmasi'}</Button>
+            <Button onClick={runConfirm} disabled={confirming}>{confirming ? 'Memproses...' : 'Ya, Lanjutkan'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Excel Dialog */}
+      <Dialog open={!!previewData} onOpenChange={(open) => {
+        if (!open && !savingExcel) {
+          setPreviewData(null);
+          setSkippedData(null);
+        }
+      }}>
+        <DialogContent className="max-w-[95vw] md:max-w-[90vw] lg:max-w-[85vw] max-h-[85vh] flex flex-col overflow-hidden bg-white/95 backdrop-blur-xl border-slate-200/60 shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="px-6 py-5 border-b border-slate-100 bg-white/50">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <FileSpreadsheet className="text-blue-600" /> Preview Data Excel SAP
+            </DialogTitle>
+            <p className="text-sm text-slate-500 mt-1">Ditemukan {previewData?.length || 0} baris SPK baru. Silakan periksa kembali sebelum menyimpan.</p>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto p-0 flex flex-col">
+            {skippedData?.length > 0 && (
+              <div className="m-4 mb-2 bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 shadow-sm">
+                <AlertTriangle className="text-amber-500 w-6 h-6 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-amber-800">Perhatian: Ada Data Terlewat ({skippedData.length} SPK)</h4>
+                  <p className="text-sm text-amber-700 mt-1">Order number dari baris-baris ini sudah pernah dimasukkan ke database sehingga dilewati secara otomatis untuk mencegah tumpang tindih data.</p>
+                </div>
+              </div>
+            )}
+            
+            {previewData?.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center py-12">
+                <EmptyState icon={FileSpreadsheet} text="Tidak ada data baru untuk ditambahkan." />
+              </div>
+            ) : (
+              <div className="overflow-x-auto w-full">
+                <Table>
+                  <TableHeader className="bg-slate-50/80 sticky top-0 shadow-sm z-10">
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Order Number</TableHead>
+                      <TableHead className="whitespace-nowrap min-w-[250px]">Deskripsi</TableHead>
+                      <TableHead className="whitespace-nowrap">System Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Work Center</TableHead>
+                      <TableHead className="whitespace-nowrap">Dur. Plan</TableHead>
+                      <TableHead className="whitespace-nowrap">Maint. Activ. Type</TableHead>
+                      <TableHead className="whitespace-nowrap">Location</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewData?.slice(0, 100).map((row, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-mono text-xs font-semibold whitespace-nowrap">{row.order_number}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px]" title={row.description}>{row.description || '-'}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.sys_status || '-'}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.work_center || '-'}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.dur_plan || 0} {row.normal_dur_un || ''}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.maint_activ_type || '-'}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.location || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                    {previewData?.length > 100 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-sm text-slate-500 bg-slate-50/50 italic py-3">
+                          ... dan {previewData.length - 100} baris lainnya
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2 shrink-0">
+            <Button variant="ghost" onClick={() => { setPreviewData(null); setSkippedData(null); }} disabled={savingExcel}>Batal</Button>
+            <Button onClick={handleConfirmUpload} disabled={savingExcel || previewData?.length === 0}>
+              {savingExcel ? 'Menyimpan...' : 'Simpan Data'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -674,28 +867,45 @@ export default function CorrectivePage() {
 
 function Section({ title, children }) {
   return (
-    <div>
-      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{title}</h4>
-      <div className="space-y-1.5 pl-1">{children}</div>
+    <div className="flex flex-col h-full">
+      <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">{title}</h4>
+      <div className="space-y-3 flex-1 bg-slate-50/50 p-4 rounded-xl border border-slate-100">{children}</div>
     </div>
   );
 }
 
-function Row({ label, children }) {
+function Row({ label, value }) {
   return (
-    <div className="flex gap-2">
-      <span className="text-xs text-gray-500 w-36 shrink-0">{label}</span>
-      <span className="text-xs text-gray-800">{children}</span>
+    <div className="min-w-0">
+      <dt className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">{label}</dt>
+      <dd className="text-sm text-slate-800 font-medium break-words">{value || '-'}</dd>
     </div>
   );
 }
 
-function SpkField({ label, value, onChange, type = 'text', disabled = false }) {
+function MetricCard({ label, value, className }) {
   return (
-    <div>
-      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
-        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:bg-gray-50 disabled:text-gray-400" />
+    <div className={cn("bg-white p-3 rounded-xl border border-slate-200 shadow-sm", className)}>
+      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{label}</div>
+      <div className="text-lg font-bold text-slate-800">{value}</div>
+    </div>
+  );
+}
+
+function InfoCard({ label, value, mono }) {
+  return (
+    <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{label}</div>
+      <div className={cn("text-sm text-slate-800 font-medium break-words", mono && "font-mono")}>{value || '-'}</div>
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, text }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-slate-400 py-8">
+      <Icon size={48} strokeWidth={1} className="mb-3 text-slate-300" />
+      <p className="text-sm font-medium">{text}</p>
     </div>
   );
 }
