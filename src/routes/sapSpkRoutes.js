@@ -46,4 +46,8 @@ router.put(
   sapSpkController.executeSapSpk
 );
 
+// Delete Endpoints
+router.delete("/", verifyToken, sapSpkController.deleteAllSapSpk);
+router.delete("/:order_number", verifyToken, sapSpkController.deleteSapSpk);
+
 module.exports = router;

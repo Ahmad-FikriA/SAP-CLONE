@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { RefreshCw, Upload, FileSpreadsheet, Inbox, AlertCircle, FileText, Wrench, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Upload, FileSpreadsheet, Inbox, AlertCircle, FileText, Wrench, CheckCircle2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const APPROVAL_LABELS = {
@@ -191,6 +191,40 @@ export default function CorrectivePage() {
     });
   }
 
+  async function deleteAllSpks() {
+    confirmAction('Hapus Semua SPK SAP', 'Anda yakin ingin menghapus SELURUH data SPK SAP aktif dan riwayat?', async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/sap-spk`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(data.message);
+        loadAll();
+      } else {
+        toast.error(data.message || 'Gagal menghapus');
+      }
+    });
+  }
+
+  async function deleteSpk(order_number) {
+    confirmAction('Hapus SPK SAP', `Anda yakin ingin menghapus SPK ${order_number}?`, async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/sap-spk/${order_number}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        toast.success(data.message);
+        loadAll();
+      } else {
+        toast.error(data.message || 'Gagal menghapus');
+      }
+    });
+  }
+
   const TABS = [
     { key: 'requests', label: 'Notifikasi', icon: Inbox, count: filteredRequests.length },
     { key: 'spk', label: 'SPK Aktif (SAP)', icon: FileText, count: spks.length },
@@ -213,6 +247,18 @@ export default function CorrectivePage() {
             accept=".xlsx, .xls" 
             onChange={handleFileUpload} 
           />
+          {tab === 'spk' && spks.length > 0 && (
+            <Button variant="destructive" className="shadow-sm" onClick={deleteAllSpks}>
+              <Trash2 size={16} className="mr-2" />
+              Hapus Semua
+            </Button>
+          )}
+          {tab === 'history' && history.length > 0 && (
+            <Button variant="destructive" className="shadow-sm" onClick={deleteAllSpks}>
+              <Trash2 size={16} className="mr-2" />
+              Hapus Semua
+            </Button>
+          )}
           <Button variant="default" className="shadow-sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
             <FileSpreadsheet size={16} className="mr-2" />
             {uploading ? 'Mengunggah...' : 'Upload Excel SAP'}
@@ -360,7 +406,12 @@ export default function CorrectivePage() {
                     <StatusBadge value={spk.status} colorMap={SAP_STATUS_COLORS} labelMap={SAP_STATUS_LABELS} />
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedSpk(spk)}>Detail</Button>
+                    <div className="flex justify-end items-center gap-1">
+                      <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedSpk(spk)}>Detail</Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => deleteSpk(spk.order_number)}>
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -392,8 +443,13 @@ export default function CorrectivePage() {
                   <TableCell>
                     <StatusBadge value={spk.status} colorMap={SAP_STATUS_COLORS} labelMap={SAP_STATUS_LABELS} />
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={(e) => { e.stopPropagation(); setSelectedSpk(spk); }}>Detail</Button>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-end items-center gap-1">
+                      <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedSpk(spk)}>Detail</Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => deleteSpk(spk.order_number)}>
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

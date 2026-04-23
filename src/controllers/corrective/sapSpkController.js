@@ -234,8 +234,37 @@ const executeSapSpk = async (req, res) => {
   }
 };
 
+// 4. Delete Single SPK
+const deleteSapSpk = async (req, res) => {
+  try {
+    const { order_number } = req.params;
+    const deleted = await SapSpkCorrective.destroy({ where: { order_number } });
+    if (deleted) {
+      res.status(200).json({ status: "success", message: "SPK deleted successfully" });
+    } else {
+      res.status(404).json({ status: "error", message: "SPK not found" });
+    }
+  } catch (error) {
+    console.error("Error deleting SAP SPK:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+// 5. Delete All SPK
+const deleteAllSapSpk = async (req, res) => {
+  try {
+    await SapSpkCorrective.destroy({ where: {} });
+    res.status(200).json({ status: "success", message: "All SAP SPKs deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting all SAP SPKs:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
 module.exports = {
   getSapSpkList,
   uploadExcel,
   executeSapSpk,
+  deleteSapSpk,
+  deleteAllSapSpk,
 };
