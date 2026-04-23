@@ -7,6 +7,7 @@ import {
   LayoutDashboard, FileText, Wrench, Upload, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
   ChevronLeft, ChevronRight, ClipboardCheck, BarChart2, ClipboardList,
+  MapPin, CalendarRange,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser } from '@/lib/auth';
@@ -29,7 +30,9 @@ const NAV = [
   { divider: true },
   { href: '/submissions', label: 'Submissions', Icon: Activity },
   { divider: true },
-  { href: '/inspeksi', label: 'Inspeksi', Icon: ClipboardList },
+  { href: '/inspeksi',  label: 'Inspeksi',        Icon: ClipboardList  },
+  { href: '/supervisi', label: 'Supervisi',        Icon: MapPin         },
+  { href: '/kalender',  label: 'Kalender Jadwal',  Icon: CalendarRange  },
 ];
 
 export default function Sidebar() {

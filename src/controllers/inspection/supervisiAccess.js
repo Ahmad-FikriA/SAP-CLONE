@@ -73,9 +73,18 @@ function getAllowedExecutorNamesForGroup(groupName) {
   return SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY[groupKey] || [];
 }
 
+function isAdminUser(user) {
+  return String(user && user.role ? user.role : "").toLowerCase() === "admin";
+}
+
 function getSupervisiAccess(user) {
   const nik = normalizeNik(user && user.nik);
   const displayName = String(user && user.name ? user.name : "").trim();
+
+  // Admin memiliki akses penuh (seperti monitor) ke semua data supervisi
+  if (isAdminUser(user)) {
+    return { kind: "monitor", nik, displayName };
+  }
 
   if (SUPERVISI_SCHEDULER_NIKS.has(nik)) {
     return { kind: "scheduler", nik, displayName };
@@ -97,6 +106,8 @@ function hasSupervisiAccess(user) {
 }
 
 function isSupervisiScheduler(user) {
+  // Admin juga bisa mengelola job seperti scheduler
+  if (isAdminUser(user)) return true;
   return getSupervisiAccess(user).kind === "scheduler";
 }
 
