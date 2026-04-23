@@ -371,7 +371,7 @@ const approvePlanner = async (req, res) => {
     approvalStatus: 'approved' 
   });
   
-  const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
+  const fresh = await Notification.findByPk(notification.notificationId || notification.id);
   res.json(fmtRequest(fresh));
 
   // 🔔 Notify Kadis PP that a request has been approved and awaits SPK

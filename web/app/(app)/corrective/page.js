@@ -538,51 +538,61 @@ export default function CorrectivePage() {
 
       {/* Request Detail Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={(o) => !o && setSelectedRequest(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0 rounded-2xl gap-0">
-          <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 z-10">
-            <div>
-              <DialogTitle className="text-lg text-slate-800">Detail Laporan Notifikasi</DialogTitle>
-              <div className="text-sm font-mono text-slate-500 mt-1">{selectedRequest?.id}</div>
-            </div>
-            <div className="flex gap-2">
-              <StatusBadge value={selectedRequest?.status} colorMap={NOTIF_STATUS_COLORS} labelMap={NOTIF_STATUS_LABELS} />
-              <StatusBadge value={selectedRequest?.approvalStatus} colorMap={APPROVAL_COLORS} labelMap={APPROVAL_LABELS} />
+        <DialogContent className="max-w-[95vw] lg:max-w-[75vw] max-h-[90vh] overflow-y-auto p-0 rounded-2xl gap-0">
+          <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 px-8 py-6 border-b border-slate-100 sticky top-0 z-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-800">Detail Laporan Notifikasi</DialogTitle>
+                <div className="text-sm font-mono text-slate-400 mt-1">{selectedRequest?.id}</div>
+              </div>
+              <div className="flex gap-2">
+                <StatusBadge value={selectedRequest?.status} colorMap={NOTIF_STATUS_COLORS} labelMap={NOTIF_STATUS_LABELS} />
+                <StatusBadge value={selectedRequest?.approvalStatus} colorMap={APPROVAL_COLORS} labelMap={APPROVAL_LABELS} />
+              </div>
             </div>
           </div>
           
           {selectedRequest && (
-            <div className="p-6 space-y-6">
+            <div className="p-8 space-y-8">
+              {/* Row 1: Key info cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoCard label="Notification ID" value={selectedRequest.id} mono />
+                <InfoCard label="Tipe Notifikasi" value={selectedRequest.notificationType} />
+                <InfoCard label="Work Center" value={selectedRequest.workCenter} />
+                <InfoCard label="Dilaporkan Oleh" value={selectedRequest.reportedBy} />
+              </div>
+
+              {/* Row 2: Equipment & Schedule */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Section title="Informasi Peralatan">
-                  <Row label="Functional Location" value={selectedRequest.functionalLocation} />
                   <Row label="Equipment" value={selectedRequest.equipment} />
-                  <Row label="Work Center" value={selectedRequest.workCenter} />
-                  <Row label="Tipe Notifikasi" value={selectedRequest.notificationType} />
+                  <Row label="Functional Location" value={selectedRequest.functionalLocation} />
                 </Section>
-                <Section title="Waktu & Pelapor">
+                <Section title="Jadwal">
                   <Row label="Tanggal Lapor" value={fmtDate(selectedRequest.notificationDate || selectedRequest.submittedAt)} />
-                  <Row label="Dilaporkan Oleh" value={selectedRequest.reportedBy} />
                   <Row label="Target Mulai" value={fmtDate(selectedRequest.requiredStart)} />
                   <Row label="Target Selesai" value={fmtDate(selectedRequest.requiredEnd)} />
                 </Section>
               </div>
 
+              {/* Row 3: Description */}
               <Section title="Deskripsi Kerusakan">
-                <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100/50">
-                  <p className="font-semibold text-slate-800 mb-2">{selectedRequest.description || 'Tanpa judul'}</p>
+                <div className="p-5 bg-blue-50/50 rounded-xl border border-blue-100/50">
+                  <p className="font-semibold text-slate-800 mb-2 text-base">{selectedRequest.description || 'Tanpa judul'}</p>
                   <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{selectedRequest.longText || 'Tidak ada deskripsi panjang.'}</p>
                 </div>
               </Section>
 
+              {/* Row 4: Photos */}
               {(selectedRequest.images || []).length > 0 && (
                 <Section title="Foto Lapangan">
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-4">
                     {selectedRequest.images.filter(Boolean).map((p, i) => {
                       const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
                       const src = p.startsWith('http') ? p : p.startsWith('uploads/') ? `${baseUrl}/${p}` : `${baseUrl}/uploads/${p}`;
                       return (
                         <img key={i} src={src} alt={`Attachment ${i+1}`} onClick={() => window.open(src, '_blank')}
-                          className="w-28 h-28 object-cover rounded-xl border border-slate-200 cursor-zoom-in hover:shadow-md transition-all hover:scale-105" />
+                          className="w-36 h-36 object-cover rounded-xl border border-slate-200 cursor-zoom-in hover:shadow-lg transition-all hover:scale-105" />
                       );
                     })}
                   </div>
@@ -590,7 +600,7 @@ export default function CorrectivePage() {
               )}
             </div>
           )}
-          <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0">
+          <div className="bg-slate-50/80 px-8 py-5 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0">
             <Button variant="outline" onClick={() => setSelectedRequest(null)}>Tutup</Button>
             {selectedRequest?.status === 'submitted' && selectedRequest?.approvalStatus === 'pending' && (
               <Button onClick={() => { setSelectedRequest(null); approvePlanner(selectedRequest.id); }} className="shadow-sm">Terima Laporan</Button>
