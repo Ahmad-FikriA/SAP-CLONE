@@ -161,12 +161,35 @@ const uploadExcel = async (req, res) => {
       fs.unlinkSync(req.file.path);
     }
 
+    // Check existing order numbers
+    const incomingOrderNumbers = rowsToUpsert.map((r) => r.order_number);
+    const existingSpks = await SapSpkCorrective.findAll({
+      attributes: ["order_number"],
+      where: {
+        order_number: incomingOrderNumbers,
+      },
+    });
+
+    const existingSet = new Set(existingSpks.map((s) => s.order_number));
+
+    const newRows = [];
+    const skippedRows = [];
+
+    for (const row of rowsToUpsert) {
+      if (existingSet.has(row.order_number)) {
+        skippedRows.push(row);
+      } else {
+        newRows.push(row);
+      }
+    }
+
     // Return the preview data without saving to DB
     res.status(200).json({
       status: "success",
-      message: `Successfully parsed ${rowsToUpsert.length} SPK records from Excel`,
+      message: `Berhasil memproses file Excel. ${newRows.length} data baru, ${skippedRows.length} data dilewati.`,
       data: {
-        previewData: rowsToUpsert,
+        previewData: newRows,
+        skippedData: skippedRows,
       },
     });
   } catch (error) {

@@ -94,6 +94,7 @@ export default function CorrectivePage() {
   // Upload Excel
   const [uploading, setUploading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [skippedData, setSkippedData] = useState(null);
   const [savingExcel, setSavingExcel] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -173,6 +174,7 @@ export default function CorrectivePage() {
       if (resData.status === 'success') {
         toast.success(resData.message);
         setPreviewData(resData.data.previewData);
+        setSkippedData(resData.data.skippedData);
       } else {
         toast.error(resData.message || 'Gagal mengupload file');
       }
@@ -201,6 +203,7 @@ export default function CorrectivePage() {
       if (data.status === 'success') {
         toast.success(data.message);
         setPreviewData(null);
+        setSkippedData(null);
         loadAll();
       } else {
         toast.error(data.message || 'Gagal menyimpan data');
@@ -598,7 +601,7 @@ export default function CorrectivePage() {
 
       {/* SPK Detail Dialog */}
       <Dialog open={!!selectedSpk} onOpenChange={(o) => !o && setSelectedSpk(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-0 rounded-2xl gap-0">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0 rounded-2xl gap-0">
           <div className="bg-slate-50 px-6 py-5 border-b border-slate-100 sticky top-0 z-10">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -628,7 +631,7 @@ export default function CorrectivePage() {
                       {done ? <CheckCircle2 size={14} /> : i + 1}
                     </div>
                     {/* Label */}
-                    <span className={cn("text-[10px] sm:text-xs mt-2 font-medium text-center absolute top-7 w-24", 
+                    <span className={cn("text-[10px] sm:text-xs mt-2 font-medium w-full text-center absolute top-7", 
                       active ? "text-blue-700" : done ? "text-slate-700" : "text-slate-400"
                     )}>{step.label}</span>
                   </div>
@@ -640,18 +643,43 @@ export default function CorrectivePage() {
           
           {selectedSpk && (
             <div className="p-6 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Section title="Data Utama SAP">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Section title="Informasi Utama">
                   <Row label="Order Number" value={<span className="font-mono">{selectedSpk.order_number}</span>} />
                   <Row label="Deskripsi" value={selectedSpk.description} />
                   <Row label="Status SAP" value={selectedSpk.sys_status} />
-                  <Row label="Work Center" value={selectedSpk.work_center} />
+                  <Row label="Short Text" value={selectedSpk.short_text} />
+                  <Row label="Confirmation Text" value={selectedSpk.conf_text} />
                 </Section>
-                <Section title="Lokasi & Tanggal">
+                <Section title="Lokasi & Peralatan">
                   <Row label="Equipment" value={selectedSpk.equipment_name} />
                   <Row label="Functional Loc" value={selectedSpk.functional_location} />
-                  <Row label="Tgl Posting" value={fmtDate(selectedSpk.posting_date)} />
+                  <Row label="Location" value={selectedSpk.location} />
+                  <Row label="Work Center" value={selectedSpk.work_center} />
+                </Section>
+                <Section title="Perencanaan">
                   <Row label="Plan Duration" value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || ''}`} />
+                  <Row label="Normal Dur" value={`${selectedSpk.normal_dur || 0} ${selectedSpk.normal_dur_un || ''}`} />
+                  <Row label="Unit for Work" value={selectedSpk.unit_for_work} />
+                  <Row label="Activity" value={selectedSpk.activity} />
+                  <Row label="Maint. Activ. Type" value={selectedSpk.maint_activ_type} />
+                  <Row label="Cost Center" value={selectedSpk.cost_center} />
+                  <Row label="Control Key" value={selectedSpk.ctrl_key} />
+                </Section>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Section title="Jadwal & Aktual SAP">
+                  <Row label="Tgl Posting" value={fmtDate(selectedSpk.posting_date)} />
+                  <Row label="Work Start" value={fmtDate(selectedSpk.work_start)} />
+                  <Row label="Work Finish" value={fmtDate(selectedSpk.work_finish)} />
+                  <Row label="Start Waktu" value={selectedSpk.start_time} />
+                  <Row label="Finish Waktu" value={selectedSpk.finish_time} />
+                  <Row label="Durasi Aktual" value={`${selectedSpk.dur_act || 0} ${selectedSpk.normal_dur_un || ''}`} />
+                  <Row label="Actual Work" value={`${selectedSpk.actual_work || 0} ${selectedSpk.unit_for_work || ''}`} />
+                  <Row label="Reason of Var" value={selectedSpk.reason_of_var} />
+                  <Row label="Confirm Number" value={selectedSpk.confirm_number} />
+                  <Row label="Dilaporkan Oleh" value={selectedSpk.report_by} />
                 </Section>
               </div>
 
@@ -745,49 +773,74 @@ export default function CorrectivePage() {
 
       {/* Preview Excel Dialog */}
       <Dialog open={!!previewData} onOpenChange={(open) => {
-        if (!open && !savingExcel) setPreviewData(null);
+        if (!open && !savingExcel) {
+          setPreviewData(null);
+          setSkippedData(null);
+        }
       }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col overflow-hidden bg-white/95 backdrop-blur-xl border-slate-200/60 shadow-2xl rounded-2xl p-0">
+        <DialogContent className="max-w-[95vw] md:max-w-[90vw] lg:max-w-[85vw] max-h-[85vh] flex flex-col overflow-hidden bg-white/95 backdrop-blur-xl border-slate-200/60 shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-6 py-5 border-b border-slate-100 bg-white/50">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <FileSpreadsheet className="text-blue-600" /> Preview Data Excel SAP
             </DialogTitle>
-            <p className="text-sm text-slate-500 mt-1">Ditemukan {previewData?.length || 0} baris SPK. Silakan periksa kembali sebelum menyimpan.</p>
+            <p className="text-sm text-slate-500 mt-1">Ditemukan {previewData?.length || 0} baris SPK baru. Silakan periksa kembali sebelum menyimpan.</p>
           </DialogHeader>
-          <div className="flex-1 overflow-auto p-0">
-            <Table>
-              <TableHeader className="bg-slate-50/80 sticky top-0 shadow-sm z-10">
-                <TableRow>
-                  <TableHead>Order Number</TableHead>
-                  <TableHead>Deskripsi</TableHead>
-                  <TableHead>System Status</TableHead>
-                  <TableHead>Work Center</TableHead>
-                  <TableHead>Dur. Plan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {previewData?.slice(0, 100).map((row, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-mono text-xs font-semibold">{row.order_number}</TableCell>
-                    <TableCell className="text-sm truncate max-w-[200px]" title={row.description}>{row.description || '-'}</TableCell>
-                    <TableCell className="text-sm truncate max-w-[150px]" title={row.sys_status}>{row.sys_status || '-'}</TableCell>
-                    <TableCell className="text-sm">{row.work_center || '-'}</TableCell>
-                    <TableCell className="text-sm">{row.dur_plan || 0} {row.normal_dur_un || ''}</TableCell>
-                  </TableRow>
-                ))}
-                {previewData?.length > 100 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-sm text-slate-500 bg-slate-50/50 italic py-3">
-                      ... dan {previewData.length - 100} baris lainnya
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+          <div className="flex-1 overflow-auto p-0 flex flex-col">
+            {skippedData?.length > 0 && (
+              <div className="m-4 mb-2 bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 shadow-sm">
+                <AlertTriangle className="text-amber-500 w-6 h-6 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-amber-800">Perhatian: Ada Data Terlewat ({skippedData.length} SPK)</h4>
+                  <p className="text-sm text-amber-700 mt-1">Order number dari baris-baris ini sudah pernah dimasukkan ke database sehingga dilewati secara otomatis untuk mencegah tumpang tindih data.</p>
+                </div>
+              </div>
+            )}
+            
+            {previewData?.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center py-12">
+                <EmptyState icon={FileSpreadsheet} text="Tidak ada data baru untuk ditambahkan." />
+              </div>
+            ) : (
+              <div className="overflow-x-auto w-full">
+                <Table>
+                  <TableHeader className="bg-slate-50/80 sticky top-0 shadow-sm z-10">
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Order Number</TableHead>
+                      <TableHead className="whitespace-nowrap min-w-[250px]">Deskripsi</TableHead>
+                      <TableHead className="whitespace-nowrap">System Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Work Center</TableHead>
+                      <TableHead className="whitespace-nowrap">Dur. Plan</TableHead>
+                      <TableHead className="whitespace-nowrap">Maint. Activ. Type</TableHead>
+                      <TableHead className="whitespace-nowrap">Location</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewData?.slice(0, 100).map((row, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-mono text-xs font-semibold whitespace-nowrap">{row.order_number}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px]" title={row.description}>{row.description || '-'}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.sys_status || '-'}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.work_center || '-'}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.dur_plan || 0} {row.normal_dur_un || ''}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.maint_activ_type || '-'}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">{row.location || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                    {previewData?.length > 100 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-sm text-slate-500 bg-slate-50/50 italic py-3">
+                          ... dan {previewData.length - 100} baris lainnya
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
-          <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2">
-            <Button variant="ghost" onClick={() => setPreviewData(null)} disabled={savingExcel}>Batal</Button>
-            <Button onClick={handleConfirmUpload} disabled={savingExcel}>
+          <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2 shrink-0">
+            <Button variant="ghost" onClick={() => { setPreviewData(null); setSkippedData(null); }} disabled={savingExcel}>Batal</Button>
+            <Button onClick={handleConfirmUpload} disabled={savingExcel || previewData?.length === 0}>
               {savingExcel ? 'Menyimpan...' : 'Simpan Data'}
             </Button>
           </DialogFooter>
@@ -799,18 +852,18 @@ export default function CorrectivePage() {
 
 function Section({ title, children }) {
   return (
-    <div>
+    <div className="flex flex-col h-full">
       <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">{title}</h4>
-      <div className="space-y-2.5 bg-slate-50/50 p-4 rounded-xl border border-slate-100">{children}</div>
+      <div className="space-y-3 flex-1 bg-slate-50/50 p-4 rounded-xl border border-slate-100">{children}</div>
     </div>
   );
 }
 
 function Row({ label, value }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-      <span className="text-xs font-medium text-slate-500 w-full sm:w-32 shrink-0">{label}</span>
-      <span className="text-sm text-slate-800 font-medium break-words">{value || '-'}</span>
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 min-w-0">
+      <span className="text-xs font-medium text-slate-500 w-full sm:w-28 shrink-0">{label}</span>
+      <span className="text-sm text-slate-800 font-medium break-words flex-1 min-w-0">{value || '-'}</span>
     </div>
   );
 }
