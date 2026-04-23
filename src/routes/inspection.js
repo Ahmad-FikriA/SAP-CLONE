@@ -58,6 +58,7 @@ const {
   listVisits,
   submitVisit,
   listPelanggaran,
+  submitViolationReason,
 } = require("../controllers/inspection/supervisiController");
 
 const {
@@ -118,6 +119,7 @@ router.put("/supervisi/jobs/:id", uploadJobAmendDocuments, updateJob);
 router.get("/supervisi/jobs/:id/visits", listVisits);
 router.post("/supervisi/visits", uploadVisitMedia, submitVisit);
 router.get("/supervisi/pelanggaran", listPelanggaran);
+router.put("/supervisi/visits/:id/violation-reason", submitViolationReason);
 // ── Supervisi Amend ───────────────────────────────────────────────────────────
 router.get("/supervisi/jobs/:jobId/amends", listAmends);
 router.post("/supervisi/jobs/:jobId/amends", uploadAmendDocuments, createAmend);

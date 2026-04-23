@@ -828,6 +828,209 @@ async function listPelanggaran(req, res) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CRON JOB — Auto-flag missed visits as Pelanggaran
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * markMissedVisitsAsPelanggaran
+ *
+ * Dipanggil oleh cron job setiap hari pukul 00:01.
+ * Logic:
+ *   1. Ambil semua SupervisiJob dengan status 'active' yang memiliki jadwal.
+ *   2. Untuk setiap tanggal yang sudah lewat (kemarin ke bawah) dalam range
+ *      waktuMulai–effectiveEndDate, cek apakah ada SupervisiVisit.
+ *   3. Jika belum ada visit → buat record baru dengan isPelanggaran=true.
+ */
+async function markMissedVisitsAsPelanggaran() {
+  const LABEL = "[Supervisi Cron]";
+  console.log(`${LABEL} Running missed-visit check at`, new Date().toISOString());
+
+  try {
+    const today = new Date();
+    const todayOnly = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const yesterday = new Date(todayOnly);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+    // Hanya proses job active yang kemarin masih berada di rentang jadwal.
+    // amendBerakhir disertakan untuk kompatibilitas field amend legacy.
+    const activeJobs = await SupervisiJob.findAll({
+      where: {
+        status: "active",
+        waktuMulai: { [Op.lte]: yesterdayStr },
+      },
+      include: [
+        {
+          model: SupervisiVisit,
+          as: "visits",
+          attributes: ["visitDate", "locationId", "status"],
+        },
+        {
+          model: SupervisiAmend,
+          as: "amends",
+          attributes: ["amendBerakhir"],
+        },
+      ],
+    });
+
+    let totalCreated = 0;
+
+    for (const job of activeJobs) {
+      if (!job.waktuMulai || !job.waktuBerakhir) continue;
+
+      const jobStart = new Date(job.waktuMulai);
+      const defaultEnd = new Date(job.waktuBerakhir);
+      const legacyAmendEnd = job.amendBerakhir ? new Date(job.amendBerakhir) : null;
+      const childAmendEnds = (job.amends || [])
+        .map((a) => (a && a.amendBerakhir ? new Date(a.amendBerakhir) : null))
+        .filter(Boolean);
+
+      const effectiveEnd = [defaultEnd, legacyAmendEnd, ...childAmendEnds]
+        .filter(Boolean)
+        .sort((a, b) => b.getTime() - a.getTime())[0];
+
+      if (!effectiveEnd) continue;
+
+      // Kumpulkan semua (visitDate, locationId) yang sudah ada
+      const existingVisitKeys = new Set(
+        (job.visits || []).map((v) => {
+          const d = typeof v.visitDate === "string" ? v.visitDate : v.visitDate.toISOString().split("T")[0];
+          return `${d}__${v.locationId || ""}`;
+        })
+      );
+
+      // Tentukan lokasi-lokasi yang harus dikunjungi
+      const locations =
+        Array.isArray(job.locations) && job.locations.length > 0
+          ? job.locations
+          : [{ id: null }]; // Single-location job (no locationId)
+
+      // Scope cron: kemarin harus berada dalam range waktuMulai–effectiveEndDate.
+      if (yesterday < jobStart || yesterday > effectiveEnd) continue;
+
+      // Iterasi setiap hari terlewat dari start hingga kemarin.
+      let cur = new Date(jobStart);
+      while (cur <= yesterday && cur <= effectiveEnd) {
+        const dateStr = cur.toISOString().split("T")[0];
+
+        for (const loc of locations) {
+          const locId = loc.id ? String(loc.id) : null;
+          const key = `${dateStr}__${locId || ""}`;
+
+          if (!existingVisitKeys.has(key)) {
+            try {
+              await SupervisiVisit.create({
+                jobId: job.id,
+                visitDate: dateStr,
+                status: "tidak_hadir",
+                isPelanggaran: true,
+                alasanTidakHadir: null,
+                locationId: locId,
+                submittedAt: null,
+                submittedBy: null,
+                photos: [],
+                documents: [],
+              });
+              totalCreated++;
+              // Tambahkan ke set agar iterasi berikutnya tidak duplikat
+              existingVisitKeys.add(key);
+            } catch (createErr) {
+              // Abaikan duplicate key — bisa terjadi jika ada race condition
+              if (createErr.name !== "SequelizeUniqueConstraintError") {
+                console.warn(`${LABEL} Failed to create pelanggaran for job ${job.id} date ${dateStr} loc ${locId}:`, createErr.message);
+              }
+            }
+          }
+        }
+
+        // Maju ke hari berikutnya
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    }
+
+    console.log(`${LABEL} Done. Created ${totalCreated} pelanggaran record(s).`);
+  } catch (err) {
+    console.error(`${LABEL} Error during missed-visit check:`, err.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VIOLATION REASON
+// ─────────────────────────────────────────────────────────────────────────────
+
+// PUT /api/inspection/supervisi/visits/:id/violation-reason
+async function submitViolationReason(req, res) {
+  try {
+    if (!isSupervisiExecutor(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Hanya pelaksana supervisi yang dapat mengisi alasan pelanggaran.",
+      });
+    }
+
+    const visitId = parseInt(req.params.id, 10);
+    if (isNaN(visitId)) {
+      return res.status(400).json({ success: false, message: "ID visit tidak valid." });
+    }
+
+    const { alasanTidakHadir } = req.body;
+    const normalizedAlasan = normalizeNullableString(alasanTidakHadir);
+
+    if (!normalizedAlasan) {
+      return res.status(400).json({
+        success: false,
+        message: "Alasan pelanggaran wajib diisi dan tidak boleh kosong.",
+      });
+    }
+
+    // Cari visit beserta job-nya untuk validasi kepemilikan
+    const visit = await SupervisiVisit.findByPk(visitId, {
+      include: [
+        {
+          model: SupervisiJob,
+          as: "job",
+          attributes: ["id", "picSupervisi", "namaKerja", "nomorJo"],
+        },
+      ],
+    });
+
+    if (!visit) {
+      return res.status(404).json({ success: false, message: "Kunjungan tidak ditemukan." });
+    }
+
+    // Pastikan visit ini memang pelanggaran
+    if (!visit.isPelanggaran) {
+      return res.status(400).json({
+        success: false,
+        message: "Kunjungan ini bukan pelanggaran dan tidak memerlukan alasan.",
+      });
+    }
+
+    // Validasi: Eksekutor hanya bisa mengisi alasan untuk job-nya sendiri
+    if (!canAccessSupervisiJob(req.user, visit.job)) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda hanya dapat mengisi alasan untuk pekerjaan yang ditugaskan ke Anda.",
+      });
+    }
+
+    await visit.update({
+      alasanTidakHadir: normalizedAlasan,
+      submittedBy: req.user.nik,
+      submittedAt: new Date(),
+    });
+
+    res.json({
+      success: true,
+      message: "Alasan pelanggaran berhasil disimpan.",
+      data: visit,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 module.exports = {
   uploadVisitMedia,
   uploadJobAmendDocuments,
@@ -838,4 +1041,6 @@ module.exports = {
   listVisits,
   submitVisit,
   listPelanggaran,
+  markMissedVisitsAsPelanggaran,
+  submitViolationReason,
 };

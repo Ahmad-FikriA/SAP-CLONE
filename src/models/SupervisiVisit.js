@@ -174,6 +174,57 @@ async function ensureSupervisiVisitSchema() {
     allowNull: false,
     comment: "Hadir atau tidak hadir",
   });
+
+  // ── Migrasi Unique Index untuk multi-lokasi ───────────────────────────────
+  // Index lama: UNIQUE(jobId, visitDate) — hanya allow 1 visit per hari.
+  // Index baru:  UNIQUE(jobId, visitDate, locationId) — allow 1 visit per hari PER LOKASI.
+  // Jika index lama masih ada, hapus dulu, lalu buat yang baru.
+  try {
+    const [indexes] = await sequelize.query(
+      `SHOW INDEX FROM \`${tableName}\` WHERE Key_name != 'PRIMARY'`
+    );
+
+    // Cari index dengan kolom (jobId, visitDate) tapi TIDAK punya locationId
+    const oldIndexNames = new Set();
+    const indexCols = {};
+    for (const row of indexes) {
+      const name = row.Key_name;
+      if (!indexCols[name]) indexCols[name] = [];
+      indexCols[name].push(row.Column_name);
+    }
+    for (const [name, cols] of Object.entries(indexCols)) {
+      const hasJobId = cols.includes("jobId");
+      const hasVisitDate = cols.includes("visitDate");
+      const hasLocationId = cols.includes("locationId");
+      // Old-style: (jobId, visitDate) saja OR (jobId, visitDate, locationId) belum ada
+      if (hasJobId && hasVisitDate && !hasLocationId) {
+        oldIndexNames.add(name);
+      }
+    }
+
+    for (const name of oldIndexNames) {
+      console.log(`[SupervisiVisit] Dropping old index: ${name}`);
+      await sequelize.query(`ALTER TABLE \`${tableName}\` DROP INDEX \`${name}\``);
+    }
+
+    // Cek apakah index baru sudah ada
+    const newIndexExists = Object.values(indexCols).some((cols) => {
+      return (
+        cols.includes("jobId") &&
+        cols.includes("visitDate") &&
+        cols.includes("locationId")
+      );
+    });
+
+    if (!newIndexExists) {
+      console.log(`[SupervisiVisit] Creating new multi-location unique index.`);
+      await sequelize.query(
+        `ALTER TABLE \`${tableName}\` ADD UNIQUE INDEX \`supervisi_visits_job_date_location_unique\` (\`jobId\`, \`visitDate\`, \`locationId\`)`
+      );
+    }
+  } catch (idxErr) {
+    console.warn("[SupervisiVisit] Index migration warning:", idxErr.message);
+  }
 }
 
 module.exports = SupervisiVisit;
