@@ -191,6 +191,40 @@ export default function CorrectivePage() {
     });
   }
 
+  async function deleteAllRequests() {
+    confirmAction('Hapus Semua Notifikasi', 'Anda yakin ingin menghapus SELURUH data notifikasi yang belum dibuat SPK?', async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/requests`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Berhasil dihapus');
+        loadAll();
+      } else {
+        toast.error(data.error || 'Gagal menghapus');
+      }
+    });
+  }
+
+  async function deleteRequest(id) {
+    confirmAction('Hapus Notifikasi', `Anda yakin ingin menghapus notifikasi ${id}?`, async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/requests/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Berhasil dihapus');
+        loadAll();
+      } else {
+        toast.error(data.error || 'Gagal menghapus');
+      }
+    });
+  }
+
   async function deleteAllSpks() {
     confirmAction('Hapus Semua SPK SAP', 'Anda yakin ingin menghapus SELURUH data SPK SAP aktif dan riwayat?', async () => {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
@@ -292,7 +326,13 @@ export default function CorrectivePage() {
         </div>
         
         {/* Dynamic Filters based on active tab */}
-        <div className="flex gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {tab === 'requests' && filteredRequests.length > 0 && (
+            <Button variant="destructive" className="shadow-sm" onClick={deleteAllRequests}>
+              <Trash2 size={16} className="mr-2" />
+              Hapus Semua
+            </Button>
+          )}
           {tab === 'requests' && (
             <>
               <select value={filterNotifStatus} onChange={(e) => setFilterNotifStatus(e.target.value)}
@@ -362,11 +402,16 @@ export default function CorrectivePage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    {req.status === 'submitted' && req.approvalStatus === 'pending' ? (
-                      <Button size="sm" className="h-8 shadow-sm" onClick={() => approvePlanner(req.id)}>Terima</Button>
-                    ) : (
-                      <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelectedRequest(req)}>Detail</Button>
-                    )}
+                    <div className="flex justify-end items-center gap-1">
+                      {req.status === 'submitted' && req.approvalStatus === 'pending' ? (
+                        <Button size="sm" className="h-8 shadow-sm" onClick={() => approvePlanner(req.id)}>Terima</Button>
+                      ) : (
+                        <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => setSelectedRequest(req)}>Detail</Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => deleteRequest(req.id)}>
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

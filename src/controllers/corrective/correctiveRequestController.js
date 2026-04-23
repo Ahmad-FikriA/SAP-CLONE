@@ -341,6 +341,21 @@ const bulkDelete = async (req, res) => {
   res.json({ message: `Deleted ${count} notification(s)` });
 };
 
+// DELETE /api/corrective/requests
+const deleteAll = async (req, res) => {
+  try {
+    const count = await Notification.destroy({
+      where: {
+        status: { [Op.ne]: 'spk_created' } // Prevent deleting notifications tied to old SPKs if any
+      }
+    });
+    res.json({ message: `Berhasil menghapus ${count} notifikasi.` });
+  } catch (error) {
+    console.error('Error deleting all requests:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // POST /api/corrective/requests/:id/approve-planner
 const approvePlanner = async (req, res) => {
   const notification = await Notification.findByPk(req.params.id);
@@ -374,4 +389,4 @@ const approvePlanner = async (req, res) => {
   });
 };
 
-module.exports = { getAll, getOne, create, update, remove, bulkDelete, approveKadisPusat, rejectKadisPusat, approvePlanner };
+module.exports = { getAll, getOne, create, update, remove, bulkDelete, deleteAll, approveKadisPusat, rejectKadisPusat, approvePlanner };

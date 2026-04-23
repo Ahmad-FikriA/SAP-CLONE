@@ -61,6 +61,9 @@ router.put('/requests/:id', verifyToken, canViewNotification, reqCtrl.update);
 // DELETE /api/corrective/requests/:id
 router.delete('/requests/:id', verifyToken, canViewNotification, reqCtrl.remove);
 
+// DELETE /api/corrective/requests
+router.delete('/requests', verifyToken, reqCtrl.deleteAll);
+
 // POST /api/corrective/requests/bulk-delete
 router.post('/requests/bulk-delete', verifyToken, reqCtrl.bulkDelete);
 
