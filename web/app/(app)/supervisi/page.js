@@ -238,6 +238,12 @@ export default function SupervisiPage() {
       </div>
 
       {/* ── Peta ── */}
+      {/*
+        * [z-index fix] Wrapper ini membentuk isolated stacking context via
+        * `isolation: isolate` sehingga semua z-index internal Leaflet
+        * (.leaflet-pane z-400, controls z-1000, dll.) tetap terkurung
+        * di dalam elemen ini dan tidak dapat menembus Side Panel di atasnya.
+        */}
       <div className="flex-1 relative" style={{ minHeight: '480px' }}>
         {loading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400 bg-gray-50">
@@ -245,7 +251,14 @@ export default function SupervisiPage() {
             <p className="text-sm">Memuat data supervisi...</p>
           </div>
         ) : (
-          <div className="absolute inset-0">
+          <div
+            className="absolute inset-0"
+            style={{
+              /* Isolasi stacking context — Leaflet z-index tidak bocor keluar */
+              isolation: 'isolate',
+              zIndex: 0,
+            }}
+          >
             <LeafletMap
               onMapReady={onMapReady}
               className="h-full w-full"

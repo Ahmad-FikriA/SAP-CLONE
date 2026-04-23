@@ -33,12 +33,13 @@ export function SupervisiJobPanel({ job, onClose }) {
     <>
       {/* Backdrop transparan untuk close saat klik luar */}
       <div
-        className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm"
+        style={{ zIndex: 500 }}
         onClick={onClose}
       />
 
       {/* Side panel */}
-      <div className="fixed right-0 top-0 bottom-0 z-40 w-full max-w-sm bg-white shadow-2xl flex flex-col overflow-hidden animate-slide-in-right">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-sm bg-white shadow-2xl flex flex-col overflow-hidden animate-slide-in-right" style={{ zIndex: 600 }}>
         {/* Header */}
         <div className="bg-[#0a2540] text-white px-5 py-4 flex items-start gap-3">
           <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
