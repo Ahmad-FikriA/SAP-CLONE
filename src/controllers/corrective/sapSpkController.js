@@ -1,4 +1,6 @@
 const SapSpkCorrective = require("../../models/SapSpkCorrective");
+const Notification = require("../../models/Notification");
+const { Op } = require("sequelize");
 const exceljs = require("exceljs");
 const fs = require("fs");
 const path = require("path");
@@ -183,12 +185,32 @@ const uploadExcel = async (req, res) => {
       }
     }
 
+    // Check which new SPKs have a matching Notification
+    const newOrderNumbers = newRows.map((r) => r.order_number);
+    const matchingNotifications = await Notification.findAll({
+      attributes: ["sapOrderNumber"],
+      where: {
+        sapOrderNumber: {
+          [Op.in]: newOrderNumbers,
+        },
+      },
+    });
+
+    const matchingSet = new Set(
+      matchingNotifications.map((n) => n.sapOrderNumber),
+    );
+
+    const newRowsWithMatchStatus = newRows.map((row) => ({
+      ...row,
+      hasMatchedNotification: matchingSet.has(row.order_number),
+    }));
+
     // Return the preview data without saving to DB
     res.status(200).json({
       status: "success",
       message: `Berhasil memproses file Excel. ${newRows.length} data baru, ${skippedRows.length} data dilewati.`,
       data: {
-        previewData: newRows,
+        previewData: newRowsWithMatchStatus,
         skippedData: skippedRows,
       },
     });

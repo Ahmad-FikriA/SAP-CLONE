@@ -864,6 +864,16 @@ export default function CorrectivePage() {
               </div>
             )}
             
+            {previewData?.some(r => r.hasMatchedNotification === false) && (
+              <div className="mx-4 mt-2 mb-2 bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-start gap-3 shadow-sm">
+                <AlertCircle className="text-blue-500 w-6 h-6 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-blue-800">Info: Ada SPK Tanpa Notifikasi</h4>
+                  <p className="text-sm text-blue-700 mt-1">SPK dengan ikon <AlertTriangle className="inline w-3 h-3 text-amber-500" /> tidak terhubung ke laporan notifikasi manapun di sistem. Ini bisa terjadi karena SPK dibuat langsung di SAP tanpa laporan dari web.</p>
+                </div>
+              </div>
+            )}
+            
             {previewData?.length === 0 ? (
               <div className="flex-1 flex items-center justify-center py-12">
                 <EmptyState icon={FileSpreadsheet} text="Tidak ada data baru untuk ditambahkan." />
@@ -885,7 +895,16 @@ export default function CorrectivePage() {
                   <TableBody>
                     {previewData?.slice(0, 100).map((row, i) => (
                       <TableRow key={i}>
-                        <TableCell className="font-mono text-xs font-semibold whitespace-nowrap">{row.order_number}</TableCell>
+                        <TableCell className="font-mono text-xs font-semibold whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            {row.order_number}
+                            {row.hasMatchedNotification === false && (
+                              <div title="Tidak ada laporan notifikasi yang terhubung dengan Order Number SPK ini" className="text-amber-500 cursor-help">
+                                <AlertTriangle size={14} />
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px]" title={row.description}>{row.description || '-'}</TableCell>
                         <TableCell className="text-sm whitespace-nowrap">{row.sys_status || '-'}</TableCell>
                         <TableCell className="text-sm whitespace-nowrap">{row.work_center || '-'}</TableCell>
