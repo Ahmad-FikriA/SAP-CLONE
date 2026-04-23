@@ -10,7 +10,29 @@ const NotificationService = require("../../services/notificationService");
 // 1. Get SAP SPK List
 const getSapSpkList = async (req, res) => {
   try {
+    const where = {};
+    const { role, group, dinas } = req.user || {};
+
+    // Filter by group if not admin/super-user
+    // Kadis Pusat Perawatan is considered a super-user for corrective
+    const isKadisPP = role === "kadis" && dinas && dinas.toLowerCase().includes("pusat perawatan");
+    
+    if (role !== "admin" && !isKadisPP && group) {
+      const prefixes = [];
+      if (group.includes("Elektrik")) prefixes.push("E");
+      if (group.includes("Otomasi")) prefixes.push("O");
+      if (group.includes("Mekanik")) prefixes.push("M");
+      if (group.includes("Sipil")) prefixes.push("S");
+
+      if (prefixes.length > 0) {
+        where.work_center = {
+          [Op.or]: prefixes.map((p) => ({ [Op.like]: `${p}%` })),
+        };
+      }
+    }
+
     const spks = await SapSpkCorrective.findAll({
+      where,
       order: [["created_at", "DESC"]],
     });
     res.status(200).json({
@@ -97,9 +119,19 @@ const uploadExcel = async (req, res) => {
         "functional location",
         "functional loc.",
       ]),
-      maint_activ_type: findCol(["maintactivtype", "maint activ type", "maint. activ. type"]),
+      maint_activ_type: findCol([
+        "maintactivtype",
+        "maint activ type",
+        "maint. activ. type",
+      ]),
       actual_work: findCol(["actual work"]),
-      num_of_work: findCol(["no. of work", "num of work", "no.of work", "number of work"]),
+      num_of_work: findCol([
+        "no. of work",
+        "num of work",
+        "no.of work",
+        "number of work",
+        "numofwork",
+      ]),
       location: findCol(["location"]),
     };
 
@@ -232,12 +264,10 @@ const bulkInsertSapSpk = async (req, res) => {
   try {
     const { spks } = req.body;
     if (!spks || !Array.isArray(spks)) {
-      return res
-        .status(400)
-        .json({
-          status: "error",
-          message: "Invalid payload, expected array of spks",
-        });
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid payload, expected array of spks",
+      });
     }
 
     await SapSpkCorrective.bulkCreate(spks, {
@@ -272,8 +302,16 @@ const bulkInsertSapSpk = async (req, res) => {
       ],
     });
 
-    // 🔔 Trigger FCM for matching notifications
+    // 🔔 Trigger FCM for matching notifications & Work Center Groups
+    const WORK_CENTER_GROUP_MAP = {
+      E: "Elektrik",
+      O: "Otomasi",
+      M: "Mekanik",
+      S: "Sipil & Lingkungan",
+    };
+
     try {
+      // A. Existing logic: Match with reporter notifications
       const newOrderNumbers = spks.map((s) => s.order_number);
       const matchingNotifications = await Notification.findAll({
         where: {
@@ -302,6 +340,41 @@ const bulkInsertSapSpk = async (req, res) => {
               },
             });
           }
+        }
+      }
+
+      // B. New logic: Notify Work Center Groups
+      const groupCounts = {}; // { 'Mekanik': 5, 'Elektrik': 2 }
+      for (const spk of spks) {
+        const wc = spk.work_center || "";
+        const prefix = wc.split("-")[0]?.charAt(0)?.toUpperCase();
+        const groupName = WORK_CENTER_GROUP_MAP[prefix];
+        if (groupName) {
+          groupCounts[groupName] = (groupCounts[groupName] || 0) + 1;
+        }
+      }
+
+      for (const [groupName, count] of Object.entries(groupCounts)) {
+        // Find all users in this group (Teknisi, Petugas, Kasie)
+        const groupUsers = await User.findAll({
+          where: {
+            group: { [Op.like]: `%${groupName}%` },
+          },
+          attributes: ["id"],
+        });
+
+        if (groupUsers.length > 0) {
+          await NotificationService.notify({
+            module: "corrective",
+            type: "new_workcenter_spk",
+            recipientIds: groupUsers.map((u) => u.id),
+            title: "Tugas SPK Baru",
+            body: `Ada ${count} SPK Corrective baru untuk grup ${groupName}. Silakan cek di aplikasi.`,
+            data: {
+              group: groupName,
+              count: String(count),
+            },
+          });
         }
       }
     } catch (notifErr) {
@@ -396,12 +469,10 @@ const deleteSapSpk = async (req, res) => {
 const deleteAllSapSpk = async (req, res) => {
   try {
     await SapSpkCorrective.destroy({ where: {} });
-    res
-      .status(200)
-      .json({
-        status: "success",
-        message: "All SAP SPKs deleted successfully",
-      });
+    res.status(200).json({
+      status: "success",
+      message: "All SAP SPKs deleted successfully",
+    });
   } catch (error) {
     console.error("Error deleting all SAP SPKs:", error);
     res.status(500).json({ status: "error", message: error.message });

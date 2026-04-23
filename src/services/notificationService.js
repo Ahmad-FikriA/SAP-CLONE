@@ -61,12 +61,33 @@ function getModels() {
  * @param {Object}   opts.data          Arbitrary data (e.g. { spkNumber, deepLink })
  * @param {string[]} opts.recipientIds  Recipient identifiers (NIK / user id) to notify
  */
-async function notify({ module, type, title, body, data = {}, recipientIds = [] }) {
-  if (recipientIds.length === 0) return;
+async function notify({
+  module,
+  type,
+  title,
+  body,
+  data = {},
+  recipientIds = [],
+  targetNik,
+  targetId,
+}) {
+  // 0. Backward compatibility & normalization
+  if (!type && data.type) type = data.type;
 
-  const normalizedRecipientIds = recipientIds
-    .map((recipientId) => String(recipientId ?? '').trim())
-    .filter((recipientId) => recipientId.length > 0);
+  let ids = [];
+  if (Array.isArray(recipientIds)) {
+    ids = [...recipientIds];
+  } else if (recipientIds) {
+    ids = [recipientIds];
+  }
+
+  if (targetNik) ids.push(targetNik);
+  if (targetId) ids.push(targetId);
+
+  const normalizedRecipientIds = ids
+    .map((id) => String(id ?? "").trim())
+    .filter((id) => id.length > 0);
+
   if (normalizedRecipientIds.length === 0) return;
 
   const { User, PushNotification } = getModels();
