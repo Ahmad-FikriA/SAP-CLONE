@@ -18,6 +18,21 @@ function normalizeNik(value) {
   return String(value || "").trim();
 }
 
+function buildRequestRejectionNotification(request, notes) {
+  const trimmedNotes =
+    typeof notes === "string" && notes.trim().length > 0 ? notes.trim() : null;
+
+  return {
+    type: "request_rejected",
+    title: "Permintaan Inspeksi Ditolak",
+    body: `Permintaan inspeksi Anda untuk "${request.judul}" ditolak.${
+      trimmedNotes ? ` Catatan: ${trimmedNotes}` : ""
+    }`,
+    deepLink: "inspection/riwayat",
+    responseMessage: "Permintaan inspeksi ditolak.",
+  };
+}
+
 function canViewAllRequests(user) {
   const profile = buildAccessProfile(user || {});
   const appRole = profile?.appRole;
@@ -289,23 +304,26 @@ async function rejectRequest(req, res) {
       });
     }
 
+    const notification = buildRequestRejectionNotification(
+      request,
+      req.body.notes,
+    );
+
     await request.update({
-      status: "revisions_required",
+      status: "rejected",
       approvedBy: req.user?.nik,
       approvedAt: new Date(),
       notes: req.body.notes,
     });
 
-    // Notifikasi ke pemohon bahwa request-nya perlu direvisi
+    // Notifikasi ke pemohon bahwa request-nya ditolak
     notify({
       module: 'inspection',
-      type: 'request_revisions_required',
-      title: 'Permintaan Inspeksi Perlu Revisi',
-      body: `Permintaan inspeksi Anda untuk "${request.judul}" dikembalikan untuk diperbaiki.${
-        req.body.notes ? ` Catatan: ${req.body.notes}` : ''
-      }`,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
       data: {
-        deepLink: 'inspection/permintaan',
+        deepLink: notification.deepLink,
         requestId: String(request.id),
       },
       recipientIds: [String(request.requestedBy)],
@@ -313,7 +331,7 @@ async function rejectRequest(req, res) {
 
     res.json({
       success: true,
-      message: "Permintaan inspeksi dikembalikan untuk diperbaiki oleh pemohon.",
+      message: notification.responseMessage,
       data: request,
     });
   } catch (err) {

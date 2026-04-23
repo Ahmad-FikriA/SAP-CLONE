@@ -1,18 +1,42 @@
 'use strict';
 
 const admin = require('firebase-admin');
+const fs = require('fs');
 const path = require('path');
+
+const serviceAccountPath = path.resolve(
+  __dirname,
+  '../config/serviceAccountKey.json'
+);
 
 // Initialize firebase-admin once (lazy)
 let initialized = false;
+let initializationFailed = false;
 
 function ensureInitialized() {
-  if (!initialized) {
-    const serviceAccount = require(
-      path.resolve(__dirname, '../config/serviceAccountKey.json')
-    );
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  if (initialized) return true;
+  if (initializationFailed) return false;
+  try {
+    if (fs.existsSync(serviceAccountPath)) {
+      const serviceAccount = require(serviceAccountPath);
+      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    } else {
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+      });
+      console.warn(
+        '[NotificationService] serviceAccountKey.json not found, trying application default credentials for FCM.'
+      );
+    }
+
     initialized = true;
+    return true;
+  } catch (error) {
+    initializationFailed = true;
+    console.warn(
+      `[NotificationService] FCM initialization unavailable, skipping push delivery: ${error.message}`
+    );
+    return false;
   }
 }
 
@@ -35,20 +59,42 @@ function getModels() {
  * @param {string}   opts.title         Notification title shown in system tray
  * @param {string}   opts.body          Notification body text
  * @param {Object}   opts.data          Arbitrary data (e.g. { spkNumber, deepLink })
- * @param {string[]} opts.recipientIds  User IDs (STRING) to notify
+ * @param {string[]} opts.recipientIds  Recipient identifiers (NIK / user id) to notify
  */
 async function notify({ module, type, title, body, data = {}, recipientIds = [] }) {
   if (recipientIds.length === 0) return;
 
+  const normalizedRecipientIds = recipientIds
+    .map((recipientId) => String(recipientId ?? '').trim())
+    .filter((recipientId) => recipientId.length > 0);
+  if (normalizedRecipientIds.length === 0) return;
+
+  const { User, PushNotification } = getModels();
+
   try {
-    ensureInitialized();
-    const { User, PushNotification } = getModels();
+    await PushNotification.bulkCreate(
+      normalizedRecipientIds.map((recipientId) => ({
+        module,
+        type,
+        title,
+        body,
+        data,
+        recipientId,
+        isRead: false,
+      }))
+    );
+  } catch (err) {
+    console.error('[NotificationService] Failed to persist notification:', err.message);
+  }
+
+  try {
+    if (!ensureInitialized()) return;
     const { Op } = require('sequelize');
 
     // 1. Look up FCM tokens for all recipients
     // recipientIds berisi NIK (bukan primary key id), jadi query by nik
     const users = await User.findAll({
-      where: { nik: { [Op.in]: recipientIds } },
+      where: { nik: { [Op.in]: normalizedRecipientIds } },
       attributes: ['id', 'nik', 'fcmToken'],
     });
 
@@ -94,18 +140,6 @@ async function notify({ module, type, title, body, data = {}, recipientIds = [] 
       }
     }
 
-    // 3. Persist one row per recipient (even those without FCM token)
-    await PushNotification.bulkCreate(
-      recipientIds.map((recipientId) => ({
-        module,
-        type,
-        title,
-        body,
-        data,
-        recipientId,
-        isRead: false,
-      }))
-    );
   } catch (err) {
     console.error('[NotificationService] notify() error:', err.message);
     // Intentionally swallowed — approval flow must not be blocked

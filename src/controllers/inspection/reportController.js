@@ -8,6 +8,10 @@ const InspectionSchedule = require("../../models/InspectionSchedule");
 const InspectionFollowUp = require("../../models/InspectionFollowUp");
 const sequelize = require("../../config/database");
 const { buildAccessProfile } = require("../../services/accessProfile");
+const {
+  resolveSupportedStatus,
+  invalidateStatusEnumCache,
+} = require("../../services/inspectionStatusSupport");
 const { notify } = require("../../services/notificationService");
 
 // NIK Approver yang menerima notifikasi laporan baru
@@ -18,6 +22,71 @@ const FOLLOW_UP_TARGET_DINAS_PERAWATAN = "dinas_perawatan";
 
 function normalizeNik(value) {
   return String(value || "").trim();
+}
+
+function isStatusColumnTruncationError(error) {
+  return String(error?.message || "")
+    .toLowerCase()
+    .includes("data truncated for column 'status'");
+}
+
+async function applyRejectedReportStatus(report, user, notes, transaction) {
+  const nextRejectedStatus = await resolveSupportedStatus(
+    "inspection_reports",
+    "revisions_required",
+    "rejected",
+  );
+
+  try {
+    await report.update(
+      {
+        status: nextRejectedStatus,
+        approvedBy: user?.nik,
+        approvalDate: new Date(),
+        approvalNotes: notes || null,
+      },
+      { transaction },
+    );
+    return nextRejectedStatus;
+  } catch (error) {
+    if (!isStatusColumnTruncationError(error)) {
+      throw error;
+    }
+
+    invalidateStatusEnumCache("inspection_reports");
+    await report.update(
+      {
+        status: "rejected",
+        approvedBy: user?.nik,
+        approvalDate: new Date(),
+        approvalNotes: notes || null,
+      },
+      { transaction },
+    );
+    return "rejected";
+  }
+}
+
+function buildReportRejectionNotification(finalStatus, notes) {
+  const trimmedNotes =
+    typeof notes === "string" && notes.trim().length > 0 ? notes.trim() : null;
+  const noteSuffix = trimmedNotes ? ` Catatan: ${trimmedNotes}` : "";
+
+  if (finalStatus === "rejected") {
+    return {
+      type: "report_rejected",
+      title: "Laporan Inspeksi Ditolak",
+      body: `Laporan inspeksi Anda ditolak.${noteSuffix}`,
+      responseMessage: "Report ditolak.",
+    };
+  }
+
+  return {
+    type: "report_revisions_required",
+    title: "Laporan Inspeksi Perlu Direvisi",
+    body: `Laporan inspeksi Anda dikembalikan untuk direvisi.${noteSuffix}`,
+    responseMessage: "Report dikembalikan ke eksekutor untuk revisi.",
+  };
 }
 
 function canViewAllReports(user) {
@@ -524,14 +593,16 @@ async function rejectReport(req, res) {
         .json({ success: false, message: "Report not found." });
     }
 
-    // Set status to revisions_required so the executor still sees it
-    // and can open/edit the same report record for rework.
-    await report.update({
-      status: "revisions_required",
-      approvedBy: req.user.nik,
-      approvalDate: new Date(),
-      approvalNotes: req.body.notes || null,
-    }, { transaction: t });
+    const finalStatus = await applyRejectedReportStatus(
+      report,
+      req.user,
+      req.body.notes,
+      t,
+    );
+    const notification = buildReportRejectionNotification(
+      finalStatus,
+      req.body.notes,
+    );
 
     // Revert schedule back to in_progress so it re-appears in the
     // executor's active schedule list.
@@ -549,11 +620,9 @@ async function rejectReport(req, res) {
     if (report.submittedBy) {
       notify({
         module: 'inspection',
-        type: 'report_revisions_required',
-        title: 'Laporan Inspeksi Perlu Direvisi',
-        body: `Laporan inspeksi Anda dikembalikan untuk direvisi.${
-          req.body.notes ? ` Catatan: ${req.body.notes}` : ''
-        }`,
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
         data: {
           deepLink: 'inspection/draft',
           reportId: String(report.id),
@@ -564,7 +633,7 @@ async function rejectReport(req, res) {
 
     res.json({
       success: true,
-      message: "Report dikembalikan ke eksekutor untuk revisi.",
+      message: notification.responseMessage,
       data: updated,
     });
   } catch (err) {

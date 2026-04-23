@@ -9,14 +9,24 @@ function getModel() {
   return require('../models/PushNotification');
 }
 
+function buildRecipientIds(user = {}) {
+  return [user.userId, user.nik]
+    .map((value) => String(value ?? '').trim())
+    .filter((value) => value.length > 0);
+}
+
 // GET /api/notifications?module=preventive&unreadOnly=true
 router.get('/', verifyToken, async (req, res) => {
   try {
     const { module: mod, unreadOnly } = req.query;
-    const userId = req.user.userId;
     const Model = getModel();
-
-    const where = { recipientId: userId };
+    const recipientIds = buildRecipientIds(req.user);
+    const where = {
+      recipientId:
+        recipientIds.length === 1
+          ? recipientIds[0]
+          : { [Op.in]: recipientIds },
+    };
     if (mod) where.module = mod;
     if (unreadOnly === 'true') where.isRead = false;
 
@@ -36,10 +46,15 @@ router.get('/', verifyToken, async (req, res) => {
 router.patch('/read-all', verifyToken, async (req, res) => {
   try {
     const { module: mod } = req.query;
-    const userId = req.user.userId;
     const Model = getModel();
-
-    const where = { recipientId: userId, isRead: false };
+    const recipientIds = buildRecipientIds(req.user);
+    const where = {
+      recipientId:
+        recipientIds.length === 1
+          ? recipientIds[0]
+          : { [Op.in]: recipientIds },
+      isRead: false,
+    };
     if (mod) where.module = mod;
 
     await Model.update({ isRead: true }, { where });
@@ -52,12 +67,20 @@ router.patch('/read-all', verifyToken, async (req, res) => {
 // PATCH /api/notifications/:id/read
 router.patch('/:id/read', verifyToken, async (req, res) => {
   try {
-    const userId = req.user.userId;
     const Model = getModel();
+    const recipientIds = buildRecipientIds(req.user);
 
     await Model.update(
       { isRead: true },
-      { where: { id: req.params.id, recipientId: userId } }
+      {
+        where: {
+          id: req.params.id,
+          recipientId:
+            recipientIds.length === 1
+              ? recipientIds[0]
+              : { [Op.in]: recipientIds },
+        },
+      }
     );
     res.json({ success: true });
   } catch (err) {

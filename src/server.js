@@ -34,6 +34,7 @@ const {
   ensureSubmissionActivityResultSchema,
   ensureInspectionScheduleRecurringSchema,
 } = require("./models/ensureMeasurementSchema");
+const { ensureInspectionEnums } = require("./migrate_inspection_enums");
 
 // Register all Sequelize model associations (must run before any query)
 require("./models/associations");
@@ -309,6 +310,10 @@ sequelize
   })
   .then(() => {
     console.log("Inspection schedule recurring schema ensured.");
+    return ensureInspectionEnums({ shouldAuthenticate: false });
+  })
+  .then(() => {
+    console.log("Inspection enum schema ensured.");
     return syncDatabase(sequelize, "server startup");
   })
   .then(() => {

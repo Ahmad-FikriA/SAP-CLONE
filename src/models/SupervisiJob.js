@@ -238,6 +238,11 @@ async function ensureSupervisiJobSchema() {
     allowNull: true,
     comment: "Tanggal berakhir pekerjaan",
   });
+  await queryInterface.changeColumn(tableName, "status", {
+    type: DataTypes.ENUM("draft", "active", "completed", "cancelled"),
+    allowNull: false,
+    defaultValue: "draft",
+  });
 }
 
 module.exports = SupervisiJob;

@@ -6,9 +6,11 @@ const SUPERVISI_SCHEDULER_NIKS = new Set(["10000262"]);
 const SUPERVISI_MONITOR_NIKS = new Set(["10000191"]);
 const SUPERVISI_GROUP_PERPIPAAN = "Group supervisi Sipil dan Perpipaan";
 const SUPERVISI_GROUP_MEKATRONIK = "Group supervisi Mekanikal Elektrik dan Instrumen";
-const SUPERVISI_EXECUTOR_NAMES_BY_GROUP = {
-  [SUPERVISI_GROUP_PERPIPAAN]: ["Ibrohim", "Agus Miftakh"],
-  [SUPERVISI_GROUP_MEKATRONIK]: ["Deni Yuniardi", "Yoyon Sutrisno"],
+const SUPERVISI_GROUP_KEY_PERPIPAAN = "sipil_perpipaan";
+const SUPERVISI_GROUP_KEY_MEKATRONIK = "mekanikal_elektrik_instrumen";
+const SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY = {
+  [SUPERVISI_GROUP_KEY_PERPIPAAN]: ["Deni Yuniardi", "Yoyon Sutrisno"],
+  [SUPERVISI_GROUP_KEY_MEKATRONIK]: ["Ibrohim", "Agus Miftakh"],
 };
 
 function normalizeNik(value) {
@@ -29,21 +31,37 @@ function isSupervisiGroup(value) {
   return normalizeGroup(value).includes("supervisi");
 }
 
-function normalizeSupervisiGroupLabel(value) {
-  const normalized = String(value || "").trim().toLowerCase();
+function getSupervisiGroupKey(value) {
+  const normalized = normalizeGroup(value);
   if (!normalized) return null;
 
-  if (
-    normalized === "group supervisi sipil dan perpipaan" ||
-    normalized === "group supervisi sipil dan perpipaan"
-  ) {
-    return SUPERVISI_GROUP_PERPIPAAN;
+  if (normalized.includes("sipil") || normalized.includes("perpipaan")) {
+    return SUPERVISI_GROUP_KEY_PERPIPAAN;
   }
 
   if (
-    normalized === "group supervisi mekanikal elektrik dan instrumen" ||
-    normalized === "group supervisi mekanikal elektrik dan instrumen"
+    normalized.includes("mekan") ||
+    normalized.includes("elektrik") ||
+    normalized.includes("instrumen")
   ) {
+    return SUPERVISI_GROUP_KEY_MEKATRONIK;
+  }
+
+  return null;
+}
+
+function normalizeSupervisiGroupLabel(value) {
+  const normalizedKey = getSupervisiGroupKey(value);
+  if (!normalizedKey) {
+    const trimmed = String(value || "").trim();
+    return trimmed || null;
+  }
+
+  if (normalizedKey === SUPERVISI_GROUP_KEY_PERPIPAAN) {
+    return SUPERVISI_GROUP_PERPIPAAN;
+  }
+
+  if (normalizedKey === SUPERVISI_GROUP_KEY_MEKATRONIK) {
     return SUPERVISI_GROUP_MEKATRONIK;
   }
 
@@ -51,8 +69,8 @@ function normalizeSupervisiGroupLabel(value) {
 }
 
 function getAllowedExecutorNamesForGroup(groupName) {
-  const normalizedGroup = normalizeSupervisiGroupLabel(groupName);
-  return SUPERVISI_EXECUTOR_NAMES_BY_GROUP[normalizedGroup] || [];
+  const groupKey = getSupervisiGroupKey(groupName);
+  return SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY[groupKey] || [];
 }
 
 function getSupervisiAccess(user) {
@@ -98,14 +116,19 @@ async function isAllowedExecutorName(value) {
 
 async function isAllowedExecutorForGroup(groupName, value) {
   const name = String(value || "").trim();
-  if (!name) return false;
+  const requestedGroupKey = getSupervisiGroupKey(groupName);
+  if (!name || !requestedGroupKey) return false;
 
-  const allowedNames = getAllowedExecutorNamesForGroup(groupName);
-  if (!allowedNames.some((item) => normalizeName(item) === normalizeName(name))) {
+  const user = await User.findOne({
+    where: { name },
+    attributes: ["group"],
+  });
+  if (!user || !isSupervisiGroup(user.group)) {
     return false;
   }
 
-  return true;
+  const userGroupKey = getSupervisiGroupKey(user.group);
+  return userGroupKey === requestedGroupKey;
 }
 
 function canAccessSupervisiJob(user, job) {

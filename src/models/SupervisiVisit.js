@@ -168,6 +168,12 @@ async function ensureSupervisiVisitSchema() {
       comment: "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
     });
   }
+
+  await queryInterface.changeColumn(tableName, "status", {
+    type: DataTypes.ENUM("hadir", "tidak_hadir"),
+    allowNull: false,
+    comment: "Hadir atau tidak hadir",
+  });
 }
 
 module.exports = SupervisiVisit;
