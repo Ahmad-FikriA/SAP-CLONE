@@ -35,6 +35,8 @@ const {
   ensureInspectionScheduleRecurringSchema,
 } = require("./models/ensureMeasurementSchema");
 const { ensureInspectionEnums } = require("./migrate_inspection_enums");
+const { markMissedVisitsAsPelanggaran } = require("./controllers/inspection/supervisiController");
+const cron = require("node-cron");
 
 // Register all Sequelize model associations (must run before any query)
 require("./models/associations");
@@ -318,6 +320,14 @@ sequelize
   })
   .then(() => {
     console.log("Database models synced successfully.");
+    // ── Supervisi: Cron job — tandai kunjungan yang terlewat sebagai Pelanggaran
+    // Jalankan sekali saat server start (untuk menangkap backlog)
+    markMissedVisitsAsPelanggaran();
+    // Jadwalkan setiap hari pukul 00:01 server time
+    cron.schedule("1 0 * * *", markMissedVisitsAsPelanggaran, {
+      timezone: "Asia/Jakarta",
+    });
+    console.log("[Supervisi Cron] Scheduled daily missed-visit check at 00:01 Asia/Jakarta.");
   })
   .catch((err) => {
     console.error("Unable to connect to the database:", err);
