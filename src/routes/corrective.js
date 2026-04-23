@@ -70,6 +70,7 @@ router.post('/requests/bulk-delete', verifyToken, reqCtrl.bulkDelete);
 // POST /api/corrective/requests/:id/approve-planner
 // Rules: Planner changes pending to approved
 router.post('/requests/:id/approve-planner', verifyToken, requirePlanner, reqCtrl.approvePlanner);
+router.post('/requests/:id/reject-planner', verifyToken, requirePlanner, reqCtrl.rejectPlanner);
 
 // POST /api/corrective/requests/:id/approve
 router.post('/requests/:id/approve', verifyToken, reqCtrl.approveKadisPusat);

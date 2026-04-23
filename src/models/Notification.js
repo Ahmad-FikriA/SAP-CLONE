@@ -108,6 +108,11 @@ const Notification = sequelize.define('Notification', {
     allowNull: true,
     field: 'submitted_at',
   },
+  rejectionReason: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    field: 'rejection_reason',
+  },
 }, {
   tableName: 'notifications',
   underscored: true,

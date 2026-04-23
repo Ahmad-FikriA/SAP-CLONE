@@ -97,6 +97,7 @@ function fmtRequest(notif) {
       n.status === "closed" ? "selesai" : n.approvalStatus || "pending",
     workCenter: spk.workCenter || n.workCenter,
     sapOrderNumber: n.sapOrderNumber,
+    rejectionReason: n.rejectionReason,
     images,
 
     // SPK mapped fields
@@ -470,6 +471,55 @@ const approvePlanner = async (req, res) => {
   }
 };
 
+// POST /api/corrective/requests/:id/reject-planner
+const rejectPlanner = async (req, res) => {
+  const { rejectionReason } = req.body;
+  const notification = await Notification.findByPk(req.params.id);
+
+  if (!notification)
+    return res.status(404).json({ error: "Notification not found" });
+
+  if (
+    notification.status !== "submitted" &&
+    notification.approvalStatus !== "pending"
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Notification is not currently pending" });
+  }
+
+  await notification.update({
+    status: "rejected",
+    approvalStatus: "rejected",
+    rejectionReason: rejectionReason || "Tidak ada alasan spesifik",
+  });
+
+  const fresh = await Notification.findByPk(
+    notification.notificationId || notification.id,
+  );
+  res.json(fresh ? fmtRequest(fresh) : { success: true });
+
+  // 🔔 Notify Pelapor (Kadis Pelapor) that their report has been rejected
+  if (notification.kadisPelaporId) {
+    const pelaporUser = await User.findByPk(notification.kadisPelaporId, {
+      attributes: ["nik"],
+    });
+    if (pelaporUser?.nik) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "request_rejected_for_reporter",
+        title: "Laporan Anda Ditolak",
+        body: `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah ditolak oleh Planner. Alasan: ${rejectionReason || "-"}`,
+        data: {
+          requestId: notification.notificationId,
+          deepLink: "corrective/request-detail",
+        },
+        recipientIds: [pelaporUser.nik],
+      });
+    }
+  }
+};
+
 module.exports = {
   getAll,
   getOne,
@@ -481,4 +531,5 @@ module.exports = {
   approveKadisPusat,
   rejectKadisPusat,
   approvePlanner,
+  rejectPlanner,
 };
