@@ -601,73 +601,73 @@ export default function CorrectivePage() {
 
       {/* SPK Detail Dialog */}
       <Dialog open={!!selectedSpk} onOpenChange={(o) => !o && setSelectedSpk(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0 rounded-2xl gap-0">
-          <div className="bg-slate-50 px-6 py-5 border-b border-slate-100 sticky top-0 z-10">
-            <div className="flex items-center justify-between mb-4">
+        <DialogContent className="max-w-[95vw] lg:max-w-[80vw] max-h-[90vh] overflow-y-auto p-0 rounded-2xl gap-0">
+          <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 px-8 py-6 border-b border-slate-100 sticky top-0 z-10">
+            <div className="flex items-center justify-between mb-5">
               <div>
-                <DialogTitle className="text-lg text-slate-800">Detail SPK SAP</DialogTitle>
-                <div className="text-sm font-mono text-slate-500 mt-1">{selectedSpk?.order_number}</div>
+                <DialogTitle className="text-xl font-bold text-slate-800">Detail SPK SAP</DialogTitle>
+                <div className="text-sm font-mono text-slate-400 mt-1">{selectedSpk?.order_number}</div>
               </div>
               <StatusBadge value={selectedSpk?.status} colorMap={SAP_STATUS_COLORS} labelMap={SAP_STATUS_LABELS} />
             </div>
 
             {/* Progress Stepper */}
-            <div className="flex items-center w-full relative">
+            <div className="flex items-center w-full relative max-w-xl mx-auto">
               {SAP_SPK_STEPS.map((step, i) => {
                 const currentIdx = SAP_SPK_STEPS.findIndex((s) => s.key === selectedSpk?.status);
                 const done = i < currentIdx;
                 const active = i === currentIdx;
                 return (
                   <div key={step.key} className="flex-1 relative flex flex-col items-center">
-                    {/* Line Connector */}
                     {i !== 0 && (
                        <div className={cn("absolute top-3 left-[-50%] w-full h-[2px] -z-10", done || active ? "bg-blue-500" : "bg-slate-200")} />
                     )}
-                    {/* Circle */}
-                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-slate-50 transition-colors z-10", 
+                    <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ring-4 ring-slate-50 transition-colors z-10", 
                       done ? "bg-blue-500 text-white" : 
                       active ? "bg-blue-600 text-white ring-blue-100" : "bg-slate-200 text-slate-400"
                     )}>
                       {done ? <CheckCircle2 size={14} /> : i + 1}
                     </div>
-                    {/* Label */}
-                    <span className={cn("text-[10px] sm:text-xs mt-2 font-medium w-full text-center absolute top-7", 
+                    <span className={cn("text-xs mt-2 font-medium w-full text-center absolute top-8", 
                       active ? "text-blue-700" : done ? "text-slate-700" : "text-slate-400"
                     )}>{step.label}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="h-6"></div>{/* spacing for absolute labels */}
+            <div className="h-7"></div>
           </div>
           
           {selectedSpk && (
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Section title="Informasi Utama">
-                  <Row label="Order Number" value={<span className="font-mono">{selectedSpk.order_number}</span>} />
-                  <Row label="Deskripsi" value={selectedSpk.description} />
-                  <Row label="Status SAP" value={selectedSpk.sys_status} />
-                  <Row label="Short Text" value={selectedSpk.short_text} />
-                  <Row label="Confirmation Text" value={selectedSpk.conf_text} />
-                </Section>
+            <div className="p-8 space-y-8">
+              {/* Row 1: 4-column grid for key info */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoCard label="Order Number" value={selectedSpk.order_number} mono />
+                <InfoCard label="Status SAP" value={selectedSpk.sys_status} />
+                <InfoCard label="Work Center" value={selectedSpk.work_center} />
+                <InfoCard label="Control Key" value={selectedSpk.ctrl_key} />
+              </div>
+
+              {/* Row 2: Description full width */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InfoCard label="Deskripsi" value={selectedSpk.description} />
+                <InfoCard label="Short Text" value={selectedSpk.short_text} />
+              </div>
+
+              {/* Row 3: Sections */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Section title="Lokasi & Peralatan">
                   <Row label="Equipment" value={selectedSpk.equipment_name} />
                   <Row label="Functional Loc" value={selectedSpk.functional_location} />
                   <Row label="Location" value={selectedSpk.location} />
-                  <Row label="Work Center" value={selectedSpk.work_center} />
+                  <Row label="Cost Center" value={selectedSpk.cost_center} />
                 </Section>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Section title="Perencanaan">
                   <Row label="Plan Duration" value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || ''}`} />
-                  <Row label="Normal Dur" value={`${selectedSpk.normal_dur || 0} ${selectedSpk.normal_dur_un || ''}`} />
+                  <Row label="Normal Duration" value={`${selectedSpk.normal_dur || 0} ${selectedSpk.normal_dur_un || ''}`} />
                   <Row label="Unit for Work" value={selectedSpk.unit_for_work} />
                   <Row label="Activity" value={selectedSpk.activity} />
                   <Row label="Maint. Activ. Type" value={selectedSpk.maint_activ_type} />
-                  <Row label="Cost Center" value={selectedSpk.cost_center} />
-                  <Row label="Control Key" value={selectedSpk.ctrl_key} />
                 </Section>
                 <Section title="Jadwal & Aktual SAP">
                   <Row label="Tgl Posting" value={fmtDate(selectedSpk.posting_date)} />
@@ -677,10 +677,15 @@ export default function CorrectivePage() {
                   <Row label="Finish Time" value={selectedSpk.finish_time} />
                   <Row label="Durasi Aktual" value={`${selectedSpk.dur_act || 0} ${selectedSpk.normal_dur_un || ''}`} />
                   <Row label="Actual Work" value={`${selectedSpk.actual_work || 0} ${selectedSpk.unit_for_work || ''}`} />
-                  <Row label="Reason of Var" value={selectedSpk.reason_of_var} />
-                  <Row label="Confirm Number" value={selectedSpk.confirm_number} />
-                  <Row label="Dilaporkan Oleh" value={selectedSpk.report_by} />
                 </Section>
+              </div>
+
+              {/* Row 4: Additional info */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoCard label="Confirmation Text" value={selectedSpk.conf_text} />
+                <InfoCard label="Confirm Number" value={selectedSpk.confirm_number} />
+                <InfoCard label="Reason of Var" value={selectedSpk.reason_of_var} />
+                <InfoCard label="Dilaporkan Oleh" value={selectedSpk.report_by} />
               </div>
 
               {/* Execution Results */}
@@ -873,6 +878,15 @@ function MetricCard({ label, value, className }) {
     <div className={cn("bg-white p-3 rounded-xl border border-slate-200 shadow-sm", className)}>
       <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{label}</div>
       <div className="text-lg font-bold text-slate-800">{value}</div>
+    </div>
+  );
+}
+
+function InfoCard({ label, value, mono }) {
+  return (
+    <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{label}</div>
+      <div className={cn("text-sm text-slate-800 font-medium break-words", mono && "font-mono")}>{value || '-'}</div>
     </div>
   );
 }
