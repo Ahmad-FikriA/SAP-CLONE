@@ -246,11 +246,9 @@ const update = async (req, res) => {
       notification.status === "spk_created" ||
       notification.status === "closed"
     ) {
-      return res
-        .status(400)
-        .json({
-          error: "Cannot modify notification after SPK is created or closed",
-        });
+      return res.status(400).json({
+        error: "Cannot modify notification after SPK is created or closed",
+      });
     }
   }
 
@@ -445,17 +443,23 @@ const approvePlanner = async (req, res) => {
 
   // 🔔 Notify Pelapor (Kadis Pelapor) that their report has been approved
   if (notification.kadisPelaporId) {
-    await NotificationService.notify({
-      module: "corrective",
-      type: "request_approved_for_reporter",
-      title: "Laporan Anda Telah Disetujui",
-      body: `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah disetujui oleh Planner. Proses selanjutnya menunggu pembuatan SPK.`,
-      data: {
-        requestId: notification.notificationId,
-        deepLink: "corrective/request-detail",
-      },
-      recipientIds: [notification.kadisPelaporId],
+    // kadisPelaporId stores the user `id`, but NotificationService queries by `nik`
+    const pelaporUser = await User.findByPk(notification.kadisPelaporId, {
+      attributes: ["nik"],
     });
+    if (pelaporUser?.nik) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "request_approved_for_reporter",
+        title: "Laporan Anda Telah Disetujui",
+        body: `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah disetujui oleh Planner. Proses selanjutnya menunggu pembuatan SPK.`,
+        data: {
+          requestId: notification.notificationId,
+          deepLink: "corrective/request-detail",
+        },
+        recipientIds: [pelaporUser.nik],
+      });
+    }
   }
 };
 
