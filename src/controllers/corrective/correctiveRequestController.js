@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const { v4: uuid } = require('uuid');
 const Notification = require('../../models/Notification');
 const User = require('../../models/User');
-const { SpkCorrectiveItem, SpkCorrectivePhoto } = require('../../models/associations');
+// Legacy SpkCorrective models have been removed — no longer needed here.
 const { KADIS_ROLE, KADIS_PUSAT_ROLE } = require('../../middleware/correctiveAccess');
 const NotificationService = require('../../services/notificationService');
 
@@ -107,7 +107,7 @@ function fmtRequest(notif) {
   };
 }
 
-const SPK_INCLUDE = []; // Disabled old SPK include
+// SPK_INCLUDE removed — legacy SpkCorrective tables no longer exist.
 
 // GET /api/corrective/requests
 const getAll = async (req, res) => {
@@ -189,7 +189,7 @@ const create = async (req, res) => {
     workCenter: workCenter || null,
   });
   
-  const fresh = await Notification.findByPk(id, { include: [SPK_INCLUDE] });
+  const fresh = await Notification.findByPk(id);
   res.status(201).json(fmtRequest(fresh));
 
   // 🔔 Notify all Planners about new corrective request
@@ -236,7 +236,7 @@ const update = async (req, res) => {
 
   await notification.update(payload);
   
-  const fresh = await Notification.findByPk(notification.notificationId || notification.id, { include: [SPK_INCLUDE] });
+  const fresh = await Notification.findByPk(notification.notificationId || notification.id);
   res.json(fmtRequest(fresh));
 };
 
