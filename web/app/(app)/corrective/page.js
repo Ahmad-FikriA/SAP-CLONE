@@ -855,18 +855,11 @@ export default function CorrectivePage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1 text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center gap-1 text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-medium">
-                            Plan: {spk.num_of_work || "—"} org
-                          </span>
-                          <span className="flex items-center gap-1 text-[10px] bg-blue-50 px-1.5 py-0.5 rounded text-blue-600 font-bold">
-                            Act: {spk.actual_personnel || 0} org
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                          <AlertCircle size={10} /> {spk.total_actual_hour || 0} jam total
-                        </div>
+                      <div className="text-xs font-bold text-slate-700">
+                        {spk.dur_plan || 0} Jam / {spk.num_of_work || 0} Orang
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-tight font-bold">
+                        Planned
                       </div>
                     </TableCell>
                     <TableCell>
@@ -1337,8 +1330,8 @@ export default function CorrectivePage() {
                 </Section>
                 <Section title="Perencanaan">
                   <Row
-                    label="Plan Duration"
-                    value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || ""}`}
+                    label="Jam Pekerja (Planned)"
+                    value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || "Jam"} / ${selectedSpk.num_of_work || 0} Orang`}
                   />
                   <Row
                     label="Normal Duration"
@@ -1412,6 +1405,11 @@ export default function CorrectivePage() {
                   </h4>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <MetricCard
+                      label="Jam Pekerja (Planned)"
+                      value={`${selectedSpk.dur_plan || 0} Jam / ${selectedSpk.num_of_work || 0} Org`}
+                      className="bg-blue-50/50 border-blue-100"
+                    />
                     <MetricCard
                       label="Pekerja Aktual"
                       value={`${selectedSpk.actual_personnel || 0} Orang`}
@@ -1628,7 +1626,7 @@ export default function CorrectivePage() {
                         Work Center
                       </TableHead>
                       <TableHead className="whitespace-nowrap">
-                        Dur. Plan
+                        Jam Pekerja (Planned)
                       </TableHead>
                       <TableHead className="whitespace-nowrap">
                         Maint. Activ. Type
@@ -1667,7 +1665,7 @@ export default function CorrectivePage() {
                           {row.work_center || "-"}
                         </TableCell>
                         <TableCell className="text-sm whitespace-nowrap">
-                          {row.dur_plan || 0} {row.normal_dur_un || ""}
+                          {row.dur_plan || 0} {row.normal_dur_un || "Jam"} / {row.num_of_work || 0} Orang
                         </TableCell>
                         <TableCell className="text-sm whitespace-nowrap">
                           {row.maint_activ_type || "-"}

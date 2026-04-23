@@ -292,12 +292,12 @@ const bulkInsertSapSpk = async (req, res) => {
 
             await NotificationService.notify({
               module: "corrective",
-              targetNik: pelaporUser.nik,
+              type: "corrective_notification_approved",
+              recipientIds: [pelaporUser.nik],
               title: "SPK Corrective Terbit",
               body: `SPK SAP untuk laporan ${notif.notificationId} telah tersedia (${notif.sapOrderNumber}). Silakan cek progres di aplikasi.`,
               data: {
                 id: notif.id,
-                type: "corrective_notification_approved",
                 sapOrderNumber: notif.sapOrderNumber,
               },
             });

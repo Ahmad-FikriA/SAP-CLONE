@@ -74,10 +74,15 @@ async function notify({ module, type, title, body, data = {}, recipientIds = [] 
   try {
     const { Op } = require('sequelize');
 
-    // 1. Look up users by NIK (since recipientIds contains NIKs)
+    // 1. Look up users by NIK or ID (since recipientIds can contain either)
     const users = await User.findAll({
-      where: { nik: { [Op.in]: normalizedRecipientIds } },
-      attributes: ['id', 'nik', 'fcmToken'],
+      where: {
+        [Op.or]: [
+          { nik: { [Op.in]: normalizedRecipientIds } },
+          { id: { [Op.in]: normalizedRecipientIds } },
+        ],
+      },
+      attributes: ["id", "nik", "fcmToken"],
     });
 
     if (users.length === 0) return;

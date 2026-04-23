@@ -454,12 +454,12 @@ const updateSapNumber = async (req, res) => {
         if (pelaporUser?.nik) {
           await NotificationService.notify({
             module: "corrective",
-            targetNik: pelaporUser.nik,
+            type: "corrective_notification_approved",
+            recipientIds: [pelaporUser.nik],
             title: "SPK Corrective Ditemukan",
             body: `Laporan ${notification.notificationId} telah cocok dengan SPK SAP ${sapOrderNumber}. Progres kini dapat dipantau.`,
             data: {
               id: notification.id,
-              type: "corrective_notification_approved",
               sapOrderNumber: sapOrderNumber,
             },
           });
