@@ -70,7 +70,7 @@ const Notification = sequelize.define('Notification', {
     field: 'photo_2',
   },
   status: {
-    type: DataTypes.ENUM('draft', 'submitted', 'menunggu_review_awal_kadis_pp', 'approved', 'ditolak_kadis_pp_awal', 'spk_created', 'closed'),
+    type: DataTypes.ENUM('draft', 'submitted', 'menunggu_review_awal_kadis_pp', 'approved', 'ditolak_kadis_pp_awal', 'spk_created', 'closed', 'rejected'),
     allowNull: false,
     defaultValue: 'draft',
   },
