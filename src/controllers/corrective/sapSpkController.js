@@ -455,6 +455,13 @@ const claimSapSpk = async (req, res) => {
 
     await spk.update(updates);
 
+    // Sync status to Notification table if exists
+    const Notification = require("../../models/Notification");
+    await Notification.update(
+      { approvalStatus: "eksekusi" },
+      { where: { sapOrderNumber: order_number } }
+    );
+
     res.status(200).json({
       status: "success",
       message: "SPK berhasil diklaim. Silakan lanjutkan eksekusi.",
@@ -545,6 +552,13 @@ const executeSapSpk = async (req, res) => {
 
     await spk.update(updates);
 
+    // Sync status to Notification table if exists
+    const Notification = require("../../models/Notification");
+    await Notification.update(
+      { approvalStatus: "menunggu_review_kadis_pp" },
+      { where: { sapOrderNumber: order_number } }
+    );
+
     res.status(200).json({
       status: "success",
       message: "SPK berhasil dilengkapi dan dikirim untuk review Kadis PP",
@@ -618,6 +632,13 @@ const approveKadisPp = async (req, res) => {
       kadis_pusat_approved_at: new Date(),
     });
 
+    // Sync status to Notification table if exists
+    const Notification = require("../../models/Notification");
+    await Notification.update(
+      { approvalStatus: "menunggu_review_kadis_pelapor" },
+      { where: { sapOrderNumber: order_number } }
+    );
+
     // Notify Kadis Pelapor (if notification exists)
     if (spk.notification && spk.notification.kadisPelaporId) {
       await NotificationService.notify({
@@ -653,6 +674,13 @@ const rejectKadisPp = async (req, res) => {
       rejected_at: new Date(),
       rejection_note,
     });
+
+    // Sync status to Notification table if exists
+    const Notification = require("../../models/Notification");
+    await Notification.update(
+      { approvalStatus: "eksekusi" },
+      { where: { sapOrderNumber: order_number } }
+    );
 
     // Notify Teknisi
     if (spk.execution_nik) {
@@ -690,6 +718,13 @@ const approveKadisPelapor = async (req, res) => {
       kadis_pelapor_approved_at: new Date(),
     });
 
+    // Sync status to Notification table if exists
+    const Notification = require("../../models/Notification");
+    await Notification.update(
+      { approvalStatus: "selesai" },
+      { where: { sapOrderNumber: order_number } }
+    );
+
     // Notify Teknisi that it's completely done
     if (spk.execution_nik) {
       await NotificationService.notify({
@@ -725,6 +760,13 @@ const rejectKadisPelapor = async (req, res) => {
       rejected_at: new Date(),
       rejection_note,
     });
+
+    // Sync status to Notification table if exists
+    const Notification = require("../../models/Notification");
+    await Notification.update(
+      { approvalStatus: "eksekusi" },
+      { where: { sapOrderNumber: order_number } }
+    );
 
     // Notify Teknisi
     if (spk.execution_nik) {
