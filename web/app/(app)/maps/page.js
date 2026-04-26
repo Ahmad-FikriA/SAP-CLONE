@@ -91,19 +91,22 @@ export default function MapsPage() {
     const drawnItems = new L.FeatureGroup().addTo(map);
     drawnItemsRef.current = drawnItems;
 
+    // Tell Geoman to draw directly into drawnItems — prevents double-add to map
+    map.pm.setGlobalOptions({ layerGroup: drawnItems });
+
     // pm (geoman) events
     map.on('pm:create', (e) => {
       const layer = e.layer;
+      // Layer is already in drawnItems (Geoman put it there via layerGroup option)
       if (!layer.feature) layer.feature = { type: 'Feature', properties: { source: 'custom' } };
       layer.feature.properties.source = 'custom';
-      drawnItems.addLayer(layer);
       attachLayerClick(layer);
       openProps(layer);
       setCustomCount(drawnItems.getLayers().length);
     });
 
     map.on('pm:remove', (e) => {
-      drawnItemsRef.current?.removeLayer(e.layer);
+      // Layer already removed from drawnItems by Geoman (it manages its own layerGroup)
       setCustomCount(drawnItemsRef.current?.getLayers().length || 0);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
