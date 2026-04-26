@@ -166,9 +166,11 @@ export default function SubmissionsPage() {
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Bulan</label>
+          <label className={`text-[11px] font-semibold uppercase tracking-wide ${week ? 'text-gray-300' : 'text-gray-500'}`}>
+            Bulan {week ? <span className="normal-case font-normal">(nonaktif saat minggu dipilih)</span> : ''}
+          </label>
           <select value={month} onChange={(e) => { setMonth(e.target.value); if (e.target.value) setWeek(''); }}
-            className={`px-2.5 py-1.5 border border-gray-200 rounded-md text-sm bg-white min-w-[120px] ${week ? 'opacity-40 cursor-not-allowed' : ''}`}
+            className={`px-2.5 py-1.5 border rounded-md text-sm bg-white min-w-[120px] transition-colors ${week ? 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50' : 'border-gray-200'}`}
             disabled={!!week}>
             {MONTHS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>

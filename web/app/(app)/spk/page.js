@@ -203,6 +203,7 @@ export default function SpkPage() {
         }
       });
       setActivities(newActs);
+      if (newActs.length > 0) toast.info(`${newActs.length} aktivitas ditambahkan dari task mapping`);
     }
   }
 
@@ -218,6 +219,7 @@ export default function SpkPage() {
             ...acts,
             ...mapping.activities.map((step) => ({ _id: actIdxRef.current++, equipmentId: eqId, operationText: step.operationText || '', durationPlan: 30 })),
           ]);
+          toast.info(`${mapping.activities.length} aktivitas ditambahkan untuk equipment ini`);
         }
       }
       if (prev.includes(eqId)) {

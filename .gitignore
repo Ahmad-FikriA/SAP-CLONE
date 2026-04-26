@@ -6,6 +6,9 @@ uploads/*
 storage/*
 !storage/.gitkeep
 
+# Map GeoJSON files are runtime data — never overwrite with deploys
+data/maps/*.geojson
+
 /docs
 /exceldata
 /preventive_field.md

@@ -32,10 +32,27 @@ export default function MapsEditor({ onMapReady, className = 'h-96 w-full', cent
       const map = L.map(containerRef.current).setView(center, zoom);
       mapRef.current = map;
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 22,
-      }).addTo(map);
+      const satellite = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: 'Tiles © Esri', maxZoom: 20 }
+      );
+      const streets = L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { attribution: '© OpenStreetMap contributors', maxZoom: 22 }
+      );
+      const labels = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        { attribution: '', maxZoom: 20, opacity: 0.8 }
+      );
+
+      satellite.addTo(map);
+      labels.addTo(map);
+
+      L.control.layers(
+        { 'Satelit (ESRI)': satellite, 'Street Map': streets },
+        { 'Label': labels },
+        { position: 'topright', collapsed: false }
+      ).addTo(map);
 
       // Geoman controls — only polygon/rectangle drawing and edit/delete
       map.pm.addControls({
