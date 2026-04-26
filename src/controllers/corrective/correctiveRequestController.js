@@ -105,6 +105,10 @@ function fmtRequest(notif, sapSpk) {
     submittedAt: n.submittedAt,
     status: n.status,
     approvalStatus:
+      sap?.status === "eksekusi" ? "eksekusi" : 
+      sap?.status === "menunggu_review_kadis_pp" ? "menunggu_review_kadis_pp" :
+      sap?.status === "menunggu_review_kadis_pelapor" ? "menunggu_review_kadis_pelapor" :
+      sap?.status === "selesai" ? "selesai" :
       n.status === "closed" ? "selesai" : n.approvalStatus || "pending",
     workCenter: sap?.work_center || spk.workCenter || n.workCenter,
     sapOrderNumber: n.sapOrderNumber,
