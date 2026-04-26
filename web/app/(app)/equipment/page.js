@@ -38,11 +38,21 @@ export default function EquipmentPage() {
 
   useEffect(() => {
     apiGet('/maps').then(setPlants).catch(() => {});
+    loadMapMarkers();
   }, []);
 
   useEffect(() => {
     load(0);
   }, [category, plantFilter, search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Loads ALL equipment with coordinates for the map — independent of table filters/pagination
+  async function loadMapMarkers() {
+    try {
+      const data = await apiGet('/equipment?limit=9999');
+      const items = data.data || data;
+      if (mapCallbackRef.current) mapCallbackRef.current(items);
+    } catch { /* silent — map just shows fewer pins */ }
+  }
 
   async function load(p = page) {
     setLoading(true);
@@ -56,7 +66,6 @@ export default function EquipmentPage() {
       setEquipment(items);
       setTotal(data.total || items.length);
       setPage(p);
-      if (mapCallbackRef.current) mapCallbackRef.current(items);
     } catch (e) {
       toast.error('Gagal memuat: ' + e.message);
     } finally {
@@ -115,6 +124,7 @@ export default function EquipmentPage() {
       }
       setPanelOpen(false);
       load(0);
+      loadMapMarkers();
     } catch (e) { toast.error(e.message); }
   }
 
@@ -124,6 +134,7 @@ export default function EquipmentPage() {
       toast.success('Equipment dihapus');
       setDeleteTarget(null);
       load(0);
+      loadMapMarkers();
     } catch (e) { toast.error(e.message); }
   }
 
@@ -161,6 +172,7 @@ export default function EquipmentPage() {
       const data = await apiUpload('/equipment/import-excel', fd);
       toast.success(data.message || 'Import selesai');
       load(0);
+      loadMapMarkers();
     } catch (err) { toast.error('Import gagal: ' + err.message); }
   }
 

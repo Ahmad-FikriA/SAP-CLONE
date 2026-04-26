@@ -21,6 +21,8 @@ const Submission = sequelize.define('Submission', {
   },
   submittedAt:    { type: DataTypes.DATE,           allowNull: false, field: 'submitted_at' },
   workStart:      { type: DataTypes.DATE,           allowNull: true,  field: 'work_start' },
+  locationQuality: { type: DataTypes.STRING(20),    allowNull: true,  field: 'location_quality' },
+  lateReason:      { type: DataTypes.TEXT,           allowNull: true,  field: 'late_reason' },
 }, {
   tableName: 'submissions',
   underscored: true,
@@ -28,6 +30,7 @@ const Submission = sequelize.define('Submission', {
   indexes: [
     { fields: ['spk_number'] },
     { fields: ['submitted_at'] },
+    { fields: ['spk_number', 'submitted_at'] },
   ],
 });
 

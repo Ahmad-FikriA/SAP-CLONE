@@ -271,8 +271,78 @@ const submit = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
 
-  const { durationActual, activityResultsModel = [], photoPaths = [], evaluasi, latitude, longitude, workStart } = req.body;
+  // Block re-submission of an already-submitted or approved SPK
+  if (!['pending', 'rejected'].includes(spk.status)) {
+    return res.status(409).json({ error: `SPK sudah disubmit (status: ${spk.status})` });
+  }
+
+  const { durationActual, activityResultsModel = [], photoPaths = [], evaluasi, latitude, longitude, workStart, locationQuality, lateReason } = req.body;
   const subId = `SUB-${uuid().slice(0, 8).toUpperCase()}`;
+
+  // ── 24h duplicate prevention ────────────────────────────────────────────────
+  const equipmentIds = (spk.equipmentModels ?? []).map(e => e.equipmentId);
+  if (equipmentIds.length > 0) {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Find any SPK with the same intervalPeriod + overlapping equipment submitted in last 24h
+    const conflictingSpkNumbers = await SpkEquipment.findAll({
+      where: { equipmentId: { [Op.in]: equipmentIds } },
+      attributes: ['spkNumber'],
+      include: [{
+        model: Spk,
+        as: 'spk',
+        where: {
+          intervalPeriod: spk.intervalPeriod,
+          spkNumber: { [Op.ne]: spk.spkNumber },
+        },
+        attributes: [],
+        required: true,
+      }],
+      raw: true,
+    });
+
+    if (conflictingSpkNumbers.length > 0) {
+      const spkNums = [...new Set(conflictingSpkNumbers.map(r => r.spkNumber))];
+      const recentSubmission = await Submission.findOne({
+        where: {
+          spkNumber: { [Op.in]: spkNums },
+          submittedAt: { [Op.gte]: cutoff },
+        },
+        order: [['submittedAt', 'DESC']],
+        attributes: ['submittedAt'],
+      });
+
+      if (recentSubmission) {
+        const nextAvailableAt = new Date(recentSubmission.submittedAt.getTime() + 24 * 60 * 60 * 1000);
+        return res.status(409).json({
+          error: 'Equipment ini sudah memiliki laporan dalam 24 jam terakhir',
+          lastSubmittedAt: recentSubmission.submittedAt.toISOString(),
+          nextAvailableAt: nextAvailableAt.toISOString(),
+        });
+      }
+    }
+  }
+
+  // Late SPK validation — require lateReason if submitting after scheduled week ends
+  if (spk.scheduledDate) {
+    const scheduled = new Date(spk.scheduledDate); // DATEONLY → YYYY-MM-DD
+    // Normalize to ISO weekday (Mon=1 … Sun=7) to match Flutter's Dart convention.
+    // getUTCDay() returns Sun=0 … Sat=6; negative daysToFriday (Sat=-1, Sun=-2)
+    // correctly points back to the preceding Friday.
+    const rawDow = scheduled.getUTCDay();
+    const isoDow = rawDow === 0 ? 7 : rawDow; // Mon=1 … Sun=7
+    const daysToFriday = 5 - isoDow;           // 0 on Fri, negative for Sat/Sun
+    const weekFriday = new Date(scheduled);
+    weekFriday.setUTCDate(weekFriday.getUTCDate() + daysToFriday);
+    weekFriday.setUTCHours(23, 59, 59, 999); // end of Friday UTC
+
+    const isLate = new Date() > weekFriday;
+    if (isLate && (!lateReason || lateReason.trim().length < 10)) {
+      return res.status(422).json({
+        error: 'SPK terlambat. Wajib isi alasan keterlambatan (min. 10 karakter).',
+      });
+    }
+  }
 
   const t = await sequelize.transaction();
   try {
@@ -282,6 +352,8 @@ const submit = async (req, res) => {
       evaluasi: evaluasi || null, latitude: latitude ?? 0, longitude: longitude ?? 0,
       submittedAt: new Date(),
       workStart: workStart ? new Date(workStart) : null,
+      locationQuality: locationQuality ?? null,
+      lateReason: lateReason ?? null,
     }, { transaction: t });
 
     // Photos
