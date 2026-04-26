@@ -141,8 +141,12 @@ export default function EquipmentMap({ equipment, plants, plantId, onMapReady, o
         if (onClickCoordRef.current) onClickCoordRef.current(e.latlng.lat, e.latlng.lng);
       });
 
+      // markerStore: equipmentId → { marker, eq, color }
+      const markerStore = new Map();
+
       function addMarkers(items) {
         markersLayer.clearLayers();
+        markerStore.clear();
         (items || []).forEach((eq) => {
           if (eq.latitude == null || eq.longitude == null) return;
           const color = CATEGORY_MARKER_COLORS[eq.category] || '#6B7280';
@@ -168,12 +172,30 @@ export default function EquipmentMap({ equipment, plants, plantId, onMapReady, o
           });
 
           marker.addTo(markersLayer);
+          markerStore.set(eq.equipmentId, { marker, eq, color });
+        });
+      }
+
+      // Dim non-matching markers, highlight matching ones
+      function applyFilter({ category, plantId } = {}) {
+        const hasFilter = !!(category || plantId);
+        markerStore.forEach(({ marker, eq, color }) => {
+          const matches =
+            (!category || eq.category === category) &&
+            (!plantId  || eq.plantId  === plantId);
+
+          if (!hasFilter || matches) {
+            marker.setStyle({ radius: 8, color, weight: 2, fillColor: color, fillOpacity: 0.75 });
+            marker.setZIndexOffset?.(0);
+          } else {
+            marker.setStyle({ radius: 4, color: '#9CA3AF', weight: 1, fillColor: '#9CA3AF', fillOpacity: 0.25 });
+          }
         });
       }
 
       const flyTo = (lat, lng, zoom = 17) => map.flyTo([lat, lng], zoom);
 
-      if (onMapReady) onMapReady((newEquipment) => addMarkers(newEquipment), flyTo);
+      if (onMapReady) onMapReady((newEquipment) => addMarkers(newEquipment), flyTo, applyFilter);
       if (equipment) addMarkers(equipment);
     }
 

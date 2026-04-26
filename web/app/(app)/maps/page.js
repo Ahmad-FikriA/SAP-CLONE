@@ -29,6 +29,7 @@ const MapEditor = dynamic(() => import('@/components/map/MapsEditor'), { ssr: fa
 export default function MapsPage() {
   const [plants, setPlants] = useState([]);
   const [plantId, setPlantId] = useState('');
+  const [mapReady, setMapReady] = useState(false);
   const [customCount, setCustomCount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [propsOpen, setPropsOpen] = useState(false);
@@ -52,6 +53,7 @@ export default function MapsPage() {
   const onMapReady = useCallback((map, L, pm) => {
     mapRef.current = map;
     LRef.current = L;
+    setMapReady(true);
 
     // Coordinate picker — click anywhere to show a popup with lat/lng + copy button
     // Suppressed while a draw tool is active (Geoman)
@@ -100,7 +102,10 @@ export default function MapsPage() {
       setCustomCount(drawnItems.getLayers().length);
     });
 
-    map.on('pm:remove', () => setCustomCount(drawnItemsRef.current?.getLayers().length || 0));
+    map.on('pm:remove', (e) => {
+      drawnItemsRef.current?.removeLayer(e.layer);
+      setCustomCount(drawnItemsRef.current?.getLayers().length || 0);
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function attachLayerClick(layer) {
@@ -193,7 +198,16 @@ export default function MapsPage() {
     } catch {
       // No map data yet — ready to draw
     }
-    setCustomCount(drawnItemsRef.current.getLayers().length);
+    const count = drawnItemsRef.current.getLayers().length;
+    setCustomCount(count);
+
+    // Fit map to show all custom areas if any exist
+    if (count > 0) {
+      try {
+        const bounds = drawnItemsRef.current.getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 17 });
+      } catch { /* bounds might fail on empty/invalid layer */ }
+    }
   }
 
   function handlePlantChange(id) {
@@ -201,13 +215,9 @@ export default function MapsPage() {
     loadPlantData(id);
   }
 
-  // Load data when plantId changes after map is ready
-  const plantIdRef = useRef(plantId);
-  useEffect(() => { plantIdRef.current = plantId; }, [plantId]);
-
   useEffect(() => {
-    if (plantId && mapRef.current) loadPlantData(plantId);
-  }, [plantId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (plantId && mapReady) loadPlantData(plantId);
+  }, [plantId, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveMap() {
     if (!plantId) { toast.error('Pilih plant terlebih dahulu'); return; }

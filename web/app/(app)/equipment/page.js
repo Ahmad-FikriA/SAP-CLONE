@@ -35,6 +35,7 @@ export default function EquipmentPage() {
   const fileRef = useRef(null);
   const mapCallbackRef = useRef(null);  // refreshes markers
   const flyToRef = useRef(null);        // pans map to a coordinate
+  const filterFnRef = useRef(null);     // applies category/plant filter to markers
 
   useEffect(() => {
     apiGet('/maps').then(setPlants).catch(() => {});
@@ -44,6 +45,10 @@ export default function EquipmentPage() {
   useEffect(() => {
     load(0);
   }, [category, plantFilter, search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    filterFnRef.current?.({ category, plantId: plantFilter });
+  }, [category, plantFilter]);
 
   // Loads ALL equipment with coordinates for the map — independent of table filters/pagination
   async function loadMapMarkers() {
@@ -225,9 +230,10 @@ export default function EquipmentPage() {
           equipment={equipment}
           plants={plants}
           plantId={plantFilter}
-          onMapReady={(updateFn, flyToFn) => {
+          onMapReady={(updateFn, flyToFn, filterFn) => {
             mapCallbackRef.current = updateFn;
             flyToRef.current = flyToFn;
+            filterFnRef.current = filterFn;
           }}
           onClickCoord={panelOpen ? onMapCoord : null}
           className="h-[26rem] w-full"
