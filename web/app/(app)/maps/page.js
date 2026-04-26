@@ -43,6 +43,7 @@ export default function MapsPage() {
   const [propsOpen, setPropsOpen] = useState(false);
   const [propName, setPropName]   = useState('');
   const [propType, setPropType]   = useState('');
+  const [propColor, setPropColor] = useState('#7F8C8D');
   const [editingId, setEditingId] = useState(null); // leaflet id of layer being edited
 
   const mapRef          = useRef(null);
@@ -139,6 +140,7 @@ export default function MapsPage() {
     const props = layer.feature?.properties || {};
     setPropName(props.name || '');
     setPropType(props.featureType || '');
+    setPropColor(props.color || styleForType(props.featureType).fillColor);
     setEditingId(layer._leaflet_id);
     setPropsOpen(true);
   }
@@ -166,7 +168,20 @@ export default function MapsPage() {
 
   function handleTypeChange(type) {
     setPropType(type);
-    if (editingLayerRef.current?.setStyle) editingLayerRef.current.setStyle(styleForType(type));
+    const baseColor = styleForType(type).fillColor;
+    setPropColor(baseColor);
+    if (editingLayerRef.current?.setStyle) {
+      const s = styleForType(type);
+      editingLayerRef.current.setStyle({ ...s, color: baseColor, fillColor: baseColor });
+    }
+  }
+
+  function handleColorChange(color) {
+    setPropColor(color);
+    if (editingLayerRef.current?.setStyle) {
+      const s = styleForType(propType);
+      editingLayerRef.current.setStyle({ ...s, color, fillColor: color });
+    }
   }
 
   function applyProps() {
@@ -175,8 +190,12 @@ export default function MapsPage() {
     if (!layer.feature) layer.feature = { type: 'Feature', properties: {} };
     layer.feature.properties.name        = propName;
     layer.feature.properties.featureType = propType;
+    layer.feature.properties.color       = propColor;
     layer.feature.properties.source      = 'custom';
-    if (layer.setStyle) layer.setStyle(styleForType(propType));
+    if (layer.setStyle) {
+      const base = styleForType(propType);
+      layer.setStyle({ ...base, color: propColor, fillColor: propColor });
+    }
     if (propName) layer.bindTooltip(propName, { className: 'osm-tooltip', direction: 'top', offset: [0, -4] });
     else if (layer.unbindTooltip) layer.unbindTooltip();
     editingLayerRef.current = null;
@@ -187,7 +206,12 @@ export default function MapsPage() {
 
   function cancelProps() {
     const layer = editingLayerRef.current;
-    if (layer?.setStyle) layer.setStyle(styleForType(layer.feature?.properties?.featureType));
+    if (layer?.setStyle) {
+      const props = layer.feature?.properties || {};
+      const base = styleForType(props.featureType);
+      const c = props.color || base.fillColor;
+      layer.setStyle({ ...base, color: c, fillColor: c });
+    }
     editingLayerRef.current = null;
     setPropsOpen(false);
     setEditingId(null);
@@ -221,10 +245,13 @@ export default function MapsPage() {
           const coordKey = JSON.stringify(feature.geometry?.coordinates);
           if (seenCoords.has(coordKey)) return; // skip duplicates from corrupted file
           seenCoords.add(coordKey);
-          const gl = L.geoJSON(feature, { style: () => styleForType(props.featureType) });
+          const base = styleForType(props.featureType);
+          const c = props.color || base.fillColor;
+          const layerStyle = { ...base, color: c, fillColor: c };
+          const gl = L.geoJSON(feature, { style: () => layerStyle });
           gl.eachLayer((l) => {
             l.feature = JSON.parse(JSON.stringify(feature));
-            if (l.setStyle) l.setStyle(styleForType(props.featureType));
+            if (l.setStyle) l.setStyle(layerStyle);
             drawnItemsRef.current.addLayer(l);
             attachLayerClick(l);
             if (props.name) l.bindTooltip(props.name, { className: 'osm-tooltip', direction: 'top', offset: [0, -4] });
@@ -283,8 +310,6 @@ export default function MapsPage() {
     finally { setSaving(false); }
   }
 
-  const previewStyle = styleForType(propType);
-
   return (
     <div className="p-6 space-y-4">
       {/* Header */}
@@ -322,21 +347,33 @@ export default function MapsPage() {
               Belum disimpan ke server
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Nama</label>
               <input value={propName} onChange={(e) => setPropName(e.target.value)} placeholder="Nama area"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Tipe</label>
-              <div className="flex items-center gap-2">
-                <select value={propType} onChange={(e) => handleTypeChange(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-                  <option value="">Pilih tipe...</option>
-                  {FEATURE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <div className="w-8 h-8 rounded border-2 shrink-0" style={{ background: previewStyle.fillColor, borderColor: previewStyle.color }} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Tipe</label>
+                <input
+                  list="feature-types-list"
+                  value={propType}
+                  onChange={(e) => handleTypeChange(e.target.value)}
+                  placeholder="Ketik atau pilih..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+                <datalist id="feature-types-list">
+                  {FEATURE_TYPES.map((t) => <option key={t} value={t} />)}
+                </datalist>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Warna</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={propColor} onChange={(e) => handleColorChange(e.target.value)}
+                    className="w-10 h-9 rounded border border-gray-200 cursor-pointer p-0.5 bg-white" />
+                  <span className="text-xs font-mono text-gray-500">{propColor}</span>
+                </div>
               </div>
             </div>
           </div>
