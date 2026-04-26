@@ -91,22 +91,21 @@ export default function MapsPage() {
     const drawnItems = new L.FeatureGroup().addTo(map);
     drawnItemsRef.current = drawnItems;
 
-    // Tell Geoman to draw directly into drawnItems — prevents double-add to map
-    map.pm.setGlobalOptions({ layerGroup: drawnItems });
-
     // pm (geoman) events
     map.on('pm:create', (e) => {
       const layer = e.layer;
-      // Layer is already in drawnItems (Geoman put it there via layerGroup option)
+      // Geoman adds to the map root — explicitly move it into our FeatureGroup only
+      map.removeLayer(layer);
       if (!layer.feature) layer.feature = { type: 'Feature', properties: { source: 'custom' } };
       layer.feature.properties.source = 'custom';
+      drawnItems.addLayer(layer);
       attachLayerClick(layer);
       openProps(layer);
       setCustomCount(drawnItems.getLayers().length);
     });
 
     map.on('pm:remove', (e) => {
-      // Layer already removed from drawnItems by Geoman (it manages its own layerGroup)
+      drawnItemsRef.current?.removeLayer(e.layer);
       setCustomCount(drawnItemsRef.current?.getLayers().length || 0);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -224,12 +223,16 @@ export default function MapsPage() {
 
   async function saveMap() {
     if (!plantId) { toast.error('Pilih plant terlebih dahulu'); return; }
+    const seen = new Set();
     const customFeatures = [];
     drawnItemsRef.current?.eachLayer((layer) => {
       if (!layer.toGeoJSON) return;
       const f = layer.toGeoJSON();
       if (layer.feature?.properties) f.properties = { ...f.properties, ...layer.feature.properties };
       f.properties.source = 'custom';
+      const key = JSON.stringify(f.geometry?.coordinates);
+      if (seen.has(key)) return;
+      seen.add(key);
       customFeatures.push(f);
     });
     const geojson = { type: 'FeatureCollection', features: [...osmFeaturesRef.current, ...customFeatures] };
