@@ -45,6 +45,13 @@ router.post(
   sapSpkController.bulkInsertSapSpk
 );
 
+// ── Manual Create SPK ────────────────────────────────────────────────────────
+router.post(
+  "/manual",
+  verifyToken,
+  sapSpkController.createManualSapSpk
+);
+
 // ── Step 1: Claim SPK (Photo Before + Lock to NIK) ──────────────────────────
 router.post(
   "/:order_number/claim",

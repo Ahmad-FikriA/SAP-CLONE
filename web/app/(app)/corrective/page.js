@@ -36,6 +36,7 @@ import {
   Activity,
   Clock,
   LayoutDashboard,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -140,6 +141,38 @@ export default function CorrectivePage() {
   const [confirmState, setConfirmState] = useState(null);
   const [confirmNotes, setConfirmNotes] = useState("");
   const [confirming, setConfirming] = useState(false);
+
+  // Manual Create
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    order_number: "",
+    description: "",
+    work_center: "",
+    equipment_name: "",
+    functional_location: "",
+    report_by: "",
+    sys_status: "CRTD",
+  });
+  const [savingManual, setSavingManual] = useState(false);
+
+  async function submitManualSpk() {
+    if (!manualForm.order_number) return toast.error("Nomor SPK SAP wajib diisi");
+    
+    setSavingManual(true);
+    try {
+      const res = await apiPost("/corrective/sap-spk/manual", manualForm);
+      toast.success("SPK Manual berhasil dibuat");
+      setShowManualForm(false);
+      setManualForm({
+        order_number: "", description: "", work_center: "", equipment_name: "", functional_location: "", report_by: "", sys_status: "CRTD"
+      });
+      loadAll();
+    } catch (e) {
+      toast.error(e.message || "Gagal membuat SPK Manual");
+    } finally {
+      setSavingManual(false);
+    }
+  }
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -505,6 +538,14 @@ export default function CorrectivePage() {
             accept=".xlsx, .xls"
             onChange={handleFileUpload}
           />
+          <Button
+            variant="outline"
+            className="shadow-md bg-white hover:bg-slate-50 border-slate-200"
+            onClick={() => setShowManualForm(true)}
+          >
+            <Plus size={16} className="mr-2" />
+            Create Manual
+          </Button>
           <Button
             variant="default"
             className="shadow-md bg-blue-600 hover:bg-blue-700"
@@ -872,6 +913,25 @@ export default function CorrectivePage() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex justify-end items-center gap-1">
+                        {spk.status === "menunggu_review_kadis_pp" && (
+                          <>
+                            <Button
+                              size="sm"
+                              className="h-8 shadow-sm bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() => triggerApproveKadisPp(spk.order_number)}
+                            >
+                              Setujui
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-8 shadow-sm"
+                              onClick={() => triggerRejectKadisPp(spk.order_number)}
+                            >
+                              Tolak
+                            </Button>
+                          </>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -1501,7 +1561,32 @@ export default function CorrectivePage() {
               )}
             </div>
           )}
-          <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end sticky bottom-0">
+          <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-between items-center sticky bottom-0">
+            <div>
+              {selectedSpk?.status === "menunggu_review_kadis_pp" && (
+                <div className="flex gap-2">
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                    onClick={() => {
+                      setSelectedSpk(null);
+                      triggerApproveKadisPp(selectedSpk.order_number);
+                    }}
+                  >
+                    Setujui (Kadis PP)
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="shadow-sm"
+                    onClick={() => {
+                      setSelectedSpk(null);
+                      triggerRejectKadisPp(selectedSpk.order_number);
+                    }}
+                  >
+                    Tolak (Kadis PP)
+                  </Button>
+                </div>
+              )}
+            </div>
             <Button variant="outline" onClick={() => setSelectedSpk(null)}>
               Tutup
             </Button>
@@ -1706,6 +1791,83 @@ export default function CorrectivePage() {
               disabled={savingExcel || previewData?.length === 0}
             >
               {savingExcel ? "Menyimpan..." : "Simpan Data"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MANUAL CREATE DIALOG */}
+      <Dialog open={showManualForm} onOpenChange={setShowManualForm}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Buat SPK Manual (Bypass SAP)</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Order Number (10 digit)</label>
+              <Input
+                value={manualForm.order_number}
+                onChange={(e) => setManualForm({ ...manualForm, order_number: e.target.value })}
+                placeholder="Misal: 1000289381"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Deskripsi / Short Text</label>
+              <Input
+                value={manualForm.description}
+                onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
+                placeholder="Kerusakan pompa..."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Work Center</label>
+              <Input
+                value={manualForm.work_center}
+                onChange={(e) => setManualForm({ ...manualForm, work_center: e.target.value })}
+                placeholder="Misal: M1-MEKANIK"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Equipment</label>
+                <Input
+                  value={manualForm.equipment_name}
+                  onChange={(e) => setManualForm({ ...manualForm, equipment_name: e.target.value })}
+                  placeholder="Misal: POMPA TRANSFER"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Functional Loc.</label>
+                <Input
+                  value={manualForm.functional_location}
+                  onChange={(e) => setManualForm({ ...manualForm, functional_location: e.target.value })}
+                  placeholder="Misal: PABRIK-AREA"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Reported By</label>
+                <Input
+                  value={manualForm.report_by}
+                  onChange={(e) => setManualForm({ ...manualForm, report_by: e.target.value })}
+                  placeholder="Nama pelapor..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">System Status</label>
+                <Input
+                  value={manualForm.sys_status}
+                  onChange={(e) => setManualForm({ ...manualForm, sys_status: e.target.value })}
+                  placeholder="CRTD"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowManualForm(false)}>Batal</Button>
+            <Button onClick={submitManualSpk} disabled={savingManual}>
+              {savingManual ? "Menyimpan..." : "Simpan SPK"}
             </Button>
           </DialogFooter>
         </DialogContent>

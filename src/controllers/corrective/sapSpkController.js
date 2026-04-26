@@ -611,6 +611,51 @@ const deleteAllSapSpk = async (req, res) => {
   }
 };
 
+// 6. Manual Create SPK (for testing/bypass SAP)
+const createManualSapSpk = async (req, res) => {
+  try {
+    const spkData = req.body;
+    
+    if (!spkData.order_number) {
+      return res.status(400).json({ status: "error", message: "Order Number is required" });
+    }
+
+    const existing = await SapSpkCorrective.findByPk(spkData.order_number);
+    if (existing) {
+      return res.status(400).json({ status: "error", message: "SPK with this Order Number already exists" });
+    }
+
+    const newSpk = await SapSpkCorrective.create(spkData);
+
+    // Sync to notification if exists
+    const Notification = require("../../models/Notification");
+    const notif = await Notification.findOne({ where: { sapOrderNumber: spkData.order_number } });
+    if (notif && notif.kadisPelaporId) {
+      await notif.update({ approvalStatus: "spk_issued" });
+      const pelaporUser = await User.findByPk(notif.kadisPelaporId, { attributes: ["nik"] });
+      if (pelaporUser?.nik) {
+        await NotificationService.notify({
+          module: "corrective",
+          type: "corrective_notification_approved",
+          recipientIds: [pelaporUser.nik],
+          title: "SPK Corrective Terbit",
+          body: `SPK SAP untuk laporan ${notif.notificationId} telah tersedia (${notif.sapOrderNumber}). Silakan cek progres di aplikasi.`,
+          data: { id: notif.id, sapOrderNumber: notif.sapOrderNumber },
+        });
+      }
+    }
+
+    res.status(201).json({
+      status: "success",
+      message: "Manual SPK created successfully",
+      data: newSpk,
+    });
+  } catch (error) {
+    console.error("Error creating manual SAP SPK:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
 // ── 4. Approval Flows ──────────────────────────────────────────────────────────
 
 // 4a. Kadis PP Approve
@@ -791,6 +836,7 @@ module.exports = {
   getSapSpkList,
   uploadExcel,
   bulkInsertSapSpk,
+  createManualSapSpk,
   claimSapSpk,
   executeSapSpk,
   getReasonOfVarianceCodes,
