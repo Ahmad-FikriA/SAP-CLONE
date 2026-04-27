@@ -37,6 +37,7 @@ import {
   Clock,
   LayoutDashboard,
   Plus,
+  UserCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -1479,7 +1480,7 @@ export default function CorrectivePage() {
               </div>
 
               {/* Row 4: Additional info */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <InfoCard
                   label="Confirmation Text"
                   value={selectedSpk.conf_text}
@@ -1492,13 +1493,29 @@ export default function CorrectivePage() {
                   label="Reason of Var"
                   value={selectedSpk.reason_of_var}
                 />
-                <InfoCard
-                  label="Dilaporkan Oleh"
-                  value={
-                    selectedSpk.notification?.kadisPelapor
-                      ? `${selectedSpk.notification.kadisPelapor.name} (${[selectedSpk.notification.kadisPelapor.role, selectedSpk.notification.kadisPelapor.divisi, selectedSpk.notification.kadisPelapor.dinas].filter(Boolean).join(" - ")})`
-                      : (selectedSpk.report_by || "—")
-                  }
+              </div>
+
+              {/* Row 5: Personnel Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <PersonCard
+                  title="Dilaporkan Oleh"
+                  name={selectedSpk.notification?.kadisPelapor?.name}
+                  nik={selectedSpk.notification?.kadisPelapor?.id}
+                  role={selectedSpk.notification?.kadisPelapor?.role}
+                  divisi={selectedSpk.notification?.kadisPelapor?.divisi}
+                  dinas={selectedSpk.notification?.kadisPelapor?.dinas}
+                  group={selectedSpk.notification?.kadisPelapor?.group}
+                  fallback={selectedSpk.report_by || "—"}
+                />
+                <PersonCard
+                  title="Tim Eksekutor (Penerima SPK)"
+                  name={selectedSpk.executor?.name || selectedSpk.execution_name}
+                  nik={selectedSpk.executor?.id || selectedSpk.execution_nik}
+                  role={selectedSpk.executor?.role}
+                  divisi={selectedSpk.executor?.divisi}
+                  dinas={selectedSpk.executor?.dinas}
+                  group={selectedSpk.executor?.group}
+                  fallback={selectedSpk.execution_nik ? `NIK: ${selectedSpk.execution_nik}` : "Belum ada eksekutor"}
                 />
               </div>
 
@@ -1513,7 +1530,7 @@ export default function CorrectivePage() {
                     <Wrench size={16} /> Laporan Eksekusi Teknisi
                   </h4>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <MetricCard
                       label="Jam Pekerja (Planned)"
                       value={`${selectedSpk.dur_plan || 0} Jam / ${selectedSpk.num_of_work || 0} Org`}
@@ -1526,15 +1543,6 @@ export default function CorrectivePage() {
                     <MetricCard
                       label="Jam Aktual"
                       value={`${selectedSpk.total_actual_hour || 0} Jam`}
-                    />
-                    <MetricCard
-                      label="Tim Eksekutor (Penerima SPK)"
-                      value={
-                        selectedSpk.executor
-                          ? `${selectedSpk.executor.name} (${[selectedSpk.executor.role, selectedSpk.executor.divisi, selectedSpk.executor.group, selectedSpk.executor.dinas].filter(Boolean).join(" - ")}) NIK: ${selectedSpk.execution_nik}`
-                          : (selectedSpk.execution_nik || "-")
-                      }
-                      className="col-span-2 md:col-span-2"
                     />
                   </div>
 
@@ -1994,6 +2002,85 @@ function EmptyState({ icon: Icon, text }) {
     <div className="flex flex-col items-center justify-center text-slate-400 py-8">
       <Icon size={48} strokeWidth={1} className="mb-3 text-slate-300" />
       <p className="text-sm font-medium">{text}</p>
+    </div>
+  );
+}
+
+function PersonCard({ title, name, nik, role, divisi, dinas, group, fallback }) {
+  if (!name && !fallback) return null;
+
+  const initials = name
+    ? name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase()
+    : "";
+
+  return (
+    <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col h-full hover:border-blue-200 hover:shadow-md transition-all duration-200">
+      <div className="flex items-center gap-2 mb-3">
+        <UserCircle2 size={16} className="text-blue-500" />
+        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          {title}
+        </div>
+      </div>
+      {name ? (
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0 border border-blue-100 shadow-sm">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-bold text-slate-800 text-[15px] truncate leading-tight">
+              {name}
+            </div>
+            {nik && (
+              <div className="text-xs text-slate-500 font-mono mt-0.5 mb-2">
+                {nik}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {role && (
+                <Badge
+                  variant="secondary"
+                  className="bg-slate-100 text-slate-700 hover:bg-slate-200 text-[10px] px-2 py-0.5 font-semibold"
+                >
+                  {role}
+                </Badge>
+              )}
+              {divisi && (
+                <Badge
+                  variant="secondary"
+                  className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-[10px] px-2 py-0.5 font-semibold"
+                >
+                  {divisi}
+                </Badge>
+              )}
+              {dinas && (
+                <Badge
+                  variant="secondary"
+                  className="bg-teal-50 text-teal-700 hover:bg-teal-100 text-[10px] px-2 py-0.5 font-semibold"
+                >
+                  {dinas}
+                </Badge>
+              )}
+              {group && (
+                <Badge
+                  variant="secondary"
+                  className="bg-orange-50 text-orange-700 hover:bg-orange-100 text-[10px] px-2 py-0.5 font-semibold"
+                >
+                  {group}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-sm text-slate-500 italic flex items-center h-11 bg-slate-50 rounded-lg px-3 border border-slate-100">
+          {fallback}
+        </div>
+      )}
     </div>
   );
 }
