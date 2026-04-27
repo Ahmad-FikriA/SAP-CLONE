@@ -392,6 +392,51 @@ export default function CorrectivePage() {
     }
   }
 
+  function triggerApproveKadisPp(order_number) {
+    confirmAction(
+      "Setujui Pekerjaan (Kadis PP)",
+      `Anda yakin pekerjaan untuk SPK ${order_number} sudah selesai dengan baik?`,
+      async () => {
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/sap-spk/${order_number}/approve-kadis-pp`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.status !== "error") {
+          toast.success("Berhasil disetujui");
+          loadAll();
+        } else {
+          toast.error(data.message || data.error || "Gagal menyetujui");
+        }
+      }
+    );
+  }
+
+  function triggerRejectKadisPp(order_number) {
+    confirmAction(
+      "Tolak Pekerjaan (Kadis PP)",
+      `Masukkan alasan mengapa pekerjaan SPK ${order_number} ditolak:`,
+      async (notes) => {
+        if (!notes || !notes.trim()) throw new Error("Alasan penolakan wajib diisi");
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/corrective/sap-spk/${order_number}/reject-kadis-pp`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ rejection_note: notes })
+        });
+        const data = await res.json();
+        if (res.ok && data.status !== "error") {
+          toast.success("Berhasil ditolak");
+          loadAll();
+        } else {
+          toast.error(data.message || data.error || "Gagal menolak");
+        }
+      },
+      true
+    );
+  }
+
   async function deleteAllRequests() {
     confirmAction(
       "Hapus Semua Notifikasi",
@@ -1449,7 +1494,11 @@ export default function CorrectivePage() {
                 />
                 <InfoCard
                   label="Dilaporkan Oleh"
-                  value={selectedSpk.report_by}
+                  value={
+                    selectedSpk.notification?.kadisPelapor
+                      ? `${selectedSpk.notification.kadisPelapor.name} (${[selectedSpk.notification.kadisPelapor.role, selectedSpk.notification.kadisPelapor.divisi, selectedSpk.notification.kadisPelapor.dinas].filter(Boolean).join(" - ")})`
+                      : (selectedSpk.report_by || "—")
+                  }
                 />
               </div>
 
@@ -1479,8 +1528,12 @@ export default function CorrectivePage() {
                       value={`${selectedSpk.total_actual_hour || 0} Jam`}
                     />
                     <MetricCard
-                      label="Eksekutor NIK"
-                      value={selectedSpk.execution_nik || "-"}
+                      label="Tim Eksekutor (Penerima SPK)"
+                      value={
+                        selectedSpk.executor
+                          ? `${selectedSpk.executor.name} (${[selectedSpk.executor.role, selectedSpk.executor.divisi, selectedSpk.executor.group, selectedSpk.executor.dinas].filter(Boolean).join(" - ")}) NIK: ${selectedSpk.execution_nik}`
+                          : (selectedSpk.execution_nik || "-")
+                      }
                       className="col-span-2 md:col-span-2"
                     />
                   </div>

@@ -34,6 +34,25 @@ const getSapSpkList = async (req, res) => {
     const spks = await SapSpkCorrective.findAll({
       where,
       order: [["created_at", "DESC"]],
+      include: [
+        {
+          model: Notification,
+          as: "notification",
+          attributes: ["kadisPelaporId"],
+          include: [
+            {
+              model: User,
+              as: "kadisPelapor",
+              attributes: ["name", "role", "dinas", "divisi", "group"],
+            },
+          ],
+        },
+        {
+          model: User,
+          as: "executor",
+          attributes: ["name", "role", "dinas", "divisi", "group"],
+        },
+      ],
     });
     res.status(200).json({
       status: "success",

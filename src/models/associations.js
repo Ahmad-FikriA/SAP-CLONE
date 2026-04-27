@@ -110,8 +110,27 @@ Equipment.hasMany(Notification, { foreignKey: 'equipmentId', as: 'notifications'
 Notification.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });
 
 // ── SPK Corrective Relations ─────────────────────────────────────────────────
-// (Deprecated SpkCorrective tables have been dropped)
+// SapSpkCorrective ↔ Notification
+SapSpkCorrective.hasOne(Notification, {
+  foreignKey: "sapOrderNumber",
+  sourceKey: "order_number",
+  as: "notification",
+  constraints: false,
+});
+Notification.belongsTo(SapSpkCorrective, {
+  foreignKey: "sapOrderNumber",
+  targetKey: "order_number",
+  as: "sapSpk",
+  constraints: false,
+});
 
+// SapSpkCorrective ↔ User (Executor)
+SapSpkCorrective.belongsTo(User, {
+  foreignKey: "execution_nik",
+  targetKey: "nik",
+  as: "executor",
+  constraints: false,
+});
 // ── Supervisi Module ─────────────────────────────────────────────────────────
 const SupervisiJob = require("./SupervisiJob");
 const SupervisiVisit = require("./SupervisiVisit");
