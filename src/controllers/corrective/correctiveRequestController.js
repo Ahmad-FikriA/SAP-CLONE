@@ -58,10 +58,10 @@ function fmtRequest(notif, sapSpk) {
     spk.photos.filter((p) => p.photoType === "before").forEach((p) => beforeImages.push(p.photoPath));
     spk.photos.filter((p) => p.photoType === "after").forEach((p) => afterImages.push(p.photoPath));
   }
-  // SAP SPK photos
+  // SAP SPK photos (stored in uploads/ root by sapSpkRoutes multer)
   if (sap) {
-    if (sap.photo_before) beforeImages.push(`uploads/corrective/${sap.photo_before}`);
-    if (sap.photo_after) afterImages.push(`uploads/corrective/${sap.photo_after}`);
+    if (sap.photo_before) beforeImages.push(`uploads/${sap.photo_before}`);
+    if (sap.photo_after) afterImages.push(`uploads/${sap.photo_after}`);
   }
 
   const materials = (spk.items || [])
@@ -114,7 +114,7 @@ function fmtRequest(notif, sapSpk) {
     sapOrderNumber: n.sapOrderNumber,
     rejectionReason: n.rejectionReason,
     images,
-    spkId: spk.spkId,
+    spkId: spk.spkId || (sap ? sap.order_number : null),
     spkNumber: spk.spkNumber || n.sapOrderNumber,
     priority: spk.priority,
     targetDate: sap?.work_finish || spk.requestedFinishDate,
@@ -130,6 +130,13 @@ function fmtRequest(notif, sapSpk) {
     actualPersonnelCount: sap?.actual_personnel || spk.actualWorker,
     actualDuration: sap?.total_actual_hour != null ? Number(sap.total_actual_hour) : (spk.totalActualHour || null),
     executionResultText: sap?.job_result_description || spk.jobResultDescription,
+    // Technician info from SAP SPK
+    executionName: sap?.execution_name || null,
+    executionNik: sap?.execution_nik || null,
+    executionWorkCenter: sap?.work_center || null,
+    // Actual materials/tools from SAP execution
+    actualMaterials: sap?.actual_materials ? sap.actual_materials.split(', ').filter(Boolean) : [],
+    actualTools: sap?.actual_tools ? sap.actual_tools.split(', ').filter(Boolean) : [],
   };
 }
 
