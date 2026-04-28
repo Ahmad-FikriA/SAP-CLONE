@@ -1,0 +1,59 @@
+{
+  "teknisi": [
+    "dashboard",
+    "inspeksi",
+    "kalender",
+    "supervisi",
+    "submissions",
+    "spk"
+  ],
+  "petugas": [
+    "dashboard",
+    "spk",
+    "submissions",
+    "inspeksi",
+    "supervisi",
+    "kalender"
+  ],
+  "kasie": [
+    "dashboard",
+    "spk",
+    "spk-approval",
+    "corrective",
+    "submissions",
+    "interval-planner",
+    "inspeksi",
+    "supervisi",
+    "kalender"
+  ],
+  "kadis": [
+    "dashboard",
+    "spk",
+    "spk-approval",
+    "corrective",
+    "hse",
+    "submissions",
+    "inspeksi",
+    "supervisi",
+    "kalender"
+  ],
+  "kadiv": [
+    "dashboard",
+    "spk",
+    "spk-approval",
+    "corrective",
+    "hse",
+    "spk-import",
+    "equipment",
+    "maps",
+    "users",
+    "track-record",
+    "task-mapping",
+    "interval-planner",
+    "submissions",
+    "inspeksi",
+    "supervisi",
+    "kalender",
+    "settings"
+  ]
+}

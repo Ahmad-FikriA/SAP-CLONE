@@ -7,7 +7,7 @@ import {
   LayoutDashboard, FileText, Wrench, Upload, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
   ChevronLeft, ChevronRight, ClipboardCheck, BarChart2, ClipboardList,
-  MapPin, CalendarRange, ShieldCheck,
+  MapPin, CalendarRange, ShieldCheck, Settings,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser } from '@/lib/auth';
@@ -15,25 +15,27 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const NAV = [
-  { href: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-  { href: '/spk', label: 'SPK / Preventive', Icon: FileText },
-  { href: '/spk/approval', label: 'Persetujuan SPK', Icon: ClipboardCheck, roles: ['kasie', 'kadis', 'admin'] },
-  { href: '/corrective', label: 'Corrective Planner', Icon: Wrench },
-  { href: '/hse',       label: 'HSE Command Center', Icon: ShieldCheck },
-  { href: '/spk/import', label: 'Import SAP', Icon: Upload },
+  { key: 'dashboard',         href: '/dashboard',          label: 'Dashboard',          Icon: LayoutDashboard },
+  { key: 'spk',               href: '/spk',                label: 'SPK / Preventive',   Icon: FileText },
+  { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan SPK',    Icon: ClipboardCheck },
+  { key: 'corrective',        href: '/corrective',         label: 'Corrective Planner', Icon: Wrench },
+  { key: 'hse',               href: '/hse',                label: 'HSE Command Center', Icon: ShieldCheck },
+  { key: 'spk-import',        href: '/spk/import',         label: 'Import SAP',         Icon: Upload },
   { divider: true },
-  { href: '/equipment', label: 'Equipment', Icon: Radio },
-  { href: '/maps', label: 'Maps', Icon: Map },
-  { href: '/users', label: 'Users', Icon: Users },
-  { href: '/users/track-record', label: 'Track Record', Icon: BarChart2, roles: ['admin'] },
-  { href: '/equipment/mappings', label: 'Task Mapping', Icon: Link2 },
-  { href: '/interval-planner', label: 'Interval Planner', Icon: Calendar },
+  { key: 'equipment',         href: '/equipment',          label: 'Equipment',          Icon: Radio },
+  { key: 'maps',              href: '/maps',               label: 'Maps',               Icon: Map },
+  { key: 'users',             href: '/users',              label: 'Users',              Icon: Users },
+  { key: 'track-record',      href: '/users/track-record', label: 'Track Record',       Icon: BarChart2 },
+  { key: 'task-mapping',      href: '/equipment/mappings', label: 'Task Mapping',       Icon: Link2 },
+  { key: 'interval-planner',  href: '/interval-planner',   label: 'Interval Planner',   Icon: Calendar },
   { divider: true },
-  { href: '/submissions', label: 'Submissions', Icon: Activity },
+  { key: 'submissions',       href: '/submissions',        label: 'Submissions',        Icon: Activity },
   { divider: true },
-  { href: '/inspeksi',  label: 'Inspeksi',        Icon: ClipboardList  },
-  { href: '/supervisi', label: 'Supervisi',        Icon: MapPin         },
-  { href: '/kalender',  label: 'Kalender Jadwal',  Icon: CalendarRange  },
+  { key: 'inspeksi',          href: '/inspeksi',           label: 'Inspeksi',           Icon: ClipboardList },
+  { key: 'supervisi',         href: '/supervisi',          label: 'Supervisi',          Icon: MapPin },
+  { key: 'kalender',          href: '/kalender',           label: 'Kalender Jadwal',    Icon: CalendarRange },
+  { key: 'settings',          href: '/settings',           label: 'Pengaturan Akses',   Icon: Settings },
+
 ];
 
 export default function Sidebar() {
@@ -97,7 +99,11 @@ export default function Sidebar() {
           if (item.divider) {
             return <div key={i} className="my-2 border-t border-white/10" />;
           }
-          if (item.roles && user && !item.roles.includes(user.role)) return null;
+          const rolePages = user?.rolePages;
+          const canSee = rolePages
+            ? rolePages.includes(item.key)
+            : true; // null = unrestricted (unknown role or kadiv)
+          if (!canSee) return null;
           const { href, label, Icon } = item;
           const active = isActive(href);
           return (

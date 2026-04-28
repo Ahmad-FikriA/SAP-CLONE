@@ -40,10 +40,23 @@ function detectMeasurementUnit(operationText) {
 }
 
 const PENDING_STATUSES = {
-  kasie:  ['awaiting_kasie'],
-  kadis:  ['awaiting_kadis_perawatan', 'awaiting_kadis'],
-  admin:  ['awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis'],
+  kasie:         ['awaiting_kasie'],
+  kepala_seksi:  ['awaiting_kasie'],
+  supervisor:    ['awaiting_kasie'],
+  kadis:         ['awaiting_kadis_perawatan', 'awaiting_kadis'],
+  admin:         ['awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis'],
 };
+
+// Maps user.group (DB value) → SPK category (DB value) for kasie discipline filtering.
+// Note: the Elektrik discipline stores group='Elektrik' but category='Listrik' — all others are identity.
+const GROUP_TO_CATEGORY = {
+  Mekanik: 'Mekanik',
+  Elektrik: 'Listrik',
+  Sipil: 'Sipil',
+  Otomasi: 'Otomasi',
+};
+
+const KASIE_ROLES = new Set(['kasie', 'kepala_seksi', 'supervisor']);
 
 const STATUS_COLORS = {
   awaiting_kasie:              'bg-amber-100 text-amber-700',
@@ -102,6 +115,23 @@ export default function SpkApprovalPage() {
     const role = u?.role;
     const statuses = PENDING_STATUSES[role];
     if (!statuses) { setSpks([]); setLoading(false); return; }
+
+    // Kasie: only fetch SPKs matching their discipline
+    if (KASIE_ROLES.has(role)) {
+      const category = GROUP_TO_CATEGORY[String(u?.group || '').trim()];
+      if (!category) { setSpks([]); setLoading(false); return; }
+
+      setLoading(true);
+      try {
+        const data = await apiGet(`/spk?status=awaiting_kasie&category=${encodeURIComponent(category)}`);
+        setSpks(data.sort((a, b) => new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0)));
+      } catch (e) {
+        toast.error('Gagal memuat daftar SPK: ' + e.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     setLoading(true);
     try {
@@ -197,7 +227,14 @@ export default function SpkApprovalPage() {
           ) : spks.length === 0 ? (
             <div className="p-8 text-center">
               <CheckCircle size={32} className="mx-auto text-green-400 mb-2" />
-              <p className="text-sm text-gray-400">Tidak ada SPK yang perlu disetujui</p>
+              {KASIE_ROLES.has(user?.role) && !GROUP_TO_CATEGORY[String(user?.group || '').trim()] ? (
+                <p className="text-sm text-gray-500">
+                  Grup Anda belum dikonfigurasi.<br />
+                  <span className="text-gray-400">Hubungi admin untuk mengatur grup Anda.</span>
+                </p>
+              ) : (
+                <p className="text-sm text-gray-400">Tidak ada SPK yang perlu disetujui</p>
+              )}
             </div>
           ) : (
             spks.map(spk => (

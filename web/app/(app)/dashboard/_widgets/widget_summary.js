@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiGet } from '@/lib/api';
+import { getUser } from '@/lib/auth';
 import { FileText, Wrench, Radio, Users, AlertCircle, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
@@ -46,6 +47,9 @@ export function WidgetSummary() {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState({ spk: false, corrective: false, equipment: false, users: false });
 
+  const rolePages = getUser()?.rolePages ?? null; // null = unrestricted
+  function canLink(key) { return rolePages ? rolePages.includes(key) : true; }
+
   async function load() {
     setLoading(true);
     setErrors({ spk: false, corrective: false, equipment: false, users: false });
@@ -84,10 +88,10 @@ export function WidgetSummary() {
   useEffect(() => { load(); }, []);
 
   const cards = [
-    { icon: FileText, label: 'Total SPK Preventive', value: stats.spk,        sub: 'Semua status',  color: 'bg-blue-600',   href: '/spk',        key: 'spk' },
-    { icon: Wrench,   label: 'Corrective Aktif',     value: stats.corrective, sub: 'Belum selesai', color: 'bg-orange-500', href: '/corrective', key: 'corrective' },
-    { icon: Radio,    label: 'Total Equipment',       value: stats.equipment,  sub: 'Semua plant',   color: 'bg-violet-600', href: '/equipment',  key: 'equipment' },
-    { icon: Users,    label: 'Total User',            value: stats.users,      sub: 'Terdaftar',     color: 'bg-teal-600',   href: '/users',      key: 'users' },
+    { icon: FileText, label: 'Total SPK Preventive', value: stats.spk,        sub: 'Semua status',  color: 'bg-blue-600',   href: canLink('spk')        ? '/spk'        : null, key: 'spk' },
+    { icon: Wrench,   label: 'Corrective Aktif',     value: stats.corrective, sub: 'Belum selesai', color: 'bg-orange-500', href: canLink('corrective') ? '/corrective' : null, key: 'corrective' },
+    { icon: Radio,    label: 'Total Equipment',       value: stats.equipment,  sub: 'Semua plant',   color: 'bg-violet-600', href: canLink('equipment')  ? '/equipment'  : null, key: 'equipment' },
+    { icon: Users,    label: 'Total User',            value: stats.users,      sub: 'Terdaftar',     color: 'bg-teal-600',   href: canLink('users')      ? '/users'      : null, key: 'users' },
   ];
 
   return (

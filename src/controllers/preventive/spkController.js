@@ -385,9 +385,13 @@ const submit = async (req, res) => {
 
     await t.commit();
 
-    // Notify all Kasie
+    // Notify Kasie whose discipline matches the SPK category
+    const kasieGroupKeyword = CATEGORY_GROUP_MAP[spk.category];
     const kasieUsers = await User.findAll({
-      where: { role: ['supervisor', 'kepala_seksi', 'kasie'] },
+      where: {
+        role: ['supervisor', 'kepala_seksi', 'kasie'],
+        ...(kasieGroupKeyword ? { group: { [Op.like]: `%${kasieGroupKeyword}%` } } : {}),
+      },
       attributes: ['id'],
     });
     if (kasieUsers.length > 0) {

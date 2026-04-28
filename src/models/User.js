@@ -22,6 +22,11 @@ const User = sequelize.define('User', {
     allowNull: true,
     field: 'fcm_token',
   },
+  allowedPages: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'allowed_pages',
+  },
 }, {
   tableName: 'users',
   underscored: true,

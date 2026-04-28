@@ -279,6 +279,11 @@ app.use("/api/preventive-schedule", scheduleRouter);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/k3-safety", k3SafetyRoutes);
 
+// ── Settings ─────────────────────────────────────────────────────────────────
+const settingsController = require('./controllers/settings/settingsController');
+app.get('/api/settings/role-templates', verifyToken, settingsController.getRoleTemplates);
+app.put('/api/settings/role-templates', verifyToken, settingsController.updateRoleTemplates);
+
 // ── Error Handler ────────────────────────────────────────────────────────────
 app.use(errorHandler);
 

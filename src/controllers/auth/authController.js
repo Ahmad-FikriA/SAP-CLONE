@@ -1,10 +1,21 @@
 'use strict';
 
+const fs   = require('fs');
+const path = require('path');
 const jwt  = require('jsonwebtoken');
 const User = require('../../models/User');
 const { buildAccessProfile } = require('../../services/accessProfile');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'kti-mock-secret-dev';
+const JWT_SECRET     = process.env.JWT_SECRET || 'kti-mock-secret-dev';
+const TEMPLATES_PATH = path.join(__dirname, '..', '..', '..', 'data', 'role_templates.json');
+
+function loadRoleTemplates() {
+  try {
+    return JSON.parse(fs.readFileSync(TEMPLATES_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
+}
 
 const login = async (req, res) => {
   const { nik, password } = req.body;
@@ -15,7 +26,9 @@ const login = async (req, res) => {
   const user = await User.findOne({ where: { nik, password } });
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const accessProfile = buildAccessProfile(user);
+  const accessProfile  = buildAccessProfile(user);
+  const roleTemplates  = loadRoleTemplates();
+  const rolePages      = roleTemplates[user.role] ?? null; // null = unrestricted
 
   const token = jwt.sign(
     {
@@ -43,6 +56,7 @@ const login = async (req, res) => {
       email: user.email,
       group: user.group,
       accessProfile,
+      rolePages,
     },
   });
 };

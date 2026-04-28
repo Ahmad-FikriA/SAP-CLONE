@@ -121,7 +121,11 @@ export default function EquipmentPage() {
     };
     try {
       if (editingId) {
-        await apiPut(`/equipment/${editingId}`, body);
+        // If ID was changed, rename first (cascades all FK references), then update fields
+        if (equipmentId !== editingId) {
+          await apiPut(`/equipment/${editingId}/rename-id`, { newId: equipmentId });
+        }
+        await apiPut(`/equipment/${equipmentId}`, body);
         toast.success(`Equipment ${equipmentId} diperbarui`);
       } else {
         await apiPost('/equipment', body);
@@ -306,8 +310,13 @@ export default function EquipmentPage() {
             <DialogTitle>{editingId ? 'Edit Equipment' : 'Tambah Equipment'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            {editingId && form.equipmentId !== editingId && (
+              <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                ID akan diubah dari <span className="font-mono font-bold">{editingId}</span> → <span className="font-mono font-bold">{form.equipmentId}</span>. Semua referensi (SPK, notifikasi, mapping) akan ikut diperbarui.
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Equipment ID *" value={form.equipmentId} onChange={(v) => setForm({ ...form, equipmentId: v })} disabled={!!editingId} />
+              <Field label="Equipment ID *" value={form.equipmentId} onChange={(v) => setForm({ ...form, equipmentId: v })} />
               <Field label="Nama Equipment *" value={form.equipmentName} onChange={(v) => setForm({ ...form, equipmentName: v })} />
             </div>
             <div className="grid grid-cols-2 gap-3">

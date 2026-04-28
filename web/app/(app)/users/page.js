@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { UserPlus, Trash2, Download, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-const EMPTY_FORM = { id: '', nik: '', name: '', role: '', email: '', dinas: '', divisi: '', group: '', password: 'password123' };
+const EMPTY_FORM = { id: '', nik: '', name: '', role: '', email: '', dinas: '', divisi: '', group: '', password: 'password123', allowedPages: null };
+
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -58,7 +59,7 @@ export default function UsersPage() {
 
   function openEdit(u) {
     setEditingId(u.id);
-    setForm({ ...EMPTY_FORM, ...u, password: '' });
+    setForm({ ...EMPTY_FORM, ...u, password: '', allowedPages: u.allowedPages ?? null });
     setPanelOpen(true);
   }
 
@@ -241,7 +242,7 @@ export default function UsersPage() {
 
       {/* Create/Edit panel */}
       <Dialog open={panelOpen} onOpenChange={setPanelOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit User' : 'Tambah User'}</DialogTitle>
           </DialogHeader>
@@ -269,6 +270,10 @@ export default function UsersPage() {
             {!editingId && (
               <Field label="Password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder="password123" />
             )}
+
+            <p className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2">
+              Akses halaman diatur per role di <a href="/settings" className="text-blue-600 hover:underline">Pengaturan Akses</a>.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setPanelOpen(false)}>Batal</Button>
@@ -296,7 +301,7 @@ function Field({ label, value, onChange, placeholder, type = 'text' }) {
   return (
     <div>
       <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+      <input type={type} value={value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
     </div>
   );

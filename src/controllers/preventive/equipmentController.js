@@ -88,6 +88,34 @@ const update = async (req, res) => {
   res.json(eq);
 };
 
+// PUT /api/equipment/:equipmentId/rename-id
+// Renames the primary key and cascades to all referencing tables in one transaction.
+const renameId = async (req, res) => {
+  const oldId = req.params.equipmentId;
+  const newId = String(req.body.newId || '').trim();
+  if (!newId) return res.status(400).json({ error: 'newId is required' });
+  if (newId === oldId) return res.status(400).json({ error: 'newId must differ from current ID' });
+
+  const eq = await Equipment.findByPk(oldId);
+  if (!eq) return res.status(404).json({ error: 'Equipment not found' });
+
+  const conflict = await Equipment.findByPk(newId);
+  if (conflict) return res.status(409).json({ error: `Equipment ID "${newId}" already exists` });
+
+  const sequelize = require('../../config/database');
+  await sequelize.transaction(async (t) => {
+    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction: t });
+    await sequelize.query('UPDATE equipment SET equipment_id = ? WHERE equipment_id = ?',                       { replacements: [newId, oldId], transaction: t });
+    await sequelize.query('UPDATE spk_equipment SET equipment_id = ? WHERE equipment_id = ?',                  { replacements: [newId, oldId], transaction: t });
+    await sequelize.query('UPDATE notifications SET equipment_id = ? WHERE equipment_id = ?',                  { replacements: [newId, oldId], transaction: t });
+    await sequelize.query('UPDATE equipment_interval_mappings SET equipment_id = ? WHERE equipment_id = ?',    { replacements: [newId, oldId], transaction: t });
+    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction: t });
+  });
+
+  const updated = await Equipment.findByPk(newId);
+  res.json(updated);
+};
+
 // POST /api/equipment/bulk-delete
 const bulkDelete = async (req, res) => {
   const { ids } = req.body;
@@ -322,4 +350,4 @@ const syncSipilFuncloc = async (req, res) => {
   res.json({ message: `${synced} funcloc Sipil berhasil disinkronisasi ke equipment`, synced });
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, bulkUpdate, remove, importExcel, getMeasurementHistory, syncSipilFuncloc };
+module.exports = { getAll, getOne, create, update, renameId, bulkDelete, bulkUpdate, remove, importExcel, getMeasurementHistory, syncSipilFuncloc };
