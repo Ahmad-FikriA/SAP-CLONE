@@ -100,6 +100,9 @@ function fmtRequest(notif, sapSpk) {
     requiredStart: sap?.work_start || n.requiredStart,
     requiredEnd: sap?.work_finish || n.requiredEnd,
     reportedBy: sap?.report_by || n.reportedBy,
+    reportedByRole: n.kadisPelapor?.role || null,
+    reportedByDivisi: n.kadisPelapor?.divisi || null,
+    reportedByDinas: n.kadisPelapor?.dinas || null,
     longText: n.longText,
     submittedBy: n.submittedBy,
     submittedAt: n.submittedAt,
@@ -159,6 +162,7 @@ const getAll = async (req, res) => {
 
     const data = await Notification.findAll({
       where,
+      include: [{ model: User, as: "kadisPelapor" }],
       order: [["submittedAt", "DESC"]],
     });
 
@@ -185,7 +189,9 @@ const getAll = async (req, res) => {
 // GET /api/corrective/requests/:id
 const getOne = async (req, res) => {
   try {
-    const notification = await Notification.findByPk(req.params.id);
+    const notification = await Notification.findByPk(req.params.id, {
+      include: [{ model: User, as: "kadisPelapor" }],
+    });
     if (!notification)
       return res.status(404).json({ error: "Notification not found" });
 
