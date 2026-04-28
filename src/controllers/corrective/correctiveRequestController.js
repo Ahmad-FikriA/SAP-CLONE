@@ -58,10 +58,10 @@ function fmtRequest(notif, sapSpk) {
     spk.photos.filter((p) => p.photoType === "before").forEach((p) => beforeImages.push(p.photoPath));
     spk.photos.filter((p) => p.photoType === "after").forEach((p) => afterImages.push(p.photoPath));
   }
-  // SAP SPK photos
+  // SAP SPK photos (stored in uploads/ root by sapSpkRoutes multer)
   if (sap) {
-    if (sap.photo_before) beforeImages.push(`uploads/corrective/${sap.photo_before}`);
-    if (sap.photo_after) afterImages.push(`uploads/corrective/${sap.photo_after}`);
+    if (sap.photo_before) beforeImages.push(`uploads/${sap.photo_before}`);
+    if (sap.photo_after) afterImages.push(`uploads/${sap.photo_after}`);
   }
 
   const materials = (spk.items || [])
@@ -100,6 +100,9 @@ function fmtRequest(notif, sapSpk) {
     requiredStart: sap?.work_start || n.requiredStart,
     requiredEnd: sap?.work_finish || n.requiredEnd,
     reportedBy: sap?.report_by || n.reportedBy,
+    reportedByRole: n.kadisPelapor?.role || null,
+    reportedByDivisi: n.kadisPelapor?.divisi || null,
+    reportedByDinas: n.kadisPelapor?.dinas || null,
     longText: n.longText,
     submittedBy: n.submittedBy,
     submittedAt: n.submittedAt,
@@ -114,7 +117,7 @@ function fmtRequest(notif, sapSpk) {
     sapOrderNumber: n.sapOrderNumber,
     rejectionReason: n.rejectionReason,
     images,
-    spkId: spk.spkId,
+    spkId: spk.spkId || (sap ? sap.order_number : null),
     spkNumber: spk.spkNumber || n.sapOrderNumber,
     priority: spk.priority,
     targetDate: sap?.work_finish || spk.requestedFinishDate,
@@ -130,6 +133,13 @@ function fmtRequest(notif, sapSpk) {
     actualPersonnelCount: sap?.actual_personnel || spk.actualWorker,
     actualDuration: sap?.total_actual_hour != null ? Number(sap.total_actual_hour) : (spk.totalActualHour || null),
     executionResultText: sap?.job_result_description || spk.jobResultDescription,
+    // Technician info from SAP SPK
+    executionName: sap?.execution_name || null,
+    executionNik: sap?.execution_nik || null,
+    executionWorkCenter: sap?.work_center || null,
+    // Actual materials/tools from SAP execution
+    actualMaterials: sap?.actual_materials ? sap.actual_materials.split(', ').filter(Boolean) : [],
+    actualTools: sap?.actual_tools ? sap.actual_tools.split(', ').filter(Boolean) : [],
   };
 }
 
@@ -152,6 +162,7 @@ const getAll = async (req, res) => {
 
     const data = await Notification.findAll({
       where,
+      include: [{ model: User, as: "kadisPelapor" }],
       order: [["submittedAt", "DESC"]],
     });
 
@@ -178,7 +189,9 @@ const getAll = async (req, res) => {
 // GET /api/corrective/requests/:id
 const getOne = async (req, res) => {
   try {
-    const notification = await Notification.findByPk(req.params.id);
+    const notification = await Notification.findByPk(req.params.id, {
+      include: [{ model: User, as: "kadisPelapor" }],
+    });
     if (!notification)
       return res.status(404).json({ error: "Notification not found" });
 
