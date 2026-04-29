@@ -13,6 +13,29 @@ import { RefreshCw, Trash2, Wrench, Upload, Plus, X, RotateCcw, Pencil, Eye, Map
 import Link from 'next/link';
 
 const STATUS_OPTIONS = ['pending', 'in_progress', 'completed', 'approved', 'rejected'];
+
+function detectMeasurementUnit(operationText) {
+  if (!operationText) return null;
+  const t = operationText;
+  const l = t.toLowerCase();
+  if (t.includes('°C') || t.includes('ºC')) return '°C';
+  if (t.includes('mm/s')) return 'mm/s';
+  if (t.includes('m3/h')) return 'm3/h';
+  if (/bar/i.test(t)) return 'bar';
+  if (t.includes('NTU')) return 'NTU';
+  if (t.includes('pH')) return 'pH';
+  if (/\bOhm\b/i.test(t)) return 'Ohm';
+  if (/[.\s]\s*%/.test(t)) return '%';
+  if (/[.(]\s*A\s*[).]|\.\.\s*A\b/.test(t)) return 'A';
+  if (/[.(]\s*V\s*[).]|\.\.\s*V\b/.test(t)) return 'V';
+  if (l.includes('temperatur') || l.includes('suhu')) return '°C';
+  if (l.includes('vibrasi') || l.includes('vibration')) return 'mm/s';
+  if (l.includes('tekanan') || l.includes('pressure')) return 'bar';
+  if (l.includes('ampere') || l.includes('arus')) return 'A';
+  if (l.includes('tegangan') || l.includes('voltage')) return 'V';
+  if (l.includes('turbid') || l.includes('kekeruhan')) return 'NTU';
+  return null;
+}
 const INTERVALS = ['1wk', '2wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
 const curYear = new Date().getFullYear();
 const YEARS = [curYear - 1, curYear, curYear + 1];
@@ -625,7 +648,7 @@ export default function SpkPage() {
 
       {/* ── SPK Detail Dialog ─────────────────────────────────────────── */}
       <Dialog open={!!detailSpk} onOpenChange={(open) => !open && setDetailSpk(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2 flex-wrap">
               <DialogTitle className="font-mono">{detailSpk?.spkNumber}</DialogTitle>
@@ -664,7 +687,7 @@ export default function SpkPage() {
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                     Equipment ({detailSpk.equipmentModels.length})
                   </p>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
@@ -694,7 +717,7 @@ export default function SpkPage() {
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                     Aktivitas ({detailSpk.activitiesModel.length})
                   </p>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
@@ -723,6 +746,53 @@ export default function SpkPage() {
                   </div>
                 </div>
               )}
+
+              {/* Hasil Ukur — from latest submission's activity results */}
+              {(() => {
+                const latestSub = detailSubs[0];
+                const results = latestSub?.activityResultsModel || [];
+                const hasMeasurements = results.some(r => r.measurementValue != null);
+                if (!hasMeasurements || !detailSpk.activitiesModel?.length) return null;
+                const resultMap = new Map(results.map(r => [r.activityNumber, r]));
+                return (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Hasil Ukur</p>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            {['No.', 'Uraian Pekerjaan', 'Nilai Ukur', 'Komentar', 'Status'].map((h) => (
+                              <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {detailSpk.activitiesModel.map((act) => {
+                            const res = resultMap.get(act.activityNumber);
+                            if (!res?.measurementValue) return null;
+                            const unit = res.measurementUnit || detectMeasurementUnit(act.operationText);
+                            return (
+                              <tr key={act.activityNumber} className="hover:bg-gray-50">
+                                <td className="px-3 py-2 font-mono text-gray-500">{act.activityNumber}</td>
+                                <td className="px-3 py-2 text-gray-700 max-w-[240px]">{act.operationText || '—'}</td>
+                                <td className="px-3 py-2 font-mono font-semibold text-gray-800">
+                                  {res.measurementValue}{unit ? ` ${unit}` : ''}
+                                </td>
+                                <td className="px-3 py-2 text-gray-500 max-w-[180px]">{res.resultComment || '—'}</td>
+                                <td className="px-3 py-2">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${res.isNormal ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                    {res.isNormal ? 'Normal' : 'Tidak Normal'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Submission history */}
               <div>
