@@ -747,22 +747,19 @@ export default function HseDashboardPage() {
               </>
             )}
 
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Catatan {validationAction === 'reject' ? '(Wajib)' : '(Opsional)'}
-              </label>
-              <textarea
-                value={catatanValidasi}
-                onChange={(e) => setCatatanValidasi(e.target.value)}
-                placeholder={validationAction === 'approve' ? "Tambahkan pesan untuk petugas..." : "Masukkan alasan penolakan laporan..."}
-                className={cn(
-                  "w-full h-28 p-4 rounded-xl border text-sm transition-all focus:outline-none",
-                  validationAction === 'approve' 
-                    ? "border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50 focus:bg-white" 
-                    : "border-slate-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-slate-50 focus:bg-white"
-                )}
-              />
-            </div>
+            {validationAction === 'reject' && (
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Catatan (Wajib)
+                </label>
+                <textarea
+                  value={catatanValidasi}
+                  onChange={(e) => setCatatanValidasi(e.target.value)}
+                  placeholder="Masukkan alasan penolakan laporan..."
+                  className="w-full h-28 p-4 rounded-xl border border-slate-200 text-sm transition-all focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-slate-50 focus:bg-white"
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0 border-t pt-4 border-slate-100">
