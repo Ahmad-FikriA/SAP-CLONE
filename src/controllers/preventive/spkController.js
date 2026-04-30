@@ -80,6 +80,7 @@ function fmt(spk) {
     dueDate: j.scheduledDate ? new Date(j.scheduledDate).toISOString() : null,
     orderNumber: j.orderNumber ?? null,
     evaluasi: j.evaluasi ?? null,
+    equipmentStatus: j.equipmentStatus ?? 'Running',
     submittedBy: j.submittedBy ?? null,
     submittedAt: j.submittedAt ?? null,
     kasieApprovedBy: j.kasieApprovedBy ?? null,
@@ -129,6 +130,16 @@ const getAll = async (req, res) => {
       [Op.gte]: weekStart.toISOString().slice(0, 10),
       [Op.lte]: weekEnd.toISOString().slice(0, 10),
     };
+  }
+
+  // Plant filter — subquery through SpkEquipment → Equipment
+  if (req.query.plantId) {
+    where[Op.and] = where[Op.and] || [];
+    where[Op.and].push(
+      sequelize.literal(
+        `Spk.spk_number IN (SELECT DISTINCT se.spk_number FROM spk_equipment se INNER JOIN equipment e ON se.equipment_id = e.equipment_id WHERE e.plant_id = ${sequelize.escape(req.query.plantId)})`
+      )
+    );
   }
 
   // If equipmentId is given, replace the SpkEquipment include with a filtered one
@@ -276,7 +287,7 @@ const submit = async (req, res) => {
     return res.status(409).json({ error: `SPK sudah disubmit (status: ${spk.status})` });
   }
 
-  const { durationActual, activityResultsModel = [], photoPaths = [], evaluasi, latitude, longitude, workStart, locationQuality, lateReason } = req.body;
+  const { durationActual, activityResultsModel = [], photoPaths = [], evaluasi, latitude, longitude, workStart, locationQuality, lateReason, equipmentStatus = 'Running' } = req.body;
   const subId = `SUB-${uuid().slice(0, 8).toUpperCase()}`;
 
   // ── 24h duplicate prevention ────────────────────────────────────────────────
@@ -379,6 +390,7 @@ const submit = async (req, res) => {
       status: 'awaiting_kasie',
       durationActual: durationActual ?? spk.durationActual,
       evaluasi: evaluasi || null,
+      equipmentStatus: ['Running', 'Standby', 'Breakdown'].includes(equipmentStatus) ? equipmentStatus : 'Running',
       submittedBy: req.user?.userId ?? null,
       submittedAt: new Date(),
     }, { transaction: t });

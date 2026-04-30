@@ -1,59 +1,60 @@
 {
-  "teknisi": [
-    "dashboard",
-    "inspeksi",
-    "kalender",
-    "supervisi",
-    "submissions",
-    "spk"
-  ],
-  "petugas": [
-    "dashboard",
-    "spk",
-    "submissions",
-    "inspeksi",
-    "supervisi",
-    "kalender"
-  ],
-  "kasie": [
-    "dashboard",
-    "spk",
-    "spk-approval",
-    "corrective",
-    "submissions",
-    "interval-planner",
-    "inspeksi",
-    "supervisi",
-    "kalender"
-  ],
-  "kadis": [
-    "dashboard",
-    "spk",
-    "spk-approval",
-    "corrective",
-    "hse",
-    "submissions",
-    "inspeksi",
-    "supervisi",
-    "kalender"
-  ],
-  "kadiv": [
-    "dashboard",
-    "spk",
-    "spk-approval",
-    "corrective",
-    "hse",
-    "spk-import",
-    "equipment",
-    "maps",
-    "users",
-    "track-record",
-    "task-mapping",
-    "interval-planner",
-    "submissions",
-    "inspeksi",
-    "supervisi",
-    "kalender",
-    "settings"
-  ]
+  "teknisi": {
+    "dashboard":   ["R"],
+    "spk":         ["R"],
+    "submissions": ["C","R"],
+    "inspeksi":    ["R"],
+    "supervisi":   ["R"],
+    "kalender":    ["R"]
+  },
+  "petugas": {
+    "dashboard":   ["R"],
+    "spk":         ["R"],
+    "submissions": ["C","R"],
+    "inspeksi":    ["R"],
+    "supervisi":   ["R"],
+    "kalender":    ["R"]
+  },
+  "kasie": {
+    "dashboard":        ["R"],
+    "spk":              ["R","U"],
+    "spk-approval":     ["R","U"],
+    "corrective":       ["C","R","U","D"],
+    "submissions":      ["R"],
+    "interval-planner": ["C","R","U","D"],
+    "inspeksi":         ["R"],
+    "supervisi":        ["R"],
+    "kalender":         ["R"]
+  },
+  "kadis": {
+    "dashboard":    ["R"],
+    "spk":          ["R","U"],
+    "spk-approval": ["R","U"],
+    "corrective":   ["C","R","U","D"],
+    "hse":          ["R"],
+    "submissions":  ["R"],
+    "inspeksi":     ["R"],
+    "supervisi":    ["R"],
+    "kalender":     ["R"]
+  },
+  "kadiv": {
+    "dashboard":        ["R"],
+    "spk":              ["C","R","U","D"],
+    "spk-approval":     ["R","U"],
+    "corrective":       ["C","R","U","D"],
+    "hse":              ["C","R","U","D"],
+    "spk-import":       ["C","R"],
+    "equipment":        ["C","R","U","D"],
+    "maps":             ["C","R","U","D"],
+    "plants":           ["C","R","U","D"],
+    "users":            ["C","R","U","D"],
+    "track-record":     ["R"],
+    "settings":         ["C","R","U","D"],
+    "task-mapping":     ["C","R","U","D"],
+    "interval-planner": ["C","R","U","D"],
+    "submissions":      ["R"],
+    "inspeksi":         ["R"],
+    "supervisi":        ["R"],
+    "kalender":         ["R"]
+  }
 }

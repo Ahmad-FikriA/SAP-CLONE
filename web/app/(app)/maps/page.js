@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
-import { apiGet, apiPut } from '@/lib/api';
+import { apiGet, apiPut, apiPost, apiDelete } from '@/lib/api';
+import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import dynamic from 'next/dynamic';
-import { MapPin, Trash2, Save, Pencil } from 'lucide-react';
+import { MapPin, Trash2, Save, Pencil, Building2, Plus } from 'lucide-react';
 
 const FEATURE_TYPES = ['building', 'industrial', 'road', 'railway', 'water', 'reservoir'];
 
@@ -45,6 +47,12 @@ export default function MapsPage() {
   const [propType, setPropType]   = useState('');
   const [propColor, setPropColor] = useState('#7F8C8D');
   const [editingId, setEditingId] = useState(null); // leaflet id of layer being edited
+
+  const [managePlantsOpen, setManagePlantsOpen] = useState(false);
+  const [plantList, setPlantList]               = useState([]);
+  const [plantForm, setPlantForm]               = useState(null); // null=list, {}=add, {...,_editing}=edit
+  const [plantSaving, setPlantSaving]           = useState(false);
+  const [confirmDeletePlant, setConfirmDeletePlant] = useState(null);
 
   const mapRef          = useRef(null);
   const LRef            = useRef(null);
@@ -217,6 +225,53 @@ export default function MapsPage() {
     setEditingId(null);
   }
 
+  async function openManagePlants() {
+    setManagePlantsOpen(true);
+    setPlantForm(null);
+    setConfirmDeletePlant(null);
+    try {
+      const data = await apiGet('/plants');
+      setPlantList(Array.isArray(data) ? data : []);
+    } catch (e) { toast.error('Gagal memuat daftar plant: ' + e.message); }
+  }
+
+  async function savePlant() {
+    if (!plantForm.plantId?.trim() || !plantForm.plantName?.trim()) {
+      toast.error('Plant ID dan Nama Plant wajib diisi');
+      return;
+    }
+    setPlantSaving(true);
+    try {
+      if (plantForm._editing) {
+        const { _editing, ...body } = plantForm;
+        await apiPut(`/plants/${plantForm.plantId}`, body);
+        toast.success(`Plant ${plantForm.plantId} diperbarui`);
+      } else {
+        await apiPost('/plants', plantForm);
+        toast.success(`Plant ${plantForm.plantId} ditambahkan`);
+      }
+      setPlantForm(null);
+      const data = await apiGet('/plants');
+      setPlantList(Array.isArray(data) ? data : []);
+      apiGet('/maps').then(setPlants);
+    } catch (e) { toast.error(e.message); }
+    finally { setPlantSaving(false); }
+  }
+
+  async function deletePlant(plantId) {
+    try {
+      await apiDelete(`/plants/${plantId}`);
+      toast.success(`Plant ${plantId} dihapus`);
+      setConfirmDeletePlant(null);
+      const data = await apiGet('/plants');
+      setPlantList(Array.isArray(data) ? data : []);
+      apiGet('/maps').then(setPlants);
+    } catch (e) {
+      toast.error(e.message);
+      setConfirmDeletePlant(null);
+    }
+  }
+
   async function loadPlantData(id) {
     if (!mapRef.current || !LRef.current || !drawnItemsRef.current) return;
     const L   = LRef.current;
@@ -324,10 +379,17 @@ export default function MapsPage() {
             {plants.length === 0 && <option value="">Tidak ada plant</option>}
             {plants.map((p) => <option key={p.plantId} value={p.plantId}>{p.plantName} — {p.city || ''}</option>)}
           </select>
-          <Button size="sm" onClick={saveMap} disabled={saving} className="gap-1.5">
-            <Save size={13} />
-            {saving ? 'Menyimpan...' : 'Simpan Peta ke Server'}
-          </Button>
+          {(canCreate('plants') || canUpdate('plants') || canDelete('plants')) && (
+            <Button variant="outline" size="sm" onClick={openManagePlants} className="gap-1.5">
+              <Building2 size={13} /> Kelola Plant
+            </Button>
+          )}
+          {canUpdate('maps') && (
+            <Button size="sm" onClick={saveMap} disabled={saving} className="gap-1.5">
+              <Save size={13} />
+              {saving ? 'Menyimpan...' : 'Simpan Peta ke Server'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -383,6 +445,124 @@ export default function MapsPage() {
           </div>
         </div>
       )}
+
+      {/* Kelola Plant Dialog */}
+      <Dialog open={managePlantsOpen} onOpenChange={(o) => { setManagePlantsOpen(o); if (!o) setPlantForm(null); }}>
+        <DialogContent className="w-[95vw] max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Kelola Plant</DialogTitle>
+          </DialogHeader>
+          {plantForm === null ? (
+            <div className="space-y-3">
+              {canCreate('plants') && (
+                <div className="flex justify-end">
+                  <Button size="sm" onClick={() => setPlantForm({})} className="gap-1.5">
+                    <Plus size={13} /> Tambah Plant
+                  </Button>
+                </div>
+              )}
+              <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      {['Plant ID', 'Nama', 'Singkatan', 'Kota', 'Sort', 'Aksi'].map((h) => (
+                        <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {plantList.length === 0 && (
+                      <tr><td colSpan={6} className="px-3 py-6 text-center text-sm text-gray-400">Belum ada plant</td></tr>
+                    )}
+                    {plantList.map((p) => (
+                      <tr key={p.plantId} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.plantId}</td>
+                        <td className="px-3 py-2 font-medium text-gray-800 text-xs">{p.plantName}</td>
+                        <td className="px-3 py-2 text-xs text-gray-500">{p.shortName || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-gray-500">{p.city || '—'}</td>
+                        <td className="px-3 py-2 text-xs text-gray-500">{p.sortOrder ?? '—'}</td>
+                        <td className="px-3 py-2">
+                          {confirmDeletePlant === p.plantId ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-red-600 mr-1 whitespace-nowrap">Yakin hapus?</span>
+                              <button onClick={() => deletePlant(p.plantId)}
+                                className="text-xs text-white bg-red-500 hover:bg-red-600 px-2 py-0.5 rounded transition-colors">Ya</button>
+                              <button onClick={() => setConfirmDeletePlant(null)}
+                                className="text-xs text-gray-600 px-2 py-0.5 rounded border border-gray-200 hover:bg-gray-50 transition-colors">Batal</button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              {canUpdate('plants') && (
+                                <button onClick={() => setPlantForm({ ...p, _editing: true })}
+                                  className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors" title="Edit">
+                                  <Pencil size={13} />
+                                </button>
+                              )}
+                              {canDelete('plants') && (
+                                <button onClick={() => setConfirmDeletePlant(p.plantId)}
+                                  className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title="Hapus">
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Plant ID <span className="text-red-500">*</span></label>
+                  <input value={plantForm.plantId || ''}
+                    onChange={(e) => setPlantForm({ ...plantForm, plantId: e.target.value.toUpperCase() })}
+                    disabled={!!plantForm._editing}
+                    placeholder="I-22L001"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:bg-gray-50 disabled:text-gray-400" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Nama Plant <span className="text-red-500">*</span></label>
+                  <input value={plantForm.plantName || ''}
+                    onChange={(e) => setPlantForm({ ...plantForm, plantName: e.target.value })}
+                    placeholder="PS I Cidanau"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Singkatan</label>
+                  <input value={plantForm.shortName || ''}
+                    onChange={(e) => setPlantForm({ ...plantForm, shortName: e.target.value })}
+                    placeholder="PS I"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Kota</label>
+                  <input value={plantForm.city || ''}
+                    onChange={(e) => setPlantForm({ ...plantForm, city: e.target.value })}
+                    placeholder="Cilegon"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Sort Order</label>
+                  <input type="number" value={plantForm.sortOrder ?? ''}
+                    onChange={(e) => setPlantForm({ ...plantForm, sortOrder: e.target.value ? parseInt(e.target.value) : null })}
+                    placeholder="10"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button size="sm" onClick={savePlant} disabled={plantSaving}>
+                  {plantSaving ? 'Menyimpan...' : (plantForm._editing ? 'Simpan Perubahan' : 'Tambah Plant')}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setPlantForm(null)}>Batal</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Area table */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">

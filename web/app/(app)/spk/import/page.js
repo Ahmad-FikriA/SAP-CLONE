@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiPost } from '@/lib/api';
+import { canCreate } from '@/lib/auth';
 import { KADIS_AREAS } from '@/lib/constants';
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
 import { Button } from '@/components/ui/button';
@@ -190,8 +191,12 @@ export default function SpkImportPage() {
 
       {orders.length === 0 ? (
         <div className="max-w-xl">
-          <FileUploadZone onFile={handleFile} accept=".xlsx"
-            label={loading ? 'Memproses...' : 'Drag & drop file Excel SPK, atau klik untuk memilih'} />
+          {canCreate('spk-import') ? (
+            <FileUploadZone onFile={handleFile} accept=".xlsx"
+              label={loading ? 'Memproses...' : 'Drag & drop file Excel SPK, atau klik untuk memilih'} />
+          ) : (
+            <p className="text-sm text-gray-400 italic">Anda tidak memiliki izin untuk mengimport SPK.</p>
+          )}
         </div>
       ) : (
         <>
@@ -302,7 +307,7 @@ export default function SpkImportPage() {
 
           <div className="flex justify-end gap-3">
             <Button variant="ghost" onClick={() => { setOrders([]); setLocationCode(null); setApiKadisId(null); }}>Batal / Upload Lagi</Button>
-            <Button onClick={confirmImport} disabled={confirming || pendingCount > 0}>
+            <Button onClick={confirmImport} disabled={confirming || pendingCount > 0 || !canCreate('spk-import')}>
               {confirming ? 'Mengimport...' : `Konfirmasi Import (${readyCount} order)`}
             </Button>
           </div>

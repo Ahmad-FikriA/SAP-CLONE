@@ -10,7 +10,7 @@ import {
   MapPin, CalendarRange, ShieldCheck, Settings,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { clearAuth, getUser } from '@/lib/auth';
+import { clearAuth, getUser, canRead } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -99,11 +99,7 @@ export default function Sidebar() {
           if (item.divider) {
             return <div key={i} className="my-2 border-t border-white/10" />;
           }
-          const rolePages = user?.rolePages;
-          const canSee = rolePages
-            ? rolePages.includes(item.key)
-            : true; // null = unrestricted (unknown role or kadiv)
-          if (!canSee) return null;
+          if (!canRead(item.key)) return null;
           const { href, label, Icon } = item;
           const active = isActive(href);
           return (

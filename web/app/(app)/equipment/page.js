@@ -9,6 +9,7 @@ import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { MapPin, Plus, RefreshCw, Upload, BarChart2, Download, QrCode } from 'lucide-react';
+import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -204,11 +205,15 @@ export default function EquipmentPage() {
           <Button variant="outline" size="sm" onClick={exportCoordinates} className="gap-1.5">
             <Download size={13} /> Export Koordinat
           </Button>
-          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
-            <Upload size={13} /> Import Excel
-          </Button>
-          <input ref={fileRef} type="file" accept=".xlsx" onChange={importExcel} className="hidden" />
-          <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus size={14} /> Tambah</Button>
+          {canCreate('equipment') && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
+                <Upload size={13} /> Import Excel
+              </Button>
+              <input ref={fileRef} type="file" accept=".xlsx" onChange={importExcel} className="hidden" />
+              <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus size={14} /> Tambah</Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -284,8 +289,8 @@ export default function EquipmentPage() {
                         <BarChart2 size={11} /> Riwayat
                       </Button>
                     </Link>
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(eq)}>Edit</Button>
-                    <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTarget(eq)}>Hapus</Button>
+                    {canUpdate('equipment') && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(eq)}>Edit</Button>}
+                    {canDelete('equipment') && <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTarget(eq)}>Hapus</Button>}
                   </div>
                 </td>
               </tr>

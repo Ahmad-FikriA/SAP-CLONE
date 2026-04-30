@@ -104,6 +104,33 @@ export const STATUS_VARIANTS = {
   cancelled: 'error',
 };
 
+export const ALL_PAGES = [
+  { key: 'dashboard',        label: 'Dashboard' },
+  { key: 'spk',              label: 'SPK / Preventive' },
+  { key: 'spk-approval',     label: 'Persetujuan SPK' },
+  { key: 'corrective',       label: 'Corrective Planner' },
+  { key: 'hse',              label: 'HSE Command Center' },
+  { key: 'spk-import',       label: 'Import SAP' },
+  { key: 'equipment',        label: 'Equipment' },
+  { key: 'maps',             label: 'Maps' },
+  { key: 'plants',           label: 'Manajemen Plant' },
+  { key: 'users',            label: 'Users' },
+  { key: 'track-record',     label: 'Track Record' },
+  { key: 'settings',         label: 'Pengaturan Akses' },
+  { key: 'task-mapping',     label: 'Task Mapping' },
+  { key: 'interval-planner', label: 'Interval Planner' },
+  { key: 'submissions',      label: 'Submissions' },
+  { key: 'inspeksi',         label: 'Inspeksi' },
+  { key: 'supervisi',        label: 'Supervisi' },
+  { key: 'kalender',         label: 'Kalender Jadwal' },
+];
+
+export const TEMPLATE_ROLES = ['teknisi', 'petugas', 'kasie', 'kadis', 'kadiv'];
+
+export const TEMPLATE_ROLE_LABELS = {
+  teknisi: 'Teknisi', petugas: 'Petugas', kasie: 'Kasie', kadis: 'Kadis', kadiv: 'Kadiv',
+};
+
 export const GEOJSON_FEATURE_COLORS = {
   building: '#6B7280',
   industrial: '#D97706',

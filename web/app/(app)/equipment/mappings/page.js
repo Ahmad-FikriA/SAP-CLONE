@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiPut, apiDelete, apiUpload } from '@/lib/api';
+import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import { CategoryBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CATEGORIES, INTERVALS } from '@/lib/constants';
@@ -245,8 +246,12 @@ export default function MappingsPage() {
       {tab === 'Mappings' && (
         <div className="space-y-3">
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => setAddMappingOpen(true)} className="gap-1.5"><Plus size={13} /> Tambah Mapping</Button>
-            <Button variant="outline" size="sm" onClick={() => { setBulkSelected([]); setBulkOpen(true); }}>Bulk Mapping</Button>
+            {canCreate('task-mapping') && (
+              <Button size="sm" onClick={() => setAddMappingOpen(true)} className="gap-1.5"><Plus size={13} /> Tambah Mapping</Button>
+            )}
+            {canCreate('task-mapping') && (
+              <Button variant="outline" size="sm" onClick={() => { setBulkSelected([]); setBulkOpen(true); }}>Bulk Mapping</Button>
+            )}
           </div>
 
           {/* Filter bar */}
@@ -290,7 +295,9 @@ export default function MappingsPage() {
                         <td className="px-4 py-3 text-gray-500 text-xs">{m.taskListId || '—'}</td>
                         <td className="px-4 py-3 text-gray-500 text-xs">{tl ? tl.activities?.length + ' aktivitas' : '—'}</td>
                         <td className="px-4 py-3">
-                          <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteMapping(m)}>Hapus</Button>
+                          {canDelete('task-mapping') && (
+                            <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteMapping(m)}>Hapus</Button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -316,11 +323,15 @@ export default function MappingsPage() {
             <input value={tlSearch} onChange={(e) => setTlSearch(e.target.value)}
               placeholder="Cari ID atau nama..."
               className="flex-1 max-w-sm px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            <Button variant="outline" size="sm" onClick={() => tlFileRef.current?.click()} className="gap-1.5">
-              <Upload size={13} /> Import Excel
-            </Button>
-            <input ref={tlFileRef} type="file" accept=".xlsx" onChange={importTlExcel} className="hidden" />
-            <Button size="sm" onClick={openCreateTl} className="gap-1.5"><Plus size={13} /> Tambah Task List</Button>
+            {canCreate('task-mapping') && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => tlFileRef.current?.click()} className="gap-1.5">
+                  <Upload size={13} /> Import Excel
+                </Button>
+                <input ref={tlFileRef} type="file" accept=".xlsx" onChange={importTlExcel} className="hidden" />
+                <Button size="sm" onClick={openCreateTl} className="gap-1.5"><Plus size={13} /> Tambah Task List</Button>
+              </>
+            )}
           </div>
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
@@ -343,8 +354,12 @@ export default function MappingsPage() {
                       <td className="px-4 py-3 text-gray-500 text-xs">{(tl.activities || []).length}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1.5">
-                          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEditTl(tl)}>Edit</Button>
-                          <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTl(tl)}>Hapus</Button>
+                          {canUpdate('task-mapping') && (
+                            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEditTl(tl)}>Edit</Button>
+                          )}
+                          {canDelete('task-mapping') && (
+                            <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTl(tl)}>Hapus</Button>
+                          )}
                         </div>
                       </td>
                     </tr>

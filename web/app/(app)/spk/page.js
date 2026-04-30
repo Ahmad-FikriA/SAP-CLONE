@@ -10,6 +10,7 @@ import { CATEGORIES, STATUS_LABELS } from '@/lib/constants';
 import { formatDate, formatDateShort } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Trash2, Wrench, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin } from 'lucide-react';
+import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import Link from 'next/link';
 
 const STATUS_OPTIONS = ['pending', 'in_progress', 'completed', 'approved', 'rejected'];
@@ -81,6 +82,8 @@ export default function SpkPage() {
   const [search, setSearch] = useState('');
   const [weekFilter, setWeekFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
+  const [plantFilter, setPlantFilter] = useState('');
+  const [plants, setPlants] = useState([]);
 
   // Side panel
   const [panelOpen, setPanelOpen]   = useState(false);
@@ -104,12 +107,17 @@ export default function SpkPage() {
   const [detailSubs, setDetailSubs] = useState([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
 
-  useEffect(() => { load(); }, [category]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { apiGet('/maps').then(setPlants).catch(() => {}); }, []);
+  useEffect(() => { load(); }, [category, plantFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load() {
     setLoading(true);
     try {
-      const data = await apiGet('/spk' + (category ? `?category=${category}` : ''));
+      const params = new URLSearchParams();
+      if (category) params.set('category', category);
+      if (plantFilter) params.set('plantId', plantFilter);
+      const qs = params.toString();
+      const data = await apiGet('/spk' + (qs ? `?${qs}` : ''));
       setSpkList(Array.isArray(data) ? data : []);
       setSelected([]);
     } catch (e) { toast.error('Gagal memuat: ' + e.message); }
@@ -346,13 +354,16 @@ export default function SpkPage() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={load}><RefreshCw size={13} /></Button>
-            <Link href="/spk/import">
-              <Button variant="outline" size="sm" className="gap-1.5"><Upload size={13} /> Import SAP</Button>
-            </Link>
-            <Link href="/spk/generate">
-              <Button variant="outline" size="sm" className="gap-1.5"><Wrench size={13} /> Generate</Button>
-            </Link>
-            {/* <Button size="sm" onClick={openCreate} className="gap-1.5"><Plus size={14} /> Buat SPK</Button> */}
+            {canCreate('spk') && (
+              <Link href="/spk/import">
+                <Button variant="outline" size="sm" className="gap-1.5"><Upload size={13} /> Import SAP</Button>
+              </Link>
+            )}
+            {canCreate('spk') && (
+              <Link href="/spk/generate">
+                <Button variant="outline" size="sm" className="gap-1.5"><Wrench size={13} /> Generate</Button>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -383,15 +394,22 @@ export default function SpkPage() {
             <option value="">Semua Minggu</option>
             {weekOptions.map((w) => <option key={w} value={String(w)}>Minggu {w}</option>)}
           </select>
-          {(search || statusFilter || weekFilter || yearFilter || category) && (
+          {plants.length > 0 && (
+            <select value={plantFilter} onChange={(e) => setPlantFilter(e.target.value)}
+              className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+              <option value="">Semua Plant</option>
+              {plants.map((p) => <option key={p.plantId} value={p.plantId}>{p.plantName}</option>)}
+            </select>
+          )}
+          {(search || statusFilter || weekFilter || yearFilter || category || plantFilter) && (
             <button
-              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); setCategory(''); }}
+              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); setCategory(''); setPlantFilter(''); }}
               className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
             >
               <X size={12} /> Reset Filter
             </button>
           )}
-          {selected.length > 0 && (
+          {selected.length > 0 && canDelete('spk') && (
             <div className="flex items-center gap-2 ml-auto bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
               <span className="text-sm text-red-700 font-medium">{selected.length} dipilih</span>
               <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)} className="gap-1 h-7 text-xs">
@@ -454,16 +472,20 @@ export default function SpkPage() {
                       <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => openDetail(s)}>
                         <Eye size={11} /> Detail
                       </Button>
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => openEdit(s)}>
-                        <Pencil size={11} /> Edit
-                      </Button>
-                      {s.status === 'completed' && (
+                      {canUpdate('spk') && (
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => openEdit(s)}>
+                          <Pencil size={11} /> Edit
+                        </Button>
+                      )}
+                      {canUpdate('spk') && s.status === 'completed' && (
                         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-amber-600 hover:bg-amber-50" onClick={() => handleReset(s)}>
                           <RotateCcw size={11} /> Reset
                         </Button>
                       )}
-                      <Button variant="destructive" size="sm" className="h-7 text-xs"
-                        onClick={() => setDeleteTarget(s)}>Hapus</Button>
+                      {canDelete('spk') && (
+                        <Button variant="destructive" size="sm" className="h-7 text-xs"
+                          onClick={() => setDeleteTarget(s)}>Hapus</Button>
+                      )}
                     </div>
                   </td>
                 </tr>

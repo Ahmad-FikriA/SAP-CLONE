@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiPost } from '@/lib/api';
-import { getUser } from '@/lib/auth';
+import { getUser, canUpdate } from '@/lib/auth';
 import { formatDate } from '@/lib/date-utils';
 import { STATUS_LABELS, CATEGORY_COLORS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
@@ -309,7 +309,7 @@ export default function SpkApprovalPage() {
             <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={approving}>
               Batal
             </Button>
-            <Button onClick={handleApprove} disabled={approving}>
+            <Button onClick={handleApprove} disabled={approving || !canUpdate('spk-approval')}>
               {approving ? 'Menyetujui...' : 'Setujui'}
             </Button>
           </DialogFooter>
@@ -364,7 +364,7 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {}
             </div>
             <p className="text-sm text-gray-500">{spk.description || '—'}</p>
           </div>
-          {canApprove && (
+          {canApprove && canUpdate('spk-approval') && (
             <Button onClick={onApprove} className="gap-2 shrink-0">
               <CheckCircle size={15} />
               Setujui SPK

@@ -5,13 +5,16 @@ import { toast } from 'sonner';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { RoleBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { ROLES } from '@/lib/constants';
+import { ROLES, ALL_PAGES, TEMPLATE_ROLES } from '@/lib/constants';
+import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { UserPlus, Trash2, Download, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-const EMPTY_FORM = { id: '', nik: '', name: '', role: '', email: '', dinas: '', divisi: '', group: '', password: 'password123', allowedPages: null };
+const EMPTY_FORM = { id: '', nik: '', name: '', role: '', email: '', dinas: '', divisi: '', group: '', password: 'password123', permissions: null };
+const OPS = ['C', 'R', 'U', 'D'];
+const OP_LABELS = { C: 'Buat', R: 'Lihat', U: 'Edit', D: 'Hapus' };
 
 
 export default function UsersPage() {
@@ -59,8 +62,22 @@ export default function UsersPage() {
 
   function openEdit(u) {
     setEditingId(u.id);
-    setForm({ ...EMPTY_FORM, ...u, password: '', allowedPages: u.allowedPages ?? null });
+    setForm({ ...EMPTY_FORM, ...u, password: '', permissions: u.permissions ?? null });
     setPanelOpen(true);
+  }
+
+  function togglePermCRUD(pageKey, op) {
+    const current = form.permissions || {};
+    const pagePerms = current[pageKey] || [];
+    const next = pagePerms.includes(op) ? pagePerms.filter((o) => o !== op) : [...pagePerms, op];
+    setForm({ ...form, permissions: { ...current, [pageKey]: next } });
+  }
+
+  async function applyRoleTemplate(role) {
+    try {
+      const templates = await apiGet('/settings/role-templates');
+      setForm({ ...form, permissions: templates[role] ?? {} });
+    } catch { toast.error('Gagal memuat template'); }
   }
 
   async function saveUser() {
@@ -142,7 +159,7 @@ export default function UsersPage() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={load}><RefreshCw size={13} /></Button>
           <Button variant="outline" size="sm" onClick={exportExcel} className="gap-1.5"><Download size={13} /> Export</Button>
-          <Button size="sm" onClick={openCreate} className="gap-1.5"><UserPlus size={14} /> Tambah User</Button>
+          {canCreate('users') && <Button size="sm" onClick={openCreate} className="gap-1.5"><UserPlus size={14} /> Tambah User</Button>}
         </div>
       </div>
 
@@ -176,7 +193,7 @@ export default function UsersPage() {
           ))}
         </select>
 
-        {selected.length > 0 && (
+        {selected.length > 0 && canDelete('users') && (
           <div className="flex items-center gap-2 ml-auto bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
             <span className="text-sm text-red-700 font-medium">{selected.length} dipilih</span>
             <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)} className="gap-1 h-7 text-xs">
@@ -230,8 +247,8 @@ export default function UsersPage() {
                 </td>
                 <td className="px-3 py-3">
                   <div className="flex gap-1.5">
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(u)}>Edit</Button>
-                    <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTarget(u)}>Hapus</Button>
+                    {canUpdate('users') && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(u)}>Edit</Button>}
+                    {canDelete('users') && <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTarget(u)}>Hapus</Button>}
                   </div>
                 </td>
               </tr>
@@ -271,9 +288,84 @@ export default function UsersPage() {
               <Field label="Password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder="password123" />
             )}
 
-            <p className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2">
-              Akses halaman diatur per role di <a href="/settings" className="text-blue-600 hover:underline">Pengaturan Akses</a>.
-            </p>
+            {/* Per-user CRUD permissions */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
+                <span className="text-xs font-semibold text-gray-700">Hak Akses</span>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.permissions === null}
+                    onChange={(e) => setForm({ ...form, permissions: e.target.checked ? null : {} })}
+                    className="w-3.5 h-3.5 rounded border-gray-300" />
+                  <span className="text-xs text-gray-600">Gunakan Template Role</span>
+                </label>
+              </div>
+              {form.permissions === null ? (
+                <p className="px-3 py-2.5 text-xs text-gray-400">
+                  Mengikuti template role <strong>{form.role || '—'}</strong>. Atur di{' '}
+                  <a href="/settings" className="text-blue-600 hover:underline">Pengaturan Akses</a>.
+                </p>
+              ) : (
+                <div className="p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs text-gray-500">Terapkan template:</span>
+                    {TEMPLATE_ROLES.map((r) => (
+                      <button key={r} onClick={() => applyRoleTemplate(r)}
+                        className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded px-2 py-0.5 transition-colors">
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded px-2.5 py-1.5">
+                    <span><span className="font-bold">C</span> = Create (Tambah)</span>
+                    <span><span className="font-bold">R</span> = Read (Lihat)</span>
+                    <span><span className="font-bold">U</span> = Update (Edit)</span>
+                    <span><span className="font-bold">D</span> = Delete (Hapus)</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left py-1.5 pr-3 font-semibold text-gray-500">Halaman</th>
+                          {OPS.map((op) => (
+                            <th key={op} className="px-2 py-1.5 text-center font-semibold text-gray-500">
+                              <span className="text-gray-700">{op}</span>
+                              <span className="block font-normal text-gray-400 normal-case">{OP_LABELS[op]}</span>
+                            </th>
+                          ))}
+                          <th className="px-2 py-1.5" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {ALL_PAGES.map((page) => {
+                          const pagePerms = (form.permissions || {})[page.key] || [];
+                          const hasAll = OPS.every((o) => pagePerms.includes(o));
+                          return (
+                            <tr key={page.key} className="hover:bg-gray-50">
+                              <td className="py-1.5 pr-3 text-gray-700">{page.label}</td>
+                              {OPS.map((op) => (
+                                <td key={op} className="px-2 py-1.5 text-center">
+                                  <input type="checkbox" checked={pagePerms.includes(op)}
+                                    onChange={() => togglePermCRUD(page.key, op)}
+                                    className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 cursor-pointer" />
+                                </td>
+                              ))}
+                              <td className="px-2 py-1.5 text-center">
+                                <button onClick={() => {
+                                  const current = form.permissions || {};
+                                  setForm({ ...form, permissions: { ...current, [page.key]: hasAll ? [] : [...OPS] } });
+                                }} className="text-[10px] text-blue-500 hover:text-blue-700 hover:underline">
+                                  {hasAll ? 'Hapus' : 'Semua'}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setPanelOpen(false)}>Batal</Button>

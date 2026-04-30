@@ -40,6 +40,7 @@ import {
   UserCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { canCreate, canUpdate, canDelete } from "@/lib/auth";
 
 const APPROVAL_LABELS = {
   pending: "Menunggu Approval",
@@ -584,23 +585,27 @@ export default function CorrectivePage() {
             accept=".xlsx, .xls"
             onChange={handleFileUpload}
           />
-          <Button
-            variant="outline"
-            className="shadow-md bg-white hover:bg-slate-50 border-slate-200"
-            onClick={() => setShowManualForm(true)}
-          >
-            <Plus size={16} className="mr-2" />
-            Create Manual
-          </Button>
-          <Button
-            variant="default"
-            className="shadow-md bg-blue-600 hover:bg-blue-700"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <Upload size={16} className="mr-2" />
-            {uploading ? "Mengunggah..." : "Upload Excel SAP"}
-          </Button>
+          {canCreate('corrective') && (
+            <Button
+              variant="outline"
+              className="shadow-md bg-white hover:bg-slate-50 border-slate-200"
+              onClick={() => setShowManualForm(true)}
+            >
+              <Plus size={16} className="mr-2" />
+              Create Manual
+            </Button>
+          )}
+          {canCreate('corrective') && (
+            <Button
+              variant="default"
+              className="shadow-md bg-blue-600 hover:bg-blue-700"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <Upload size={16} className="mr-2" />
+              {uploading ? "Mengunggah..." : "Upload Excel SAP"}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="icon"
@@ -715,7 +720,7 @@ export default function CorrectivePage() {
 
         {/* Dynamic Filters based on active tab */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {tab === "requests" && filteredRequests.length > 0 && (
+          {tab === "requests" && filteredRequests.length > 0 && canDelete('corrective') && (
             <Button
               variant="destructive"
               className="shadow-sm"
@@ -825,7 +830,7 @@ export default function CorrectivePage() {
                         <span className="font-mono text-xs text-slate-600">
                           {req.sapOrderNumber || "—"}
                         </span>
-                        {req.approvalStatus === "approved" && (
+                        {req.approvalStatus === "approved" && canUpdate('corrective') && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -860,7 +865,8 @@ export default function CorrectivePage() {
                           Detail
                         </Button>
                         {req.status === "submitted" &&
-                          req.approvalStatus === "pending" && (
+                          req.approvalStatus === "pending" &&
+                          canUpdate('corrective') && (
                             <Button
                               size="sm"
                               className="h-8 shadow-sm"
@@ -869,14 +875,16 @@ export default function CorrectivePage() {
                               Terima
                             </Button>
                           )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
-                          onClick={() => deleteRequest(req.id)}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        {canDelete('corrective') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => deleteRequest(req.id)}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -959,7 +967,7 @@ export default function CorrectivePage() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex justify-end items-center gap-1">
-                        {spk.status === "menunggu_review_kadis_pp" && (
+                        {spk.status === "menunggu_review_kadis_pp" && canUpdate('corrective') && (
                           <>
                             <Button
                               size="sm"
@@ -986,14 +994,16 @@ export default function CorrectivePage() {
                         >
                           Detail
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
-                          onClick={() => deleteSpk(spk.order_number)}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        {canDelete('corrective') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => deleteSpk(spk.order_number)}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1069,14 +1079,16 @@ export default function CorrectivePage() {
                         >
                           Detail
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
-                          onClick={() => deleteSpk(spk.order_number)}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        {canDelete('corrective') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => deleteSpk(spk.order_number)}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1226,7 +1238,8 @@ export default function CorrectivePage() {
               Tutup
             </Button>
             {selectedRequest?.status === "submitted" &&
-              selectedRequest?.approvalStatus === "pending" && (
+              selectedRequest?.approvalStatus === "pending" &&
+              canUpdate('corrective') && (
                 <div className="flex gap-3">
                   <Button
                     variant="destructive"
@@ -1624,7 +1637,7 @@ export default function CorrectivePage() {
           )}
           <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-between items-center sticky bottom-0">
             <div>
-              {selectedSpk?.status === "menunggu_review_kadis_pp" && (
+              {selectedSpk?.status === "menunggu_review_kadis_pp" && canUpdate('corrective') && (
                 <div className="flex gap-2">
                   <Button
                     className="bg-green-600 hover:bg-green-700 text-white shadow-sm"

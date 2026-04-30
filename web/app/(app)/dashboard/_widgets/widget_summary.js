@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiGet } from '@/lib/api';
-import { getUser } from '@/lib/auth';
+import { canRead } from '@/lib/auth';
 import { FileText, Wrench, Radio, Users, AlertCircle, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
@@ -47,8 +47,7 @@ export function WidgetSummary() {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState({ spk: false, corrective: false, equipment: false, users: false });
 
-  const rolePages = getUser()?.rolePages ?? null; // null = unrestricted
-  function canLink(key) { return rolePages ? rolePages.includes(key) : true; }
+  function canLink(key) { return canRead(key); }
 
   async function load() {
     setLoading(true);

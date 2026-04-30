@@ -27,6 +27,21 @@ export function clearAuth() {
   localStorage.removeItem(USER_KEY);
 }
 
+export function getPermissions() {
+  return getUser()?.permissions ?? null; // null = unrestricted
+}
+
+export function canDo(page, op) {
+  const p = getPermissions();
+  if (!p) return true; // null = unrestricted
+  return Array.isArray(p[page]) && p[page].includes(op);
+}
+
+export const canRead   = (page) => canDo(page, 'R');
+export const canCreate = (page) => canDo(page, 'C');
+export const canUpdate = (page) => canDo(page, 'U');
+export const canDelete = (page) => canDo(page, 'D');
+
 /**
  * Checks token presence and expiry (client-side decode, no signature check).
  * Returns true if valid, false if missing or expired.

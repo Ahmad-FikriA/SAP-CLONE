@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -217,8 +218,12 @@ export default function IntervalPlannerPage() {
             className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-white">
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
-          <Button variant="outline" size="sm" onClick={autoFill}>Auto-fill formula</Button>
-          <Button variant="outline" size="sm" onClick={clearAll} className="text-red-600 border-red-200 hover:bg-red-50">Hapus semua</Button>
+          {canCreate('interval-planner') && (
+            <Button variant="outline" size="sm" onClick={autoFill}>Auto-fill formula</Button>
+          )}
+          {canDelete('interval-planner') && (
+            <Button variant="outline" size="sm" onClick={clearAll} className="text-red-600 border-red-200 hover:bg-red-50">Hapus semua</Button>
+          )}
         </div>
       </div>
 
@@ -232,7 +237,7 @@ export default function IntervalPlannerPage() {
       </div>
 
       {/* Unsaved bar */}
-      {dirty && (
+      {dirty && canUpdate('interval-planner') && (
         <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-sm">
           <span className="text-amber-700 font-medium flex-1">Perubahan belum disimpan: {diffLabel}</span>
           <Button size="sm" variant="ghost" onClick={discardChanges} className="text-gray-500">Buang</Button>
@@ -279,7 +284,7 @@ export default function IntervalPlannerPage() {
                       return (
                         <td key={iv} className="px-1 py-1.5 text-center">
                           <button
-                            onClick={() => toggleCell(year, week, iv)}
+                            onClick={() => canUpdate('interval-planner') && toggleCell(year, week, iv)}
                             className={cn(
                               'w-8 h-6 rounded text-[10px] font-semibold transition-colors',
                               active

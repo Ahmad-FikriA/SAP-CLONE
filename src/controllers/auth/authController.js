@@ -28,7 +28,7 @@ const login = async (req, res) => {
 
   const accessProfile  = buildAccessProfile(user);
   const roleTemplates  = loadRoleTemplates();
-  const rolePages      = roleTemplates[user.role] ?? null; // null = unrestricted
+  const permissions    = user.permissions ?? roleTemplates[user.role] ?? null; // null = unrestricted
 
   const token = jwt.sign(
     {
@@ -56,7 +56,7 @@ const login = async (req, res) => {
       email: user.email,
       group: user.group,
       accessProfile,
-      rolePages,
+      permissions,
     },
   });
 };
