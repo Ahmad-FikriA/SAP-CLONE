@@ -29,6 +29,19 @@ export function SupervisiJobPanel({ job, onClose }) {
   const meta    = SUPERVISI_STATUS_META[job.status] || SUPERVISI_STATUS_META.draft;
   const hasMaps = job.locations && Array.isArray(job.locations) && job.locations.length > 0;
 
+  // Compute effectiveEndDate
+  const effectiveEndDate = job.amends && job.amends.length > 0 
+    ? job.amends[job.amends.length - 1].amendBerakhir 
+    : job.waktuBerakhir;
+
+  let sisaHari = null;
+  if (effectiveEndDate) {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const end = new Date(effectiveEndDate + 'T00:00:00');
+    sisaHari = Math.round((end - today) / (1000 * 60 * 60 * 24));
+  }
+
   return (
     <>
       {/* Backdrop transparan untuk close saat klik luar */}
@@ -65,6 +78,18 @@ export function SupervisiJobPanel({ job, onClose }) {
             <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
             {meta.label}
           </span>
+
+          {job.status === 'active' && sisaHari !== null && (
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+              sisaHari < 0 ? 'bg-red-50 text-red-700 border border-red-200' :
+              sisaHari === 0 ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+              'bg-blue-50 text-blue-700 border border-blue-200'
+            }`}>
+              {sisaHari < 0 ? `Terlambat ${Math.abs(sisaHari)} Hari` :
+               sisaHari === 0 ? 'Hari Ini Terakhir' :
+               `Sisa ${sisaHari} Hari`}
+            </span>
+          )}
         </div>
 
         {/* Scrollable content */}
@@ -97,7 +122,7 @@ export function SupervisiJobPanel({ job, onClose }) {
               <span>
                 {fmt(job.waktuMulai)}
                 {' — '}
-                {fmt(job.waktuBerakhir)}
+                {fmt(effectiveEndDate)}
               </span>
             </Row>
 

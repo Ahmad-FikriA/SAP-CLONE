@@ -92,6 +92,12 @@ const SupervisiVisit = sequelize.define(
       allowNull: true,
       comment: "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
     },
+    isDraft: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: "true = disimpan sebagai draft (belum final). Draft yang melewati hari akan dikonversi ke tidak_hadir.",
+    },
   },
   {
     tableName: "supervisi_visits",
@@ -166,6 +172,15 @@ async function ensureSupervisiVisitSchema() {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
       comment: "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
+    });
+  }
+
+  if (!table.isDraft) {
+    await queryInterface.addColumn(tableName, "isDraft", {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: "true = disimpan sebagai draft (belum final). Draft yang melewati hari akan dikonversi ke tidak_hadir.",
     });
   }
 

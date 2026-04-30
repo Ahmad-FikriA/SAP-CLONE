@@ -111,6 +111,49 @@ function normalizeName(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+// ── Name lookup helpers ───────────────────────────────────────────────────────
+
+/**
+ * Buat map { nik → name } dari sekumpulan NIK unik.
+ * Satu query ke tabel users untuk semua NIK sekaligus.
+ */
+async function buildNikNameMap(niks) {
+  if (!niks || niks.length === 0) return {};
+  const uniqueNiks = [...new Set(niks.filter(Boolean))];
+  if (uniqueNiks.length === 0) return {};
+  try {
+    const users = await User.findAll({
+      where: { nik: { [Op.in]: uniqueNiks } },
+      attributes: ["nik", "name"],
+    });
+    const map = {};
+    for (const u of users) {
+      if (u.nik) map[u.nik] = u.name || null;
+    }
+    return map;
+  } catch (_err) {
+    return {};
+  }
+}
+
+/**
+ * Tambahkan creatorName ke job plain object, dan submitterName ke setiap visit.
+ */
+function enrichJobWithNames(jobData, nikNameMap) {
+  const obj = typeof jobData.toJSON === "function" ? jobData.toJSON() : { ...jobData };
+  // Inject nama pembuat job
+  obj.creatorName = nikNameMap[obj.createdBy] || null;
+  // Inject nama pengirim visit
+  if (Array.isArray(obj.visits)) {
+    obj.visits = obj.visits.map((v) => {
+      const visit = typeof v.toJSON === "function" ? v.toJSON() : { ...v };
+      visit.submitterName = nikNameMap[visit.submittedBy] || null;
+      return visit;
+    });
+  }
+  return obj;
+}
+
 async function findExecutorRecipientIds(picSupervisi) {
   const targetName = normalizeNullableString(picSupervisi);
   if (!targetName) return [];
@@ -206,6 +249,35 @@ async function notifySupervisorVisitUpdate({ job, visitStatus, visitDate, execut
   }
 }
 
+/**
+ * Konversi draft kunjungan yang kedaluwarsa menjadi tidak_hadir (pelanggaran).
+ *
+ * Draft yang belum di-finalkan hingga pergantian hari dianggap tidak hadir.
+ * Fungsi ini dipanggil secara lazy (tanpa cron job) di awal listJobs,
+ * getJob, dan submitVisit agar konversi selalu terjadi saat app aktif.
+ *
+ * @param {number|null} jobId - Jika diisi, hanya konversi draft untuk job tertentu.
+ */
+async function convertStaleDrafts(jobId = null) {
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD (server UTC)
+  const where = {
+    isDraft: true,
+    visitDate: { [Op.lt]: today },
+  };
+  if (jobId) where.jobId = parseInt(jobId);
+  try {
+    const [count] = await SupervisiVisit.update(
+      { isDraft: false, status: "tidak_hadir", isPelanggaran: true },
+      { where }
+    );
+    if (count > 0) {
+      console.log(`[Supervisi] convertStaleDrafts: ${count} draft kedaluwarsa dikonversi ke tidak_hadir.`);
+    }
+  } catch (err) {
+    console.error("[Supervisi] convertStaleDrafts error:", err.message);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // JOBS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -213,6 +285,9 @@ async function notifySupervisorVisitUpdate({ job, visitStatus, visitDate, execut
 // GET /api/inspection/supervisi/jobs
 async function listJobs(req, res) {
   try {
+    // Konversi draft kedaluwarsa (visitDate < hari ini) → tidak_hadir
+    await convertStaleDrafts();
+
     const access = getSupervisiAccess(req.user);
     if (access.kind === "none") {
       return res.status(403).json({
@@ -241,7 +316,18 @@ async function listJobs(req, res) {
       ],
     });
 
-    res.json({ success: true, data: jobs });
+    // Kumpulkan semua NIK unik (createdBy + semua submittedBy visit)
+    const nikSet = new Set();
+    for (const job of jobs) {
+      if (job.createdBy) nikSet.add(job.createdBy);
+      for (const visit of job.visits || []) {
+        if (visit.submittedBy) nikSet.add(visit.submittedBy);
+      }
+    }
+    const nikNameMap = await buildNikNameMap([...nikSet]);
+    const enrichedJobs = jobs.map((job) => enrichJobWithNames(job, nikNameMap));
+
+    res.json({ success: true, data: enrichedJobs });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -257,6 +343,9 @@ async function getJob(req, res) {
       });
     }
 
+    // Konversi draft kedaluwarsa untuk job ini sebelum fetch
+    await convertStaleDrafts(parseInt(req.params.id));
+
     const job = await SupervisiJob.findByPk(req.params.id, {
       include: [
         { model: SupervisiVisit, as: "visits", order: [["visitDate", "ASC"]] },
@@ -270,7 +359,17 @@ async function getJob(req, res) {
         message: forbiddenMessage(),
       });
     }
-    res.json({ success: true, data: job });
+
+    // Inject nama pembuat dan nama pengirim visit
+    const nikSet = new Set();
+    if (job.createdBy) nikSet.add(job.createdBy);
+    for (const visit of job.visits || []) {
+      if (visit.submittedBy) nikSet.add(visit.submittedBy);
+    }
+    const nikNameMap = await buildNikNameMap([...nikSet]);
+    const enrichedJob = enrichJobWithNames(job, nikNameMap);
+
+    res.json({ success: true, data: enrichedJob });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -650,6 +749,16 @@ async function submitVisit(req, res) {
     const { jobId, status, keterangan, alasanTidakHadir,
             visitLatitude, visitLongitude, locationId } = req.body;
 
+    // Tentukan apakah submission ini adalah draft atau final.
+    // Baca dari query param ATAU body — query param lebih andal untuk multipart.
+    const parseDraft = (val) => {
+      if (val === true || val === 1) return true;
+      if (!val) return false;
+      const str = Array.isArray(val) ? val[0] : String(val);
+      return str.trim() === "true" || str.trim() === "1";
+    };
+    const isDraftBool = parseDraft(req.query.isDraft) || parseDraft(req.body.isDraft);
+
     // Use server time — never trust the client's date
     const serverNow = new Date();
     // Format as YYYY-MM-DD in UTC to stay consistent with DATEONLY column
@@ -663,12 +772,14 @@ async function submitVisit(req, res) {
       return res.status(400).json({ success: false, message: "Status harus 'hadir' atau 'tidak_hadir'." });
     }
 
-    if (status === "hadir" && !keterangan) {
-      return res.status(400).json({ success: false, message: "Keterangan wajib diisi jika hadir." });
-    }
-
-    if (status === "tidak_hadir" && !alasanTidakHadir) {
-      return res.status(400).json({ success: false, message: "Alasan tidak hadir wajib diisi." });
+    // Validasi mandatory fields hanya untuk submit final (bukan draft)
+    if (!isDraftBool) {
+      if (status === "hadir" && !keterangan) {
+        return res.status(400).json({ success: false, message: "Keterangan wajib diisi jika hadir." });
+      }
+      if (status === "tidak_hadir" && !alasanTidakHadir) {
+        return res.status(400).json({ success: false, message: "Alasan tidak hadir wajib diisi." });
+      }
     }
 
     // Cek job ada
@@ -686,28 +797,29 @@ async function submitVisit(req, res) {
     const vLon = parseNullableFloat(visitLongitude);
     const normalizedLocationId = locationId ? String(locationId).trim() : null;
 
-    // ── Geofence calculation (hanya saat hadir) ──────────────────────────────
+    // ── Geofence calculation ─────────────────────────────────────────────────
     if (status === "hadir") {
-      if (vLat === null || vLon === null || isNaN(vLat) || isNaN(vLon)) {
+      // Saat final submit, GPS wajib ada. Saat draft, GPS opsional.
+      if (!isDraftBool && (vLat === null || vLon === null || isNaN(vLat) || isNaN(vLon))) {
         return res.status(400).json({
           success: false,
           message: "Koordinat GPS wajib dikirim saat hadir. Pastikan lokasi aktif.",
         });
       }
 
-      // Cari lokasi target
-      let targetLocation = null;
-      if (job.locations && Array.isArray(job.locations)) {
-        targetLocation = job.locations.find(loc => String(loc.id) === normalizedLocationId);
-      }
-      
-      const tLat = targetLocation ? parseFloat(targetLocation.latitude) : parseFloat(job.latitude);
-      const tLon = targetLocation ? parseFloat(targetLocation.longitude) : parseFloat(job.longitude);
-      const tRad = targetLocation ? parseFloat(targetLocation.radius) : parseFloat(job.radius || 100);
-
-      if (!isNaN(tLat) && !isNaN(tLon)) {
-        const dist = haversineMetres(tLat, tLon, vLat, vLon);
-        jarakDariPusat = dist > tRad ? Math.round(dist - tRad) : 0;
+      // Hitung jarak dari pusat geofence jika koordinat tersedia
+      if (vLat !== null && vLon !== null && !isNaN(vLat) && !isNaN(vLon)) {
+        let targetLocation = null;
+        if (job.locations && Array.isArray(job.locations)) {
+          targetLocation = job.locations.find(loc => String(loc.id) === normalizedLocationId);
+        }
+        const tLat = targetLocation ? parseFloat(targetLocation.latitude) : parseFloat(job.latitude);
+        const tLon = targetLocation ? parseFloat(targetLocation.longitude) : parseFloat(job.longitude);
+        const tRad = targetLocation ? parseFloat(targetLocation.radius) : parseFloat(job.radius || 100);
+        if (!isNaN(tLat) && !isNaN(tLon)) {
+          const dist = haversineMetres(tLat, tLon, vLat, vLon);
+          jarakDariPusat = dist > tRad ? Math.round(dist - tRad) : 0;
+        }
       }
     }
 
@@ -718,6 +830,9 @@ async function submitVisit(req, res) {
     const documentPaths = ((req.files && req.files.documents) || []).map(
       (f) => `/uploads/supervisi/${f.filename}`
     );
+
+    // Konversi draft kedaluwarsa milik job ini sebelum upsert
+    await convertStaleDrafts(parseInt(jobId));
 
     // Upsert — jika sudah ada visit untuk hari ini dan lokasi ini, update
     const queryWhere = { jobId: parseInt(jobId), visitDate };
@@ -731,35 +846,38 @@ async function submitVisit(req, res) {
       where: queryWhere,
       defaults: {
         status,
-        keterangan: status === "hadir" ? keterangan : null,
-        alasanTidakHadir: status === "tidak_hadir" ? alasanTidakHadir : null,
+        keterangan: status === "hadir" ? (keterangan || null) : null,
+        alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
         photos: photoPaths,
         documents: documentPaths,
         submittedBy: req.user.nik,
         submittedAt: new Date(),
-        isPelanggaran: status === "tidak_hadir",
+        isPelanggaran: !isDraftBool && status === "tidak_hadir",
         visitLatitude: vLat,
         visitLongitude: vLon,
         locationId: normalizedLocationId,
         jarakDariPusat: jarakDariPusat,
+        isDraft: isDraftBool,
       },
     });
 
     if (!created) {
-      // Update existing visit
+      // Update existing visit (draft → final, atau re-submit hari yang sama)
       await visit.update({
         status,
-        keterangan: status === "hadir" ? keterangan : null,
-        alasanTidakHadir: status === "tidak_hadir" ? alasanTidakHadir : null,
+        keterangan: status === "hadir" ? (keterangan || null) : null,
+        alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
+        // Foto: ganti jika ada upload baru; pertahankan foto lama jika tidak ada upload (berguna saat draft → final)
         photos: photoPaths.length > 0 ? photoPaths : visit.photos,
         documents: documentPaths.length > 0 ? [...(visit.documents || []), ...documentPaths] : visit.documents,
         submittedBy: req.user.nik,
         submittedAt: new Date(),
-        isPelanggaran: status === "tidak_hadir",
-        visitLatitude: vLat,
-        visitLongitude: vLon,
+        isPelanggaran: !isDraftBool && status === "tidak_hadir",
+        visitLatitude: vLat !== null ? vLat : visit.visitLatitude,
+        visitLongitude: vLon !== null ? vLon : visit.visitLongitude,
         locationId: normalizedLocationId,
-        jarakDariPusat: jarakDariPusat,
+        jarakDariPusat: jarakDariPusat !== null ? jarakDariPusat : visit.jarakDariPusat,
+        isDraft: isDraftBool,
       });
     }
 
@@ -767,17 +885,30 @@ async function submitVisit(req, res) {
       normalizeNullableString(req.user && req.user.name) ||
       normalizeNullableString(req.user && req.user.nik) ||
       "Pelaksana";
-    await notifySupervisorVisitUpdate({
-      job,
-      visitStatus: status,
-      visitDate,
-      executorName,
-    });
+
+    // Kirim notifikasi ke supervisor HANYA untuk submit final (bukan draft)
+    if (!isDraftBool) {
+      await notifySupervisorVisitUpdate({
+        job,
+        visitStatus: status,
+        visitDate,
+        executorName,
+      });
+    }
+
+    // Inject submitterName ke response visit
+    const visitNikMap = await buildNikNameMap(visit.submittedBy ? [visit.submittedBy] : []);
+    const visitData = typeof visit.toJSON === "function" ? visit.toJSON() : { ...visit };
+    visitData.submitterName = visitNikMap[visit.submittedBy] || null;
+
+    const successMessage = isDraftBool
+      ? (created ? "Kunjungan disimpan sebagai draft." : "Draft kunjungan diperbarui.")
+      : (created ? "Kunjungan berhasil dicatat." : "Kunjungan berhasil diperbarui.");
 
     res.status(created ? 201 : 200).json({
       success: true,
-      message: created ? "Kunjungan berhasil dicatat." : "Kunjungan berhasil diperbarui.",
-      data: visit,
+      message: successMessage,
+      data: visitData,
     });
   } catch (err) {
     // Handle unique constraint violation
