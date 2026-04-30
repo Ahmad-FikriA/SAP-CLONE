@@ -903,7 +903,7 @@ exports.deleteAllReports = async (req, res, next) => {
       truncate: false 
     });
     
-    res.status(200).json({ success: true, message: \Berhasil menghapus \ laporan K3 Safety secara permanen\ });
+    res.status(200).json({ success: true, message: `Berhasil menghapus ${count} laporan K3 Safety secara permanen` });
   } catch (error) {
     next(error);
   }
