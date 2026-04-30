@@ -163,6 +163,8 @@ export default function HseDashboardPage() {
 
   const [selectedReport, setSelectedReport] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isValidationOpen, setIsValidationOpen] = useState(false);
+  const [validationAction, setValidationAction] = useState(null);
   const [staffList, setStaffList] = useState([]);
   
   const [jenisTindakan, setJenisTindakan] = useState('perbaikan_langsung');
@@ -185,31 +187,37 @@ export default function HseDashboardPage() {
     setIsDetailOpen(true);
   };
 
-  const handleAction = async (actionType) => {
-    if (!selectedReport) return;
+  const openValidation = (action) => {
+    setValidationAction(action);
+    setIsValidationOpen(true);
+  };
+
+  const submitValidation = async () => {
+    if (!selectedReport || !validationAction) return;
     
     setIsSubmitting(true);
     try {
       if (selectedReport.status === 'menunggu_validasi_kadis_hse' || selectedReport.status === 'menunggu_validasi_kadiv_pphse') {
-        if (actionType === 'approve' && !assignedTo) {
+        if (validationAction === 'approve' && !assignedTo) {
           toast.error("Silakan pilih staf yang ditugaskan");
           setIsSubmitting(false);
           return;
         }
         await apiPut(`/k3-safety/${selectedReport.id}/validasi-awal`, {
-          action: actionType,
+          action: validationAction,
           catatanValidasi,
           assignedTo,
           jenisTindakan
         });
       } else if (selectedReport.status === 'menunggu_validasi_akhir_kadiv_pphse') {
         await apiPut(`/k3-safety/${selectedReport.id}/validasi-akhir`, {
-          action: actionType,
+          action: validationAction,
           catatan: catatanValidasi
         });
       }
       
-      toast.success(`Laporan berhasil di${actionType === 'approve' ? 'setujui' : 'tolak'}`);
+      toast.success(`Laporan berhasil di${validationAction === 'approve' ? 'setujui' : 'tolak'}`);
+      setIsValidationOpen(false);
       setIsDetailOpen(false);
       loadReports();
     } catch (e) {
@@ -234,14 +242,13 @@ export default function HseDashboardPage() {
   async function loadStaff() {
     try {
       const res = await apiGet('/users');
-      if (res && res.data && Array.isArray(res.data)) {
-        const hseStaff = res.data.filter(u => 
-          (u.divisi?.toLowerCase().includes('pphse') || u.divisi?.toLowerCase().includes('hse')) && 
-          !u.role?.toLowerCase().includes('kadis') &&
-          !u.role?.toLowerCase().includes('kadiv')
-        );
-        setStaffList(hseStaff);
-      }
+      const usersArray = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
+      const hseStaff = usersArray.filter(u => 
+        (u.divisi?.toLowerCase().includes('pphse') || u.divisi?.toLowerCase().includes('hse')) && 
+        !u.role?.toLowerCase().includes('kadis') &&
+        !u.role?.toLowerCase().includes('kadiv')
+      );
+      setStaffList(hseStaff);
     } catch (e) {
       console.error(e);
     }
@@ -464,7 +471,7 @@ export default function HseDashboardPage() {
                         <div className="w-20 h-20 rounded-2xl bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-100 group-hover:border-rose-100 transition-colors">
                           {hasPhotos ? (
                             <img 
-                              src={`http://localhost:3000/${report.foto[0]}`} 
+                              src={`${process.env.NEXT_PUBLIC_API_URL}/${report.foto[0]}`} 
                               alt="K3 Report" 
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                             />
@@ -532,109 +539,105 @@ export default function HseDashboardPage() {
           
           {selectedReport && (
             <div className="space-y-6 py-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-bold text-rose-600 uppercase tracking-widest">{selectedReport.kategori}</p>
-                  <p className="text-sm text-slate-500 mt-1">Pelapor: {selectedReport.pelapor?.name || 'Unknown'}</p>
+              {/* Header Info */}
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 font-bold flex-shrink-0">
+                    {selectedReport.pelapor?.name ? selectedReport.pelapor.name.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-rose-600 uppercase tracking-widest mb-1">{selectedReport.kategori}</p>
+                    <p className="text-sm font-bold text-slate-900">{selectedReport.pelapor?.name || 'Unknown'}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 uppercase tracking-wider font-medium">
+                      {selectedReport.pelapor?.role || '-'} • {selectedReport.pelapor?.dinas || '-'} • {selectedReport.pelapor?.divisi || '-'}
+                    </p>
+                  </div>
                 </div>
-                <Badge className={cn("border-none", formatStatus(selectedReport.status).color)}>
+                <Badge className={cn("border-none px-3 py-1 text-xs", formatStatus(selectedReport.status).color)}>
                   {formatStatus(selectedReport.status).label}
                 </Badge>
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-sm text-slate-700 leading-relaxed">
-                  "{selectedReport.deskripsi}"
-                </p>
+              {/* Deskripsi */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Deskripsi Laporan</h4>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+                  <p className="text-sm text-slate-700 leading-relaxed pl-2">
+                    "{selectedReport.deskripsi}"
+                  </p>
+                </div>
               </div>
 
+              {/* Dokumentasi Laporan Awal */}
               {selectedReport.foto && selectedReport.foto.length > 0 && (
-                <div className="grid grid-cols-2 gap-4">
-                  {selectedReport.foto.map((f, i) => (
-                    <img key={i} src={`http://localhost:3000/${f}`} alt={`Foto ${i+1}`} className="w-full h-40 object-cover rounded-xl border border-slate-200" />
-                  ))}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Foto Temuan Awal</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedReport.foto.map((f, i) => (
+                      <div key={i} className="group relative rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                        <img 
+                          src={`${process.env.NEXT_PUBLIC_API_URL}/${f}`} 
+                          alt={`Foto Awal ${i+1}`} 
+                          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" 
+                        />
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300"></div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Form Validasi untuk Kadis / Kadiv */}
-              {(isKadisHse || isKadivPphse) && (selectedReport.status === 'menunggu_validasi_kadis_hse' || selectedReport.status === 'menunggu_validasi_kadiv_pphse') && (
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  <h4 className="font-semibold text-slate-900">Validasi Laporan</h4>
+              {/* Hasil Perbaikan (Jika Ada) */}
+              {(selectedReport.tindakanPerbaikan || (selectedReport.fotoPerbaikan && selectedReport.fotoPerbaikan.length > 0)) && (
+                <div className="space-y-4 pt-4 border-t border-slate-100 mt-4">
+                  <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Hasil Perbaikan / Tindakan</h4>
                   
-                  <div className="space-y-3">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">Jenis Tindakan</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name="jenisTindakan" 
-                          value="perbaikan_langsung" 
-                          checked={jenisTindakan === 'perbaikan_langsung'} 
-                          onChange={(e) => setJenisTindakan(e.target.value)} 
-                          className="text-rose-600"
-                        />
-                        Perbaikan Langsung
-                      </label>
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name="jenisTindakan" 
-                          value="investigasi" 
-                          checked={jenisTindakan === 'investigasi'} 
-                          onChange={(e) => setJenisTindakan(e.target.value)} 
-                          className="text-rose-600"
-                        />
-                        Investigasi Lanjut
-                      </label>
+                  {selectedReport.tindakanPerbaikan && (
+                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                      <p className="text-sm text-slate-700 leading-relaxed pl-2">
+                        "{selectedReport.tindakanPerbaikan}"
+                      </p>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="space-y-3">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">Tugaskan Ke (Staf HSE)</label>
-                    <Select value={assignedTo} onValueChange={setAssignedTo}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Pilih staf yang akan menindaklanjuti..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {staffList.map(staff => (
-                          <SelectItem key={staff.id} value={staff.id}>{staff.name} - {staff.role}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {selectedReport.fotoPerbaikan && selectedReport.fotoPerbaikan.length > 0 && (
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                      {selectedReport.fotoPerbaikan.map((f, i) => (
+                        <div key={i} className="group relative rounded-xl overflow-hidden border border-emerald-200 shadow-sm">
+                          <img 
+                            src={`${process.env.NEXT_PUBLIC_API_URL}/${f}`} 
+                            alt={`Foto Perbaikan ${i+1}`} 
+                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" 
+                          />
+                          <div className="absolute inset-0 bg-emerald-900/10 group-hover:bg-transparent transition-colors duration-300"></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
-                  <div className="space-y-3">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">Catatan Validasi</label>
-                    <textarea
-                      value={catatanValidasi}
-                      onChange={(e) => setCatatanValidasi(e.target.value)}
-                      placeholder="Masukkan catatan (opsional jika disetujui, wajib jika ditolak)"
-                      className="w-full h-24 p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-rose-500 focus:outline-none"
-                    />
+              {/* Catatan Penolakan / Validasi */}
+              {selectedReport.catatanKadivPphse && (
+                <div className="space-y-2 pt-4 border-t border-slate-100">
+                  <h4 className="text-xs font-bold text-rose-500 uppercase tracking-wider">Catatan Validasi / Penolakan</h4>
+                  <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+                    <p className="text-sm text-rose-700 leading-relaxed pl-2 font-medium">
+                      "{selectedReport.catatanKadivPphse}"
+                    </p>
                   </div>
                 </div>
               )}
 
-              {/* Form Validasi Akhir untuk Kadiv PPHSE */}
-              {isKadivPphse && selectedReport.status === 'menunggu_validasi_akhir_kadiv_pphse' && (
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  <h4 className="font-semibold text-slate-900">Validasi Akhir</h4>
-                  <div className="space-y-3">
-                    <label className="text-xs font-semibold text-slate-500 uppercase">Catatan Final</label>
-                    <textarea
-                      value={catatanValidasi}
-                      onChange={(e) => setCatatanValidasi(e.target.value)}
-                      placeholder="Masukkan catatan final (opsional)"
-                      className="w-full h-24 p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-rose-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              )}
+              {/* Form Validasi dihapus dari sini dan dipindahkan ke Dialog terpisah */}
             </div>
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsDetailOpen(false)} disabled={isSubmitting}>
+            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
               Tutup
             </Button>
             
@@ -643,17 +646,15 @@ export default function HseDashboardPage() {
               <div className="flex gap-2">
                 <Button 
                   variant="destructive" 
-                  onClick={() => handleAction('reject')} 
-                  disabled={isSubmitting || !catatanValidasi.trim()}
+                  onClick={() => openValidation('reject')} 
                 >
-                  Tolak
+                  Tolak Laporan
                 </Button>
                 <Button 
                   className="bg-emerald-600 hover:bg-emerald-700 text-white" 
-                  onClick={() => handleAction('approve')} 
-                  disabled={isSubmitting || !assignedTo}
+                  onClick={() => openValidation('approve')} 
                 >
-                  Setujui & Tugaskan
+                  Setujui & Proses
                 </Button>
               </div>
             )}
@@ -663,20 +664,121 @@ export default function HseDashboardPage() {
               <div className="flex gap-2">
                 <Button 
                   variant="destructive" 
-                  onClick={() => handleAction('reject')} 
-                  disabled={isSubmitting || !catatanValidasi.trim()}
+                  onClick={() => openValidation('reject')} 
                 >
                   Kembalikan
                 </Button>
                 <Button 
                   className="bg-emerald-600 hover:bg-emerald-700 text-white" 
-                  onClick={() => handleAction('approve')} 
-                  disabled={isSubmitting}
+                  onClick={() => openValidation('approve')} 
                 >
                   Selesaikan Laporan
                 </Button>
               </div>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Validation Dialog (Nested/Secondary Popup) */}
+      <Dialog open={isValidationOpen} onOpenChange={setIsValidationOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader className={validationAction === 'approve' ? "text-emerald-700" : "text-rose-700"}>
+            <DialogTitle>{validationAction === 'approve' ? 'Setujui Laporan' : 'Tolak Laporan'}</DialogTitle>
+            <DialogDescription>
+              {validationAction === 'approve' 
+                ? 'Pilih tindak lanjut dan tugaskan staf untuk menyelesaikan masalah ini.' 
+                : 'Berikan alasan mengapa laporan ini ditolak.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-5">
+            {validationAction === 'approve' && (selectedReport?.status === 'menunggu_validasi_kadis_hse' || selectedReport?.status === 'menunggu_validasi_kadiv_pphse') && (
+              <>
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pilih Jenis Tindakan</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className={cn(
+                      "cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center text-center gap-2",
+                      jenisTindakan === 'perbaikan_langsung' ? "border-emerald-500 bg-emerald-50" : "border-slate-200 hover:border-emerald-200 hover:bg-slate-50"
+                    )}>
+                      <input 
+                        type="radio" 
+                        className="sr-only" 
+                        name="jenisTindakan" 
+                        value="perbaikan_langsung" 
+                        checked={jenisTindakan === 'perbaikan_langsung'} 
+                        onChange={(e) => setJenisTindakan(e.target.value)} 
+                      />
+                      <ShieldCheck size={28} className={jenisTindakan === 'perbaikan_langsung' ? "text-emerald-600" : "text-slate-400"} />
+                      <span className={cn("text-xs font-bold", jenisTindakan === 'perbaikan_langsung' ? "text-emerald-700" : "text-slate-600")}>Perbaikan<br/>Langsung</span>
+                    </label>
+                    <label className={cn(
+                      "cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center text-center gap-2",
+                      jenisTindakan === 'investigasi' ? "border-amber-500 bg-amber-50" : "border-slate-200 hover:border-amber-200 hover:bg-slate-50"
+                    )}>
+                      <input 
+                        type="radio" 
+                        className="sr-only" 
+                        name="jenisTindakan" 
+                        value="investigasi" 
+                        checked={jenisTindakan === 'investigasi'} 
+                        onChange={(e) => setJenisTindakan(e.target.value)} 
+                      />
+                      <Search size={28} className={jenisTindakan === 'investigasi' ? "text-amber-600" : "text-slate-400"} />
+                      <span className={cn("text-xs font-bold", jenisTindakan === 'investigasi' ? "text-amber-700" : "text-slate-600")}>Investigasi<br/>Lanjut</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tugaskan Ke (Staf HSE)</label>
+                  <Select value={assignedTo} onValueChange={setAssignedTo}>
+                    <SelectTrigger className="w-full h-12 rounded-xl">
+                      <SelectValue placeholder="Pilih staf yang bertugas..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffList.map(staff => (
+                        <SelectItem key={staff.id} value={staff.id}>{staff.name} - {staff.role}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Catatan {validationAction === 'reject' ? '(Wajib)' : '(Opsional)'}
+              </label>
+              <textarea
+                value={catatanValidasi}
+                onChange={(e) => setCatatanValidasi(e.target.value)}
+                placeholder={validationAction === 'approve' ? "Tambahkan pesan untuk petugas..." : "Masukkan alasan penolakan laporan..."}
+                className={cn(
+                  "w-full h-28 p-4 rounded-xl border text-sm transition-all focus:outline-none",
+                  validationAction === 'approve' 
+                    ? "border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50 focus:bg-white" 
+                    : "border-slate-200 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-slate-50 focus:bg-white"
+                )}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 border-t pt-4 border-slate-100">
+            <Button variant="ghost" onClick={() => setIsValidationOpen(false)} disabled={isSubmitting}>
+              Batal
+            </Button>
+            <Button 
+              className={cn(
+                "text-white",
+                validationAction === 'approve' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+              )}
+              onClick={submitValidation}
+              disabled={isSubmitting || (validationAction === 'approve' && !assignedTo && selectedReport?.status !== 'menunggu_validasi_akhir_kadiv_pphse') || (validationAction === 'reject' && !catatanValidasi.trim())}
+            >
+              {isSubmitting ? 'Memproses...' : 'Konfirmasi'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
