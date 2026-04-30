@@ -4,12 +4,9 @@ const { Op } = require("sequelize");
 const SuratPelanggaran = require("../../models/SuratPelanggaran");
 const InspectionFollowUp = require("../../models/InspectionFollowUp");
 
-/**
- * SuratPelanggaran Controller
- * Auto-issued when follow-up deadline passes without resolution.
- */
 
-// GET /api/inspection/surat-pelanggaran
+
+
 async function listSuratPelanggaran(req, res) {
   try {
     const where = {};
@@ -41,7 +38,7 @@ async function listSuratPelanggaran(req, res) {
   }
 }
 
-// GET /api/inspection/surat-pelanggaran/:id
+
 async function getSuratPelanggaran(req, res) {
   try {
     const surat = await SuratPelanggaran.findByPk(req.params.id, {
@@ -74,7 +71,7 @@ async function getSuratPelanggaran(req, res) {
   }
 }
 
-// POST /api/inspection/surat-pelanggaran
+
 async function createSuratPelanggaran(req, res) {
   try {
     const {
@@ -102,7 +99,7 @@ async function createSuratPelanggaran(req, res) {
       notes,
     });
 
-    // Link surat to follow-up
+
     await InspectionFollowUp.update(
       { suratPelanggaranId: surat.id },
       { where: { id: followUpId } },
@@ -118,7 +115,7 @@ async function createSuratPelanggaran(req, res) {
   }
 }
 
-// PUT /api/inspection/surat-pelanggaran/:id
+
 async function updateSuratPelanggaran(req, res) {
   try {
     const surat = await SuratPelanggaran.findByPk(req.params.id);
@@ -150,13 +147,11 @@ async function updateSuratPelanggaran(req, res) {
   }
 }
 
-// POST /api/inspection/surat-pelanggaran/check-overdue
-// Checks all follow-ups past deadline and auto-issues surat pelanggaran
+
 async function checkOverdueFollowUps(req, res) {
   try {
     const now = new Date();
 
-    // Find follow-ups that are overdue and don't already have a surat pelanggaran
     const overdueFollowUps = await InspectionFollowUp.findAll({
       where: {
         deadline: { [Op.lt]: now },

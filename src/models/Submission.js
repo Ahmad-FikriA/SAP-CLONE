@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── Submission ────────────────────────────────────────────────────────────────
+
 const Submission = sequelize.define('Submission', {
   id:             { type: DataTypes.STRING(30),   primaryKey: true },
   spkNumber:      { type: DataTypes.STRING(30),   allowNull: false, field: 'spk_number' },
@@ -34,7 +34,7 @@ const Submission = sequelize.define('Submission', {
   ],
 });
 
-// ── Submission Photos ─────────────────────────────────────────────────────────
+
 const SubmissionPhoto = sequelize.define('SubmissionPhoto', {
   id:           { type: DataTypes.INTEGER,     primaryKey: true, autoIncrement: true },
   submissionId: { type: DataTypes.STRING(30),  allowNull: false, field: 'submission_id' },
@@ -45,7 +45,7 @@ const SubmissionPhoto = sequelize.define('SubmissionPhoto', {
   timestamps: false,
 });
 
-// ── Submission Activity Results ───────────────────────────────────────────────
+
 const SubmissionActivityResult = sequelize.define('SubmissionActivityResult', {
   id:             { type: DataTypes.INTEGER,    primaryKey: true, autoIncrement: true },
   submissionId:   { type: DataTypes.STRING(30), allowNull: false, field: 'submission_id' },

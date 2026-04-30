@@ -10,9 +10,7 @@ const {
   KADIS_ROLE,
 } = require("../../middleware/correctiveAccess");
 
-/**
- * Normalize a date string to YYYY-MM-DD format.
- */
+
 function toDateOnly(raw) {
   if (!raw) return null;
   const str = String(raw).trim();
@@ -35,15 +33,11 @@ function toDateOnly(raw) {
   return null;
 }
 
-/**
- * Format a Notification record into the API response shape.
- * @param {Object} notif - Notification model instance or plain object.
- * @param {Object|null} sapSpk - Matched SapSpkCorrective record (if any).
- */
+
 function fmtRequest(notif, sapSpk) {
   const n = notif.toJSON ? notif.toJSON() : notif;
   const spk = n.spkCorrective || {};
-  // SAP SPK data (from SapSpkCorrective table, matched via sapOrderNumber)
+
   const sap = sapSpk ? (sapSpk.toJSON ? sapSpk.toJSON() : sapSpk) : null;
 
   const images = [];
@@ -53,12 +47,12 @@ function fmtRequest(notif, sapSpk) {
   const beforeImages = [];
   const afterImages = [];
 
-  // Legacy SpkCorrective photos (if association still exists)
+
   if (spk.photos) {
     spk.photos.filter((p) => p.photoType === "before").forEach((p) => beforeImages.push(p.photoPath));
     spk.photos.filter((p) => p.photoType === "after").forEach((p) => afterImages.push(p.photoPath));
   }
-  // SAP SPK photos (stored in uploads/ root by sapSpkRoutes multer)
+
   if (sap) {
     if (sap.photo_before) beforeImages.push(`uploads/${sap.photo_before}`);
     if (sap.photo_after) afterImages.push(`uploads/${sap.photo_after}`);
@@ -84,7 +78,7 @@ function fmtRequest(notif, sapSpk) {
     }
   }
 
-  // SAP data can override functional location / equipment if available
+
   if (sap) {
     if (sap.functional_location) finalFuncLoc = sap.functional_location;
     if (sap.equipment_name) finalEq = sap.equipment_name;
@@ -133,17 +127,17 @@ function fmtRequest(notif, sapSpk) {
     actualPersonnelCount: sap?.actual_personnel || spk.actualWorker,
     actualDuration: sap?.total_actual_hour != null ? Number(sap.total_actual_hour) : (spk.totalActualHour || null),
     executionResultText: sap?.job_result_description || spk.jobResultDescription,
-    // Technician info from SAP SPK
+
     executionName: sap?.execution_name || null,
     executionNik: sap?.execution_nik || null,
     executionWorkCenter: sap?.work_center || null,
-    // Actual materials/tools from SAP execution
+
     actualMaterials: sap?.actual_materials ? sap.actual_materials.split(', ').filter(Boolean) : [],
     actualTools: sap?.actual_tools ? sap.actual_tools.split(', ').filter(Boolean) : [],
   };
 }
 
-// GET /api/corrective/requests
+
 const getAll = async (req, res) => {
   try {
     const { userId, role } = req.user;
@@ -166,7 +160,7 @@ const getAll = async (req, res) => {
       order: [["submittedAt", "DESC"]],
     });
 
-    // Look up matching SAP SPK records for all notifications that have sapOrderNumber
+
     const sapOrderNumbers = data
       .map((n) => n.sapOrderNumber)
       .filter(Boolean);
@@ -186,7 +180,7 @@ const getAll = async (req, res) => {
   }
 };
 
-// GET /api/corrective/requests/:id
+
 const getOne = async (req, res) => {
   try {
     const notification = await Notification.findByPk(req.params.id, {
@@ -195,7 +189,7 @@ const getOne = async (req, res) => {
     if (!notification)
       return res.status(404).json({ error: "Notification not found" });
 
-    // Look up matching SAP SPK record
+
     let sapSpk = null;
     if (notification.sapOrderNumber) {
       sapSpk = await SapSpkCorrective.findByPk(notification.sapOrderNumber);
@@ -207,7 +201,7 @@ const getOne = async (req, res) => {
   }
 };
 
-// POST /api/corrective/requests
+
 const create = async (req, res) => {
   try {
     const {
@@ -282,7 +276,7 @@ const create = async (req, res) => {
   }
 };
 
-// PUT /api/corrective/requests/:id
+
 const update = async (req, res) => {
   try {
     const { role } = req.user;
@@ -329,7 +323,7 @@ const update = async (req, res) => {
   }
 };
 
-// POST /api/corrective/requests/:id/approve
+
 const approveKadisPusat = async (req, res) => {
   try {
     const notification = await Notification.findByPk(req.params.id);
@@ -383,7 +377,7 @@ const approveKadisPusat = async (req, res) => {
   }
 };
 
-// POST /api/corrective/requests/:id/reject
+
 const rejectKadisPusat = async (req, res) => {
   try {
     const notification = await Notification.findByPk(req.params.id);
@@ -429,7 +423,6 @@ const rejectKadisPusat = async (req, res) => {
   }
 };
 
-// DELETE /api/corrective/requests/:id
 const remove = async (req, res) => {
   try {
     const notification = await Notification.findByPk(req.params.id);
@@ -449,7 +442,7 @@ const remove = async (req, res) => {
   }
 };
 
-// POST /api/corrective/requests/bulk-delete
+
 const bulkDelete = async (req, res) => {
   try {
     const { ids } = req.body;
@@ -470,7 +463,6 @@ const bulkDelete = async (req, res) => {
   }
 };
 
-// DELETE /api/corrective/requests
 const deleteAll = async (req, res) => {
   try {
     const count = await Notification.destroy({
@@ -484,7 +476,7 @@ const deleteAll = async (req, res) => {
   }
 };
 
-// POST /api/corrective/requests/:id/update-sap-number
+
 const updateSapNumber = async (req, res) => {
   try {
     const { sapOrderNumber } = req.body;
@@ -534,7 +526,7 @@ const updateSapNumber = async (req, res) => {
   }
 };
 
-// POST /api/corrective/requests/:id/approve-planner
+
 const approvePlanner = async (req, res) => {
   try {
     const { sapOrderNumber } = req.body;
@@ -602,7 +594,7 @@ const approvePlanner = async (req, res) => {
   }
 };
 
-// POST /api/corrective/requests/:id/reject-planner
+
 const rejectPlanner = async (req, res) => {
   try {
     const { rejectionReason } = req.body;

@@ -5,10 +5,7 @@ const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'kti-mock-secret-dev';
 
-/**
- * Express middleware — verifies Authorization: Bearer <token>.
- * Attaches req.user = { userId, nik, role } on success.
- */
+
 async function verifyToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

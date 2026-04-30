@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── SPK (Surat Perintah Kerja) ────────────────────────────────────────────────
+
 const Spk = sequelize.define('Spk', {
   spkNumber:      { type: DataTypes.STRING(30), primaryKey: true, field: 'spk_number' },
   description:    { type: DataTypes.STRING(500), allowNull: false },
@@ -34,11 +34,11 @@ const Spk = sequelize.define('Spk', {
     { fields: ['category'] },
     { fields: ['scheduled_date'] },
     { fields: ['submitted_by'] },
-    { fields: ['status', 'scheduled_date'] },  // composite: approval tab + date range
+    { fields: ['status', 'scheduled_date'] },
   ],
 });
 
-// ── SPK ↔ Equipment (junction) ───────────────────────────────────────────────
+
 const SpkEquipment = sequelize.define('SpkEquipment', {
   id:                { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   spkNumber:         { type: DataTypes.STRING(30), allowNull: false,  field: 'spk_number' },
@@ -56,7 +56,7 @@ const SpkEquipment = sequelize.define('SpkEquipment', {
   ],
 });
 
-// ── SPK Activities ────────────────────────────────────────────────────────────
+
 const SpkActivity = sequelize.define('SpkActivity', {
   id:             { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   spkNumber:      { type: DataTypes.STRING(30),  allowNull: false, field: 'spk_number' },

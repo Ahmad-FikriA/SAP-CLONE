@@ -56,7 +56,7 @@ const remove = async (req, res) => {
   res.json({ message: 'Deleted' });
 };
 
-// POST /api/equipment-mappings/bulk
+
 const bulkCreate = async (req, res) => {
   const { equipmentIds, interval, taskListId } = req.body;
   if (!Array.isArray(equipmentIds) || !equipmentIds.length || !interval) {
@@ -90,11 +90,7 @@ const bulkCreate = async (req, res) => {
   });
 };
 
-// POST /api/equipment-mappings/import-excel
-// Expects multipart/form-data with field "file" containing an .xlsx file.
-// Excel must have a header row with columns (any order, case-insensitive):
-//   equipment_id | interval | task_list_id
-// Rows with missing values are skipped.
+
 const importExcel = async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded. Send field "file" as multipart/form-data.' });
 
@@ -108,7 +104,7 @@ const importExcel = async (req, res) => {
 
   if (!rows.length) return res.status(400).json({ error: 'Excel sheet is empty or has no data rows' });
 
-  // Normalise header names (case-insensitive, ignore spaces/underscores)
+
   function normalise(s) { return String(s || '').toLowerCase().replace(/[\s_-]/g, ''); }
   const sample = rows[0];
   const keyMap = {};
@@ -154,7 +150,7 @@ const importExcel = async (req, res) => {
   res.json({
     message: `Import selesai: ${imported} baris diimpor, ${skipped} dilewati`,
     imported, skipped,
-    errors: errors.slice(0, 20), // cap error list
+    errors: errors.slice(0, 20),
   });
 };
 

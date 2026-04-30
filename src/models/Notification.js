@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── Notification (Corrective Request) ─────────────────────────────────────────
+
 const Notification = sequelize.define('Notification', {
   notificationId: {
     type: DataTypes.STRING(30),
@@ -80,19 +80,19 @@ const Notification = sequelize.define('Notification', {
     defaultValue: 'pending',
     field: 'approval_status',
   },
-  // Work Center untuk routing ke teknisi yang tepat
+
   workCenter: {
     type: DataTypes.ENUM('electrical', 'civil', 'automation', 'mechanical'),
     allowNull: true,
     field: 'work_center',
   },
-  // Nomor SPK SAP yang diisi Planner saat menerima laporan
+
   sapOrderNumber: {
     type: DataTypes.STRING(30),
     allowNull: true,
     field: 'sap_order_number',
   },
-  // Kadis Pelapor - yang membuat laporan/notification ini
+
   kadisPelaporId: {
     type: DataTypes.STRING(20),
     allowNull: true,

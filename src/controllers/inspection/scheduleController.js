@@ -4,14 +4,12 @@ const InspectionSchedule = require("../../models/InspectionSchedule");
 const InspectionRequest = require("../../models/InspectionRequest");
 const { notify } = require("../../services/notificationService");
 
-// NIK Planner sebagai fallback notifikasi jadwal baru jika executor belum ada
+
 const INSPECTION_PLANNER_NIK = "10000262";
 
-/**
- * Schedule Controller — CRUD for inspection schedules.
- */
 
-// GET /api/inspection/schedules
+
+
 async function listSchedules(req, res) {
   try {
     const where = {};
@@ -44,7 +42,7 @@ async function listSchedules(req, res) {
   }
 }
 
-// GET /api/inspection/schedules/:id
+
 async function getSchedule(req, res) {
   try {
     const schedule = await InspectionSchedule.findByPk(req.params.id, {
@@ -71,7 +69,7 @@ async function getSchedule(req, res) {
   }
 }
 
-// POST /api/inspection/schedules
+
 async function createSchedule(req, res) {
   try {
     const {
@@ -115,7 +113,7 @@ async function createSchedule(req, res) {
       data: schedule,
     });
 
-    // Kirim notifikasi ke executor yang di-assign (atau Planner jika belum ditentukan)
+
     const recipientNik = String(assignedTo || INSPECTION_PLANNER_NIK);
     notify({
       module: 'inspection',
@@ -133,7 +131,7 @@ async function createSchedule(req, res) {
   }
 }
 
-// PUT /api/inspection/schedules/:id
+
 async function updateSchedule(req, res) {
   try {
     const schedule = await InspectionSchedule.findByPk(req.params.id);
@@ -164,14 +162,13 @@ async function updateSchedule(req, res) {
   }
 }
 
-// GET /api/inspection/schedules/next-spk
+
 async function getNextSpkNumber(req, res) {
   try {
     const now = new Date();
-    const yearSuffix = String(now.getFullYear()).slice(-2); // '26' dari 2026
+    const yearSuffix = String(now.getFullYear()).slice(-2);
     const prefix = `SPK-INSP${yearSuffix}-`;
 
-    // Cari nomor SPK tertinggi dengan prefix tahun ini
     const { Op } = require('sequelize');
     const lastSchedule = await InspectionSchedule.findOne({
       where: {
@@ -199,7 +196,7 @@ async function getNextSpkNumber(req, res) {
   }
 }
 
-// POST /api/inspection/schedules/recurring
+
 async function createRecurringSchedules(req, res) {
   try {
     const { baseSchedule, recurringType, startDate, endDate } = req.body;
@@ -227,7 +224,6 @@ async function createRecurringSchedules(req, res) {
     }
 
     while (currentDate <= end) {
-      // Create a copy of the base date
       const scheduledDate = new Date(currentDate);
       
       const schedule = {
@@ -252,14 +248,14 @@ async function createRecurringSchedules(req, res) {
       
       schedulesToCreate.push(schedule);
 
-      // Advance by interval
+
       currentDate.setMonth(currentDate.getMonth() + intervalMonths);
       instanceNumber++;
     }
 
     const createdSchedules = await InspectionSchedule.bulkCreate(schedulesToCreate);
 
-    // Notifikasi ke executor bahwa ada jadwal berulang baru
+
     const executorNik = String(baseSchedule.assignedTo || INSPECTION_PLANNER_NIK);
     notify({
       module: 'inspection',
@@ -282,7 +278,7 @@ async function createRecurringSchedules(req, res) {
   }
 }
 
-// CRON JOB — Send reminders for today and overdue schedules
+
 async function sendInspectionReminders() {
   const LABEL = "[Inspection Cron]";
   try {
@@ -310,7 +306,7 @@ async function sendInspectionReminders() {
       const scheduleDateStr = schedule.scheduledDate;
 
       if (scheduleDateStr === todayStr) {
-        // Today
+
         notify({
           module: 'inspection',
           type: 'schedule_reminder_today',
@@ -324,7 +320,7 @@ async function sendInspectionReminders() {
         });
         todayCount++;
       } else if (scheduleDateStr < todayStr) {
-        // Overdue
+
         notify({
           module: 'inspection',
           type: 'schedule_reminder_overdue',

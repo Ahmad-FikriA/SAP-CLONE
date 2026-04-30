@@ -18,14 +18,7 @@ const CATEGORY_GROUP_MAP = {
 
 const VALID_INTERVALS = ['1wk', '2wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
 
-/**
- * POST /api/spk/import/preview
- * req.file — multer memory buffer (field name: file)
- *
- * Returns { total, orders } where each order has been enriched with
- * interval/intervalResolution/intervalOptions (resolveIntervals) and
- * alreadyExists flag (flagExisting).
- */
+
 const preview = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded. Send an Excel file in the "file" field.' });
@@ -39,21 +32,12 @@ const preview = async (req, res) => {
 
   await resolveIntervals(orders);
   await flagExisting(orders);
-  await enrichOrders(orders);   // adds equipmentName, funcLocDesc, displayName, autoMapped
+  await enrichOrders(orders);
 
   res.json({ total: orders.length, orders, locationCode: locationCode || null, detectedKadisId: detectedKadisId || null });
 };
 
-/**
- * POST /api/spk/import/confirm
- * req.body = { orders: [...] }
- *
- * Validates, de-dupes, then creates Spk + SpkEquipment + SpkActivity rows
- * in a single transaction.
- *
- * Returns:
- *   { message, created, skipped, spkNumbers, skippedDetail }
- */
+
 const confirm = async (req, res) => {
   const { orders } = req.body;
 
@@ -61,7 +45,7 @@ const confirm = async (req, res) => {
     return res.status(400).json({ error: 'orders array is required and must not be empty.' });
   }
 
-  // ── Per-order validation ─────────────────────────────────────────────────────
+  
   const validOrders = [];
   const skippedDetail = [];
 
@@ -91,7 +75,7 @@ const confirm = async (req, res) => {
     });
   }
 
-  // ── Idempotency: check which orderNumbers already exist ──────────────────────
+  
   const candidateNumbers = validOrders.map(o => o.orderNumber);
   const existingSpks = await Spk.findAll({
     where: { spkNumber: { [Op.in]: candidateNumbers } },
@@ -111,7 +95,7 @@ const confirm = async (req, res) => {
   const createdNumbers = [];
 
   if (toCreate.length > 0) {
-    // ── Bulk-fetch equipment names for all new orders ────────────────────────
+    
     const equipmentIds = [...new Set(toCreate.map(o => o.equipmentId).filter(Boolean))];
     const equipmentRecords = await Equipment.findAll({
       where: { equipmentId: { [Op.in]: equipmentIds } },
@@ -122,13 +106,13 @@ const confirm = async (req, res) => {
       equipmentNameMap[eq.equipmentId] = eq.equipmentName;
     }
 
-    // ── Single transaction for all creates ───────────────────────────────────
+    
     const t = await sequelize.transaction();
     try {
       for (const order of toCreate) {
         const spkNumber = order.orderNumber;
 
-        // 1. Spk header
+
         await Spk.create({
           spkNumber,
           description:   order.description ?? null,
@@ -141,12 +125,11 @@ const confirm = async (req, res) => {
           operWorkCtr:   order.operWorkCtr ?? null,
         }, { transaction: t });
 
-        // 2. SpkEquipment row (one per order in SAP IW38 import)
-        // Sipil orders: equipmentId is null — use functionalLocation as identifier
+
         const spkEqId   = order.equipmentId ?? order.functionalLocation ?? null;
         const spkEqName = order.equipmentId
           ? (equipmentNameMap[order.equipmentId] ?? null)
-          : (order.displayName ?? order.functionalLocation ?? null); // building name for Sipil
+          : (order.displayName ?? order.functionalLocation ?? null);
 
         if (spkEqId) {
           await SpkEquipment.create({
@@ -157,7 +140,7 @@ const confirm = async (req, res) => {
             plantName:          order.plantName ?? null,
           }, { transaction: t });
 
-          // Upsert Sipil funcLoc into equipment table so map pinning + QR verification work
+
           if (order.isSipil) {
             await Equipment.upsert({
               equipmentId:        spkEqId,
@@ -171,7 +154,7 @@ const confirm = async (req, res) => {
           }
         }
 
-        // 3. SpkActivity rows — one per item in activitiesModel
+
         const activities = Array.isArray(order.activitiesModel) ? order.activitiesModel : [];
         for (const act of activities) {
           await SpkActivity.create({
@@ -180,7 +163,7 @@ const confirm = async (req, res) => {
             equipmentId:    spkEqId ?? null,
             controlKey:     act.controlKey ?? null,
             operationText:  act.operationText ?? null,
-            durationPlan:   null, // SAP Excel doesn't carry duration per activity
+            durationPlan:   null,
           }, { transaction: t });
         }
 
@@ -193,9 +176,8 @@ const confirm = async (req, res) => {
       throw err;
     }
 
-    // ── Auto-save new equipment → task list mappings (interval = null until user fills it in) ──
-    // Only for non-Sipil orders where autoMapped=true (description matched a task list in DB)
-    // and the equipment had no prior mapping. Uses findOrCreate so re-imports are idempotent.
+    
+
     const autoMappable = toCreate.filter(
       o => !o.isSipil && o.autoMapped && o.suggestedTaskList && o.equipmentId
         && o.intervalResolution === 'unknown'
@@ -211,7 +193,6 @@ const confirm = async (req, res) => {
     }
   }
 
-  // Notify teknisi per category discipline
   if (createdNumbers.length > 0) {
     const categoryGroups = {};
     for (const order of toCreate.filter(o => createdNumbers.includes(o.orderNumber))) {

@@ -81,7 +81,7 @@ function getSupervisiAccess(user) {
   const nik = normalizeNik(user && user.nik);
   const displayName = String(user && user.name ? user.name : "").trim();
 
-  // Admin memiliki akses penuh (seperti monitor) ke semua data supervisi
+
   if (isAdminUser(user)) {
     return { kind: "monitor", nik, displayName };
   }
@@ -106,7 +106,7 @@ function hasSupervisiAccess(user) {
 }
 
 function isSupervisiScheduler(user) {
-  // Admin juga bisa mengelola job seperti scheduler
+
   if (isAdminUser(user)) return true;
   return getSupervisiAccess(user).kind === "scheduler";
 }

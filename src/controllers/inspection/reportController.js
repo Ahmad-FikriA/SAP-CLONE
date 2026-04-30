@@ -14,7 +14,7 @@ const {
 } = require("../../services/inspectionStatusSupport");
 const { notify } = require("../../services/notificationService");
 
-// NIK Approver yang menerima notifikasi laporan baru
+
 const INSPECTION_APPROVER_NIK = "10000262";
 
 const FOLLOW_UP_TARGET_DINAS_HSE = "dinas_hse";
@@ -158,11 +158,9 @@ function parsePhotoRecords(photos, reportId) {
     .filter(Boolean);
 }
 
-/**
- * Report Controller — Submit, list, approve/reject inspection reports.
- */
 
-// GET /api/inspection/reports
+
+
 async function listReports(req, res) {
   try {
     const where = {};
@@ -212,7 +210,7 @@ async function listReports(req, res) {
   }
 }
 
-// GET /api/inspection/reports/:id
+
 async function getReport(req, res) {
   try {
     const requesterNik = normalizeNik(req.user?.nik);
@@ -245,7 +243,7 @@ async function getReport(req, res) {
   }
 }
 
-// POST /api/inspection/reports
+
 async function createReport(req, res) {
   const t = await sequelize.transaction();
 
@@ -269,7 +267,6 @@ async function createReport(req, res) {
     const reportStatus = normalizeReportStatus(status, "submitted");
     const isSubmitted = reportStatus === "submitted";
 
-    // Verify schedule exists
     const schedule = await InspectionSchedule.findByPk(scheduleId, {
       transaction: t,
     });
@@ -280,7 +277,7 @@ async function createReport(req, res) {
         .json({ success: false, message: "Schedule not found." });
     }
 
-    // Draft should be savable at any time without field requirements.
+
     const normalizedInspectorName =
       typeof inspectorName === "string" && inspectorName.trim().length > 0
         ? inspectorName.trim()
@@ -317,13 +314,12 @@ async function createReport(req, res) {
       { transaction: t },
     );
 
-    // Save photos if provided
+
     const photoRecords = parsePhotoRecords(photos, report.id);
     if (photoRecords.length > 0) {
       await InspectionReportPhoto.bulkCreate(photoRecords, { transaction: t });
     }
 
-    // Update schedule status according to report state.
     if (isSubmitted) {
       await schedule.update({ status: "completed" }, { transaction: t });
     } else if (["scheduled", "in_progress"].includes(schedule.status)) {
@@ -344,7 +340,7 @@ async function createReport(req, res) {
       data: created,
     });
 
-    // Kirim notifikasi ke Approver saat laporan di-submit (bukan draft)
+
     if (isSubmitted) {
       notify({
         module: 'inspection',
@@ -364,7 +360,7 @@ async function createReport(req, res) {
   }
 }
 
-// PUT /api/inspection/reports/:id
+
 async function updateReport(req, res) {
   const t = await sequelize.transaction();
 
@@ -390,7 +386,7 @@ async function updateReport(req, res) {
       });
     }
 
-    // Block mutation only for truly-approved reports
+
     if (report.status === "approved") {
       await t.rollback();
       return res.status(400).json({
@@ -495,7 +491,7 @@ async function updateReport(req, res) {
   }
 }
 
-// PUT /api/inspection/reports/:id/approve
+
 async function approveReport(req, res) {
   const t = await sequelize.transaction();
 
@@ -522,8 +518,7 @@ async function approveReport(req, res) {
       { transaction: t },
     );
 
-    // If kerusakan found → auto-create follow-up
-    // Branching: manusia → assign ke Dinas HSE, selain itu → assign ke Dinas Perawatan
+
     if (report.hasKerusakan) {
       const kategori = report.kategoriK3 || req.body.kategoriK3;
       const isManusia = kategori === "manusia";
@@ -560,7 +555,7 @@ async function approveReport(req, res) {
       ],
     });
 
-    // Notifikasi ke inspektor bahwa laporannya disetujui
+
     if (report.submittedBy) {
       notify({
         module: 'inspection',
@@ -590,7 +585,7 @@ async function approveReport(req, res) {
   }
 }
 
-// PUT /api/inspection/reports/:id/reject
+
 async function rejectReport(req, res) {
   const t = await sequelize.transaction();
 
@@ -618,8 +613,7 @@ async function rejectReport(req, res) {
       req.body.notes,
     );
 
-    // Revert schedule back to in_progress so it re-appears in the
-    // executor's active schedule list.
+
     if (report.schedule) {
       await report.schedule.update({ status: "in_progress" }, { transaction: t });
     }
@@ -630,7 +624,7 @@ async function rejectReport(req, res) {
       include: [{ association: "schedule" }, { association: "photos" }],
     });
 
-    // Notifikasi ke inspektor bahwa laporannya dikembalikan untuk revisi
+
     if (report.submittedBy) {
       notify({
         module: 'inspection',

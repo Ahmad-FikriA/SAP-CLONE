@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── SPK Corrective ────────────────────────────────────────────────────────────
+
 const SpkCorrective = sequelize.define('SpkCorrective', {
   spkId: {
     type: DataTypes.STRING(30),
@@ -115,7 +115,7 @@ const SpkCorrective = sequelize.define('SpkCorrective', {
     allowNull: true,
     field: 'total_actual_hour',
   },
-  // Approval fields
+
   kadisPusatApprovedBy: {
     type: DataTypes.STRING(20),
     allowNull: true,

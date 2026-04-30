@@ -3,12 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * SuratPelanggaran — surat pelanggaran K3.
- *
- * Diterbitkan otomatis ketika InspectionFollowUp melewati deadline
- * tanpa penyelesaian, atau dibuat manual oleh Dinas HSE.
- */
+
 const SuratPelanggaran = sequelize.define(
   "SuratPelanggaran",
   {

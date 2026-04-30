@@ -69,7 +69,7 @@ const K3Report = sequelize.define('K3Report', {
       'disetujui',
       'ditolak',
       'selesai',
-      // ── Investigasi Statuses ──
+      
       'menunggu_verifikasi_investigasi',
       'investigasi_ditolak_kadis_hse',
       'menunggu_validasi_kadiv',
@@ -117,7 +117,7 @@ const K3Report = sequelize.define('K3Report', {
       key: 'id'
     }
   },
-  // ── Investigasi Fields ──────────────────────────────────────────────────────
+  
   investigasiCategory: {
     type: DataTypes.STRING(50),
     allowNull: true,

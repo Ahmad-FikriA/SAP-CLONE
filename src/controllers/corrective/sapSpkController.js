@@ -7,14 +7,13 @@ const path = require("path");
 const User = require("../../models/User");
 const NotificationService = require("../../services/notificationService");
 
-// 1. Get SAP SPK List
+
 const getSapSpkList = async (req, res) => {
   try {
     const where = {};
     const { role, group, dinas } = req.user || {};
 
-    // Filter by group if not admin/super-user
-    // Kadis Pusat Perawatan is considered a super-user for corrective
+
     const isKadisPP = role === "kadis" && dinas && dinas.toLowerCase().includes("pusat perawatan");
     
     if (role !== "admin" && !isKadisPP && group) {
@@ -64,7 +63,7 @@ const getSapSpkList = async (req, res) => {
   }
 };
 
-// 2. Upload and Parse Excel
+
 const uploadExcel = async (req, res) => {
   try {
     if (!req.file) {
@@ -76,7 +75,7 @@ const uploadExcel = async (req, res) => {
     const workbook = new exceljs.Workbook();
     await workbook.xlsx.readFile(req.file.path);
 
-    // Get the first worksheet
+
     const worksheet = workbook.worksheets[0];
     if (!worksheet) {
       return res
@@ -84,14 +83,14 @@ const uploadExcel = async (req, res) => {
         .json({ status: "error", message: "Excel file is empty" });
     }
 
-    // Identify Headers
+
     let headerRowIndex = 1;
     let headers = [];
     worksheet.getRow(headerRowIndex).eachCell((cell, colNumber) => {
       headers[colNumber] = cell.value ? cell.value.toString().trim() : "";
     });
 
-    // We define a helper to find column by a substring (case insensitive)
+
     const findCol = (namePatterns) => {
       for (let i = 1; i < headers.length; i++) {
         if (!headers[i]) continue;
@@ -171,9 +170,9 @@ const uploadExcel = async (req, res) => {
         if (!colIdx) return null;
         let val = row.getCell(colIdx).value;
         if (val === null || val === undefined) return null;
-        if (typeof val === "object" && val.text) val = val.text; // formula cells or rich text
+        if (typeof val === "object" && val.text) val = val.text;
         if (val instanceof Date) {
-          return val.toISOString().split("T")[0]; // Just basic date
+          return val.toISOString().split("T")[0];
         }
         return val.toString().trim();
       };
@@ -213,12 +212,10 @@ const uploadExcel = async (req, res) => {
       });
     });
 
-    // Delete uploaded file after processing
     if (fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
 
-    // Check existing order numbers
     const incomingOrderNumbers = rowsToUpsert.map((r) => r.order_number);
     const existingSpks = await SapSpkCorrective.findAll({
       attributes: ["order_number"],
@@ -240,7 +237,6 @@ const uploadExcel = async (req, res) => {
       }
     }
 
-    // Check which new SPKs have a matching Notification
     const newOrderNumbers = newRows.map((r) => r.order_number);
     const matchingNotifications = await Notification.findAll({
       attributes: ["sapOrderNumber"],
@@ -260,7 +256,6 @@ const uploadExcel = async (req, res) => {
       hasMatchedNotification: matchingSet.has(row.order_number),
     }));
 
-    // Return the preview data without saving to DB
     res.status(200).json({
       status: "success",
       message: `Berhasil memproses file Excel. ${newRows.length} data baru, ${skippedRows.length} data dilewati.`,
@@ -278,7 +273,7 @@ const uploadExcel = async (req, res) => {
   }
 };
 
-// 2b. Bulk Insert SPK (Confirm Upload)
+
 const bulkInsertSapSpk = async (req, res) => {
   try {
     const { spks } = req.body;
@@ -321,7 +316,7 @@ const bulkInsertSapSpk = async (req, res) => {
       ],
     });
 
-    // 🔔 Trigger FCM for matching notifications & Work Center Groups
+
     const WORK_CENTER_GROUP_MAP = {
       E: "Elektrik",
       O: "Otomasi",
@@ -330,7 +325,7 @@ const bulkInsertSapSpk = async (req, res) => {
     };
 
     try {
-      // A. Existing logic: Match with reporter notifications
+
       const newOrderNumbers = spks.map((s) => s.order_number);
       const matchingNotifications = await Notification.findAll({
         where: {
@@ -344,7 +339,6 @@ const bulkInsertSapSpk = async (req, res) => {
             attributes: ["nik"],
           });
           if (pelaporUser?.nik) {
-            // Update status to spk_issued
             await notif.update({ approvalStatus: "spk_issued" });
 
             await NotificationService.notify({
@@ -362,8 +356,8 @@ const bulkInsertSapSpk = async (req, res) => {
         }
       }
 
-      // B. New logic: Notify Work Center Groups
-      const groupCounts = {}; // { 'Mekanik': 5, 'Elektrik': 2 }
+
+      const groupCounts = {};
       for (const spk of spks) {
         const wc = spk.work_center || "";
         const prefix = wc.split("-")[0]?.charAt(0)?.toUpperCase();
@@ -374,7 +368,6 @@ const bulkInsertSapSpk = async (req, res) => {
       }
 
       for (const [groupName, count] of Object.entries(groupCounts)) {
-        // Find all users in this group (Teknisi, Petugas, Kasie)
         const groupUsers = await User.findAll({
           where: {
             group: { [Op.like]: `%${groupName}%` },
@@ -398,7 +391,7 @@ const bulkInsertSapSpk = async (req, res) => {
       }
     } catch (notifErr) {
       console.error("Error sending matching notifications:", notifErr);
-      // Don't fail the whole request if notification fails
+
     }
 
     res.status(200).json({
@@ -412,7 +405,7 @@ const bulkInsertSapSpk = async (req, res) => {
   }
 };
 
-// ── Reason of Variance Codes (dropdown options for teknisi) ──────────────────
+
 const REASON_OF_VARIANCE_CODES = {
   '0001': 'Machine malfunction',
   '0002': 'Operating error',
@@ -425,7 +418,7 @@ const REASON_OF_VARIANCE_CODES = {
   '0009': 'Others',
 };
 
-// 3a. Teknisi Claim SPK (Photo Before + Lock)
+
 const claimSapSpk = async (req, res) => {
   const { order_number } = req.params;
 
@@ -437,9 +430,9 @@ const claimSapSpk = async (req, res) => {
         .json({ status: "error", message: "SPK not found" });
     }
 
-    // Only allow claim on fresh SPKs
+
     if (spk.status !== "baru_import") {
-      // If already claimed by this user, allow re-upload of photo
+
       if (spk.status === "eksekusi" && spk.execution_nik === req.user.nik) {
         const updates = { claimed_at: new Date() };
         if (req.file) {
@@ -474,7 +467,6 @@ const claimSapSpk = async (req, res) => {
 
     await spk.update(updates);
 
-    // Sync status to Notification table if exists
     const Notification = require("../../models/Notification");
     await Notification.update(
       { approvalStatus: "eksekusi" },
@@ -492,7 +484,7 @@ const claimSapSpk = async (req, res) => {
   }
 };
 
-// 3b. Teknisi Complete SPK (Form + Photo After)
+
 const executeSapSpk = async (req, res) => {
   const { order_number } = req.params;
   const {
@@ -517,7 +509,7 @@ const executeSapSpk = async (req, res) => {
         .json({ status: "error", message: "SPK not found" });
     }
 
-    // ── Ownership check: only the claimer can complete ──
+    
     if (spk.execution_nik !== req.user.nik) {
       return res.status(403).json({
         status: "error",
@@ -532,7 +524,7 @@ const executeSapSpk = async (req, res) => {
       });
     }
 
-    // ── Validate reason_of_var code ──
+    
     if (reason_of_var && !REASON_OF_VARIANCE_CODES[reason_of_var]) {
       return res.status(400).json({
         status: "error",
@@ -540,7 +532,7 @@ const executeSapSpk = async (req, res) => {
       });
     }
 
-    // ── Auto-compute total_actual_hour ──
+    
     const personnel = actual_personnel ? parseInt(actual_personnel) : null;
     const workHours = actual_work ? parseFloat(actual_work) : null;
     const computedTotalHour =
@@ -562,7 +554,7 @@ const executeSapSpk = async (req, res) => {
       status: "menunggu_review_kadis_pp",
     };
 
-    // Photo after
+
     if (req.file) {
       updates.photo_after = req.file.filename;
     } else if (req.files && req.files.photoAfter && req.files.photoAfter[0]) {
@@ -571,7 +563,6 @@ const executeSapSpk = async (req, res) => {
 
     await spk.update(updates);
 
-    // Sync status to Notification table if exists
     const Notification = require("../../models/Notification");
     await Notification.update(
       { approvalStatus: "menunggu_review_kadis_pp" },
@@ -589,7 +580,7 @@ const executeSapSpk = async (req, res) => {
   }
 };
 
-// 3c. Get Reason of Variance codes (for frontend dropdown)
+
 const getReasonOfVarianceCodes = (req, res) => {
   const codes = Object.entries(REASON_OF_VARIANCE_CODES).map(([code, label]) => ({
     code,
@@ -598,7 +589,7 @@ const getReasonOfVarianceCodes = (req, res) => {
   res.status(200).json({ status: "success", data: codes });
 };
 
-// 4. Delete Single SPK
+
 const deleteSapSpk = async (req, res) => {
   try {
     const { order_number } = req.params;
@@ -616,7 +607,7 @@ const deleteSapSpk = async (req, res) => {
   }
 };
 
-// 5. Delete All SPK
+
 const deleteAllSapSpk = async (req, res) => {
   try {
     await SapSpkCorrective.destroy({ where: {} });
@@ -630,7 +621,7 @@ const deleteAllSapSpk = async (req, res) => {
   }
 };
 
-// 6. Manual Create SPK (for testing/bypass SAP)
+
 const createManualSapSpk = async (req, res) => {
   try {
     const spkData = req.body;
@@ -646,7 +637,6 @@ const createManualSapSpk = async (req, res) => {
 
     const newSpk = await SapSpkCorrective.create(spkData);
 
-    // Sync to notification if exists
     const Notification = require("../../models/Notification");
     const notif = await Notification.findOne({ where: { sapOrderNumber: spkData.order_number } });
     if (notif && notif.kadisPelaporId) {
@@ -675,9 +665,9 @@ const createManualSapSpk = async (req, res) => {
   }
 };
 
-// ── 4. Approval Flows ──────────────────────────────────────────────────────────
 
-// 4a. Kadis PP Approve
+
+
 const approveKadisPp = async (req, res) => {
   const { order_number } = req.params;
   try {
@@ -696,14 +686,12 @@ const approveKadisPp = async (req, res) => {
       kadis_pusat_approved_at: new Date(),
     });
 
-    // Sync status to Notification table if exists
     const Notification = require("../../models/Notification");
     await Notification.update(
       { approvalStatus: "menunggu_review_kadis_pelapor" },
       { where: { sapOrderNumber: order_number } }
     );
 
-    // Notify Kadis Pelapor (if notification exists)
     if (spk.notification && spk.notification.kadisPelaporId) {
       await NotificationService.notify({
         module: "corrective",
@@ -722,7 +710,7 @@ const approveKadisPp = async (req, res) => {
   }
 };
 
-// 4b. Kadis PP Reject
+
 const rejectKadisPp = async (req, res) => {
   const { order_number } = req.params;
   const { rejection_note } = req.body;
@@ -733,20 +721,18 @@ const rejectKadisPp = async (req, res) => {
     if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
     
     await spk.update({
-      status: "eksekusi", // Kembali ke teknisi
+      status: "eksekusi",
       rejected_by: req.user.name || req.user.nik,
       rejected_at: new Date(),
       rejection_note,
     });
 
-    // Sync status to Notification table if exists
     const Notification = require("../../models/Notification");
     await Notification.update(
       { approvalStatus: "eksekusi" },
       { where: { sapOrderNumber: order_number } }
     );
 
-    // Notify Teknisi
     if (spk.execution_nik) {
       await NotificationService.notify({
         module: "corrective",
@@ -765,7 +751,7 @@ const rejectKadisPp = async (req, res) => {
   }
 };
 
-// 4c. Kadis Pelapor Approve
+
 const approveKadisPelapor = async (req, res) => {
   const { order_number } = req.params;
   try {
@@ -782,14 +768,12 @@ const approveKadisPelapor = async (req, res) => {
       kadis_pelapor_approved_at: new Date(),
     });
 
-    // Sync status to Notification table if exists
     const Notification = require("../../models/Notification");
     await Notification.update(
       { approvalStatus: "selesai" },
       { where: { sapOrderNumber: order_number } }
     );
 
-    // Notify Teknisi that it's completely done
     if (spk.execution_nik) {
       await NotificationService.notify({
         module: "corrective",
@@ -808,7 +792,7 @@ const approveKadisPelapor = async (req, res) => {
   }
 };
 
-// 4d. Kadis Pelapor Reject
+
 const rejectKadisPelapor = async (req, res) => {
   const { order_number } = req.params;
   const { rejection_note } = req.body;
@@ -819,20 +803,18 @@ const rejectKadisPelapor = async (req, res) => {
     if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
     
     await spk.update({
-      status: "eksekusi", // Kembali ke teknisi
+      status: "eksekusi",
       rejected_by: req.user.name || req.user.nik,
       rejected_at: new Date(),
       rejection_note,
     });
 
-    // Sync status to Notification table if exists
     const Notification = require("../../models/Notification");
     await Notification.update(
       { approvalStatus: "eksekusi" },
       { where: { sapOrderNumber: order_number } }
     );
 
-    // Notify Teknisi
     if (spk.execution_nik) {
       await NotificationService.notify({
         module: "corrective",

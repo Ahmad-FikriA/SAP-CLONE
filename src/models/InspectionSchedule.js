@@ -3,14 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * InspectionSchedule — jadwal inspeksi (rutin, K3, supervisi).
- *
- * Covers all three inspection flows:
- *   - 'rutin'     → Dinas Inspeksi buat jadwal sendiri
- *   - 'k3'        → Vendor request → Dinas SuperVisi jadwalkan
- *   - 'supervisi'  → User darurat / Planner request → Dinas Inspeksi jadwalkan
- */
+
 const InspectionSchedule = sequelize.define(
   "InspectionSchedule",
   {

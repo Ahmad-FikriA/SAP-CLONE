@@ -34,8 +34,8 @@ const User = sequelize.define('User', {
     { fields: ['role'] },
     { fields: ['dinas'] },
     { fields: ['group'] },
-    { fields: ['role', 'dinas'] },   // approval: WHERE role='kadis' AND dinas=?
-    { fields: ['role', 'group'] },   // notifications: WHERE role='teknisi' AND group LIKE ?
+    { fields: ['role', 'dinas'] },
+    { fields: ['role', 'group'] },
   ],
 });
 

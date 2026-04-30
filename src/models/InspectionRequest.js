@@ -3,14 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * InspectionRequest — permintaan kunjungan inspeksi dari role User.
- *
- * Flow:
- *   User buat request → status: 'pending'
- *   Planner review → approve → status: 'approved' + auto-create InspectionSchedule
- *   Planner review → reject  → status: 'rejected'
- */
+
 const InspectionRequest = sequelize.define(
   "InspectionRequest",
   {

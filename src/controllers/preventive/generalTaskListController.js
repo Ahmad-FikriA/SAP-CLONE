@@ -3,10 +3,7 @@
 const sequelize = require('../../config/database');
 const { GeneralTaskList, GeneralTaskListActivity } = require('../../models/GeneralTaskList');
 
-/**
- * GET /api/task-lists
- * Query params: ?category=Mekanik  (optional)
- */
+
 exports.getAll = async (req, res, next) => {
     try {
         const where = {};
@@ -21,9 +18,7 @@ exports.getAll = async (req, res, next) => {
     } catch (err) { next(err); }
 };
 
-/**
- * GET /api/task-lists/:taskListId
- */
+
 exports.getOne = async (req, res, next) => {
     try {
         const row = await GeneralTaskList.findByPk(req.params.taskListId, {
@@ -34,10 +29,7 @@ exports.getOne = async (req, res, next) => {
     } catch (err) { next(err); }
 };
 
-/**
- * POST /api/task-lists
- * Body: { taskListId, taskListName, category, workCenter?, activities: [{stepNumber, operationText}] }
- */
+
 exports.create = async (req, res, next) => {
     const t = await sequelize.transaction();
     try {
@@ -72,11 +64,7 @@ exports.create = async (req, res, next) => {
     } catch (err) { await t.rollback(); next(err); }
 };
 
-/**
- * PUT /api/task-lists/:taskListId
- * Body: { taskListName?, category?, workCenter?, activities? }
- * Replaces all activities if activities array is provided.
- */
+
 exports.update = async (req, res, next) => {
     const t = await sequelize.transaction();
     try {
@@ -113,9 +101,7 @@ exports.update = async (req, res, next) => {
     } catch (err) { await t.rollback(); next(err); }
 };
 
-/**
- * DELETE /api/task-lists/:taskListId
- */
+
 exports.remove = async (req, res, next) => {
     try {
         const count = await GeneralTaskList.destroy({ where: { taskListId: req.params.taskListId } });
@@ -124,31 +110,7 @@ exports.remove = async (req, res, next) => {
     } catch (err) { next(err); }
 };
 
-/**
- * POST /api/task-lists/import-excel
- * Accepts multipart/form-data field "file" (.xlsx or .csv).
- *
- * Supports three formats from SAP export:
- *
- * Format A — single sheet, flat rows (one row per activity):
- *   task_list_id | task_list_name | category | work_center | step_number | operation_text
- *
- * Format B — multi-sheet SAP block format (Functional Location.xlsx):
- *   Sheet names: "G.Task List M", "G. Task List E", "G. Task List S", "G. Task List O"
- *   Each sheet has blocks separated by blank rows:
- *     Row: "KTI_0001 PREV POMPA (with Grease Pump)"  ← taskListId + taskListName
- *     Row: "PREV POMPA (with Grease Pump)"  |  "M1-N01"   ← name again + workCenter
- *     Row: "1) Cek pompa ..."                         ← activity (strip leading "N) ")
- *     Row: ""                                         ← blank = end of block
- *
- * Format C — SAP CSV export ("General task list.csv"):
- *   Header: Type, Group, Grc, Description, Plant, PlGroup, Workctr
- *   Task list row: Type=A, Group=KTI_XXXX, Description=name, PlGroup=221/222, Workctr=M1-N01
- *   Activity row:  Type=empty, only Description filled (numbered "1) ...")
- *   Blank row between task lists
- *
- * Behavior: upsert — safe to re-import. Existing activities are replaced.
- */
+
 exports.importExcel = async (req, res, next) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded. Send field "file" as multipart/form-data.' });
 
@@ -159,7 +121,7 @@ exports.importExcel = async (req, res, next) => {
     const isCsv   = filename.endsWith('.csv');
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer', raw: false });
 
-    // Detect format by sheet names
+
     const SAP_SHEET_MAP = {
         'G.Task List M':   'Mekanik',
         'G. Task List M':  'Mekanik',
@@ -174,13 +136,12 @@ exports.importExcel = async (req, res, next) => {
     const sapSheets = workbook.SheetNames.filter(n => SAP_SHEET_MAP[n]);
     const parsed = [];
 
-    // ── PG code → category ───────────────────────────────────────────────────
+    
     const PG_CAT = { '221': 'Mekanik', '222': 'Listrik', '223': 'Sipil', '224': 'Otomasi' };
 
     if (isCsv) {
-        // ── Format C: SAP CSV export ─────────────────────────────────────────
-        // Columns: Type, Group, Grc, Description, Plant, PlGroup, Workctr
-        // Skip rows until the real header (contains "Group" or "Type" in first cell)
+        
+
         const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: '', header: 1 });
 
         let headerIdx = -1;
@@ -207,13 +168,13 @@ exports.importExcel = async (req, res, next) => {
             const desc = String(row[col.desc]  || '').trim();
 
             if (!desc && !grp) {
-                // blank row — flush
+
                 if (current) { parsed.push(current); current = null; }
                 continue;
             }
 
             if (type === 'A' && grp) {
-                // task list header row
+
                 if (current) parsed.push(current);
                 const plg = String(row[col.plgroup] || '').trim();
                 const wc  = col.wc >= 0 ? String(row[col.wc] || '').trim() : null;
@@ -228,7 +189,7 @@ exports.importExcel = async (req, res, next) => {
             }
 
             if (current && desc && !grp) {
-                // activity row — strip leading "N) "
+
                 const opText = desc.replace(/^\d+\)\s*/, '').trim();
                 if (opText) {
                     current.activities.push({ stepNumber: current.activities.length + 1, operationText: opText });
@@ -238,7 +199,7 @@ exports.importExcel = async (req, res, next) => {
         if (current) parsed.push(current);
 
     } else if (sapSheets.length > 0) {
-        // ── Format B: SAP block format ───────────────────────────────────────
+        
         for (const sheetName of sapSheets) {
             const category = SAP_SHEET_MAP[sheetName];
             const ws = workbook.Sheets[sheetName];
@@ -250,12 +211,12 @@ exports.importExcel = async (req, res, next) => {
                 const col1 = String(row[1] || '').trim();
 
                 if (!col0) {
-                    // blank row — flush current block
+
                     if (current) { parsed.push(current); current = null; }
                     continue;
                 }
 
-                // New task list block: first column starts with KTI_ pattern
+
                 if (/^KTI_\d+/.test(col0)) {
                     if (current) parsed.push(current);
                     const spaceIdx = col0.indexOf(' ');
@@ -267,13 +228,13 @@ exports.importExcel = async (req, res, next) => {
 
                 if (!current) continue;
 
-                // Second row of block: repeated name + workCenter
+
                 if (current.activities.length === 0 && !current.workCenter && col1) {
                     current.workCenter = col1 || null;
                     continue;
                 }
 
-                // Activity row: strip leading "N) " numbering
+
                 const opText = col0.replace(/^\d+\)\s*/, '').trim();
                 if (opText) {
                     current.activities.push({ stepNumber: current.activities.length + 1, operationText: opText });
@@ -282,7 +243,7 @@ exports.importExcel = async (req, res, next) => {
             if (current) parsed.push(current);
         }
     } else {
-        // ── Format A: flat rows ──────────────────────────────────────────────
+        
         const ws = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
         if (!rows.length) return res.status(400).json({ error: 'Sheet is empty' });
@@ -332,7 +293,7 @@ exports.importExcel = async (req, res, next) => {
 
     if (!parsed.length) return res.status(400).json({ error: 'No task lists found in file' });
 
-    // ── Upsert all parsed task lists ─────────────────────────────────────────
+    
     let imported = 0, skipped = 0;
     const errors = [];
 

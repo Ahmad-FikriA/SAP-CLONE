@@ -3,13 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * InspectionFollowUp — tindak lanjut kerusakan oleh Teknisi.
- *
- * Dibuat otomatis ketika Kepala Dinas approve laporan
- * yang memiliki hasKerusakan = true.
- * Teknisi menerima perintah, mengerjakan, dan memberikan feedback.
- */
+
 const InspectionFollowUp = sequelize.define(
   "InspectionFollowUp",
   {

@@ -1,15 +1,14 @@
-'use strict';
+"use strict";
 
-const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
+const admin = require("firebase-admin");
+const fs = require("fs");
+const path = require("path");
 
 const serviceAccountPath = path.resolve(
   __dirname,
-  '../config/serviceAccountKey.json'
+  "../config/serviceAccountKey.json",
 );
 
-// Initialize firebase-admin once (lazy)
 let initialized = false;
 let initializationFailed = false;
 
@@ -19,13 +18,15 @@ function ensureInitialized() {
   try {
     if (fs.existsSync(serviceAccountPath)) {
       const serviceAccount = require(serviceAccountPath);
-      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
     } else {
       admin.initializeApp({
         credential: admin.credential.applicationDefault(),
       });
       console.warn(
-        '[NotificationService] serviceAccountKey.json not found, trying application default credentials for FCM.'
+        "[NotificationService] serviceAccountKey.json not found, trying application default credentials for FCM.",
       );
     }
 
@@ -34,7 +35,7 @@ function ensureInitialized() {
   } catch (error) {
     initializationFailed = true;
     console.warn(
-      `[NotificationService] FCM initialization unavailable, skipping push delivery: ${error.message}`
+      `[NotificationService] FCM initialization unavailable, skipping push delivery: ${error.message}`,
     );
     return false;
   }
@@ -43,24 +44,12 @@ function ensureInitialized() {
 let _User, _PushNotification;
 function getModels() {
   if (!_User) {
-    _User = require('../models/User');
-    _PushNotification = require('../models/PushNotification');
+    _User = require("../models/User");
+    _PushNotification = require("../models/PushNotification");
   }
   return { User: _User, PushNotification: _PushNotification };
 }
 
-/**
- * Send a push notification and persist it to the DB.
- * NEVER throws — notification failure must not block approval flow.
- *
- * @param {Object} opts
- * @param {string}   opts.module        'preventive' | 'corrective' | 'inspection' | 'supervisi'
- * @param {string}   opts.type          e.g. 'spk_created', 'spk_submitted'
- * @param {string}   opts.title         Notification title shown in system tray
- * @param {string}   opts.body          Notification body text
- * @param {Object}   opts.data          Arbitrary data (e.g. { spkNumber, deepLink })
- * @param {string[]} opts.recipientIds  Recipient identifiers (NIK / user id) to notify
- */
 async function notify({
   module,
   type,
@@ -71,7 +60,6 @@ async function notify({
   targetNik,
   targetId,
 }) {
-  // 0. Backward compatibility & normalization
   if (!type && data.type) type = data.type;
 
   let ids = [];
@@ -93,9 +81,8 @@ async function notify({
   const { User, PushNotification } = getModels();
 
   try {
-    const { Op } = require('sequelize');
+    const { Op } = require("sequelize");
 
-    // 1. Look up users by NIK or ID (since recipientIds can contain either)
     const users = await User.findAll({
       where: {
         [Op.or]: [
@@ -108,7 +95,6 @@ async function notify({
 
     if (users.length === 0) return;
 
-    // 2. Persist to PushNotification using user.id
     try {
       await PushNotification.bulkCreate(
         users.map((u) => ({
@@ -119,17 +105,19 @@ async function notify({
           data,
           recipientId: u.id,
           isRead: false,
-        }))
+        })),
       );
     } catch (err) {
-      console.error('[NotificationService] Failed to persist notification:', err.message);
+      console.error(
+        "[NotificationService] Failed to persist notification:",
+        err.message,
+      );
     }
 
     if (!ensureInitialized()) return;
 
     const tokens = users.filter((u) => u.fcmToken).map((u) => u.fcmToken);
 
-    // 2. Send FCM multicast (only if any tokens found)
     if (tokens.length > 0) {
       const fcmMessage = {
         notification: { title, body },
@@ -137,7 +125,7 @@ async function notify({
           module,
           type,
           ...Object.fromEntries(
-            Object.entries(data).map(([k, v]) => [k, String(v ?? '')])
+            Object.entries(data).map(([k, v]) => [k, String(v ?? "")]),
           ),
         },
         tokens,
@@ -146,13 +134,14 @@ async function notify({
       const staleTokens = [];
       response.responses.forEach((r, i) => {
         if (!r.success) {
-          console.error(`[NotificationService] FCM failed token=${tokens[i]}:`, r.error?.message);
-          // "registration-token-not-registered" and "invalid-registration-token"
-          // mean the token is permanently invalid — clear it from the DB.
-          const code = r.error?.code ?? '';
+          console.error(
+            `[NotificationService] FCM failed token=${tokens[i]}:`,
+            r.error?.message,
+          );
+          const code = r.error?.code ?? "";
           if (
-            code === 'messaging/registration-token-not-registered' ||
-            code === 'messaging/invalid-registration-token'
+            code === "messaging/registration-token-not-registered" ||
+            code === "messaging/invalid-registration-token"
           ) {
             staleTokens.push(tokens[i]);
           }
@@ -161,17 +150,20 @@ async function notify({
       if (staleTokens.length > 0) {
         await User.update(
           { fcmToken: null },
-          { where: { fcmToken: staleTokens } }
+          { where: { fcmToken: staleTokens } },
         ).catch((e) =>
-          console.error('[NotificationService] Failed to clear stale tokens:', e.message)
+          console.error(
+            "[NotificationService] Failed to clear stale tokens:",
+            e.message,
+          ),
         );
-        console.log(`[NotificationService] Cleared ${staleTokens.length} stale FCM token(s)`);
+        console.log(
+          `[NotificationService] Cleared ${staleTokens.length} stale FCM token(s)`,
+        );
       }
     }
-
   } catch (err) {
-    console.error('[NotificationService] notify() error:', err.message);
-    // Intentionally swallowed — approval flow must not be blocked
+    console.error("[NotificationService] notify() error:", err.message);
   }
 }
 

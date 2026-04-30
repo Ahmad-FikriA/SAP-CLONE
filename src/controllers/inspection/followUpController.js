@@ -3,11 +3,9 @@
 const InspectionFollowUp = require("../../models/InspectionFollowUp");
 const SuratPelanggaran = require("../../models/SuratPelanggaran");
 
-/**
- * FollowUp Controller — Teknisi tindak lanjut kerusakan.
- */
 
-// GET /api/inspection/follow-ups
+
+
 async function listFollowUps(req, res) {
   try {
     const where = {};
@@ -57,7 +55,7 @@ async function listFollowUps(req, res) {
   }
 }
 
-// GET /api/inspection/follow-ups/:id
+
 async function getFollowUp(req, res) {
   try {
     const followUp = await InspectionFollowUp.findByPk(req.params.id, {
@@ -88,7 +86,7 @@ async function getFollowUp(req, res) {
   }
 }
 
-// POST /api/inspection/follow-ups
+
 async function createFollowUp(req, res) {
   try {
     const {
@@ -121,7 +119,7 @@ async function createFollowUp(req, res) {
   }
 }
 
-// PUT /api/inspection/follow-ups/:id
+
 async function updateFollowUp(req, res) {
   try {
     const followUp = await InspectionFollowUp.findByPk(req.params.id);
@@ -156,7 +154,7 @@ async function updateFollowUp(req, res) {
   }
 }
 
-// PUT /api/inspection/follow-ups/:id/approve
+
 async function approveFollowUp(req, res) {
   try {
     const followUp = await InspectionFollowUp.findByPk(req.params.id);
@@ -182,7 +180,7 @@ async function approveFollowUp(req, res) {
   }
 }
 
-// PUT /api/inspection/follow-ups/:id/reject
+
 async function rejectFollowUp(req, res) {
   try {
     const followUp = await InspectionFollowUp.findByPk(req.params.id);

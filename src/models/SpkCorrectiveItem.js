@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── SPK Corrective Item ───────────────────────────────────────────────────────
+
 const SpkCorrectiveItem = sequelize.define('SpkCorrectiveItem', {
   itemId: {
     type: DataTypes.INTEGER,
@@ -42,7 +42,7 @@ const SpkCorrectiveItem = sequelize.define('SpkCorrectiveItem', {
   timestamps: false,
 });
 
-// ── SPK Corrective Photo ──────────────────────────────────────────────────────
+
 const SpkCorrectivePhoto = sequelize.define('SpkCorrectivePhoto', {
   photoId: {
     type: DataTypes.INTEGER,

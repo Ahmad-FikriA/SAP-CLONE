@@ -11,15 +11,11 @@ const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping'
 const NotificationService = require('../../services/notificationService');
 const User = require('../../models/User');
 
-/**
- * Delete all child records for the given spkNumbers inside an existing transaction,
- * then delete the SPK rows themselves.
- * Order: Submission (children cascade) → SpkActivity → SpkEquipment → Spk
- */
+
 async function destroySpksByNumbers(spkNumbers, transaction) {
   const where = { spkNumber: { [Op.in]: spkNumbers } };
 
-  // 1. Submissions — find IDs first so child tables cascade via Sequelize
+
   const submissions = await Submission.findAll({ attributes: ['id'], where, transaction });
   if (submissions.length) {
     const subIds = submissions.map(s => s.id);
@@ -28,15 +24,15 @@ async function destroySpksByNumbers(spkNumbers, transaction) {
     await Submission.destroy({ where: { id: { [Op.in]: subIds } }, transaction });
   }
 
-  // 3. SPK children with existing CASCADE (belt-and-suspenders)
+
   await SpkActivity.destroy({ where, transaction });
   await SpkEquipment.destroy({ where, transaction });
 
-  // 4. Delete the SPK itself
+
   return Spk.destroy({ where, transaction });
 }
 
-// ── Eager-load config ─────────────────────────────────────────────────────────
+
 const INCLUDE_FULL = [
   {
     model: SpkEquipment, as: 'equipmentModels',
@@ -49,14 +45,14 @@ const INCLUDE_FULL = [
   },
 ];
 
-// Derive ISO week number and year from a DATEONLY string (YYYY-MM-DD)
+
 function getISOWeek(dateStr) {
   if (!dateStr) return { weekNumber: null, weekYear: null };
-  // Parse as UTC date (DATEONLY field is already YYYY-MM-DD, treat as UTC)
+
   const d = new Date(dateStr + 'T00:00:00Z');
   const thu = new Date(d);
   thu.setUTCDate(d.getUTCDate() + (4 - (d.getUTCDay() || 7)));
-  const yearStart = new Date(Date.UTC(thu.getUTCFullYear(), 0, 4)); // Jan 4 always in week 1
+  const yearStart = new Date(Date.UTC(thu.getUTCFullYear(), 0, 4));
   const jan4Day = yearStart.getUTCDay() || 7;
   const week1Mon = new Date(yearStart);
   week1Mon.setUTCDate(yearStart.getUTCDate() - (jan4Day - 1));
@@ -103,7 +99,7 @@ function fmt(spk) {
 
 const VALID_CATEGORIES = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
 
-// GET /api/spk
+
 const getAll = async (req, res) => {
   if (req.query.category && !VALID_CATEGORIES.includes(req.query.category)) {
     return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
@@ -114,7 +110,7 @@ const getAll = async (req, res) => {
   if (req.query.from) where.scheduledDate = { ...where.scheduledDate, [Op.gte]: req.query.from };
   if (req.query.to)   where.scheduledDate = { ...where.scheduledDate, [Op.lte]: req.query.to };
 
-  // Filter by ISO week number + year (alternative to from/to date range)
+
   if (req.query.week && req.query.year) {
     const week = parseInt(req.query.week, 10);
     const year = parseInt(req.query.year, 10);
@@ -132,7 +128,7 @@ const getAll = async (req, res) => {
     };
   }
 
-  // Plant filter — subquery through SpkEquipment → Equipment
+
   if (req.query.plantId) {
     where[Op.and] = where[Op.and] || [];
     where[Op.and].push(
@@ -142,8 +138,7 @@ const getAll = async (req, res) => {
     );
   }
 
-  // If equipmentId is given, replace the SpkEquipment include with a filtered one
-  // (INNER JOIN — only SPKs that have this equipment)
+
   let include = INCLUDE_FULL;
   if (req.query.equipmentId) {
     include = [
@@ -160,7 +155,7 @@ const getAll = async (req, res) => {
 
   const order = [['scheduled_date', 'DESC'], ['spk_number', 'ASC']];
 
-  // Pagination — only active when client explicitly passes ?limit=
+
   if (req.query.limit !== undefined) {
     const limit  = Math.min(parseInt(req.query.limit,  10) || 50, 200);
     const offset = parseInt(req.query.offset, 10) || 0;
@@ -172,12 +167,12 @@ const getAll = async (req, res) => {
   res.json(data.map(fmt));
 };
 
-// GET /api/spk/:spkNumber
+
 const getOne = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
 
-  // Include submission photo paths so approvers can see technician's documentation
+
   let photoUrls = [];
   const submission = await Submission.findOne({
     where: { spkNumber: spk.spkNumber },
@@ -194,7 +189,7 @@ const getOne = async (req, res) => {
   res.json({ ...fmt(spk), photoUrls });
 };
 
-// POST /api/spk
+
 const create = async (req, res) => {
   const { spkNumber, description, interval, category, status, durationActual, scheduledDate, equipmentModels = [], activitiesModel = [] } = req.body;
   if (!spkNumber) return res.status(400).json({ error: 'spkNumber is required' });
@@ -209,7 +204,6 @@ const create = async (req, res) => {
     for (const act of activitiesModel) await SpkActivity.create({ ...act, spkNumber }, { transaction: t });
     await t.commit();
 
-    // Notify Teknisi of the matching discipline — filter by group keyword
     const groupKeyword = CATEGORY_GROUP_MAP[spk.category];
     console.log(`[SPK notify] category=${spk.category} groupKeyword=${groupKeyword}`);
     if (groupKeyword) {
@@ -235,7 +229,7 @@ const create = async (req, res) => {
   } catch (err) { await t.rollback(); throw err; }
 };
 
-// PUT /api/spk/:spkNumber
+
 const update = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber);
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
@@ -245,7 +239,7 @@ const update = async (req, res) => {
   res.json(fmt(fresh));
 };
 
-// POST /api/spk/bulk-delete
+
 const bulkDelete = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
@@ -261,7 +255,6 @@ const bulkDelete = async (req, res) => {
   }
 };
 
-// DELETE /api/spk/:spkNumber
 const remove = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber);
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
@@ -277,12 +270,12 @@ const remove = async (req, res) => {
   }
 };
 
-// POST /api/spk/:spkNumber/submit
+
 const submit = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
 
-  // Block re-submission of an already-submitted or approved SPK
+
   if (!['pending', 'rejected'].includes(spk.status)) {
     return res.status(409).json({ error: `SPK sudah disubmit (status: ${spk.status})` });
   }
@@ -290,12 +283,11 @@ const submit = async (req, res) => {
   const { durationActual, activityResultsModel = [], photoPaths = [], evaluasi, latitude, longitude, workStart, locationQuality, lateReason, equipmentStatus = 'Running' } = req.body;
   const subId = `SUB-${uuid().slice(0, 8).toUpperCase()}`;
 
-  // ── 24h duplicate prevention ────────────────────────────────────────────────
+  
   const equipmentIds = (spk.equipmentModels ?? []).map(e => e.equipmentId);
   if (equipmentIds.length > 0) {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    // Find any SPK with the same intervalPeriod + overlapping equipment submitted in last 24h
     const conflictingSpkNumbers = await SpkEquipment.findAll({
       where: { equipmentId: { [Op.in]: equipmentIds } },
       attributes: ['spkNumber'],
@@ -334,18 +326,16 @@ const submit = async (req, res) => {
     }
   }
 
-  // Late SPK validation — require lateReason if submitting after scheduled week ends
+
   if (spk.scheduledDate) {
-    const scheduled = new Date(spk.scheduledDate); // DATEONLY → YYYY-MM-DD
-    // Normalize to ISO weekday (Mon=1 … Sun=7) to match Flutter's Dart convention.
-    // getUTCDay() returns Sun=0 … Sat=6; negative daysToFriday (Sat=-1, Sun=-2)
-    // correctly points back to the preceding Friday.
+    const scheduled = new Date(spk.scheduledDate);
+
     const rawDow = scheduled.getUTCDay();
-    const isoDow = rawDow === 0 ? 7 : rawDow; // Mon=1 … Sun=7
-    const daysToFriday = 5 - isoDow;           // 0 on Fri, negative for Sat/Sun
+    const isoDow = rawDow === 0 ? 7 : rawDow;
+    const daysToFriday = 5 - isoDow;
     const weekFriday = new Date(scheduled);
     weekFriday.setUTCDate(weekFriday.getUTCDate() + daysToFriday);
-    weekFriday.setUTCHours(23, 59, 59, 999); // end of Friday UTC
+    weekFriday.setUTCHours(23, 59, 59, 999);
 
     const isLate = new Date() > weekFriday;
     if (isLate && (!lateReason || lateReason.trim().length < 10)) {
@@ -357,7 +347,6 @@ const submit = async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
-    // Create submission record
     const sub = await Submission.create({
       id: subId, spkNumber: spk.spkNumber, durationActual: durationActual ?? null,
       evaluasi: evaluasi || null, latitude: latitude ?? 0, longitude: longitude ?? 0,
@@ -367,10 +356,10 @@ const submit = async (req, res) => {
       lateReason: lateReason ?? null,
     }, { transaction: t });
 
-    // Photos
+
     for (const p of photoPaths) await SubmissionPhoto.create({ submissionId: subId, photoPath: p }, { transaction: t });
 
-    // Activity results
+
     for (const r of activityResultsModel) {
       await SubmissionActivityResult.create({
         submissionId: subId, activityNumber: r.activityNumber,
@@ -378,14 +367,12 @@ const submit = async (req, res) => {
         measurementValue: r.measurementValue ?? null,
       }, { transaction: t });
 
-      // Update activity on the SPK row
       await SpkActivity.update(
         { resultComment: r.resultComment ?? null, isVerified: r.isVerified ?? false, durationActual: r.durationActual ?? null, measurementValue: r.measurementValue ?? null },
         { where: { spkNumber: spk.spkNumber, activityNumber: r.activityNumber }, transaction: t }
       );
     }
 
-    // Move SPK into approval chain
     await spk.update({
       status: 'awaiting_kasie',
       durationActual: durationActual ?? spk.durationActual,
@@ -397,7 +384,6 @@ const submit = async (req, res) => {
 
     await t.commit();
 
-    // Notify Kasie whose discipline matches the SPK category
     const kasieGroupKeyword = CATEGORY_GROUP_MAP[spk.category];
     const kasieUsers = await User.findAll({
       where: {
@@ -421,30 +407,14 @@ const submit = async (req, res) => {
   } catch (err) { await t.rollback(); throw err; }
 };
 
-// POST /api/spk/:spkNumber/sync
+
 const sync = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber);
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
   res.json({ message: 'Synced to SAP (mock)', spkNumber: spk.spkNumber, syncedAt: new Date().toISOString() });
 };
 
-/**
- * POST /api/spk/generate-from-task-list
- *
- * Body:
- *   spkNumber       - e.g. "SPK-2026-014"
- *   description     - e.g. "Perawatan Pompa PS III - Bulanan"
- *   interval        - e.g. "1 Bulan"
- *   taskListId      - e.g. "KTI_0001" (a general task list to use as template)
- *   equipmentIds    - e.g. ["2210000012", "2210000015"] (SAP equipment IDs)
- *
- * What it does:
- *   1. Looks up the task list and its activities
- *   2. Looks up each equipment by ID
- *   3. Creates the SPK with the task list's category
- *   4. Links all selected equipment
- *   5. For each equipment × each task list activity → creates an SpkActivity
- */
+
 const generateFromTaskList = async (req, res) => {
   const { spkNumber, description, interval, taskListId, equipmentIds = [] } = req.body;
 
@@ -452,23 +422,23 @@ const generateFromTaskList = async (req, res) => {
     return res.status(400).json({ error: 'spkNumber, taskListId, and equipmentIds[] are required' });
   }
 
-  // 1. Fetch the task list template
+
   const taskList = await GeneralTaskList.findByPk(taskListId, {
     include: [{ model: GeneralTaskListActivity, as: 'activities', order: [['stepNumber', 'ASC']] }],
   });
   if (!taskList) return res.status(404).json({ error: `Task list ${taskListId} not found` });
 
-  // 2. Fetch equipment records
+
   const equipmentRecords = await Equipment.findAll({ where: { equipmentId: { [Op.in]: equipmentIds } } });
   if (!equipmentRecords.length) return res.status(404).json({ error: 'No valid equipment found' });
 
-  // 3. Check if SPK already exists
+
   const exists = await Spk.findByPk(spkNumber);
   if (exists) return res.status(409).json({ error: 'spkNumber already exists' });
 
   const t = await sequelize.transaction();
   try {
-    // 4. Create SPK header
+
     await Spk.create({
       spkNumber,
       description: description || `${taskList.taskListName}`,
@@ -477,7 +447,7 @@ const generateFromTaskList = async (req, res) => {
       status: 'pending',
     }, { transaction: t });
 
-    // 5. Link equipment
+
     for (const eq of equipmentRecords) {
       await SpkEquipment.create({
         spkNumber,
@@ -487,7 +457,7 @@ const generateFromTaskList = async (req, res) => {
       }, { transaction: t });
     }
 
-    // 6. Generate activities: for each equipment × each task list step
+
     let actNum = 1;
     for (const eq of equipmentRecords) {
       for (const step of (taskList.activities || [])) {
@@ -498,14 +468,13 @@ const generateFromTaskList = async (req, res) => {
           operationText: step.operationText,
           measurementType: step.measurementType ?? null,
           measurementUnit: step.measurementUnit ?? null,
-          durationPlan: 0.5,    // default plan duration
+          durationPlan: 0.5,
         }, { transaction: t });
       }
     }
 
     await t.commit();
 
-    // Notify Teknisi of the matching discipline
     const groupKeyword = CATEGORY_GROUP_MAP[taskList.category];
     console.log(`[SPK notify] generateFromTaskList category=${taskList.category} groupKeyword=${groupKeyword}`);
     if (groupKeyword) {
@@ -531,17 +500,15 @@ const generateFromTaskList = async (req, res) => {
   } catch (err) { await t.rollback(); throw err; }
 };
 
-// Maps SPK category → teknisi group keyword in DB
-// All teknisi have role='teknisi', discipline is stored in `group` field
+
 const CATEGORY_GROUP_MAP = {
   Mekanik: 'Mekanik',
-  Listrik: 'Elektrik',  // category='Listrik' but group='Elektrik' in DB
+  Listrik: 'Elektrik',
   Sipil: 'Sipil',
   Otomasi: 'Otomasi',
 };
 
-// Plant name → Kadis dinas routing map
-// plantName comes from Equipment.plantName (set during SAP import), not the raw funcloc code.
+
 const PLANT_KADIS_MAP = [
   { pattern: /Cidanau|Cipasauran|WTP Cidanau/i, dinas: 'Pengolahan Air Cipasauran & Cidanau' },
   { pattern: /Waduk|Re-use/i,                    dinas: 'Pengolahan Air Baku' },
@@ -557,7 +524,7 @@ function getExpectedKadisDinas(plantName) {
   return null;
 }
 
-// POST /api/spk/:spkNumber/approve-kasie
+
 const approveKasie = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
@@ -571,7 +538,7 @@ const approveKasie = async (req, res) => {
     return res.status(403).json({ error: 'Only Kasie/Supervisor can approve this step' });
   }
 
-  // Kasie can only approve SPKs matching their discipline (group field)
+
   const requiredGroup = CATEGORY_GROUP_MAP[spk.category];
   const userGroup = req.user?.group || '';
   if (requiredGroup && !userGroup.toLowerCase().includes(requiredGroup.toLowerCase())) {
@@ -586,7 +553,6 @@ const approveKasie = async (req, res) => {
     kasieApprovedAt: new Date(),
   });
 
-  // Notify Kadis Perawatan — role='kadis' + dinas contains 'Pusat Perawatan'
   const kadisPerawatanUsers = await User.findAll({
     where: { role: 'kadis', dinas: 'Pusat Perawatan' },
     attributes: ['id'],
@@ -606,7 +572,7 @@ const approveKasie = async (req, res) => {
   res.json(fmt(fresh));
 };
 
-// POST /api/spk/:spkNumber/approve-kadis-perawatan
+
 const approveKadisPerawatan = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
@@ -626,7 +592,6 @@ const approveKadisPerawatan = async (req, res) => {
     kadisPerawatanApprovedAt: new Date(),
   });
 
-  // Notify the correct Kadis using plant name routing
   const plantName = spk.equipmentModels?.[0]?.equipmentDetails?.plantName ?? null;
   const expectedDinasForNotif = getExpectedKadisDinas(plantName);
   if (expectedDinasForNotif) {
@@ -650,7 +615,7 @@ const approveKadisPerawatan = async (req, res) => {
   res.json(fmt(fresh));
 };
 
-// POST /api/spk/:spkNumber/approve-kadis
+
 const approveKadis = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
@@ -664,7 +629,7 @@ const approveKadis = async (req, res) => {
     return res.status(403).json({ error: 'Only Kadis can approve this step' });
   }
 
-  // Validate Kadis routing by plant name (read from equipment, not raw funcloc code)
+
   const plantName = spk.equipmentModels?.[0]?.equipmentDetails?.plantName ?? null;
   const expectedDinas = getExpectedKadisDinas(plantName);
   if (expectedDinas && !dinas.toLowerCase().includes(expectedDinas.toLowerCase())) {
@@ -677,7 +642,6 @@ const approveKadis = async (req, res) => {
     kadisApprovedAt: new Date(),
   });
 
-  // Notify the Teknisi who submitted (submittedBy stores NIK)
   const submittedSpk = await Spk.findOne({
     where: { spkNumber: spk.spkNumber },
     attributes: ['submittedBy'],
@@ -703,7 +667,7 @@ const approveKadis = async (req, res) => {
   res.json(fmt(fresh));
 };
 
-// POST /api/spk/batch-generate
+
 const batchGenerate = async (req, res) => {
   const { week, year, interval, category, equipmentIds = [] } = req.body;
 
@@ -714,7 +678,7 @@ const batchGenerate = async (req, res) => {
     return res.status(400).json({ error: 'week must be between 1 and 53' });
   }
 
-  // Compute weekStart (Monday of ISO week W) — use UTC to avoid timezone shift
+
   const jan4 = new Date(Date.UTC(year, 0, 4));
   const jan4Day = jan4.getUTCDay() || 7;
   const week1Mon = new Date(jan4);
@@ -727,7 +691,6 @@ const batchGenerate = async (req, res) => {
   const weekStr = String(week).padStart(2, '0');
   const spkPrefix = `SPK-${catCode}-${year}-W${weekStr}-`;
 
-  // Find highest existing sequence for this prefix
   const existingWithPrefix = await Spk.findAll({
     where: { spkNumber: { [Op.like]: spkPrefix + '%' } },
     attributes: ['spkNumber'],
@@ -737,7 +700,7 @@ const batchGenerate = async (req, res) => {
     return m ? Math.max(max, parseInt(m[1])) : max;
   }, 0);
 
-  // Load mappings for all requested equipment + interval (in bulk)
+
   const mappings = await EquipmentIntervalMapping.findAll({
     where: { equipmentId: { [Op.in]: equipmentIds }, interval },
     include: [{
@@ -748,7 +711,7 @@ const batchGenerate = async (req, res) => {
   const mappingByEq = {};
   for (const m of mappings) mappingByEq[m.equipmentId] = m;
 
-  // Idempotency: find equipment that already have an SPK for this week + interval
+
   const existingLinks = await SpkEquipment.findAll({
     where: { equipmentId: { [Op.in]: equipmentIds } },
     include: [{
@@ -761,7 +724,7 @@ const batchGenerate = async (req, res) => {
   });
   const alreadyDone = new Set(existingLinks.map(e => e.equipmentId));
 
-  // Load equipment details
+
   const eqRecords = await Equipment.findAll({ where: { equipmentId: { [Op.in]: equipmentIds } } });
   const eqMap = {};
   for (const eq of eqRecords) eqMap[eq.equipmentId] = eq;
@@ -814,7 +777,6 @@ const batchGenerate = async (req, res) => {
 
     await t.commit();
 
-    // Notify Teknisi of the matching discipline
     const groupKeyword = CATEGORY_GROUP_MAP[category];
     console.log(`[SPK notify] batchGenerate category=${category} groupKeyword=${groupKeyword} created=${created.length}`);
     if (groupKeyword && created.length > 0) {

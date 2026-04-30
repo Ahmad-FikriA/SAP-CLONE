@@ -40,7 +40,7 @@ const SapSpkCorrective = sequelize.define(
       allowNull: true,
     },
     
-    // Custom Fields
+
     status: {
       type: DataTypes.ENUM(
         "baru_import",
@@ -53,28 +53,28 @@ const SapSpkCorrective = sequelize.define(
       defaultValue: "baru_import",
     },
 
-    // ── Claim / Ownership Lock ────────────────────────────────────────────
+    
     execution_nik: DataTypes.STRING,
     execution_name: DataTypes.STRING,
     claimed_at: DataTypes.DATE,
     photo_before: DataTypes.STRING,
     photo_after: DataTypes.STRING,
 
-    // ── Technician Execution Fields (filled on complete) ──────────────────
-    actual_conf_text: DataTypes.TEXT,          // Deskripsi perbaikan setelah
-    actual_reason_of_var: DataTypes.STRING,    // Kode 0001-0009
-    actual_work_start: DataTypes.DATEONLY,     // Tanggal mulai kerja aktual
-    actual_work_finish: DataTypes.DATEONLY,    // Tanggal selesai kerja aktual
-    actual_start_time: DataTypes.TIME,         // Jam mulai aktual (HH:mm:ss)
-    actual_finish_time: DataTypes.TIME,        // Jam selesai aktual (HH:mm:ss)
+    
+    actual_conf_text: DataTypes.TEXT,
+    actual_reason_of_var: DataTypes.STRING,
+    actual_work_start: DataTypes.DATEONLY,
+    actual_work_finish: DataTypes.DATEONLY,
+    actual_start_time: DataTypes.TIME,
+    actual_finish_time: DataTypes.TIME,
     actual_materials: DataTypes.TEXT,
     actual_tools: DataTypes.TEXT,
-    actual_personnel: DataTypes.INTEGER,       // Jumlah pekerja aktual
-    actual_work: DataTypes.DECIMAL(10, 2),     // Jam kerja per orang (override SAP)
-    total_actual_hour: DataTypes.DECIMAL(10, 2), // Auto: actual_personnel × actual_work
+    actual_personnel: DataTypes.INTEGER,
+    actual_work: DataTypes.DECIMAL(10, 2),
+    total_actual_hour: DataTypes.DECIMAL(10, 2),
     job_result_description: DataTypes.TEXT,
 
-    // ── Approval Tracking ─────────────────────────────────────────────────
+    
     kadis_pusat_approved_by: DataTypes.STRING,
     kadis_pusat_approved_at: DataTypes.DATE,
     kadis_pelapor_approved_by: DataTypes.STRING,

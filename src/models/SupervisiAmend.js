@@ -3,15 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * SupervisiAmend — satu record amend (perpanjangan waktu) untuk SupervisiJob.
- *
- * Satu job bisa punya banyak amend (multi-amend).
- * Flutter client menggunakan endpoint:
- *   POST   /inspection/supervisi/jobs/:jobId/amends
- *   PUT    /inspection/supervisi/jobs/:jobId/amends/:amendId
- *   DELETE /inspection/supervisi/jobs/:jobId/amends/:amendId
- */
+
 const SupervisiAmend = sequelize.define(
   "SupervisiAmend",
   {

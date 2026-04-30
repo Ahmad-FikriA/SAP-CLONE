@@ -3,14 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * SupervisiVisit — rekaman kunjungan harian Dinas Inspeksi.
- *
- * Satu record per hari per pekerjaan.
- * - status='hadir'        → kunjungan berhasil, ada foto + keterangan
- * - status='tidak_hadir'  → tidak bisa hadir, wajib isi alasan
- *   isPelanggaran otomatis = true jika tidak_hadir
- */
+
 const SupervisiVisit = sequelize.define(
   "SupervisiVisit",
   {
@@ -104,7 +97,7 @@ const SupervisiVisit = sequelize.define(
     timestamps: true,
     indexes: [
       {
-        // Satu visit per hari per job per lokasi
+
         unique: true,
         fields: ["jobId", "visitDate", "locationId"],
       },
@@ -190,16 +183,13 @@ async function ensureSupervisiVisitSchema() {
     comment: "Hadir atau tidak hadir",
   });
 
-  // ── Migrasi Unique Index untuk multi-lokasi ───────────────────────────────
-  // Index lama: UNIQUE(jobId, visitDate) — hanya allow 1 visit per hari.
-  // Index baru:  UNIQUE(jobId, visitDate, locationId) — allow 1 visit per hari PER LOKASI.
-  // Jika index lama masih ada, hapus dulu, lalu buat yang baru.
+  
+
   try {
     const [indexes] = await sequelize.query(
       `SHOW INDEX FROM \`${tableName}\` WHERE Key_name != 'PRIMARY'`
     );
 
-    // Cari index dengan kolom (jobId, visitDate) tapi TIDAK punya locationId
     const oldIndexNames = new Set();
     const indexCols = {};
     for (const row of indexes) {
@@ -211,7 +201,7 @@ async function ensureSupervisiVisitSchema() {
       const hasJobId = cols.includes("jobId");
       const hasVisitDate = cols.includes("visitDate");
       const hasLocationId = cols.includes("locationId");
-      // Old-style: (jobId, visitDate) saja OR (jobId, visitDate, locationId) belum ada
+
       if (hasJobId && hasVisitDate && !hasLocationId) {
         oldIndexNames.add(name);
       }
@@ -222,7 +212,7 @@ async function ensureSupervisiVisitSchema() {
       await sequelize.query(`ALTER TABLE \`${tableName}\` DROP INDEX \`${name}\``);
     }
 
-    // Cek apakah index baru sudah ada
+
     const newIndexExists = Object.values(indexCols).some((cols) => {
       return (
         cols.includes("jobId") &&

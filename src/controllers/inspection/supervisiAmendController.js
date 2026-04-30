@@ -12,7 +12,7 @@ const {
   forbiddenMessage,
 } = require("./supervisiAccess");
 
-// ── File upload config ────────────────────────────────────────────────────────
+
 const uploadDir = path.join(__dirname, "../../../uploads/supervisi");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -26,12 +26,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB max per file
+  limits: { fileSize: 20 * 1024 * 1024 },
 });
 
 const uploadAmendDocuments = upload.array("documents", 10);
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function parseStringArray(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
   if (value === null || value === "" || value === undefined) return [];
@@ -44,7 +44,7 @@ function parseStringArray(value) {
   return [];
 }
 
-// POST /api/inspection/supervisi/jobs/:jobId/amends
+
 async function createAmend(req, res) {
   try {
     if (!isSupervisiScheduler(req.user)) {
@@ -80,7 +80,7 @@ async function createAmend(req, res) {
       });
     }
 
-    // Kumpulkan paths dokumen yang diupload
+
     const uploadedPaths = ((req.files) || []).map(
       (f) => `/uploads/supervisi/${f.filename}`,
     );
@@ -103,7 +103,7 @@ async function createAmend(req, res) {
   }
 }
 
-// PUT /api/inspection/supervisi/jobs/:jobId/amends/:amendId
+
 async function updateAmend(req, res) {
   try {
     if (!isSupervisiScheduler(req.user)) {
@@ -134,7 +134,7 @@ async function updateAmend(req, res) {
       });
     }
 
-    // Gabungkan dokumen lama yang dipertahankan + dokumen baru
+
     const keptDocs = parseStringArray(existingDocuments);
     const newDocs = ((req.files) || []).map(
       (f) => `/uploads/supervisi/${f.filename}`,
@@ -154,7 +154,6 @@ async function updateAmend(req, res) {
   }
 }
 
-// DELETE /api/inspection/supervisi/jobs/:jobId/amends/:amendId
 async function deleteAmend(req, res) {
   try {
     if (!isSupervisiScheduler(req.user)) {
@@ -179,7 +178,7 @@ async function deleteAmend(req, res) {
   }
 }
 
-// GET /api/inspection/supervisi/jobs/:jobId/amends
+
 async function listAmends(req, res) {
   try {
     const jobId = parseInt(req.params.jobId, 10);

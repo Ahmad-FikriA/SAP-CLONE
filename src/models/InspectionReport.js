@@ -3,13 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * InspectionReport — laporan hasil inspeksi.
- *
- * Key field: `hasKerusakan` (boolean) — decision point di flow bisnis.
- * Ketika Kepala Dinas approve dan hasKerusakan = true,
- * maka dibuat InspectionFollowUp untuk Teknisi.
- */
+
 const InspectionReport = sequelize.define(
   "InspectionReport",
   {
@@ -65,7 +59,7 @@ const InspectionReport = sequelize.define(
       allowNull: true,
       comment: "Detail kerusakan (jika hasKerusakan = true)",
     },
-    // K3-specific fields
+
     kriteria: {
       type: DataTypes.STRING(100),
       allowNull: true,
@@ -117,9 +111,7 @@ const InspectionReport = sequelize.define(
   },
 );
 
-/**
- * InspectionReportPhoto — foto lampiran laporan inspeksi.
- */
+
 const InspectionReportPhoto = sequelize.define(
   "InspectionReportPhoto",
   {

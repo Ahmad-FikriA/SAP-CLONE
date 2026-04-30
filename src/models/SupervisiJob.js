@@ -3,12 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * SupervisiJob — pekerjaan supervisi yang dibuat oleh Planner.
- *
- * Dinas Inspeksi wajib melakukan kunjungan SETIAP HARI selama range
- * waktuMulai–waktuBerakhir. Setiap hari dicatat di SupervisiVisit.
- */
+
 const SupervisiJob = sequelize.define(
   "SupervisiJob",
   {

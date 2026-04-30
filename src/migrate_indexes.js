@@ -1,43 +1,35 @@
 'use strict';
 
-/**
- * migrate_indexes.js
- *
- * Creates performance indexes on the preventive maintenance tables.
- * Safe to run multiple times — skips indexes that already exist.
- *
- * Usage:
- *   node src/migrate_indexes.js
- */
+
 
 require('dotenv').config();
 const sequelize = require('./config/database');
 
-// [indexName, table, columns]
+
 const indexes = [
-  // ── spk ───────────────────────────────────────────────────────────────────
+  
   ['idx_spk_status',         'spk',                        '(status)'],
   ['idx_spk_category',       'spk',                        '(category)'],
   ['idx_spk_scheduled_date', 'spk',                        '(scheduled_date)'],
   ['idx_spk_submitted_by',   'spk',                        '(submitted_by)'],
   ['idx_spk_status_date',    'spk',                        '(status, scheduled_date)'],
 
-  // ── spk_equipment ─────────────────────────────────────────────────────────
+  
   ['idx_spkeq_spk_number',   'spk_equipment',              '(spk_number)'],
   ['idx_spkeq_equipment_id', 'spk_equipment',              '(equipment_id)'],
 
-  // ── spk_activities ────────────────────────────────────────────────────────
+  
   ['idx_spkact_spk_number',  'spk_activities',             '(spk_number)'],
   ['idx_spkact_equip_id',    'spk_activities',             '(equipment_id)'],
 
-  // ── submissions ───────────────────────────────────────────────────────────
+  
   ['idx_sub_spk_number',     'submissions',                '(spk_number)'],
   ['idx_sub_submitted_at',   'submissions',                '(submitted_at)'],
 
-  // ── submission_activity_results ───────────────────────────────────────────
+  
   ['idx_sar_submission_id',  'submission_activity_results','(submission_id)'],
 
-  // ── users ─────────────────────────────────────────────────────────────────
+  
   ['idx_users_role',         'users',                      '(role)'],
   ['idx_users_dinas',        'users',                      '(dinas)'],
   ['idx_users_group',        'users',                      '(`group`)'],

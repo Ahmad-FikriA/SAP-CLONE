@@ -1,13 +1,9 @@
 "use strict";
 
-/**
- * Sequelize associations — import this ONCE at app startup (in server.js).
- * All models must be imported here so Sequelize knows about their relationships.
- */
+
 
 const User = require("./User");
 const Plant = require("./Plant");
-// Import FunctionalLocation BEFORE Equipment because Equipment has FK to it
 const FunctionalLocation = require("./FunctionalLocation");
 const Equipment = require("./Equipment");
 const { Spk, SpkEquipment, SpkActivity } = require("./Spk");
@@ -32,11 +28,11 @@ const PushNotification = require("./PushNotification");
 const K3Report = require("./K3Report");
 const SapSpkCorrective = require("./SapSpkCorrective");
 
-// ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
+
 Plant.hasMany(Equipment, { foreignKey: "plantId", as: "equipment" });
 Equipment.belongsTo(Plant, { foreignKey: "plantId", as: "plant" });
 
-// ── SPK ↔ SpkEquipment ────────────────────────────────────────────────────────
+
 Spk.hasMany(SpkEquipment, {
   foreignKey: "spkNumber",
   as: "equipmentModels",
@@ -44,14 +40,14 @@ Spk.hasMany(SpkEquipment, {
 });
 SpkEquipment.belongsTo(Spk, { foreignKey: "spkNumber", as: "spk" });
 
-// ── SpkEquipment ↔ Equipment (for lat/lng eager-load in spkController) ────────
+
 SpkEquipment.belongsTo(Equipment, {
   foreignKey: "equipmentId",
   as: "equipmentDetails",
   constraints: false,
 });
 
-// ── SPK ↔ SpkActivity ─────────────────────────────────────────────────────────
+
 Spk.hasMany(SpkActivity, {
   foreignKey: "spkNumber",
   as: "activitiesModel",
@@ -59,11 +55,11 @@ Spk.hasMany(SpkActivity, {
 });
 SpkActivity.belongsTo(Spk, { foreignKey: "spkNumber", as: "spk" });
 
-// ── Submission ↔ Spk ─────────────────────────────────────────────────────────
+
 Submission.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk', constraints: false });
 Spk.hasMany(Submission, { foreignKey: 'spkNumber', as: 'submissions', constraints: false });
 
-// ── Submission ↔ SubmissionPhoto ──────────────────────────────────────────────
+
 Submission.hasMany(SubmissionPhoto, {
   foreignKey: "submissionId",
   as: "photos",
@@ -74,7 +70,7 @@ SubmissionPhoto.belongsTo(Submission, {
   as: "submission",
 });
 
-// ── Submission ↔ SubmissionActivityResult ─────────────────────────────────────
+
 Submission.hasMany(SubmissionActivityResult, {
   foreignKey: "submissionId",
   as: "activityResults",
@@ -85,7 +81,7 @@ SubmissionActivityResult.belongsTo(Submission, {
   as: "submission",
 });
 
-// ── CorrectiveRequest ↔ CorrectiveRequestImage ───────────────────────────────
+
 CorrectiveRequest.hasMany(CorrectiveRequestImage, {
   foreignKey: "requestId",
   as: "images",
@@ -96,21 +92,21 @@ CorrectiveRequestImage.belongsTo(CorrectiveRequest, {
   as: "request",
 });
 
-// ── Notification (Corrective) Relations ─────────────────────────────────────
-// User ||--o{ Notification (submitted by)
+
+
 User.hasMany(Notification, { foreignKey: 'submittedBy', as: 'notificationsSubmitted' });
 Notification.belongsTo(User, { foreignKey: 'submittedBy', as: 'submitter' });
 
-// Kadis Pelapor ||--o{ Notification (Kadis yang melapor)
+
 User.hasMany(Notification, { foreignKey: 'kadisPelaporId', as: 'notificationsAsReporter' });
 Notification.belongsTo(User, { foreignKey: 'kadisPelaporId', as: 'kadisPelapor' });
 
-// Equipment ||--o{ Notification
+
 Equipment.hasMany(Notification, { foreignKey: 'equipmentId', as: 'notifications' });
 Notification.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });
 
-// ── SPK Corrective Relations ─────────────────────────────────────────────────
-// SapSpkCorrective ↔ Notification
+
+
 SapSpkCorrective.hasOne(Notification, {
   foreignKey: "sapOrderNumber",
   sourceKey: "order_number",
@@ -124,14 +120,14 @@ Notification.belongsTo(SapSpkCorrective, {
   constraints: false,
 });
 
-// SapSpkCorrective ↔ User (Executor)
+
 SapSpkCorrective.belongsTo(User, {
   foreignKey: "execution_nik",
   targetKey: "nik",
   as: "executor",
   constraints: false,
 });
-// ── Supervisi Module ─────────────────────────────────────────────────────────
+
 const SupervisiJob = require("./SupervisiJob");
 const SupervisiVisit = require("./SupervisiVisit");
 const SupervisiAmend = require("./SupervisiAmend");
@@ -156,7 +152,7 @@ SupervisiAmend.belongsTo(SupervisiJob, {
   as: "job",
 });
 
-// ── Inspection Module ─────────────────────────────────────────────────────────
+
 const InspectionSchedule = require("./InspectionSchedule");
 const {
   InspectionReport,
@@ -164,7 +160,7 @@ const {
 } = require("./InspectionReport");
 const InspectionFollowUp = require("./InspectionFollowUp");
 
-// InspectionSchedule ↔ InspectionReport
+
 InspectionSchedule.hasMany(InspectionReport, {
   foreignKey: "scheduleId",
   as: "reports",
@@ -175,7 +171,7 @@ InspectionReport.belongsTo(InspectionSchedule, {
   as: "schedule",
 });
 
-// InspectionReport ↔ InspectionReportPhoto
+
 InspectionReport.hasMany(InspectionReportPhoto, {
   foreignKey: "reportId",
   as: "photos",
@@ -186,7 +182,7 @@ InspectionReportPhoto.belongsTo(InspectionReport, {
   as: "report",
 });
 
-// InspectionReport ↔ InspectionFollowUp
+
 InspectionReport.hasMany(InspectionFollowUp, {
   foreignKey: "reportId",
   as: "followUps",
@@ -197,7 +193,7 @@ InspectionFollowUp.belongsTo(InspectionReport, {
   as: "report",
 });
 
-// InspectionRequest (User → Planner)
+
 const InspectionRequest = require("./InspectionRequest");
 
 InspectionRequest.belongsTo(InspectionSchedule, {
@@ -206,14 +202,14 @@ InspectionRequest.belongsTo(InspectionSchedule, {
   constraints: false,
 });
 
-// Reverse: InspectionSchedule → InspectionRequest (for schedules created from user requests)
+
 InspectionSchedule.hasOne(InspectionRequest, {
   foreignKey: "scheduleId",
   as: "userRequest",
   constraints: false,
 });
 
-// InspectionFollowUp ↔ SuratPelanggaran
+
 const SuratPelanggaran = require("./SuratPelanggaran");
 
 InspectionFollowUp.hasMany(SuratPelanggaran, {
@@ -226,17 +222,17 @@ SuratPelanggaran.belongsTo(InspectionFollowUp, {
   as: "followUp",
 });
 
-// ── PushNotification ↔ User ──────────────────────────────────────────────────
+
 PushNotification.belongsTo(User, { foreignKey: 'recipient_id', as: 'recipient' });
 User.hasMany(PushNotification, { foreignKey: 'recipient_id', as: 'pushNotifications' });
 
-// ── K3 Report ↔ User ─────────────────────────────────────────────────────────
+
 K3Report.belongsTo(User, { foreignKey: 'dilaporkan_oleh', as: 'pelapor' });
 User.hasMany(K3Report, { foreignKey: 'dilaporkan_oleh', as: 'k3Reports' });
 K3Report.belongsTo(User, { foreignKey: 'ditugaskan_kepada', as: 'petugasHse' });
 User.hasMany(K3Report, { foreignKey: 'ditugaskan_kepada', as: 'tugasK3Reports' });
 
-// ── FunctionalLocation (self-referencing tree) ────────────────────────────────
+
 FunctionalLocation.hasMany(FunctionalLocation, {
   foreignKey: "parentId",
   as: "children",
@@ -246,9 +242,8 @@ FunctionalLocation.belongsTo(FunctionalLocation, {
   as: "parent",
 });
 
-// ── Equipment ↔ FunctionalLocation ───────────────────────────────────────────
-// constraints: false — not all SAP funcLocIds exist in functional_locations tree,
-// so we skip the DB-level FK and let Sequelize handle joins in application code.
+
+
 FunctionalLocation.hasMany(Equipment, {
   foreignKey: "funcLocId",
   as: "equipment",
@@ -260,7 +255,7 @@ Equipment.belongsTo(FunctionalLocation, {
   constraints: false,
 });
 
-// ── GeneralTaskList ↔ GeneralTaskListActivity ────────────────────────────────
+
 GeneralTaskList.hasMany(GeneralTaskListActivity, {
   foreignKey: "taskListId",
   as: "activities",
@@ -271,7 +266,7 @@ GeneralTaskListActivity.belongsTo(GeneralTaskList, {
   as: "taskList",
 });
 
-// ── Equipment x GeneralTaskList interval mappings ────────────────────────────
+
 Equipment.hasMany(EquipmentIntervalMapping, { foreignKey: 'equipmentId', as: 'intervalMappings', onDelete: 'CASCADE' });
 EquipmentIntervalMapping.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });
 GeneralTaskList.hasMany(EquipmentIntervalMapping, { foreignKey: 'taskListId', as: 'intervalMappings' });

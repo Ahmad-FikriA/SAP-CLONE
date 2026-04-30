@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── General Task List (header) ───────────────────────────────────────────────
+
 const GeneralTaskList = sequelize.define('GeneralTaskList', {
     taskListId: {
         type: DataTypes.STRING(20),
@@ -30,7 +30,7 @@ const GeneralTaskList = sequelize.define('GeneralTaskList', {
     timestamps: false,
 });
 
-// ── General Task List Activity (child) ──────────────────────────────────────
+
 const GeneralTaskListActivity = sequelize.define('GeneralTaskListActivity', {
     id: {
         type: DataTypes.INTEGER,
