@@ -62,13 +62,17 @@ export default function UsersPage() {
 
   function openEdit(u) {
     setEditingId(u.id);
-    setForm({ ...EMPTY_FORM, ...u, password: '', permissions: u.permissions ?? null });
+    // Normalize: old-format array permissions (page-list) → null (use template)
+    const perms = (u.permissions && typeof u.permissions === 'object' && !Array.isArray(u.permissions))
+      ? u.permissions
+      : null;
+    setForm({ ...EMPTY_FORM, ...u, password: '', permissions: perms });
     setPanelOpen(true);
   }
 
   function togglePermCRUD(pageKey, op) {
-    const current = form.permissions || {};
-    const pagePerms = current[pageKey] || [];
+    const current = (form.permissions && typeof form.permissions === 'object' && !Array.isArray(form.permissions)) ? form.permissions : {};
+    const pagePerms = Array.isArray(current[pageKey]) ? current[pageKey] : [];
     const next = pagePerms.includes(op) ? pagePerms.filter((o) => o !== op) : [...pagePerms, op];
     setForm({ ...form, permissions: { ...current, [pageKey]: next } });
   }
@@ -337,7 +341,8 @@ export default function UsersPage() {
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {ALL_PAGES.map((page) => {
-                          const pagePerms = (form.permissions || {})[page.key] || [];
+                          const raw = (form.permissions && typeof form.permissions === 'object' && !Array.isArray(form.permissions)) ? form.permissions[page.key] : undefined;
+                          const pagePerms = Array.isArray(raw) ? raw : [];
                           const hasAll = OPS.every((o) => pagePerms.includes(o));
                           return (
                             <tr key={page.key} className="hover:bg-gray-50">

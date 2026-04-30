@@ -57,7 +57,7 @@ export default function SettingsPage() {
   }
 
   const rolePerms = templates[activeRole] || {};
-  const pagesWithRead = ALL_PAGES.filter((p) => (rolePerms[p.key] || []).includes('R')).length;
+  const pagesWithRead = ALL_PAGES.filter((p) => Array.isArray(rolePerms[p.key]) && rolePerms[p.key].includes('R')).length;
 
   return (
     <div className="p-6 space-y-5 max-w-4xl">
@@ -131,7 +131,7 @@ export default function SettingsPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {ALL_PAGES.map((page) => {
-                  const pageOps = rolePerms[page.key] || [];
+                  const pageOps = Array.isArray(rolePerms[page.key]) ? rolePerms[page.key] : [];
                   const hasAll = OPS.every((o) => pageOps.includes(o));
                   return (
                     <tr key={page.key} className="hover:bg-gray-50">
