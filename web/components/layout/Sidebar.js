@@ -43,8 +43,10 @@ export default function Sidebar() {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [user, setUser] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     setCollapsed(localStorage.getItem('sidebar_collapsed') === '1');
     setUser(getUser());
   }, []);
@@ -95,7 +97,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2">
-        {NAV.map((item, i) => {
+        {isMounted && NAV.map((item, i) => {
           if (item.divider) {
             return <div key={i} className="my-2 border-t border-white/10" />;
           }
@@ -122,23 +124,25 @@ export default function Sidebar() {
       </nav>
 
       {/* User + Logout */}
-      <div className="border-t border-white/10 p-3 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">
-          {initials}
+      {isMounted && (
+        <div className="border-t border-white/10 p-3 flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">
+            {initials}
+          </div>
+          {!collapsed && (
+            <span className="text-xs text-white/70 truncate flex-1">
+              {user?.name || user?.nik || ''}
+            </span>
+          )}
+          <button
+            onClick={handleLogout}
+            className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+            title="Logout"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
-        {!collapsed && (
-          <span className="text-xs text-white/70 truncate flex-1">
-            {user?.name || user?.nik || ''}
-          </span>
-        )}
-        <button
-          onClick={handleLogout}
-          className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
-          title="Logout"
-        >
-          <LogOut size={16} />
-        </button>
-      </div>
+      )}
     </aside>
   );
 }
