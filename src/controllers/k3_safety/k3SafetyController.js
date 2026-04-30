@@ -853,3 +853,59 @@ exports.validasiInvestigasiKadiv = async (req, res, next) => {
 };
 
 
+
+// -- Deletion Endpoints ----------------------------------------------------------
+
+/**
+ * DELETE /api/k3-safety/:id
+ * Menghapus laporan tunggal berdasarkan ID.
+ * Hanya admin atau pengguna dengan izin spesifik yang bisa menghapus.
+ */
+exports.deleteReport = async (req, res, next) => {
+  try {
+    const reportId = req.params.id;
+    const role = (req.user.role || '').toLowerCase();
+    
+    // Auth Check: Cuma Admin/Superadmin yang boleh (atau developer)
+    if (!role.includes('admin') && !role.includes('developer')) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin yang dapat menghapus data' });
+    }
+
+    const report = await K3Report.findByPk(reportId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
+    }
+
+    await report.destroy();
+    
+    res.status(200).json({ success: true, message: 'Laporan berhasil dihapus' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/k3-safety
+ * Menghapus semua laporan HSE (Bulk Delete).
+ * Berisiko tinggi, hanya untuk Admin.
+ */
+exports.deleteAllReports = async (req, res, next) => {
+  try {
+    const role = (req.user.role || '').toLowerCase();
+    
+    // Auth Check
+    if (!role.includes('admin') && !role.includes('developer')) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin yang dapat melakukan hapus semua data' });
+    }
+
+    const count = await K3Report.destroy({
+      where: {},
+      truncate: false 
+    });
+    
+    res.status(200).json({ success: true, message: \Berhasil menghapus \ laporan K3 Safety secara permanen\ });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -99,6 +99,12 @@ router.put('/:id/validasi-hasil', verifyToken, k3SafetyCtrl.validasiHasil);
 // PUT /api/k3-safety/:id/validasi-akhir
 router.put('/:id/validasi-akhir', verifyToken, k3SafetyCtrl.validasiAkhir);
 
+// DELETE /api/k3-safety/:id
+router.delete('/:id', verifyToken, k3SafetyCtrl.deleteReport);
+
+// DELETE /api/k3-safety
+router.delete('/', verifyToken, k3SafetyCtrl.deleteAllReports);
+
 // ── Investigasi Routes ──────────────────────────────────────────────────────────
 
 // PUT /api/k3-safety/:id/investigasi

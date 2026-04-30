@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiGet, apiPut } from '@/lib/api';
-import { getUser } from '@/lib/auth';
+import { apiGet, apiPut, apiDelete } from '@/lib/api';
+import { getUser, canDelete } from '@/lib/auth';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -45,7 +45,8 @@ import {
   HeartPulse,
   Flame,
   Stethoscope,
-  Wrench
+  Wrench,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -255,6 +256,37 @@ export default function HseDashboardPage() {
     }
   }
 
+  async function handleDelete(id) {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.")) return;
+    
+    setIsSubmitting(true);
+    try {
+      await apiDelete(`/k3-safety/${id}`);
+      toast.success("Laporan berhasil dihapus");
+      if (selectedReport?.id === id) setIsDetailOpen(false);
+      loadReports();
+    } catch (e) {
+      toast.error(e.message || "Gagal menghapus laporan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (!window.confirm("PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA laporan K3 Safety? Tindakan ini akan menghapus seluruh data secara permanen!")) return;
+    
+    setIsSubmitting(true);
+    try {
+      await apiDelete('/k3-safety');
+      toast.success("Semua laporan berhasil dihapus");
+      loadReports();
+    } catch (e) {
+      toast.error(e.message || "Gagal menghapus semua laporan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function loadStaff() {
     try {
       const res = await apiGet('/users');
@@ -314,6 +346,17 @@ export default function HseDashboardPage() {
             <RefreshCw size={16} className={cn("mr-2", loading && "animate-spin")} />
             Segarkan
           </Button>
+          {canDelete('hse') && (
+            <Button 
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={loading || isSubmitting || reports.length === 0}
+              className="shadow-md shadow-rose-100"
+            >
+              <Trash2 size={16} className="mr-2" />
+              Hapus Semua
+            </Button>
+          )}
           <Button className="bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-100">
             Export Report
           </Button>
@@ -652,10 +695,23 @@ export default function HseDashboardPage() {
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
-              Tutup
-            </Button>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4 border-t pt-4 border-slate-100 flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
+                Tutup
+              </Button>
+              {canDelete('hse') && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleDelete(selectedReport.id)}
+                  disabled={isSubmitting}
+                  className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Hapus
+                </Button>
+              )}
+            </div>
             
             {/* Action Buttons for Validasi Awal */}
             {(isKadisHse || isKadivPphse) && (selectedReport?.status === 'menunggu_validasi_kadis_hse' || selectedReport?.status === 'menunggu_validasi_kadiv_pphse') && (
