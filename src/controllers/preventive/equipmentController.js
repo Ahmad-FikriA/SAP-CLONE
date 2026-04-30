@@ -4,6 +4,7 @@ const path = require('path');
 const fs   = require('fs');
 const { Op } = require('sequelize');
 const Equipment = require('../../models/Equipment');
+const Plant = require('../../models/Plant');
 const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
 const { Submission, SubmissionActivityResult } = require('../../models/Submission');
 const User = require('../../models/User');
@@ -44,7 +45,13 @@ const create = async (req, res) => {
   const exists = await Equipment.findByPk(equipmentId);
   if (exists) return res.status(409).json({ error: 'equipmentId already exists' });
 
-  const eq = await Equipment.create(req.body);
+  const body = { ...req.body };
+  if (body.plantId && !body.plantName) {
+    const plant = await Plant.findByPk(body.plantId);
+    if (plant) body.plantName = plant.plantName;
+  }
+
+  const eq = await Equipment.create(body);
   res.status(201).json(eq);
 };
 
@@ -84,7 +91,14 @@ const getOne = async (req, res) => {
 const update = async (req, res) => {
   const eq = await Equipment.findByPk(req.params.equipmentId);
   if (!eq) return res.status(404).json({ error: 'Equipment not found' });
-  await eq.update({ ...req.body, equipmentId: eq.equipmentId });
+
+  const body = { ...req.body, equipmentId: eq.equipmentId };
+  if (body.plantId && !body.plantName) {
+    const plant = await Plant.findByPk(body.plantId);
+    if (plant) body.plantName = plant.plantName;
+  }
+
+  await eq.update(body);
   res.json(eq);
 };
 
