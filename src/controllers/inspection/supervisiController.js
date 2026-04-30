@@ -833,9 +833,11 @@ async function submitVisit(req, res) {
 
     // existingPhotos/existingDocuments: URL foto/dokumen yang MASIH ada di draft
     // (sudah di-filter oleh user — foto yang dihapus di UI tidak ikut dikirim).
-    // Jika tidak dikirim, fallback ke semua file lama dari server.
-    const existingPhotoUrls = parseStringArray(req.body.existingPhotos);
-    const existingDocumentUrls = parseStringArray(req.body.existingDocuments);
+    // Jika tidak dikirim sama sekali → fallback ke semua file lama dari server.
+    const sentExistingPhotos = req.body.existingPhotos !== undefined;
+    const sentExistingDocs   = req.body.existingDocuments !== undefined;
+    const existingPhotoUrls  = sentExistingPhotos ? (parseStringArray(req.body.existingPhotos) || []) : null;
+    const existingDocUrls    = sentExistingDocs   ? (parseStringArray(req.body.existingDocuments) || []) : null;
 
     // Konversi draft kedaluwarsa milik job ini sebelum upsert
     await convertStaleDrafts(parseInt(jobId));
@@ -868,15 +870,11 @@ async function submitVisit(req, res) {
     });
 
     if (!created) {
-      // Tentukan basis foto/dokumen yang akan disimpan:
-      // - Jika frontend mengirim existingPhotos → gunakan itu (sudah di-filter user)
-      // - Jika tidak dikirim → pakai seluruh foto lama dari server (backward compat)
-      const basePhotos = existingPhotoUrls.length > 0 || req.body.existingPhotos !== undefined
-        ? existingPhotoUrls
-        : (visit.photos || []);
-      const baseDocs = existingDocumentUrls.length > 0 || req.body.existingDocuments !== undefined
-        ? existingDocumentUrls
-        : (visit.documents || []);
+      // Tentukan basis foto/dokumen:
+      // - Frontend kirim existingPhotos → pakai itu (user sudah filter mana yang mau disimpan)
+      // - Frontend tidak kirim → pakai semua foto lama dari server (backward compat)
+      const basePhotos = sentExistingPhotos ? existingPhotoUrls : (visit.photos || []);
+      const baseDocs   = sentExistingDocs   ? existingDocUrls   : (visit.documents || []);
 
       // Update existing visit (draft → final, atau re-submit hari yang sama)
       await visit.update({
