@@ -244,7 +244,7 @@ export default function HseDashboardPage() {
       const res = await apiGet('/users');
       const usersArray = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
       const hseStaff = usersArray.filter(u => 
-        (u.divisi?.toLowerCase().includes('pphse') || u.divisi?.toLowerCase().includes('hse')) && 
+        u.dinas?.toLowerCase().includes('hse') && 
         !u.role?.toLowerCase().includes('kadis') &&
         !u.role?.toLowerCase().includes('kadiv')
       );
