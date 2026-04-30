@@ -831,6 +831,12 @@ async function submitVisit(req, res) {
       (f) => `/uploads/supervisi/${f.filename}`
     );
 
+    // existingPhotos/existingDocuments: URL foto/dokumen yang MASIH ada di draft
+    // (sudah di-filter oleh user — foto yang dihapus di UI tidak ikut dikirim).
+    // Jika tidak dikirim, fallback ke semua file lama dari server.
+    const existingPhotoUrls = parseStringArray(req.body.existingPhotos);
+    const existingDocumentUrls = parseStringArray(req.body.existingDocuments);
+
     // Konversi draft kedaluwarsa milik job ini sebelum upsert
     await convertStaleDrafts(parseInt(jobId));
 
@@ -862,15 +868,25 @@ async function submitVisit(req, res) {
     });
 
     if (!created) {
+      // Tentukan basis foto/dokumen yang akan disimpan:
+      // - Jika frontend mengirim existingPhotos → gunakan itu (sudah di-filter user)
+      // - Jika tidak dikirim → pakai seluruh foto lama dari server (backward compat)
+      const basePhotos = existingPhotoUrls.length > 0 || req.body.existingPhotos !== undefined
+        ? existingPhotoUrls
+        : (visit.photos || []);
+      const baseDocs = existingDocumentUrls.length > 0 || req.body.existingDocuments !== undefined
+        ? existingDocumentUrls
+        : (visit.documents || []);
+
       // Update existing visit (draft → final, atau re-submit hari yang sama)
       await visit.update({
         status,
         keterangan: status === "hadir" ? (keterangan || null) : null,
         alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
-        // Foto: gabungkan (merge) foto baru dengan foto lama jika ada upload baru
-        photos: photoPaths.length > 0 ? [...(visit.photos || []), ...photoPaths] : visit.photos,
-        // Dokumen: gabungkan dokumen baru dengan dokumen lama
-        documents: documentPaths.length > 0 ? [...(visit.documents || []), ...documentPaths] : visit.documents,
+        // Gabungkan: foto yang tersisa dari draft + foto baru yang diupload
+        photos: [...basePhotos, ...photoPaths],
+        // Dokumen: gabungkan yang tersisa + baru
+        documents: [...baseDocs, ...documentPaths],
         submittedBy: req.user.nik,
         submittedAt: new Date(),
         isPelanggaran: !isDraftBool && status === "tidak_hadir",
@@ -881,6 +897,7 @@ async function submitVisit(req, res) {
         isDraft: isDraftBool,
       });
     }
+
 
     const executorName =
       normalizeNullableString(req.user && req.user.name) ||
