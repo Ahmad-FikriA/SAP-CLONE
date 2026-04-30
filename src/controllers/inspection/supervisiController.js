@@ -867,8 +867,9 @@ async function submitVisit(req, res) {
         status,
         keterangan: status === "hadir" ? (keterangan || null) : null,
         alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
-        // Foto: ganti jika ada upload baru; pertahankan foto lama jika tidak ada upload (berguna saat draft → final)
-        photos: photoPaths.length > 0 ? photoPaths : visit.photos,
+        // Foto: gabungkan (merge) foto baru dengan foto lama jika ada upload baru
+        photos: photoPaths.length > 0 ? [...(visit.photos || []), ...photoPaths] : visit.photos,
+        // Dokumen: gabungkan dokumen baru dengan dokumen lama
         documents: documentPaths.length > 0 ? [...(visit.documents || []), ...documentPaths] : visit.documents,
         submittedBy: req.user.nik,
         submittedAt: new Date(),
