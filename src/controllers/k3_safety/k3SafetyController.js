@@ -110,7 +110,9 @@ exports.getAll = async (req, res, next) => {
 
     let whereClause = {};
 
-    if (divisi.includes('pphse') || divisi.includes('hse') || dinas.includes('hse')) {
+    if (role.includes('admin') || role === 'superadmin') {
+      whereClause = {};
+    } else if (divisi.includes('pphse') || divisi.includes('hse') || dinas.includes('hse')) {
       if (role.includes('kadiv') || role.includes('kepala divisi') || role.includes('kadis') || role.includes('kepala dinas')) {
         // Kadiv/Kadis PPHSE can see all reports (including pending validations)
         whereClause = {}; 
