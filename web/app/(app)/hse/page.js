@@ -806,7 +806,11 @@ export default function HseDashboardPage() {
                 validationAction === 'approve' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
               )}
               onClick={submitValidation}
-              disabled={isSubmitting || (validationAction === 'approve' && !assignedTo && selectedReport?.status !== 'menunggu_validasi_akhir_kadiv_pphse') || (validationAction === 'reject' && !catatanValidasi.trim())}
+              disabled={
+                isSubmitting || 
+                (validationAction === 'approve' && !assignedTo && (selectedReport?.status === 'menunggu_validasi_kadis_hse' || selectedReport?.status === 'menunggu_validasi_kadiv_pphse')) || 
+                (validationAction === 'reject' && !catatanValidasi.trim())
+              }
             >
               {isSubmitting ? 'Memproses...' : 'Konfirmasi'}
             </Button>
