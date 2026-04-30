@@ -154,6 +154,14 @@ function enrichJobWithNames(jobData, nikNameMap) {
   return obj;
 }
 
+function addCurrentUserNameFallback(nikNameMap, user) {
+  const nik = normalizeNullableString(user && user.nik);
+  const name = normalizeNullableString(user && user.name);
+  if (nik && name && !nikNameMap[nik]) {
+    nikNameMap[nik] = name;
+  }
+}
+
 async function findExecutorRecipientIds(picSupervisi) {
   const targetName = normalizeNullableString(picSupervisi);
   if (!targetName) return [];
@@ -325,6 +333,7 @@ async function listJobs(req, res) {
       }
     }
     const nikNameMap = await buildNikNameMap([...nikSet]);
+    addCurrentUserNameFallback(nikNameMap, req.user);
     const enrichedJobs = jobs.map((job) => enrichJobWithNames(job, nikNameMap));
 
     res.json({ success: true, data: enrichedJobs });
@@ -367,6 +376,7 @@ async function getJob(req, res) {
       if (visit.submittedBy) nikSet.add(visit.submittedBy);
     }
     const nikNameMap = await buildNikNameMap([...nikSet]);
+    addCurrentUserNameFallback(nikNameMap, req.user);
     const enrichedJob = enrichJobWithNames(job, nikNameMap);
 
     res.json({ success: true, data: enrichedJob });
@@ -914,6 +924,7 @@ async function submitVisit(req, res) {
 
     // Inject submitterName ke response visit
     const visitNikMap = await buildNikNameMap(visit.submittedBy ? [visit.submittedBy] : []);
+    addCurrentUserNameFallback(visitNikMap, req.user);
     const visitData = typeof visit.toJSON === "function" ? visit.toJSON() : { ...visit };
     visitData.submitterName = visitNikMap[visit.submittedBy] || null;
 

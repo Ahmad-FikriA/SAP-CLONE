@@ -139,8 +139,9 @@ const inspectionStorage = multer.diskStorage({
   },
 });
 
-// 25MB file size limit for inspection media (images and videos)
-const INSPECTION_MEDIA_MAX_SIZE_MB = 25;
+// 50MB file size limit for inspection media (images and videos).
+// Keep this aligned with the Flutter inspection video validator.
+const INSPECTION_MEDIA_MAX_SIZE_MB = 50;
 const INSPECTION_MEDIA_MAX_SIZE = INSPECTION_MEDIA_MAX_SIZE_MB * 1024 * 1024;
 const INSPECTION_MEDIA_MAX_COUNT = 5;
 const INSPECTION_MEDIA_ALLOWED_EXTENSIONS = new Set([
