@@ -214,6 +214,22 @@ export default function HseDashboardPage() {
           action: validationAction,
           catatan: catatanValidasi
         });
+      } else if (selectedReport.status === 'menunggu_validasi_hasil_kadis_hse') {
+        await apiPut(`/k3-safety/${selectedReport.id}/validasi-hasil`, {
+          action: validationAction,
+          catatan: catatanValidasi
+        });
+      } else if (selectedReport.status === 'menunggu_verifikasi_investigasi') {
+        await apiPut(`/k3-safety/${selectedReport.id}/verifikasi-investigasi`, {
+          action: validationAction,
+          catatan: catatanValidasi
+        });
+      } else if (selectedReport.status === 'menunggu_validasi_kadiv') {
+        await apiPut(`/k3-safety/${selectedReport.id}/validasi-investigasi-kadiv`, {
+          action: validationAction,
+          kadivType: 'pphse',
+          catatan: catatanValidasi
+        });
       }
       
       toast.success(`Laporan berhasil di${validationAction === 'approve' ? 'setujui' : 'tolak'}`);
@@ -654,25 +670,43 @@ export default function HseDashboardPage() {
                   className="bg-emerald-600 hover:bg-emerald-700 text-white" 
                   onClick={() => openValidation('approve')} 
                 >
-                  Setujui & Proses
+                  Setujui & Tugaskan
                 </Button>
               </div>
             )}
 
-            {/* Action Buttons for Validasi Akhir */}
-            {isKadivPphse && selectedReport?.status === 'menunggu_validasi_akhir_kadiv_pphse' && (
+            {/* Action Buttons for Validasi Hasil Perbaikan & Investigasi (Kadis HSE) */}
+            {isKadisHse && (selectedReport?.status === 'menunggu_validasi_hasil_kadis_hse' || selectedReport?.status === 'menunggu_verifikasi_investigasi') && (
               <div className="flex gap-2">
                 <Button 
                   variant="destructive" 
                   onClick={() => openValidation('reject')} 
                 >
-                  Kembalikan
+                  Tolak Hasil
                 </Button>
                 <Button 
                   className="bg-emerald-600 hover:bg-emerald-700 text-white" 
                   onClick={() => openValidation('approve')} 
                 >
-                  Selesaikan Laporan
+                  Terima & Validasi
+                </Button>
+              </div>
+            )}
+
+            {/* Action Buttons for Validasi Akhir (Kadiv PPHSE) */}
+            {isKadivPphse && (selectedReport?.status === 'menunggu_validasi_akhir_kadiv_pphse' || selectedReport?.status === 'menunggu_validasi_kadiv') && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="destructive" 
+                  onClick={() => openValidation('reject')} 
+                >
+                  Tolak
+                </Button>
+                <Button 
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white" 
+                  onClick={() => openValidation('approve')} 
+                >
+                  Setujui Selesai
                 </Button>
               </div>
             )}
