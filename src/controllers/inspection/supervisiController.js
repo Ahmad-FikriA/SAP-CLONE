@@ -168,7 +168,13 @@ async function findExecutorRecipientIds(picSupervisi) {
 
   // Prefer exact name match first.
   const exactUsers = await User.findAll({
-    where: { name: targetName, group: { [Op.like]: "%supervisi%" } },
+    where: {
+      name: targetName,
+      [Op.or]: [
+        { group: { [Op.like]: "%supervisi%" } },
+        { group: { [Op.like]: "%inspeksi%" } },
+      ],
+    },
     attributes: ["id"],
   });
   if (exactUsers.length > 0) {
@@ -177,7 +183,12 @@ async function findExecutorRecipientIds(picSupervisi) {
 
   // Fallback to case-insensitive matching for legacy name casing.
   const fallbackUsers = await User.findAll({
-    where: { group: { [Op.like]: "%supervisi%" } },
+    where: {
+      [Op.or]: [
+        { group: { [Op.like]: "%supervisi%" } },
+        { group: { [Op.like]: "%inspeksi%" } },
+      ],
+    },
     attributes: ["id", "name"],
   });
   return [
