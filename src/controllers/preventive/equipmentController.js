@@ -115,13 +115,15 @@ const renameId = async (req, res) => {
   if (conflict) return res.status(409).json({ error: `Equipment ID "${newId}" already exists` });
 
   const sequelize = require('../../config/database');
+  const { disableForeignKeyChecksForTables, enableForeignKeyChecksForTables } = require('../../config/sqlServerHelpers');
+  const fkTables = ['equipment', 'spk_equipment', 'notifications', 'equipment_interval_mappings'];
   await sequelize.transaction(async (t) => {
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction: t });
+    await disableForeignKeyChecksForTables(fkTables, t);
     await sequelize.query('UPDATE equipment SET equipment_id = ? WHERE equipment_id = ?',                       { replacements: [newId, oldId], transaction: t });
     await sequelize.query('UPDATE spk_equipment SET equipment_id = ? WHERE equipment_id = ?',                  { replacements: [newId, oldId], transaction: t });
     await sequelize.query('UPDATE notifications SET equipment_id = ? WHERE equipment_id = ?',                  { replacements: [newId, oldId], transaction: t });
     await sequelize.query('UPDATE equipment_interval_mappings SET equipment_id = ? WHERE equipment_id = ?',    { replacements: [newId, oldId], transaction: t });
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction: t });
+    await enableForeignKeyChecksForTables(fkTables, t);
   });
 
   const updated = await Equipment.findByPk(newId);

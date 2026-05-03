@@ -13,9 +13,10 @@ const InspectionSchedule = sequelize.define(
       autoIncrement: true,
     },
     type: {
-      type: DataTypes.ENUM("rutin", "k3", "supervisi"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       comment: "Jenis flow inspeksi",
+      validate: { isIn: [["rutin", "k3", "supervisi"]] },
     },
     title: {
       type: DataTypes.STRING(255),
@@ -59,20 +60,17 @@ const InspectionSchedule = sequelize.define(
       comment: "Mekanik | Listrik | Sipil | Otomasi",
     },
     status: {
-      type: DataTypes.ENUM(
-        "scheduled",
-        "in_progress",
-        "completed",
-        "cancelled",
-      ),
+      type: DataTypes.STRING(30),
       allowNull: false,
       defaultValue: "scheduled",
+      validate: { isIn: [["scheduled", "in_progress", "completed", "cancelled"]] },
     },
     triggerSource: {
-      type: DataTypes.ENUM("self", "vendor", "user_darurat", "planner"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: "self",
       comment: "Siapa yang memicu pembuatan jadwal",
+      validate: { isIn: [["self", "vendor", "user_darurat", "planner"]] },
     },
     vendorInfo: {
       type: DataTypes.TEXT,
@@ -91,10 +89,11 @@ const InspectionSchedule = sequelize.define(
         "Periode berulang inspeksi rutin, e.g. '2 Minggu', '1 Bulan', '3 Bulan'",
     },
     kategoriK3: {
-      type: DataTypes.ENUM("manusia", "bangunan"),
+      type: DataTypes.STRING(20),
       allowNull: true,
       comment:
         "Kategori inspeksi K3: manusia (perilaku/APD) atau bangunan (struktur/fasilitas)",
+      validate: { isIn: [["manusia", "bangunan"]] },
     },
     darurat: {
       type: DataTypes.BOOLEAN,

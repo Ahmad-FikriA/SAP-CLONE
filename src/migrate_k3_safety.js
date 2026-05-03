@@ -22,7 +22,7 @@ async function migrateK3() {
 
     try {
       await qi.addColumn('k3_reports', 'foto_perbaikan', {
-         type: sequelize.constructor.DataTypes.JSON,
+         type: sequelize.constructor.DataTypes.TEXT,
          allowNull: true,
       });
       console.log(' -> Added foto_perbaikan column.');
@@ -36,26 +36,7 @@ async function migrateK3() {
       console.log(' -> Added catatan_revisi_perbaikan column.');
     } catch(e) {}
 
-    try {
-      await qi.changeColumn('k3_reports', 'status', {
-        type: sequelize.constructor.DataTypes.ENUM(
-          'menunggu_review_kadiv_pelapor',
-          'menunggu_review_kadiv_pphse',
-          'menunggu_validasi_kadiv_pphse',
-          'ditolak_kadiv_pphse',
-          'menunggu_tindakan_hse',
-          'menunggu_validasi_akhir_pphse',
-          'perbaikan_ditolak_pphse',
-          'disetujui',
-          'ditolak',
-          'selesai'
-        ),
-        defaultValue: 'menunggu_validasi_kadiv_pphse',
-      });
-      console.log(' -> Modified status ENUM on k3_reports.');
-    } catch (e) {
-      console.log(' -> Error updating status ENUM: ', e.message);
-    }
+    console.log(' -> Skipping ENUM status modification (now using STRING type).');
 
     console.log('K3 Safety Schema Migration completed successfully.');
     process.exit(0);

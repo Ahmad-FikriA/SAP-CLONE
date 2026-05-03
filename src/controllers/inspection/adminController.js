@@ -2,6 +2,10 @@
 
 const sequelize = require('../../config/database');
 const {
+  disableForeignKeyChecks,
+  enableForeignKeyChecks,
+} = require('../../config/sqlServerHelpers');
+const {
   SuratPelanggaran,
   InspectionFollowUp,
   InspectionReportPhoto,
@@ -23,9 +27,7 @@ async function clearInspectionSupervisiData(req, res) {
       });
     }
 
-
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0;');
-
+    await disableForeignKeyChecks();
 
     await SuratPelanggaran.destroy({ where: {}, force: true });
     await InspectionFollowUp.destroy({ where: {}, force: true });
@@ -34,13 +36,11 @@ async function clearInspectionSupervisiData(req, res) {
     await InspectionRequest.destroy({ where: {}, force: true });
     await InspectionSchedule.destroy({ where: {}, force: true });
 
-
     await SupervisiVisit.destroy({ where: {}, force: true });
     await SupervisiAmend.destroy({ where: {}, force: true });
     await SupervisiJob.destroy({ where: {}, force: true });
 
-
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1;');
+    await enableForeignKeyChecks();
 
     res.json({
       success: true,

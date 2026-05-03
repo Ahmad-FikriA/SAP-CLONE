@@ -23,18 +23,20 @@ const InspectionRequest = sequelize.define(
       comment: "Lokasi yang ingin dikunjungi",
     },
     jenisInspeksi: {
-      type: DataTypes.ENUM("rutin", "k3"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: "rutin",
       field: "jenis_inspeksi",
       comment: "Jenis inspeksi yang diminta",
+      validate: { isIn: [["rutin", "k3"]] },
     },
     kategoriInspeksi: {
-      type: DataTypes.ENUM("sipil", "mekanik", "elektrik", "otomasi", "safety", "environment"),
+      type: DataTypes.STRING(50),
       allowNull: false,
       defaultValue: "sipil",
       field: "kategori_inspeksi",
       comment: "Kategori inspeksi berdasarkan jenis",
+      validate: { isIn: [["sipil", "mekanik", "elektrik", "otomasi", "safety", "environment"]] },
     },
     tanggalDiinginkan: {
       type: DataTypes.DATEONLY,
@@ -55,11 +57,18 @@ const InspectionRequest = sequelize.define(
       comment: "Deskripsi alasan / kondisi yang perlu diinspeksi",
     },
     mediaPaths: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
       field: "media_paths",
-      comment: "Array path foto/video opsional dari user",
+      comment: "Array path foto/video opsional dari user (JSON string)",
+      get() {
+        const raw = this.getDataValue('mediaPaths');
+        if (!raw) return [];
+        try { return JSON.parse(raw); } catch { return []; }
+      },
+      set(val) {
+        this.setDataValue('mediaPaths', val ? JSON.stringify(val) : '[]');
+      },
     },
     requestedBy: {
       type: DataTypes.STRING(100),
@@ -68,10 +77,11 @@ const InspectionRequest = sequelize.define(
       comment: "Username user yang membuat request",
     },
     status: {
-      type: DataTypes.ENUM("pending", "approved", "rejected", "cancelled", "revisions_required"),
+      type: DataTypes.STRING(30),
       allowNull: false,
       defaultValue: "pending",
       comment: "Status tindak lanjut oleh Planner. revisions_required = dikembalikan ke User untuk diperbaiki",
+      validate: { isIn: [["pending", "approved", "rejected", "cancelled", "revisions_required"]] },
     },
     approvedBy: {
       type: DataTypes.STRING(100),

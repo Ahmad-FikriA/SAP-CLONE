@@ -33,10 +33,17 @@ const SupervisiAmend = sequelize.define(
       comment: "Tanggal akhir amend (batas baru pekerjaan)",
     },
     documents: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
-      comment: "Array path file dokumen amend yang diupload",
+      comment: "Array path file dokumen amend yang diupload (JSON string)",
+      get() {
+        const raw = this.getDataValue('documents');
+        if (!raw) return [];
+        try { return JSON.parse(raw); } catch { return []; }
+      },
+      set(val) {
+        this.setDataValue('documents', val ? JSON.stringify(val) : '[]');
+      },
     },
   },
   {

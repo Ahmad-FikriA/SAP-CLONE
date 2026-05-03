@@ -26,9 +26,10 @@ async function migrate() {
         "🔄 [Auto-Migration] Merakit ulang tabel users dengan NIK...",
       );
 
-      await sequelize.query("SET FOREIGN_KEY_CHECKS = 0");
+      const { disableForeignKeyChecks, enableForeignKeyChecks } = require("./config/sqlServerHelpers");
+      await disableForeignKeyChecks();
       await queryInterface.dropTable("users");
-      await sequelize.query("SET FOREIGN_KEY_CHECKS = 1");
+      await enableForeignKeyChecks();
 
       const User = require("./models/User");
       await User.sync({ force: true });
@@ -40,28 +41,6 @@ async function migrate() {
 
       console.log(
         "✅ [Auto-Migration] Tabel users berhasil diperbarui ke NIK!",
-      );
-      process.exit(0);
-      return;
-    }
-
-    if (
-      tableDesc.role &&
-      tableDesc.role.type &&
-      tableDesc.role.type.startsWith("ENUM")
-    ) {
-      console.log(
-        "[Auto-Migration] Terdeteksi kolom role bertipe ENUM, mengubah ke VARCHAR...",
-      );
-
-      await queryInterface.changeColumn("users", "role", {
-        type: sequelize.constructor.DataTypes.STRING(50),
-        allowNull: false,
-        defaultValue: "teknisi",
-      });
-
-      console.log(
-        "[Auto-Migration] Kolom role berhasil diubah ke VARCHAR(50)!",
       );
       process.exit(0);
       return;

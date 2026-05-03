@@ -109,9 +109,12 @@ const generateFromFormula = async (req, res) => {
     }
   }
 
-  await PreventiveWeekSchedule.bulkCreate(toInsert, {
-    ignoreDuplicates: true,
-  });
+  for (const item of toInsert) {
+    await PreventiveWeekSchedule.findOrCreate({
+      where: { year: item.year, weekNumber: item.weekNumber, interval: item.interval },
+      defaults: item,
+    });
+  }
 
   res.json({ message: `Generated schedule for ${year}`, count: toInsert.length, year });
 };

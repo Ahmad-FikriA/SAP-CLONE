@@ -16,7 +16,8 @@ const GeneralTaskList = sequelize.define('GeneralTaskList', {
         field: 'task_list_name',
     },
     category: {
-        type: DataTypes.ENUM('Mekanik', 'Listrik', 'Sipil', 'Otomasi'),
+        type: DataTypes.STRING(50),
+        validate: { isIn: [['Mekanik', 'Listrik', 'Sipil', 'Otomasi']] },
         allowNull: false,
     },
     workCenter: {

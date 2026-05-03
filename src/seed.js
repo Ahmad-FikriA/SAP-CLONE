@@ -245,9 +245,8 @@ async function main() {
   await sequelize.authenticate();
   console.log("\n  KTI SmartCare — Seed\n");
 
-  await sequelize.query("SET FOREIGN_KEY_CHECKS = 0");
   await sequelize.sync({ force: true });
-  console.log("  ✓  Tables synced (force rebuilt with FK checks disabled)");
+  console.log("  ✓  Tables synced (force rebuilt)");
 
   let added, skipped;
 
@@ -339,14 +338,13 @@ async function main() {
   );
 
   console.log("\n  Seed complete!\n");
-  await sequelize.query("SET FOREIGN_KEY_CHECKS = 1");
+
   await sequelize.close();
 }
 
 main().catch(async (err) => {
   console.error("  ✗  Seed failed:\n", err);
   try {
-    await sequelize.query("SET FOREIGN_KEY_CHECKS = 1");
   } catch (e) {}
   process.exit(1);
 });

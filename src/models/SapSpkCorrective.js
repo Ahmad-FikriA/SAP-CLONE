@@ -42,15 +42,9 @@ const SapSpkCorrective = sequelize.define(
     
 
     status: {
-      type: DataTypes.ENUM(
-        "baru_import",
-        "eksekusi",
-        "menunggu_review_kadis_pp",
-        "menunggu_review_kadis_pelapor",
-        "selesai",
-        "ditolak"
-      ),
+      type: DataTypes.STRING(50),
       defaultValue: "baru_import",
+      validate: { isIn: [["baru_import", "eksekusi", "menunggu_review_kadis_pp", "menunggu_review_kadis_pelapor", "selesai", "ditolak"]] },
     },
 
     

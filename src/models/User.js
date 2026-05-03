@@ -23,9 +23,17 @@ const User = sequelize.define('User', {
     field: 'fcm_token',
   },
   permissions: {
-    type: DataTypes.JSON,
+    type: DataTypes.TEXT,
     allowNull: true,
     field: 'allowed_pages',
+    get() {
+      const raw = this.getDataValue('permissions');
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return raw; }
+    },
+    set(val) {
+      this.setDataValue('permissions', val ? JSON.stringify(val) : null);
+    },
   },
 }, {
   tableName: 'users',

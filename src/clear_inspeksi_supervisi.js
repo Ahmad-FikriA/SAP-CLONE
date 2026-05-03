@@ -1,6 +1,7 @@
 "use strict";
 
 const sequelize = require("./config/database");
+const { disableForeignKeyChecks, enableForeignKeyChecks } = require("./config/sqlServerHelpers");
 const {
   SuratPelanggaran,
   InspectionFollowUp,
@@ -18,7 +19,7 @@ async function clearData() {
     await sequelize.authenticate();
     console.log("[OK] Database connected.");
 
-    await sequelize.query("SET FOREIGN_KEY_CHECKS = 0;");
+    await disableForeignKeyChecks();
     console.log("[OK] Disabled foreign key checks.");
 
     console.log("--- Clearing Inspection Data ---");
@@ -50,7 +51,7 @@ async function clearData() {
     await SupervisiJob.destroy({ where: {}, force: true });
     console.log("Cleared SupervisiJob");
 
-    await sequelize.query("SET FOREIGN_KEY_CHECKS = 1;");
+    await enableForeignKeyChecks();
     console.log("[OK] Re-enabled foreign key checks.");
 
     console.log("===================================================");

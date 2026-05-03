@@ -32,18 +32,17 @@ const indexes = [
   
   ['idx_users_role',         'users',                      '(role)'],
   ['idx_users_dinas',        'users',                      '(dinas)'],
-  ['idx_users_group',        'users',                      '(`group`)'],
+  ['idx_users_group',        'users',                      '([group])'],
   ['idx_users_role_dinas',   'users',                      '(role, dinas)'],
-  ['idx_users_role_group',   'users',                      '(role, `group`)'],
+  ['idx_users_role_group',   'users',                      '(role, [group])'],
 ];
 
 async function indexExists(table, indexName) {
   const [rows] = await sequelize.query(
     `SELECT COUNT(*) AS cnt
-     FROM information_schema.statistics
-     WHERE table_schema = DATABASE()
-       AND table_name   = :table
-       AND index_name   = :indexName`,
+     FROM sys.indexes
+     WHERE object_id = OBJECT_ID(:table)
+       AND name = :indexName`,
     { replacements: { table, indexName }, type: sequelize.QueryTypes.SELECT },
   );
   return rows.cnt > 0;
@@ -64,7 +63,7 @@ async function run() {
         continue;
       }
       try {
-        await sequelize.query(`CREATE INDEX ${name} ON ${table} ${cols}`);
+        await sequelize.query(`CREATE INDEX ${name} ON [${table}] ${cols}`);
         console.log(`  ✓ ${name}`);
         created++;
       } catch (err) {

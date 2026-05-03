@@ -9,8 +9,15 @@ if (!process.env.URI) {
 }
 
 const sequelize = new Sequelize(process.env.URI, {
-  dialect: 'mysql',
+  dialect: 'mssql',
   logging: false,
+  dialectOptions: {
+    options: {
+      encrypt: false,
+      trustServerCertificate: true,
+      instanceName: process.env.DB_INSTANCE || 'SQLEXPRESS',
+    }
+  }
 });
 
 module.exports = sequelize;

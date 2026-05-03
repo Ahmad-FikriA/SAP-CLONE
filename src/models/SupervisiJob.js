@@ -2,6 +2,7 @@
 
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
+const { isTableNotFoundError } = require("../config/sqlServerHelpers");
 
 
 const SupervisiJob = sequelize.define(
@@ -68,15 +69,23 @@ const SupervisiJob = sequelize.define(
       comment: "Tanggal akhir amend",
     },
     amendDocuments: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
-      comment: "Array path dokumen amend",
+      comment: "Array path dokumen amend (JSON string)",
+      get() {
+        const raw = this.getDataValue('amendDocuments');
+        if (!raw) return [];
+        try { return JSON.parse(raw); } catch { return []; }
+      },
+      set(val) {
+        this.setDataValue('amendDocuments', val ? JSON.stringify(val) : '[]');
+      },
     },
     status: {
-      type: DataTypes.ENUM("draft", "active", "completed", "cancelled"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: "draft",
+      validate: { isIn: [["draft", "active", "completed", "cancelled"]] },
     },
     latitude: {
       type: DataTypes.DECIMAL(10, 7),
@@ -100,10 +109,17 @@ const SupervisiJob = sequelize.define(
       comment: "Nama area atau lokasi proyek",
     },
     locations: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
-      comment: "Array of locations: [{ id, namaArea, latitude, longitude, radius }]",
+      comment: "Array of locations: [{ id, namaArea, latitude, longitude, radius }] (JSON string)",
+      get() {
+        const raw = this.getDataValue('locations');
+        if (!raw) return [];
+        try { return JSON.parse(raw); } catch { return []; }
+      },
+      set(val) {
+        this.setDataValue('locations', val ? JSON.stringify(val) : '[]');
+      },
     },
     createdBy: {
       type: DataTypes.STRING(100),
@@ -125,23 +141,15 @@ async function ensureSupervisiJobSchema() {
   try {
     table = await queryInterface.describeTable(tableName);
   } catch (err) {
-    const code = err?.original?.code || err?.parent?.code || err?.code;
-    const message = String(err?.message || "");
-
-    if (
-      code === "ER_NO_SUCH_TABLE" ||
-      code === "ER_BAD_TABLE_ERROR" ||
-      message.includes("doesn't exist")
-    ) {
+    if (isTableNotFoundError(err)) {
       return;
     }
-
     throw err;
   }
 
   if (!table.locations) {
     await queryInterface.addColumn(tableName, "locations", {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
       comment: "Array of locations",
     });
@@ -173,9 +181,8 @@ async function ensureSupervisiJobSchema() {
 
   if (!table.amendDocuments) {
     await queryInterface.addColumn(tableName, "amendDocuments", {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
       comment: "Array path dokumen amend",
     });
   }
@@ -232,11 +239,6 @@ async function ensureSupervisiJobSchema() {
     type: DataTypes.DATEONLY,
     allowNull: true,
     comment: "Tanggal berakhir pekerjaan",
-  });
-  await queryInterface.changeColumn(tableName, "status", {
-    type: DataTypes.ENUM("draft", "active", "completed", "cancelled"),
-    allowNull: false,
-    defaultValue: "draft",
   });
 }
 

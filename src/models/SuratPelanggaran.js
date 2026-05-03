@@ -47,9 +47,10 @@ const SuratPelanggaran = sequelize.define(
       comment: "Deadline baru setelah surat pelanggaran",
     },
     status: {
-      type: DataTypes.ENUM("issued", "acknowledged", "resolved"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: "issued",
+      validate: { isIn: [["issued", "acknowledged", "resolved"]] },
     },
     issuedBy: {
       type: DataTypes.STRING(100),

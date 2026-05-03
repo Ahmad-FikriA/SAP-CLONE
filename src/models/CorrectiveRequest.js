@@ -20,16 +20,18 @@ const CorrectiveRequest = sequelize.define('CorrectiveRequest', {
   submittedAt:        { type: DataTypes.DATE,        allowNull: true,  field: 'submitted_at' },
 
   status:             {
-    type: DataTypes.ENUM('draft','submitted','approved','rejected'),
+    type: DataTypes.STRING(50),
     allowNull: false,
     defaultValue: 'draft',
+    validate: { isIn: [['draft','submitted','approved','rejected']] },
   },
 
   approvalStatus:     {
-    type: DataTypes.ENUM('pending','awaiting_supervisor','awaiting_manager','approved','rejected'),
+    type: DataTypes.STRING(50),
     allowNull: true,
     defaultValue: 'pending',
     field: 'approval_status',
+    validate: { isIn: [['pending','awaiting_supervisor','awaiting_manager','approved','rejected']] },
   },
   approvedBy:         { type: DataTypes.STRING(20),  allowNull: true, field: 'approved_by' },
   approvedAt:         { type: DataTypes.DATE,        allowNull: true, field: 'approved_at' },

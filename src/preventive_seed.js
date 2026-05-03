@@ -314,9 +314,12 @@ async function main() {
         });
     }
   }
-  await PreventiveWeekSchedule.bulkCreate(scheduleRows, {
-    ignoreDuplicates: true,
-  });
+  for (const item of scheduleRows) {
+    await PreventiveWeekSchedule.findOrCreate({
+      where: { year: item.year, weekNumber: item.weekNumber, interval: item.interval },
+      defaults: item,
+    });
+  }
   console.log(
     `  ✓  week_schedule  (${scheduleRows.length} entries for ${SCHEDULE_YEAR})`,
   );
