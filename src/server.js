@@ -366,7 +366,7 @@ sequelize
 
 if (process.env.NODE_ENV !== "test") {
   app.listen(PORT, () => {
-    console.log(`\n  KTI SAP Mock Server`);
+    console.log(`\n  KTI MANTIS Server`);
     console.log(`  ───────────────────────────────`);
     console.log(`  API:      http://localhost:${PORT}/api`);
     console.log(`  Admin UI: http://localhost:${PORT}\n`);

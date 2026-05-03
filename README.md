@@ -1,6 +1,6 @@
-# KTI SmartCare — SAP Mock System
+# KTI SmartCare — MANTIS Server
 
-Sistem Backend SAP Mock untuk aplikasi **KTI SmartCare**. Sistem ini menyediakan REST API untuk aplikasi mobile (Flutter) dan Web Admin UI untuk manajemen data pemeliharaan (Preventive & Corrective Maintenance).
+Sistem Backend MANTIS Server untuk aplikasi **KTI SmartCare**. Sistem ini menyediakan REST API untuk aplikasi mobile (Flutter) dan Web Admin UI untuk manajemen data pemeliharaan (Preventive & Corrective Maintenance).
 
 ---
 
@@ -97,7 +97,7 @@ Setelah container berjalan, Anda perlu mengisi database dengan data awal (master
 
 ```bash
 # Masuk ke container backend
-docker exec -it sap-mock-server sh
+docker exec -it mantis-server sh
 
 # Jalankan script seed
 npm run seed             # Master data (Users, Plants, Equipment)
@@ -118,7 +118,7 @@ npm run preventive-seed  # Data jadwal pemeliharaan (Preventive)
 
 ## 🛠 Perintah Penting lainnya
 
-*   **Melihat Log:** `docker logs -f sap-mock-server`
+*   **Melihat Log:** `docker logs -f mantis-server`
 *   **Menghentikan Sistem:** `docker compose down`
 *   **Reset Data Inspeksi:** `npm run clear-inspeksi` (jalankan di dalam container)
 

@@ -1,11 +1,11 @@
 version: '3.9'
 
 services:
-  sap-mock:
+  mantis-server:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: kti-sap-mock
+    container_name: mantis-server
     restart: unless-stopped
     ports:
       - "3222:3000"
@@ -50,7 +50,7 @@ services:
       - /app/node_modules
       - /app/.next
     depends_on:
-      - sap-mock
+      - mantis-server
     networks:
       - kti-net
 

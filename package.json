@@ -1,7 +1,7 @@
 {
   "name": "kti-sap-mock",
   "version": "1.0.0",
-  "description": "KTI SmartCare — SAP Mock API Server with Admin UI",
+  "description": "KTI SmartCare — MANTIS Server with Admin UI",
   "main": "src/server.js",
   "scripts": {
     "prestart": "node src/migrate_users.js && node src/migrate_corrective_spk.js && node src/migrate_k3_safety.js && node src/migrate_inspection_enums.js",
