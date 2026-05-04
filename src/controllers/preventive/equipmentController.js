@@ -46,10 +46,13 @@ const create = async (req, res) => {
   if (exists) return res.status(409).json({ error: 'equipmentId already exists' });
 
   const body = { ...req.body };
+  if (!body.plantId) body.plantId = null;
+
   if (body.plantId && !body.plantName) {
     const plant = await Plant.findByPk(body.plantId);
     if (plant) body.plantName = plant.plantName;
   }
+  if (!body.plantId) body.plantName = null;
 
   const eq = await Equipment.create(body);
   res.status(201).json(eq);
@@ -89,17 +92,27 @@ const getOne = async (req, res) => {
 
 // PUT /api/equipment/:equipmentId
 const update = async (req, res) => {
-  const eq = await Equipment.findByPk(req.params.equipmentId);
-  if (!eq) return res.status(404).json({ error: 'Equipment not found' });
+  try {
+    const eq = await Equipment.findByPk(req.params.equipmentId);
+    if (!eq) return res.status(404).json({ error: 'Equipment not found' });
 
-  const body = { ...req.body, equipmentId: eq.equipmentId };
-  if (body.plantId && !body.plantName) {
-    const plant = await Plant.findByPk(body.plantId);
-    if (plant) body.plantName = plant.plantName;
+    const body = { ...req.body, equipmentId: eq.equipmentId };
+
+    // Coerce empty-string plantId to null to avoid FK violation.
+    if (!body.plantId) body.plantId = null;
+
+    if (body.plantId && !body.plantName) {
+      const plant = await Plant.findByPk(body.plantId);
+      if (plant) body.plantName = plant.plantName;
+    }
+    if (!body.plantId) body.plantName = null;
+
+    await eq.update(body);
+    res.json(eq);
+  } catch (err) {
+    console.error('[equipment.update]', err.message);
+    res.status(500).json({ error: err.message });
   }
-
-  await eq.update(body);
-  res.json(eq);
 };
 
 // PUT /api/equipment/:equipmentId/rename-id
