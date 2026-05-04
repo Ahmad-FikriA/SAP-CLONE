@@ -30,24 +30,6 @@ const TITLE_BORDER = '2px solid #1b3a5c';
 const EQUIP_ROW_BG = '#e8eef7';
 const SIG_HDR_BG   = '#f0f4f8';
 
-const SESSION_KEY = 'spk_import_state';
-
-function loadSession() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch { return null; }
-}
-
-function saveSession(state) {
-  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(state)); } catch { /* quota exceeded — ignore */ }
-}
-
-function clearSession() {
-  try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
-}
-
 export default function SpkImportPage() {
   const [orders, setOrders]           = useState([]);
   const [loading, setLoading]         = useState(false);
@@ -55,25 +37,8 @@ export default function SpkImportPage() {
   const [printOpen, setPrintOpen]     = useState(false);
   const [mappings, setMappings]       = useState([]);
   const [taskLists, setTaskLists]     = useState([]);
-  const [locationCode, setLocationCode] = useState(null);
-  const [apiKadisId, setApiKadisId]   = useState(null);
-
-  // Restore preview state from sessionStorage on mount (survives page switches)
-  useEffect(() => {
-    const saved = loadSession();
-    if (saved) {
-      setOrders(saved.orders || []);
-      setLocationCode(saved.locationCode || null);
-      setApiKadisId(saved.apiKadisId || null);
-    }
-  }, []);
-
-  // Persist preview state whenever it changes
-  useEffect(() => {
-    if (orders.length > 0) {
-      saveSession({ orders, locationCode, apiKadisId });
-    }
-  }, [orders, locationCode, apiKadisId]);
+  const [locationCode, setLocationCode] = useState(null);   // raw code from Header tab
+  const [apiKadisId, setApiKadisId]   = useState(null);     // detected by backend
 
   // Fetch task lists + mappings once
   useEffect(() => {
@@ -157,7 +122,6 @@ export default function SpkImportPage() {
       const toImport = orders.filter((o) => !o.alreadyExists);
       const res = await apiPost('/spk/import-excel/confirm', { orders: toImport });
       toast.success(`${res.imported || toImport.length} SPK berhasil diimport`);
-      clearSession();
       setOrders([]);
     } catch (e) { toast.error('Import gagal: ' + e.message); }
     finally { setConfirming(false); }
@@ -342,7 +306,7 @@ export default function SpkImportPage() {
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => { clearSession(); setOrders([]); setLocationCode(null); setApiKadisId(null); }}>Batal / Upload Lagi</Button>
+            <Button variant="ghost" onClick={() => { setOrders([]); setLocationCode(null); setApiKadisId(null); }}>Batal / Upload Lagi</Button>
             <Button onClick={confirmImport} disabled={confirming || pendingCount > 0 || !canCreate('spk-import')}>
               {confirming ? 'Mengimport...' : `Konfirmasi Import (${readyCount} order)`}
             </Button>
