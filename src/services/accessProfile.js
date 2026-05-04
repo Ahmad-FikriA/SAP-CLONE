@@ -9,8 +9,14 @@ const INSPECTION_EXECUTOR_NIK_2 = "10000275";
 const INSPECTION_MONITOR_NIK = "10000191";
 
 const SUPERVISI_DENIED_NIKS = new Set([
-  INSPECTION_EXECUTOR_NIK_1,
-  INSPECTION_EXECUTOR_NIK_2,
+  // Kosong — Rangga & Usep kini diizinkan akses supervisi.
+]);
+
+// Nama-nama executor yang di-whitelist untuk supervisi meskipun
+// group DB-nya bukan group supervisi (misal: group "Inspeksi").
+const SUPERVISI_WHITELISTED_NAMES = new Set([
+  "rangga pramana putra",
+  "usep supriatna",
 ]);
 
 const INSPECTION_ROLE_OVERRIDE_NIKS = new Set([
@@ -106,7 +112,9 @@ function buildAccessProfile(user) {
   const isSupervisiScheduler = nik === SUPERVISI_SCHEDULER_NIK;
   const isSupervisiMonitor = nik === SUPERVISI_MONITOR_NIK;
   const isSupervisiDenied = SUPERVISI_DENIED_NIKS.has(nik);
-  const isSupervisiGroup = !isSupervisiDenied && normalizedGroup.includes("supervisi");
+  const userName = String((user && user.name) || "").trim().toLowerCase();
+  const isSupervisiGroup = !isSupervisiDenied &&
+    (normalizedGroup.includes("supervisi") || SUPERVISI_WHITELISTED_NAMES.has(userName));
   const isSupervisiExecutor =
     !isSupervisiScheduler && !isSupervisiMonitor && isSupervisiGroup;
   const canAccessSupervisi =
