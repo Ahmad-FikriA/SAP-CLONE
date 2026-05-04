@@ -240,6 +240,40 @@ export default function SubmissionsPage() {
 
           {detail && (
             <div className="space-y-5 mt-2">
+              {/* SPK metadata */}
+              <div className="grid grid-cols-2 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <InfoField label="Interval" value={detail.spkInterval || '—'} />
+                <InfoField label="Jadwal" value={detail.spkScheduledDate ? formatDate(detail.spkScheduledDate) : '—'} />
+              </div>
+
+              {/* Equipment */}
+              {detail.spkEquipmentModels?.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Equipment</p>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          {['Equipment ID', 'Nama', 'Functional Location', 'Plant'].map((h) => (
+                            <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {detail.spkEquipmentModels.map((e) => (
+                          <tr key={e.equipmentId}>
+                            <td className="px-3 py-2 font-mono text-gray-800">{e.equipmentId}</td>
+                            <td className="px-3 py-2 text-gray-700">{e.equipmentName || '—'}</td>
+                            <td className="px-3 py-2 text-gray-500">{e.functionalLocation || '—'}</td>
+                            <td className="px-3 py-2 text-gray-500">{e.plantName || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Timing + executor */}
               <div className="grid grid-cols-2 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <InfoField label="Work Start" value={detail.workStart ? formatDate(detail.workStart) : '—'} />

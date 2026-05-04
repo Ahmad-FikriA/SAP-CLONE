@@ -16,8 +16,11 @@ const INCLUDE_FULL = [
   {
     model: Spk,
     as: 'spk',
-    attributes: ['category', 'description', 'submittedBy', 'scheduledDate'],
-    include: [{ model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan', 'measurementUnit'] }],
+    attributes: ['category', 'description', 'submittedBy', 'scheduledDate', 'intervalPeriod'],
+    include: [
+      { model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan', 'measurementUnit'] },
+      { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId', 'equipmentName', 'functionalLocation', 'plantName'] },
+    ],
     required: false,
   },
 ];
@@ -36,6 +39,13 @@ function fmt(sub) {
     spkDescription: spk.description || null,
     spkSubmittedBy: spk.submittedBy || null,
     spkScheduledDate: spk.scheduledDate || null,
+    spkInterval: spk.intervalPeriod || null,
+    spkEquipmentModels: (spk.equipmentModels || []).map(e => ({
+      equipmentId: e.equipmentId,
+      equipmentName: e.equipmentName || null,
+      functionalLocation: e.functionalLocation || null,
+      plantName: e.plantName || null,
+    })),
     workStart: j.workStart,
     submittedAt: j.submittedAt,
     durationActual: j.durationActual,
