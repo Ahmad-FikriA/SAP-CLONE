@@ -1200,6 +1200,72 @@ async function submitViolationReason(req, res) {
   }
 }
 
+// PUT /api/inspection/supervisi/visits/:id/undo
+// Revert a finalized visit back to draft — only allowed on the same day.
+async function undoVisit(req, res) {
+  try {
+    if (!isSupervisiExecutor(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Hanya pelaksana supervisi yang dapat membatalkan submit kunjungan.",
+      });
+    }
+
+    const visit = await SupervisiVisit.findByPk(req.params.id, {
+      include: [{ model: SupervisiJob, as: "job" }],
+    });
+
+    if (!visit) {
+      return res.status(404).json({
+        success: false,
+        message: "Kunjungan tidak ditemukan.",
+      });
+    }
+
+    if (!canAccessSupervisiJob(req.user, visit.job)) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda hanya dapat membatalkan submit untuk pekerjaan yang ditugaskan ke Anda.",
+      });
+    }
+
+    if (visit.isDraft) {
+      return res.status(400).json({
+        success: false,
+        message: "Kunjungan ini sudah berstatus draft.",
+      });
+    }
+
+    // Only allow undo on the same calendar day (server time)
+    const serverToday = new Date().toISOString().split("T")[0];
+    const visitDateStr = String(visit.visitDate);
+    if (visitDateStr !== serverToday) {
+      return res.status(400).json({
+        success: false,
+        message: "Batal submit hanya bisa dilakukan pada hari yang sama dengan tanggal kunjungan.",
+      });
+    }
+
+    await visit.update({ isDraft: true });
+
+    // Inject submitterName
+    const nikMap = await buildNikNameMap(visit.submittedBy ? [visit.submittedBy] : []);
+    addCurrentUserNameFallback(nikMap, req.user);
+    const visitData = typeof visit.toJSON === "function" ? visit.toJSON() : { ...visit };
+    visitData.submitterName = nikMap[visit.submittedBy] || null;
+    // Remove included job to keep response lean
+    delete visitData.job;
+
+    res.json({
+      success: true,
+      message: "Laporan berhasil dikembalikan ke draft.",
+      data: visitData,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 module.exports = {
   uploadVisitMedia,
   uploadJobAmendDocuments,
@@ -1212,4 +1278,5 @@ module.exports = {
   listPelanggaran,
   markMissedVisitsAsPelanggaran,
   submitViolationReason,
+  undoVisit,
 };
