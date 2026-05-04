@@ -337,10 +337,16 @@ const syncSipilFuncloc = async (req, res) => {
     return res.status(400).json({ error: 'JSON file is empty or not an array' });
   }
 
+  // Pre-load all plants once for name lookup.
+  const allPlants = await Plant.findAll({ attributes: ['plantId', 'plantName'] });
+  const plantNameById = Object.fromEntries(allPlants.map(p => [p.plantId, p.plantName]));
+
   let synced = 0;
   for (const entry of entries) {
-    const { funcLocId, name, taskListId, interval, location } = entry;
+    const { funcLocId, name, taskListId, interval, location, plantId } = entry;
     if (!funcLocId || !name) continue;
+
+    const plantName = plantId ? (plantNameById[plantId] || null) : null;
 
     await Equipment.upsert({
       equipmentId:        funcLocId,
@@ -348,6 +354,8 @@ const syncSipilFuncloc = async (req, res) => {
       category:           'Sipil',
       functionalLocation: location || null,
       funcLocId:          funcLocId,
+      plantId:            plantId || null,
+      plantName,
     });
 
     await SipilFunclocMapping.upsert({
