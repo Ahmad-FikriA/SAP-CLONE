@@ -137,7 +137,10 @@ function fmtRequest(notif, sapSpk) {
     executionName: sap?.execution_name || null,
     executionNik: sap?.execution_nik || null,
     executionWorkCenter: sap?.work_center || null,
-    // Actual materials/tools from SAP execution
+    actualWorkStart: sap?.work_start || spk.actualStartDate,
+    actualWorkFinish: sap?.work_finish || null,
+    actualStartTime: sap?.start_time || null,
+    actualFinishTime: sap?.finish_time || null,
     actualMaterials: sap?.actual_materials ? sap.actual_materials.split(', ').filter(Boolean) : [],
     actualTools: sap?.actual_tools ? sap.actual_tools.split(', ').filter(Boolean) : [],
   };
