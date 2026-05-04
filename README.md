@@ -100,8 +100,9 @@ Setelah container berjalan, Anda perlu mengisi database dengan data awal (master
 docker exec -it mantis-server sh
 
 # Jalankan script seed
-npm run seed             # Master data (Users, Plants, Equipment)
-npm run preventive-seed  # Data jadwal pemeliharaan (Preventive)
+npm run seed              # Master data (Users, Plants, Equipment)
+npm run seed:preventive   # Data jadwal pemeliharaan (Preventive)
+npm run clear:inspeksi    # Hapus data inspeksi (Hanya jika perlu reset)
 ```
 
 ---
@@ -120,7 +121,7 @@ npm run preventive-seed  # Data jadwal pemeliharaan (Preventive)
 
 *   **Melihat Log:** `docker logs -f mantis-server`
 *   **Menghentikan Sistem:** `docker compose down`
-*   **Reset Data Inspeksi:** `npm run clear-inspeksi` (jalankan di dalam container)
+*   **Reset Data Inspeksi:** `npm run clear:inspeksi` (jalankan di dalam container)
 
 ---
 
@@ -134,5 +135,41 @@ npm test
 
 ---
 
+## 🔄 Pembaruan Sistem (Updates)
+
+Jika ada pembaruan kode dari GitLab (remote repository), ikuti langkah berikut untuk memperbarui server:
+
+1.  **Tarik Kode Terbaru:**
+    ```bash
+    git pull origin main
+    ```
+2.  **Rebuild Container:**
+    ```bash
+    docker compose up -d --build
+    ```
+    *Docker akan mendeteksi perubahan kode, melakukan rebuild image, dan merestart container secara otomatis tanpa menghapus volume database.*
+
+3.  **Verifikasi:**
+    Cek log untuk memastikan tidak ada error saat startup:
+    ```bash
+    docker logs -f mantis-server
+    ```
+
+---
+
+## 🔍 Troubleshooting
+
+| Masalah | Solusi |
+|---|---|
+| **Gagal Connect ke SQL Server** | Pastikan **TCP/IP** di SQL Server Configuration Manager sudah `Enabled` dan port `1433` terbuka di Firewall. |
+| **Error `Login failed for user 'sa'`** | Pastikan password di `.env` sesuai dengan password user `sa` di SSMS. |
+| **Container tidak jalan/Restarting** | Cek log dengan `docker logs mantis-server`. Biasanya karena `.env` tidak ditemukan atau URI database salah. |
+| **Data tidak muncul di Web Admin** | Pastikan sudah menjalankan `npm run seed` di dalam container. |
+
+---
+
 ## 📝 Catatan untuk Pengembang
-Jika ada perubahan schema pada model Sequelize, SQL Server 2017 memerlukan perhatian khusus pada tipe data JSON (yang dimigrasikan ke TEXT) dan ENUM (yang dimigrasikan ke VARCHAR dengan validasi aplikasi). Pastikan selalu mengecek `src/config/sqlServerHelpers.js` jika ingin melakukan manipulasi database secara raw.
+
+*   **Migrasi Otomatis:** Setiap kali container dijalankan, sistem akan otomatis menjalankan script migrasi (`src/migrate_*.js`) untuk memastikan schema user dan mapping SPK tetap sinkron.
+*   **SQL Server 2017:** Menggunakan dialek MSSQL. Perhatikan tipe data JSON (disimpan sebagai `NVARCHAR(MAX)` atau `TEXT`) karena versi 2017 belum mendukung tipe JSON asli secara penuh di Sequelize.
+*   **Logs:** Gunakan `docker logs` untuk debugging di environment production/staging.

@@ -1,5 +1,5 @@
 {
-  "name": "kti-sap-mock",
+  "name": "mantis-server",
   "version": "1.0.0",
   "description": "KTI SmartCare — MANTIS Server with Admin UI",
   "main": "src/server.js",
@@ -10,6 +10,7 @@
     "dev": "nodemon src/server.js",
     "seed": "node src/seed.js",
     "seed:preventive": "node src/preventive_seed.js",
+    "clear:inspeksi": "node src/clear_inspeksi_supervisi.js",
     "backup:coords": "node src/backup_coords.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watch --runInBand",
