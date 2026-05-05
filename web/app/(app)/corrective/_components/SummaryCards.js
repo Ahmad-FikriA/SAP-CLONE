@@ -27,9 +27,23 @@ export function SummaryCards({ requests, spks }) {
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Butuh Approval
           </p>
-          <p className="text-2xl font-extrabold text-slate-900 truncate">
-            {requests.filter((r) => r.approvalStatus === "pending").length}
+          <p className="text-2xl font-extrabold text-slate-900 truncate leading-none mb-1.5">
+            {
+              requests.filter((r) => r.approvalStatus === "pending").length +
+              spks.filter((s) => s.status === "menunggu_review_kadis_pp" || s.status === "menunggu_review_kadis_pelapor").length
+            }
           </p>
+          <div className="flex flex-wrap items-center gap-1.5 text-[9px] font-bold mt-1">
+            <span className="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded" title="Approval Planner">
+              Plan: {requests.filter((r) => r.approvalStatus === "pending").length}
+            </span>
+            <span className="text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded" title="Review Kadis PP">
+              K.PP: {spks.filter((s) => s.status === "menunggu_review_kadis_pp").length}
+            </span>
+            <span className="text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded" title="Review Kadis Pelapor">
+              K.Pel: {spks.filter((s) => s.status === "menunggu_review_kadis_pelapor").length}
+            </span>
+          </div>
         </div>
       </div>
 

@@ -19,7 +19,7 @@ export function useCorrective() {
         apiGet("/corrective/requests"),
         apiGet("/corrective/sap-spk"),
       ]);
-      setRequests(Array.isArray(reqData) ? reqData : []);
+      setRequests(Array.isArray(reqData) ? reqData.filter(r => r.approvalStatus === "pending" || r.approvalStatus === "rejected") : []);
 
       const allSpks = Array.isArray(sapSpkRes?.data) ? sapSpkRes.data : [];
       let filteredSpks = allSpks;

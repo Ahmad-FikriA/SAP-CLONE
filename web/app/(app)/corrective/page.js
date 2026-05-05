@@ -280,7 +280,6 @@ export default function CorrectivePage() {
               className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all shadow-sm">
               <option value="">Semua Status</option>
               <option value="pending">Menunggu Approval</option>
-              <option value="approved">Sudah Disetujui</option>
               <option value="rejected">Ditolak</option>
             </select>
           )}

@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/table";
 import { Inbox, Edit2, Trash2 } from "lucide-react";
 import { canUpdate, canDelete } from "@/lib/auth";
-import { APPROVAL_COLORS, APPROVAL_LABELS } from "./constants";
+import { APPROVAL_COLORS, APPROVAL_LABELS, NOTIF_STATUS_COLORS, NOTIF_STATUS_LABELS } from "./constants";
 import { CorrectiveStatusBadge, EmptyState, fmtDate } from "./ui-primitives";
 
 export function RequestsTable({

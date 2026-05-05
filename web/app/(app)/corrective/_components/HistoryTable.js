@@ -15,8 +15,8 @@ export function HistoryTable({ loading, history, onSelectSpk, onDeleteSpk }) {
       <TableHeader className="bg-slate-50/80">
         <TableRow>
           <TableHead>Order Number</TableHead>
-          <TableHead>Tanggal Posting</TableHead>
           <TableHead>Equipment</TableHead>
+          <TableHead>Status Sistem</TableHead>
           <TableHead>Status SAP</TableHead>
           <TableHead className="text-right">Aksi</TableHead>
         </TableRow>
@@ -44,9 +44,6 @@ export function HistoryTable({ loading, history, onSelectSpk, onDeleteSpk }) {
               <TableCell className="font-mono text-xs font-semibold text-slate-800">
                 {spk.order_number}
               </TableCell>
-              <TableCell className="text-slate-600 font-medium">
-                {fmtDate(spk.posting_date)}
-              </TableCell>
               <TableCell className="text-slate-600 truncate max-w-[200px]">
                 {spk.equipment_name || "—"}
               </TableCell>
@@ -56,6 +53,13 @@ export function HistoryTable({ loading, history, onSelectSpk, onDeleteSpk }) {
                   colorMap={SAP_STATUS_COLORS}
                   labelMap={SAP_STATUS_LABELS}
                 />
+              </TableCell>
+              <TableCell>
+                {spk.sys_status ? (
+                  <span className="text-[10px] font-bold font-mono tracking-tight px-1.5 py-0.5 rounded border bg-slate-100 border-slate-200 text-slate-500" title={spk.sys_status}>
+                    {spk.sys_status.length > 9 ? spk.sys_status.substring(0, 9) + "....." : spk.sys_status}
+                  </span>
+                ) : "—"}
               </TableCell>
               <TableCell
                 className="text-right"
