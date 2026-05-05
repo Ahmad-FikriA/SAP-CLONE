@@ -16,8 +16,8 @@ export function SpkDetailDialog({
 }) {
   return (
     <Dialog open={!!selectedSpk} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent showCloseButton={false} className="max-w-[95vw] lg:max-w-[80vw] max-h-[90vh] overflow-y-auto p-0 rounded-2xl gap-0">
-        <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 px-8 py-6 border-b border-slate-100 sticky top-0 z-10">
+      <DialogContent showCloseButton={false} className="max-w-[95vw] lg:max-w-[80vw] max-h-[90vh] overflow-hidden p-0 rounded-2xl flex flex-col gap-0">
+        <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 px-8 py-6 border-b border-slate-100 shrink-0">
           <div className="flex items-center justify-between mb-5">
             <div>
               <DialogTitle className="text-xl font-bold text-slate-800">
@@ -80,7 +80,7 @@ export function SpkDetailDialog({
         </div>
 
         {selectedSpk && (
-          <div className="p-8 space-y-8">
+          <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <InfoCard label="Order Number" value={selectedSpk.order_number} mono />
               <InfoCard label="Status SAP" value={selectedSpk.sys_status} />
@@ -237,7 +237,7 @@ export function SpkDetailDialog({
             )}
           </div>
         )}
-        <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-between items-center sticky bottom-0">
+        <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-between items-center shrink-0">
           <div>
             {selectedSpk?.status === "menunggu_review_kadis_pp" && canUpdate('corrective') && (
               <div className="flex gap-2">
