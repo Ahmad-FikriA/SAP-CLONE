@@ -275,19 +275,11 @@ export default function CorrectivePage() {
               <Trash2 size={16} className="mr-2" /> Hapus Semua
             </Button>
           )}
-          {tab === "requests" && (
-            <select value={filterApprovalStatus} onChange={(e) => setFilterApprovalStatus(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all shadow-sm">
-              <option value="">Semua Status</option>
-              <option value="pending">Menunggu Approval</option>
-              <option value="rejected">Ditolak</option>
-            </select>
-          )}
           {tab === "spk" && (
             <select value={filterSpkStatus} onChange={(e) => setFilterSpkStatus(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all">
               <option value="">Semua Status SPK</option>
-              <option value="baru_import">Baru</option>
+              <option value="baru_import">Tugas Baru</option>
               <option value="eksekusi">Eksekusi</option>
               <option value="menunggu_review_kadis_pp">Review Kadis PP</option>
               <option value="menunggu_review_kadis_pelapor">Review Pelapor</option>
@@ -297,7 +289,7 @@ export default function CorrectivePage() {
       </div>
 
       {/* Main Content */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div key={tab} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
         {tab === "requests" && (
           <RequestsTable
             loading={loading} filteredRequests={filteredRequests}
