@@ -159,14 +159,17 @@ const confirm = async (req, res) => {
 
           // Upsert Sipil funcLoc into equipment table so map pinning + QR verification work
           if (order.isSipil) {
+            // Prefer SAP Location column; fall back to plantId from SipilFunclocMapping (set by sync-sipil)
+            const sipilPlantId   = order.locationCode ?? order.plantId ?? null;
+            const sipilPlantName = order.plantName ?? null;
             await Equipment.upsert({
               equipmentId:        spkEqId,
               equipmentName:      spkEqName ?? spkEqId,
               category:           'Sipil',
               functionalLocation: order.functionalLocation ?? null,
               funcLocId:          order.functionalLocation ?? null,
-              plantId:            order.locationCode ?? null,
-              plantName:          order.plantName ?? null,
+              plantId:            sipilPlantId,
+              plantName:          sipilPlantName,
             }, { transaction: t });
           }
         }

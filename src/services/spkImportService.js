@@ -205,7 +205,7 @@ async function resolveIntervals(orders) {
   // ── Sipil orders: look up interval + task list from SipilFunclocMapping ──────
   const sipilFuncLocs = [...new Set(orders.filter(o => o.isSipil).map(o => o.functionalLocation).filter(Boolean))];
   const sipilRows = sipilFuncLocs.length
-    ? await SipilFunclocMapping.findAll({ where: { funcLocId: { [Op.in]: sipilFuncLocs } }, attributes: ['funcLocId', 'interval', 'taskListId'] })
+    ? await SipilFunclocMapping.findAll({ where: { funcLocId: { [Op.in]: sipilFuncLocs } }, attributes: ['funcLocId', 'interval', 'taskListId', 'plantId'] })
     : [];
   const sipilMap = Object.fromEntries(sipilRows.map(s => [s.funcLocId, s]));
 
@@ -213,6 +213,7 @@ async function resolveIntervals(orders) {
     const sipil = sipilMap[order.functionalLocation];
     order.interval           = sipil?.interval || '1wk';  // Sipil is always 1wk
     order.taskListId         = sipil?.taskListId || null;
+    order.plantId            = sipil?.plantId || null;    // plant from mapping table
     order.intervalResolution = 'auto';
     order.intervalOptions    = [order.interval];
   }

@@ -377,6 +377,7 @@ const syncSipilFuncloc = async (req, res) => {
       taskListId: taskListId || null,
       interval:   interval || '1wk',
       location:   location || null,
+      plantId:    plantId || null,
     });
 
     synced++;
