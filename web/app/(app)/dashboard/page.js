@@ -1,6 +1,6 @@
 'use client';
 
-import { WidgetSummary, WidgetPreventive, WidgetCorrective } from './_widgets';
+import { WidgetSummary, WidgetPreventive, WidgetCorrective, WidgetK3Inspection } from './_widgets';
 import { getUser } from '@/lib/auth';
 import { useEffect, useState } from 'react';
 
@@ -30,10 +30,10 @@ export default function DashboardPage() {
       <WidgetSummary />
 
       {/* Module widgets grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <WidgetPreventive />
         <WidgetCorrective />
-        {/* Team adds their widget components here ↓ */}
+        <WidgetK3Inspection />
       </div>
     </div>
   );
