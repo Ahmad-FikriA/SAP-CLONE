@@ -537,6 +537,10 @@ async function approveReport(req, res) {
       { transaction: t },
     );
 
+    if (report.schedule) {
+      await report.schedule.update({ status: "approved" }, { transaction: t });
+    }
+
     // If kerusakan found → auto-create follow-up
     // Branching: manusia → assign ke Dinas HSE, selain itu → assign ke Dinas Perawatan
     if (report.hasKerusakan) {
