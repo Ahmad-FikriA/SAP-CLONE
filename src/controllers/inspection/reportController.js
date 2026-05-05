@@ -159,6 +159,16 @@ function parsePhotoRecords(photos, reportId) {
 }
 
 /**
+ * Parse raw attachment paths into a clean array of non-empty strings.
+ */
+function parseAttachmentPaths(attachments) {
+  if (!Array.isArray(attachments)) return [];
+  return attachments
+    .map((a) => String(a || "").trim())
+    .filter((a) => a.length > 0);
+}
+
+/**
  * Report Controller — Submit, list, approve/reject inspection reports.
  */
 
@@ -310,6 +320,7 @@ async function createReport(req, res) {
         kriteria,
         kategoriK3: kategoriK3 || null,
         signaturePath: signaturePath || null,
+        attachments: parseAttachmentPaths(req.body.attachments),
         status: reportStatus,
         submittedBy: req.user.nik,
         submittedAt: isSubmitted ? new Date() : null,
@@ -436,6 +447,10 @@ async function updateReport(req, res) {
       nextStatus === "submitted"
         ? report.submittedAt || new Date()
         : null;
+
+    if (req.body.attachments !== undefined) {
+      updatePayload.attachments = parseAttachmentPaths(req.body.attachments);
+    }
 
     await report.update(updatePayload, { transaction: t });
 

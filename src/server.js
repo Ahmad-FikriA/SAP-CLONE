@@ -143,7 +143,7 @@ const inspectionStorage = multer.diskStorage({
 // Keep this aligned with the Flutter inspection video validator.
 const INSPECTION_MEDIA_MAX_SIZE_MB = 50;
 const INSPECTION_MEDIA_MAX_SIZE = INSPECTION_MEDIA_MAX_SIZE_MB * 1024 * 1024;
-const INSPECTION_MEDIA_MAX_COUNT = 5;
+const INSPECTION_MEDIA_MAX_COUNT = 10;
 const INSPECTION_MEDIA_ALLOWED_EXTENSIONS = new Set([
   ".jpg",
   ".jpeg",
@@ -163,6 +163,12 @@ const INSPECTION_MEDIA_ALLOWED_EXTENSIONS = new Set([
   ".avi",
   ".mkv",
   ".webm",
+  // Document extensions — for inspection report attachments
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
 ]);
 
 function isInspectionMediaAllowed(file) {
@@ -175,8 +181,14 @@ function isInspectionMediaAllowed(file) {
   const looksLikeBlobUpload =
     mimeType === "application/octet-stream" &&
     (originalName.toLowerCase() === "blob" || originalName.toLowerCase().startsWith("image_picker"));
+  // Accept document MIME types (PDF, Word, Excel) for inspection attachments
+  const isDocumentMime =
+    mimeType === "application/pdf" ||
+    mimeType === "application/msword" ||
+    mimeType.includes("officedocument") ||
+    mimeType === "application/vnd.ms-excel";
 
-  return hasAllowedMimePrefix || hasAllowedExtension || looksLikeBlobUpload;
+  return hasAllowedMimePrefix || hasAllowedExtension || looksLikeBlobUpload || isDocumentMime;
 }
 
 const uploadInspectionMedia = multer({

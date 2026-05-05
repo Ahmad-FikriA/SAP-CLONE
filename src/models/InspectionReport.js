@@ -110,6 +110,19 @@ const InspectionReport = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    attachments: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Dokumen lampiran (JSON array of file path strings, e.g. PDF/DOCX/XLSX)",
+      get() {
+        const raw = this.getDataValue("attachments");
+        if (!raw) return [];
+        try { return JSON.parse(raw); } catch { return []; }
+      },
+      set(val) {
+        this.setDataValue("attachments", JSON.stringify(Array.isArray(val) ? val : []));
+      },
+    },
   },
   {
     tableName: "inspection_reports",

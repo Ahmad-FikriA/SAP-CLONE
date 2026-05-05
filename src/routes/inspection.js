@@ -70,7 +70,6 @@ const {
   listAmends,
 } = require("../controllers/inspection/supervisiAmendController");
 
-const { clearInspectionSupervisiData } = require("../controllers/inspection/adminController");
 
 // All inspection routes require authentication
 router.use(verifyToken);
@@ -130,7 +129,5 @@ router.post("/supervisi/jobs/:jobId/amends", uploadAmendDocuments, createAmend);
 router.put("/supervisi/jobs/:jobId/amends/:amendId", uploadAmendDocuments, updateAmend);
 router.delete("/supervisi/jobs/:jobId/amends/:amendId", deleteAmend);
 
-// ── Admin Utilities ─────────────────────────────────────────────────────────
-router.delete("/clear-dummy-data", clearInspectionSupervisiData);
 
 module.exports = router;
