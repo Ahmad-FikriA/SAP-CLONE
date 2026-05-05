@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiGet } from '@/lib/api';
 import { formatDate } from '@/lib/date-utils';
-import { INSPEKSI_STATUS_META, INSPEKSI_TYPE_LABELS } from '@/lib/inspeksi-service';
+import { INSPEKSI_STATUS_META, resolveInspeksiTypeLabel } from '@/lib/inspeksi-service';
 import { FileText, User, MapPin, Calendar, Clock, Tag, AlertCircle, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 
 const TYPE_COLORS = {
@@ -104,7 +104,7 @@ export function InspeksiDetailModal({ schedule, open, onClose }) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${typeColor.bg} ${typeColor.text}`}>
-                  {INSPEKSI_TYPE_LABELS[schedule.type] || schedule.type}
+                  {resolveInspeksiTypeLabel(schedule)}
                 </span>
                 {schedule.nomorPoJo && (
                   <span className="text-[10px] font-mono text-white/50">#{schedule.nomorPoJo}</span>
@@ -125,7 +125,6 @@ export function InspeksiDetailModal({ schedule, open, onClose }) {
           <div>
             <SectionLabel>Informasi Utama</SectionLabel>
             <div className="grid grid-cols-2 gap-4">
-              <InfoRow icon={User}     label="Pelaksana"        value={schedule.assignedTo || '—'} />
               <InfoRow icon={User}     label="Dibuat Oleh"      value={schedule.createdBy} />
               <InfoRow icon={MapPin}   label="Lokasi"           value={schedule.location || '—'} />
               <InfoRow icon={Tag}      label="Unit Kerja"        value={schedule.unitKerja || '—'} />

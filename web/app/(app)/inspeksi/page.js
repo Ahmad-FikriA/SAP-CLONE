@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { ClipboardList, Loader2 } from 'lucide-react';
-import { fetchInspeksiSchedules } from '@/lib/inspeksi-service';
+import {
+  fetchInspeksiSchedules,
+  deleteInspeksiSchedule,
+  fetchInspeksiUsersMap,
+} from '@/lib/inspeksi-service';
 import { InspeksiSpkTable } from '@/components/inspeksi/InspeksiSpkTable';
 import { InspeksiDetailModal } from '@/components/inspeksi/InspeksiDetailModal';
 
@@ -12,13 +16,18 @@ export default function InspeksiPage() {
   const [loading,        setLoading]        = useState(true);
   const [detailOpen,     setDetailOpen]     = useState(false);
   const [detailSchedule, setDetailSchedule] = useState(null);
+  const [usersMap,       setUsersMap]       = useState({});
 
   // ── Ambil data ──────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchInspeksiSchedules();
+      const [data, uMap] = await Promise.all([
+        fetchInspeksiSchedules(),
+        fetchInspeksiUsersMap(),
+      ]);
       setSchedules(Array.isArray(data) ? data : []);
+      setUsersMap(uMap);
     } catch (e) {
       toast.error('Gagal memuat jadwal inspeksi: ' + e.message);
     } finally {
@@ -34,6 +43,17 @@ export default function InspeksiPage() {
     setDetailOpen(true);
   }
 
+  // ── Hapus jadwal ────────────────────────────────────────────────────────────
+  async function handleDelete(schedule) {
+    try {
+      await deleteInspeksiSchedule(schedule.id);
+      toast.success(`Jadwal "${schedule.title}" berhasil dihapus.`);
+      setSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
+    } catch (e) {
+      toast.error(`Gagal menghapus jadwal (ID: ${schedule?.id}): ` + e.message);
+    }
+  }
+
   // Ringkasan statistik
   const stats = {
     total:    schedules.length,
@@ -43,39 +63,48 @@ export default function InspeksiPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       {/* ── Page Header ── */}
-      <div className="bg-[#0a2540] text-white px-6 pt-8 pb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-            <ClipboardList size={20} className="text-white" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-1.5 bg-blue-600 rounded-lg">
+              <ClipboardList size={16} className="text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+              Monitoring Inspeksi
+            </h2>
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Monitoring Inspeksi</h1>
-            <p className="text-white/50 text-xs mt-0.5">Daftar SPK Inspeksi · Rutin · K3</p>
-          </div>
+          <p className="text-slate-500 text-sm ml-9">
+            Daftar SPK Inspeksi
+          </p>
         </div>
-
-        {/* ── Stat Cards ── */}
-        {!loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-            {[
-              { label: 'Total SPK',       value: stats.total,    color: 'from-white/10 to-white/5',         text: 'text-white'       },
-              { label: 'Aktif',           value: stats.aktif,    color: 'from-green-500/30 to-green-600/20', text: 'text-green-200'  },
-              { label: 'Sedang Berjalan', value: stats.berjalan, color: 'from-blue-500/30 to-blue-600/20',   text: 'text-blue-200'   },
-              { label: 'Selesai',         value: stats.selesai,  color: 'from-white/5 to-white/0',           text: 'text-white/60'   },
-            ].map(({ label, value, color, text }) => (
-              <div key={label} className={`bg-gradient-to-br ${color} rounded-xl px-4 py-3 border border-white/10`}>
-                <p className={`text-2xl font-bold ${text}`}>{value}</p>
-                <p className="text-xs text-white/50 mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
+      {/* ── Stat Cards ── */}
+      {!loading && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { label: 'Total SPK',       value: stats.total,    icon: ClipboardList, color: 'bg-blue-50 text-blue-600' },
+            { label: 'Aktif',           value: stats.aktif,    icon: ClipboardList, color: 'bg-amber-50 text-amber-600' },
+            { label: 'Sedang Berjalan', value: stats.berjalan, icon: ClipboardList, color: 'bg-emerald-50 text-emerald-600' },
+            { label: 'Selesai',         value: stats.selesai,  icon: ClipboardList, color: 'bg-gray-50 text-gray-600' },
+          ].map(({ label, value, icon: Icon, color }) => (
+            <div key={label} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+                <Icon size={24} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
+                <p className="text-2xl font-extrabold text-slate-900 truncate">{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── Content ── */}
-      <div className="p-6">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden p-6">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
             <Loader2 size={28} className="animate-spin" />
@@ -85,8 +114,10 @@ export default function InspeksiPage() {
           <InspeksiSpkTable
             schedules={schedules}
             loading={loading}
+            usersMap={usersMap}
             onRefresh={load}
             onViewDetail={openDetail}
+            onDelete={handleDelete}
           />
         )}
       </div>
