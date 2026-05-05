@@ -29,7 +29,9 @@ jobs:
           docker compose up -d --build
           docker compose restart sap-mock web
 
-
+          # 4. Run database migrations automatically after every deploy
+          #    Setiap migration sudah idempotent (aman dijalankan berulang kali)
+          docker compose exec -T sap-mock node src/migrate_inspection_attachments.js
 
           # Note: Because the container runs `npm run dev` (nodemon) via start.sh
           # and the current folder is mounted as a volume (- .:/app), 
