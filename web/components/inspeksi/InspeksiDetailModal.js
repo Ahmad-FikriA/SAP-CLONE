@@ -5,8 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { apiGet } from '@/lib/api';
 import { formatDate } from '@/lib/date-utils';
 import { INSPEKSI_STATUS_META, resolveInspeksiTypeLabel } from '@/lib/inspeksi-service';
-import { FileText, User, MapPin, Calendar, Clock, Tag, AlertCircle, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import {
+  FileText, User, MapPin, Calendar, Tag, AlertCircle, CheckCircle,
+  XCircle, Clock, Wrench, ClipboardList, Camera, AlertTriangle, ChevronDown, ChevronUp,
+} from 'lucide-react';
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const TYPE_COLORS = {
   rutin:     { bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200'   },
   k3:        { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
@@ -14,10 +18,22 @@ const TYPE_COLORS = {
 };
 
 const STATUS_CONFIG = {
-  scheduled:   { Icon: Clock,        className: 'bg-amber-50 text-amber-700 border border-amber-200'   },
-  in_progress: { Icon: AlertCircle,  className: 'bg-blue-50 text-blue-700 border border-blue-200'      },
-  completed:   { Icon: CheckCircle,  className: 'bg-green-50 text-green-700 border border-green-200'   },
-  cancelled:   { Icon: XCircle,      className: 'bg-gray-100 text-gray-500 border border-gray-200'     },
+  scheduled:          { Icon: Clock,        className: 'bg-amber-50 text-amber-700 border border-amber-200'   },
+  in_progress:        { Icon: AlertCircle,  className: 'bg-blue-50 text-blue-700 border border-blue-200'      },
+  completed:          { Icon: CheckCircle,  className: 'bg-green-50 text-green-700 border border-green-200'   },
+  cancelled:          { Icon: XCircle,      className: 'bg-gray-100 text-gray-500 border border-gray-200'     },
+  submitted:          { Icon: Clock,        className: 'bg-amber-50 text-amber-700 border border-amber-200'   },
+  approved:           { Icon: CheckCircle,  className: 'bg-green-50 text-green-700 border border-green-200'   },
+  rejected:           { Icon: XCircle,      className: 'bg-red-50 text-red-600 border border-red-200'         },
+  revisions_required: { Icon: AlertTriangle,className: 'bg-orange-50 text-orange-700 border border-orange-200'},
+};
+
+const REPORT_STATUS_LABEL = {
+  draft:              'Draft',
+  submitted:          'Menunggu Persetujuan',
+  approved:           'Disetujui',
+  rejected:           'Ditolak',
+  revisions_required: 'Perlu Revisi',
 };
 
 function StatusPill({ status }) {
@@ -53,32 +69,242 @@ function InfoRow({ icon: Icon, label, value }) {
   );
 }
 
-export function InspeksiDetailModal({ schedule, open, onClose }) {
-  const [reports, setReports]       = useState([]);
-  const [followUps, setFollowUps]   = useState([]);
-  const [loadingReports, setLR]     = useState(false);
-  const [loadingFollowUps, setLFU]  = useState(false);
+/** Tampilkan satu kartu laporan hasil. */
+function ReportCard({ report, index }) {
+  const [expanded, setExpanded] = useState(index === 0);
+
+  const config       = STATUS_CONFIG[report.status] || STATUS_CONFIG.submitted;
+  const { Icon }     = config;
+  const statusLabel  = REPORT_STATUS_LABEL[report.status] || report.status?.toUpperCase();
+  const tools        = Array.isArray(report.tools) ? report.tools : [];
+  const photos       = Array.isArray(report.photos) ? report.photos : [];
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+      {/* ── Header kartu (selalu terlihat) ── */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${config.className}`}>
+            <Icon size={10} />
+            {statusLabel}
+          </span>
+          <span className="text-xs text-gray-500 truncate">
+            {report.inspectorName || '—'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[10px] text-gray-400">
+            {report.submittedAt
+              ? formatDate(report.submittedAt)
+              : report.createdAt
+                ? formatDate(report.createdAt)
+                : '—'}
+          </span>
+          {expanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+        </div>
+      </button>
+
+      {/* ── Body kartu (expand/collapse) ── */}
+      {expanded && (
+        <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-3">
+
+          {/* Baris meta: inspektor & tanggal submit */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Inspektor</p>
+              <div className="flex items-center gap-1.5">
+                <User size={13} className="text-gray-400 shrink-0" />
+                <span className="text-sm text-gray-800 font-medium">{report.inspectorName || '—'}</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Tanggal Submit</p>
+              <div className="flex items-center gap-1.5">
+                <Calendar size={13} className="text-gray-400 shrink-0" />
+                <span className="text-sm text-gray-800 font-medium">
+                  {report.submittedAt
+                    ? new Date(report.submittedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+                    : '—'}
+                </span>
+              </div>
+            </div>
+
+            {/* Kriteria */}
+            {report.kriteria && (
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Kriteria</p>
+                <div className="flex items-center gap-1.5">
+                  <Tag size={13} className="text-gray-400 shrink-0" />
+                  <span className="text-sm text-gray-800 font-medium">{report.kriteria}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Alat yang digunakan */}
+          {tools.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Alat yang Digunakan</p>
+              <div className="flex flex-wrap gap-1.5">
+                {tools.map((tool, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-medium"
+                  >
+                    <Wrench size={9} />
+                    {tool}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Temuan dan kondisi */}
+          <div className="border border-gray-100 rounded-xl p-3 space-y-3 bg-gray-50">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Temuan &amp; Kondisi</p>
+
+            {/* Temuan */}
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Temuan</p>
+              {report.findings ? (
+                <p className="text-sm text-gray-700 leading-relaxed">{report.findings}</p>
+              ) : (
+                <p className="text-xs text-gray-400 italic">Tidak ada temuan dicatat</p>
+              )}
+            </div>
+
+            {/* Ada kerusakan */}
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Ada Kerusakan</p>
+              <span
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                  report.hasKerusakan
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-green-100 text-green-700'
+                }`}
+              >
+                {report.hasKerusakan ? (
+                  <><AlertTriangle size={11} /> Ya — Ada Kerusakan</>
+                ) : (
+                  <><CheckCircle size={11} /> Tidak Ada Kerusakan</>
+                )}
+              </span>
+              {report.hasKerusakan && report.kerusakanDetail && (
+                <p className="text-sm text-gray-600 mt-2 leading-relaxed">{report.kerusakanDetail}</p>
+              )}
+            </div>
+
+            {/* Dokumentasi (foto) */}
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                Dokumentasi{photos.length > 0 ? ` (${photos.length})` : ''}
+              </p>
+              {photos.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Tidak ada dokumentasi foto</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {photos.map((ph) => {
+                    const src = ph.photoPath?.startsWith('http')
+                      ? ph.photoPath
+                      : `${process.env.NEXT_PUBLIC_API_URL || ''}/${ph.photoPath}`;
+                    return (
+                      <a
+                        key={ph.id}
+                        href={src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block rounded-lg overflow-hidden border border-gray-200 hover:border-blue-300 transition-colors group"
+                        title={ph.caption || 'Foto dokumentasi'}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={src}
+                          alt={ph.caption || 'dokumentasi'}
+                          className="w-full h-24 object-cover group-hover:opacity-90 transition-opacity"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div
+                          className="hidden w-full h-24 bg-gray-100 items-center justify-center"
+                          style={{ display: 'none' }}
+                        >
+                          <Camera size={20} className="text-gray-400" />
+                        </div>
+                        {ph.caption && (
+                          <p className="px-1.5 py-1 text-[10px] text-gray-500 truncate">{ph.caption}</p>
+                        )}
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Catatan approval (jika ada) */}
+          {report.approvalNotes && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+              <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mb-0.5">
+                Catatan Persetujuan
+              </p>
+              <p className="text-sm text-gray-700 leading-relaxed">{report.approvalNotes}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Modal ─────────────────────────────────────────────────────────────────────────────
+const SCROLLBAR_STYLE = `
+  .modal-custom-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .modal-custom-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+  .modal-custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .modal-custom-scroll::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 99px;
+  }
+  .modal-custom-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+`;
+
+export function InspeksiDetailModal({ schedule, open, onClose, usersMap = {} }) {
+  const [reports,        setReports]   = useState([]);
+  const [loadingReports, setLR]        = useState(false);
   const lastId = useRef(null);
+
+  // Resolve NIK → nama
+  function resolveNama(nik) {
+    if (!nik) return '—';
+    return usersMap[String(nik)] || nik;
+  }
 
   useEffect(() => {
     if (!schedule || !open) return;
-    if (lastId.current === schedule.id) return; // sudah di-load
+    if (lastId.current === schedule.id) return;
     lastId.current = schedule.id;
 
     setReports([]);
-    setFollowUps([]);
-
     setLR(true);
     apiGet(`/inspection/reports?scheduleId=${schedule.id}`)
       .then((d) => setReports(d?.data ?? []))
       .catch(() => setReports([]))
       .finally(() => setLR(false));
-
-    setLFU(true);
-    apiGet(`/inspection/follow-ups?scheduleId=${schedule.id}`)
-      .then((d) => setFollowUps(d?.data ?? []))
-      .catch(() => setFollowUps([]))
-      .finally(() => setLFU(false));
   }, [schedule, open]);
 
   if (!schedule) return null;
@@ -94,7 +320,10 @@ export function InspeksiDetailModal({ schedule, open, onClose }) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto p-0">
+      {/* Inject scrollbar style sekali */}
+      <style>{SCROLLBAR_STYLE}</style>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 modal-custom-scroll">
+
         {/* ── Header berwarna ── */}
         <div className="bg-[#0a2540] px-6 pt-6 pb-5 rounded-t-xl">
           <div className="flex items-start gap-3">
@@ -121,108 +350,87 @@ export function InspeksiDetailModal({ schedule, open, onClose }) {
         </div>
 
         <div className="px-6 py-5 space-y-6">
-          {/* ── Info Utama ── */}
-          <div>
-            <SectionLabel>Informasi Utama</SectionLabel>
-            <div className="grid grid-cols-2 gap-4">
-              <InfoRow icon={User}     label="Dibuat Oleh"      value={schedule.createdBy} />
-              <InfoRow icon={MapPin}   label="Lokasi"           value={schedule.location || '—'} />
-              <InfoRow icon={Tag}      label="Unit Kerja"        value={schedule.unitKerja || '—'} />
-              <InfoRow icon={Calendar} label="Tanggal Mulai"     value={schedule.scheduledDate ? new Date(schedule.scheduledDate + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'} />
-              <InfoRow icon={Calendar} label="Tanggal Selesai"   value={schedule.scheduledEndDate ? new Date(schedule.scheduledEndDate + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'} />
-              {schedule.kategoriTeknisi && (
-                <InfoRow icon={Tag} label="Kategori Teknisi" value={schedule.kategoriTeknisi} />
-              )}
-              {schedule.kategoriK3 && (
-                <InfoRow icon={Tag} label="Kategori K3" value={schedule.kategoriK3 === 'manusia' ? 'Manusia (Perilaku/APD)' : 'Bangunan (Struktur/Fasilitas)'} />
-              )}
-            </div>
-          </div>
 
-          {/* ── Catatan ── */}
-          {(schedule.notes || schedule.vendorInfo) && (
+          {/* ── 1. Deskripsi ── */}
+          {schedule.notes && (
             <div>
-              <SectionLabel>Catatan & Informasi Tambahan</SectionLabel>
-              <div className="space-y-3">
-                {schedule.notes && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Catatan</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">{schedule.notes}</p>
-                  </div>
-                )}
-                {schedule.vendorInfo && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Info Vendor</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">{schedule.vendorInfo}</p>
-                  </div>
-                )}
+              <SectionLabel>Deskripsi</SectionLabel>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p className="text-sm text-gray-700 leading-relaxed">{schedule.notes}</p>
               </div>
             </div>
           )}
 
-          {/* ── Laporan Hasil ── */}
+          {/* ── 2. Info Pelapor & Informasi Utama ── */}
           <div>
-            <SectionLabel>Laporan Hasil {!loadingReports && `(${reports.length})`}</SectionLabel>
+            <SectionLabel>Informasi Utama</SectionLabel>
+            <div className="grid grid-cols-2 gap-4">
+              <InfoRow icon={User}     label="Dibuat Oleh"      value={resolveNama(schedule.createdBy)} />
+              <InfoRow icon={MapPin}   label="Lokasi"           value={schedule.location || '—'} />
+              <InfoRow icon={Tag}      label="Unit Kerja"        value={schedule.unitKerja || '—'} />
+              <InfoRow
+                icon={Calendar}
+                label="Tanggal Mulai"
+                value={
+                  schedule.scheduledDate
+                    ? new Date(schedule.scheduledDate + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+                    : '—'
+                }
+              />
+              <InfoRow
+                icon={Calendar}
+                label="Tanggal Selesai"
+                value={
+                  schedule.scheduledEndDate
+                    ? new Date(schedule.scheduledEndDate + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+                    : '—'
+                }
+              />
+              {schedule.kategoriTeknisi && (
+                <InfoRow icon={Tag} label="Kategori Teknisi" value={schedule.kategoriTeknisi} />
+              )}
+              {schedule.kategoriK3 && (
+                <InfoRow
+                  icon={Tag}
+                  label="Kategori K3"
+                  value={schedule.kategoriK3 === 'manusia' ? 'Manusia (Perilaku/APD)' : 'Bangunan (Struktur/Fasilitas)'}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* ── Info Vendor ── */}
+          {schedule.vendorInfo && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Info Vendor</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{schedule.vendorInfo}</p>
+            </div>
+          )}
+
+          {/* ── 6. Laporan Hasil ── */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <ClipboardList size={14} className="text-gray-400" />
+              <SectionLabel>
+                Laporan Hasil{!loadingReports && ` (${reports.length})`}
+              </SectionLabel>
+            </div>
+
             {loadingReports ? (
-              <div className="text-xs text-gray-400 py-3 text-center">Memuat laporan...</div>
+              <div className="text-xs text-gray-400 py-6 text-center">Memuat laporan...</div>
             ) : reports.length === 0 ? (
-              <div className="text-xs text-gray-400 py-4 text-center border border-dashed border-gray-200 rounded-xl">
+              <div className="text-xs text-gray-400 py-6 text-center border border-dashed border-gray-200 rounded-xl">
                 Belum ada laporan hasil untuk jadwal ini
               </div>
             ) : (
-              <div className="space-y-2">
-                {reports.map((r) => (
-                  <div key={r.id} className="border border-gray-200 rounded-xl p-4 bg-white hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${r.status === 'approved' ? 'bg-green-500' : r.status === 'rejected' ? 'bg-red-500' : 'bg-amber-400'}`} />
-                        <span className="text-xs font-semibold text-gray-700">{r.status?.toUpperCase() || 'DRAFT'}</span>
-                      </div>
-                      <span className="text-[10px] text-gray-400">{r.createdAt ? formatDate(r.createdAt) : '—'}</span>
-                    </div>
-                    {r.findings && (
-                      <p className="text-sm text-gray-600 mt-2 leading-relaxed">{r.findings}</p>
-                    )}
-                  </div>
+              <div className="space-y-3">
+                {reports.map((r, i) => (
+                  <ReportCard key={r.id} report={r} index={i} />
                 ))}
               </div>
             )}
           </div>
 
-          {/* ── Follow-up ── */}
-          <div>
-            <SectionLabel>Tindak Lanjut {!loadingFollowUps && `(${followUps.length})`}</SectionLabel>
-            {loadingFollowUps ? (
-              <div className="text-xs text-gray-400 py-3 text-center">Memuat tindak lanjut...</div>
-            ) : followUps.length === 0 ? (
-              <div className="text-xs text-gray-400 py-4 text-center border border-dashed border-gray-200 rounded-xl">
-                Belum ada tindak lanjut untuk jadwal ini
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {followUps.map((fu) => (
-                  <div key={fu.id} className="border border-gray-200 rounded-xl p-4 bg-white hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-xs font-semibold text-gray-700">{fu.title || 'Tindak Lanjut'}</span>
-                      <span className="text-[10px] text-gray-400">{fu.createdAt ? formatDate(fu.createdAt) : '—'}</span>
-                    </div>
-                    {fu.description && (
-                      <p className="text-sm text-gray-600 leading-relaxed">{fu.description}</p>
-                    )}
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
-                        ${fu.status === 'approved' ? 'bg-green-100 text-green-700' : fu.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {fu.status || 'pending'}
-                      </span>
-                      {fu.assignedTo && (
-                        <span className="text-[10px] text-gray-400">→ {fu.assignedTo}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </DialogContent>
     </Dialog>

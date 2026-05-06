@@ -235,9 +235,6 @@ export function InspeksiSpkTable({
                   {/* Judul */}
                   <td className="px-4 py-3 max-w-[220px]">
                     <p className="font-semibold text-gray-800 truncate">{s.title}</p>
-                    {s.nomorPoJo && (
-                      <p className="text-[10px] font-mono text-gray-400 mt-0.5">{s.nomorPoJo}</p>
-                    )}
                   </td>
 
                   {/* Tipe */}
@@ -293,7 +290,7 @@ export function InspeksiSpkTable({
       </div>
 
       <Dialog open={!!deleteCandidate} onOpenChange={(open) => !open && setDeleteCandidate(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Hapus Jadwal Inspeksi</DialogTitle>
           </DialogHeader>

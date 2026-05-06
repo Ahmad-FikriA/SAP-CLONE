@@ -182,6 +182,11 @@ async function listReports(req, res) {
 
     if (req.query.status) where.status = req.query.status;
 
+    // Filter per jadwal (dipakai oleh web modal detail)
+    if (req.query.scheduleId) {
+      where.scheduleId = Number(req.query.scheduleId);
+    }
+
     if (requestedSubmittedBy) {
       if (!hasGlobalAccess && requestedSubmittedBy !== requesterNik) {
         return res.status(403).json({
@@ -190,7 +195,9 @@ async function listReports(req, res) {
         });
       }
       where.submittedBy = requestedSubmittedBy;
-    } else if (!hasGlobalAccess) {
+    } else if (!hasGlobalAccess && !req.query.scheduleId) {
+      // Jika bukan akses global & tidak filter per scheduleId,
+      // batasi hanya ke laporan milik sendiri
       if (!requesterNik) {
         return res.status(403).json({
           success: false,
