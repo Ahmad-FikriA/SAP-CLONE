@@ -603,7 +603,7 @@ export default function CorrectivePage() {
               disabled={uploading}
             >
               <Upload size={16} className="mr-2" />
-              {uploading ? "Mengunggah..." : "Upload Excel SAP"}
+              {uploading ? "Mengunggah..." : "Import SAP"}
             </Button>
           )}
           <Button

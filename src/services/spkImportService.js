@@ -51,6 +51,24 @@ function normaliseHeader(h) {
   return String(h ?? '').toLowerCase().trim();
 }
 
+// ── FuncLoc prefix → Kadis area ID (per-order, handles mixed-plant files) ────
+// Longer prefixes (kadis_keamanan) must come first — A-A1-01-006 would otherwise
+// match the shorter A-A1-01 prefix of kadis_airbaku before being checked.
+const FUNCLOC_KADIS_MAP = [
+  { id: 'kadis_keamanan',           prefixes: ['A-A1-01-006', 'A-A1-02-006', 'A-A1-03-004'] },
+  { id: 'kadis_krenceng',           prefixes: ['A-A2-01'] },
+  { id: 'kadis_airbaku',            prefixes: ['A-A1-01', 'A-A1-03'] },
+  { id: 'kadis_cipasauran_cidanau', prefixes: ['A-A1-02', 'A-A2-09'] },
+];
+
+function detectKadisFromFuncLoc(functionalLocation) {
+  if (!functionalLocation) return null;
+  for (const area of FUNCLOC_KADIS_MAP) {
+    if (area.prefixes.some(p => functionalLocation.startsWith(p))) return area.id;
+  }
+  return null;
+}
+
 // ── SAP Location code → Kadis area ID ────────────────────────────────────────
 // The "Location" column in SAP IW38 exports contains site codes like P-22L006.
 // These are direct KTI plant section codes — map them explicitly.
@@ -150,6 +168,9 @@ function parseExcelBuffer(buffer) {
       const isSipil      = !rawEquipmentId && !!rawFuncLoc;
       const equipmentId  = isSipil ? null : (rawEquipmentId || null);
 
+      // Read Location per-order row — Sipil files mix multiple plants in one file
+      const rowLocationCode = String(get(row, 'location') ?? '').trim() || null;
+
       orderMap.set(orderNumber, {
         orderNumber,
         description: String(get(row, 'description') ?? '').trim(),
@@ -157,7 +178,7 @@ function parseExcelBuffer(buffer) {
         category,
         equipmentId,
         functionalLocation: rawFuncLoc,
-        locationCode,
+        locationCode: rowLocationCode,
         isSipil,
         systemStatus: String(get(row, 'system status') ?? '').trim() || null,
         costCenter:   String(get(row, 'cost center') ?? '').trim() || null,
@@ -461,4 +482,4 @@ async function enrichOrders(orders) {
   }
 }
 
-module.exports = { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders, detectKadisFromLocationCode };
+module.exports = { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders, detectKadisFromLocationCode, detectKadisFromFuncLoc };

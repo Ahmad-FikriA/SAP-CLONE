@@ -37,8 +37,7 @@ export default function SpkImportPage() {
   const [printOpen, setPrintOpen]     = useState(false);
   const [mappings, setMappings]       = useState([]);
   const [taskLists, setTaskLists]     = useState([]);
-  const [locationCode, setLocationCode] = useState(null);   // raw code from Header tab
-  const [apiKadisId, setApiKadisId]   = useState(null);     // detected by backend
+  const [locationCode, setLocationCode] = useState(null);
 
   // Fetch task lists + mappings once
   useEffect(() => {
@@ -63,22 +62,27 @@ export default function SpkImportPage() {
     return parts.length >= 3 ? parts.slice(0, 3).join('-') : null;
   }
 
-  /** Derive the Kadis area from the orders' functionalLocation fields.
-   *  Picks whichever KADIS_AREAS entry's funcLocPrefixes match the most orders.
-   *  This is called with `orders` as a computed value — no user input needed. */
-  function deriveKadisArea(orderList) {
-    const counts = {};
+  /** Returns all unique Kadis areas found across all orders' functionalLocation fields.
+   *  Longer prefixes (keamanan) are checked first to avoid false partial matches. */
+  function deriveAllKadisAreas(orderList) {
+    const FUNCLOC_ORDER = [
+      { id: 'kadis_keamanan',           prefixes: ['A-A1-01-006', 'A-A1-02-006', 'A-A1-03-004'] },
+      { id: 'kadis_krenceng',           prefixes: ['A-A2-01'] },
+      { id: 'kadis_airbaku',            prefixes: ['A-A1-01', 'A-A1-03'] },
+      { id: 'kadis_cipasauran_cidanau', prefixes: ['A-A1-02', 'A-A2-09'] },
+    ];
+    const seen = new Set();
     for (const o of orderList) {
       const fl = o.functionalLocation || '';
-      for (const area of KADIS_AREAS) {
-        if (area.funcLocPrefixes.some((p) => fl.startsWith(p))) {
-          counts[area.id] = (counts[area.id] || 0) + 1;
+      if (!fl) continue;
+      for (const entry of FUNCLOC_ORDER) {
+        if (!seen.has(entry.id) && entry.prefixes.some((p) => fl.startsWith(p))) {
+          seen.add(entry.id);
           break;
         }
       }
     }
-    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-    return top ? KADIS_AREAS.find((a) => a.id === top[0]) || null : null;
+    return KADIS_AREAS.filter((a) => seen.has(a.id));
   }
 
   async function handleFile(file) {
@@ -98,7 +102,6 @@ export default function SpkImportPage() {
       const loadedOrders = data.orders || [];
       setOrders(loadedOrders);
       setLocationCode(data.locationCode || null);
-      setApiKadisId(data.detectedKadisId || null);
     } catch (e) { toast.error('Gagal preview: ' + e.message); }
     finally { setLoading(false); }
   }
@@ -211,17 +214,18 @@ export default function SpkImportPage() {
               </span>
             ))}
 
-            {/* Kadis area — from Header tab location code (primary) or derived from funcLocs (fallback) */}
+            {/* Kadis areas — one pill per unique area found across all orders */}
             {(() => {
-              const kadis = apiKadisId
-                ? KADIS_AREAS.find((a) => a.id === apiKadisId)
-                : deriveKadisArea(orders);
-              if (!kadis) return null;
+              const areas = deriveAllKadisAreas(orders);
+              if (!areas.length) return null;
               return (
-                <span className="ml-auto px-3 py-1 rounded-full text-xs font-semibold bg-teal-100 text-teal-700 border border-teal-200">
-                  📍 {kadis.label} — {kadis.description}
-                  {locationCode && <span className="ml-1.5 opacity-60">({locationCode})</span>}
-                </span>
+                <div className="ml-auto flex flex-wrap gap-1.5">
+                  {areas.map((a) => (
+                    <span key={a.id} className="px-3 py-1 rounded-full text-xs font-semibold bg-teal-100 text-teal-700 border border-teal-200">
+                      📍 {a.label}
+                    </span>
+                  ))}
+                </div>
               );
             })()}
 
@@ -241,7 +245,7 @@ export default function SpkImportPage() {
             <table className="w-full text-xs">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {['Order Number', 'Deskripsi', 'Equipment', 'Kategori', 'Interval', 'Status'].map((h) => (
+                  {['Plant', 'Order Number', 'Deskripsi', 'Equipment', 'Kategori', 'Interval', 'Status'].map((h) => (
                     <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -249,6 +253,10 @@ export default function SpkImportPage() {
               <tbody className="divide-y divide-gray-100">
                 {orders.map((o, idx) => (
                   <tr key={idx} className={o.alreadyExists ? 'opacity-40' : ''}>
+                    <td className="px-3 py-2.5">
+                      <div className="font-medium text-gray-700">{o.plantName || '—'}</div>
+                      {o.locationCode && <div className="text-[10px] text-gray-400 font-mono mt-0.5">{o.locationCode}</div>}
+                    </td>
                     <td className="px-3 py-2.5 font-mono font-semibold text-gray-800">{o.orderNumber || o.sapOrderNumber}</td>
                     <td className="px-3 py-2.5 text-gray-700 max-w-[180px] truncate">{o.description}</td>
                     <td className="px-3 py-2.5 text-gray-500">
@@ -306,7 +314,7 @@ export default function SpkImportPage() {
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => { setOrders([]); setLocationCode(null); setApiKadisId(null); }}>Batal / Upload Lagi</Button>
+            <Button variant="ghost" onClick={() => { setOrders([]); setLocationCode(null); }}>Batal / Upload Lagi</Button>
             <Button onClick={confirmImport} disabled={confirming || pendingCount > 0 || !canCreate('spk-import')}>
               {confirming ? 'Mengimport...' : `Konfirmasi Import (${readyCount} order)`}
             </Button>
@@ -429,10 +437,8 @@ export default function SpkImportPage() {
 
               {/* ── Signature footer ── */}
               {(() => {
-                const kadisArea = apiKadisId
-                  ? KADIS_AREAS.find((a) => a.id === apiKadisId)
-                  : deriveKadisArea(orders);
-                const kadisLabel = kadisArea ? `Dievaluasi (${kadisArea.label})` : 'Dievaluasi (Kadis)';
+                const areas = deriveAllKadisAreas(orders);
+                const kadisLabel = areas.length === 1 ? `Dievaluasi (${areas[0].label})` : 'Dievaluasi (Kadis)';
                 const sigLabels = ['Dilaksanakan', 'Mengetahui (Kasie)', 'Disetujui (Kadis Perawatan)', kadisLabel];
                 return (
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '32px' }}>

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { apiGet, apiPost } from '@/lib/api';
 import { getUser, canUpdate } from '@/lib/auth';
 import { formatDate } from '@/lib/date-utils';
-import { STATUS_LABELS, CATEGORY_COLORS } from '@/lib/constants';
+import { STATUS_LABELS, CATEGORY_COLORS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { RefreshCw, CheckCircle, Clock, ChevronRight, ImageIcon, X } from 'lucide-react';
@@ -102,6 +102,7 @@ export default function SpkApprovalPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [approving, setApproving] = useState(false);
   const [lightbox, setLightbox] = useState(null);      // photo path string
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   useEffect(() => { setUser(getUser()); }, []);
 
@@ -124,6 +125,7 @@ export default function SpkApprovalPage() {
       setLoading(true);
       try {
         const data = await apiGet(`/spk?status=awaiting_kasie&category=${encodeURIComponent(category)}`);
+        setCategoryFilter('');
         setSpks(data.sort((a, b) => new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0)));
       } catch (e) {
         toast.error('Gagal memuat daftar SPK: ' + e.message);
@@ -141,6 +143,7 @@ export default function SpkApprovalPage() {
       const merged = results.flat().sort((a, b) =>
         new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0)
       );
+      setCategoryFilter('');
       setSpks(merged);
     } catch (e) {
       toast.error('Gagal memuat daftar SPK: ' + e.message);
@@ -192,6 +195,10 @@ export default function SpkApprovalPage() {
 
   const canApprove = detail && !!approveEndpoint(detail.spk.status);
 
+  const uniqueCategories = [...new Set(spks.map(s => s.category).filter(Boolean))].sort();
+  const showCategoryChips = !KASIE_ROLES.has(user?.role) && uniqueCategories.length > 1;
+  const filteredSpks = categoryFilter ? spks.filter(s => s.category === categoryFilter) : spks;
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   if (user && !PENDING_STATUSES[user.role]) {
@@ -209,7 +216,9 @@ export default function SpkApprovalPage() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <div>
             <h2 className="text-sm font-semibold text-gray-800">Persetujuan SPK</h2>
-            <p className="text-xs text-gray-400">{spks.length} SPK menunggu</p>
+            <p className="text-xs text-gray-400">
+              {filteredSpks.length}{filteredSpks.length !== spks.length ? ` / ${spks.length}` : ''} SPK menunggu
+            </p>
           </div>
           <button
             onClick={() => load(user)}
@@ -220,6 +229,41 @@ export default function SpkApprovalPage() {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
+
+        {/* Category filter chips — Kadis/Admin only, when multiple categories present */}
+        {showCategoryChips && !loading && spks.length > 0 && (
+          <div className="px-3 py-2 border-b border-gray-200 flex gap-1.5 flex-wrap">
+            <button
+              onClick={() => setCategoryFilter('')}
+              className={cn(
+                'px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                categoryFilter === ''
+                  ? 'bg-gray-800 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              Semua ({spks.length})
+            </button>
+            {uniqueCategories.map(cat => {
+              const style = CATEGORY_COLORS[cat] || {};
+              const count = spks.filter(s => s.category === cat).length;
+              const isSelected = categoryFilter === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(isSelected ? '' : cat)}
+                  style={isSelected ? { backgroundColor: style.bg, color: style.text, outline: `1.5px solid ${style.text}` } : {}}
+                  className={cn(
+                    'px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                    !isSelected && 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  )}
+                >
+                  {cat} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
           {loading ? (
@@ -236,8 +280,12 @@ export default function SpkApprovalPage() {
                 <p className="text-sm text-gray-400">Tidak ada SPK yang perlu disetujui</p>
               )}
             </div>
+          ) : filteredSpks.length === 0 ? (
+            <div className="p-8 text-center text-gray-400 text-sm">
+              Tidak ada SPK {categoryFilter} yang menunggu persetujuan
+            </div>
           ) : (
-            spks.map(spk => (
+            filteredSpks.map(spk => (
               <button
                 key={spk.spkNumber}
                 onClick={() => selectSpk(spk)}
@@ -372,10 +420,14 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {}
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-4 gap-4 text-sm">
           <Info label="Interval" value={spk.interval || '—'} />
-          <Info label="Disubmit oleh" value={userMap[spk.submittedBy] || spk.submittedBy || '—'} />
+          <Info label="Disubmit oleh" value={userMap[spk.submittedBy] || spk.submittedByName || spk.submittedBy || '—'} />
           <Info label="Waktu Submit" value={formatDate(spk.submittedAt)} />
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Status Peralatan</p>
+            <EquipmentStatusBadge status={spk.equipmentStatus} />
+          </div>
         </div>
       </div>
 
@@ -543,6 +595,19 @@ function Info({ label, value }) {
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
       <p className="text-sm text-gray-700 break-words">{value}</p>
     </div>
+  );
+}
+
+function EquipmentStatusBadge({ status }) {
+  const label = EQUIPMENT_STATUS_LABELS[status] || status || 'Running';
+  const colors = EQUIPMENT_STATUS_COLORS[status] || EQUIPMENT_STATUS_COLORS['Running'];
+  return (
+    <span
+      className="px-2 py-0.5 rounded text-xs font-semibold"
+      style={{ backgroundColor: colors.bg, color: colors.text }}
+    >
+      {label}
+    </span>
   );
 }
 

@@ -72,7 +72,9 @@ export default function TrackRecordPage() {
     setLoading(true);
     try {
       const data = await apiGet('/users/stats');
-      const sorted = [...data].sort((a, b) => b.totalSpk - a.totalSpk);
+      const sorted = [...data]
+        .filter(u => u.role === 'teknisi' || u.role === 'petugas')
+        .sort((a, b) => b.totalSpk - a.totalSpk);
       setStats(sorted);
     } catch (e) {
       toast.error('Gagal memuat statistik: ' + e.message);

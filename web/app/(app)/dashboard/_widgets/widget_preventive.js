@@ -58,11 +58,6 @@ export function WidgetPreventive() {
     color: CAT_COLORS[cat],
   })).filter((d) => d.total > 0);
 
-  // Weekly trend (last 8 weeks from scheduledDate)
-  const weeklyData = buildWeeklyData(spkList);
-
-  // Recent 4
-  const recent = [...spkList].reverse().slice(0, 4);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
@@ -95,29 +90,10 @@ export function WidgetPreventive() {
           <Charts
             statusData={statusData}
             catData={catData}
-            weeklyData={weeklyData}
             total={total}
           />
 
-          {/* Recent SPK table */}
-          {recent.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                Terbaru
-              </p>
-              <div className="space-y-1.5">
-                {recent.map((s) => (
-                  <div key={s.spkNumber} className="flex items-center gap-2 py-1 border-b border-gray-50 last:border-0">
-                    <span className="font-mono text-xs font-semibold text-gray-700 w-28 truncate shrink-0">{s.spkNumber}</span>
-                    <span className="text-xs text-gray-500 flex-1 truncate">{s.description}</span>
-                    <span className="text-xs shrink-0" style={{ color: STATUS_META[s.status]?.color || '#6B7280' }}>
-                      ● {STATUS_META[s.status]?.label || s.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
         </div>
       )}
 
@@ -131,26 +107,4 @@ export function WidgetPreventive() {
   );
 }
 
-// ── Helper: group SPK by ISO week ──────────────────────────────────────────
-function buildWeeklyData(spkList) {
-  const weekMap = {};
-  spkList.forEach((s) => {
-    if (!s.scheduledDate) return;
-    const d = new Date(s.scheduledDate + 'T00:00:00');
-    if (isNaN(d)) return;
-    const label = `W${getWeekNumber(d)}`;
-    if (!weekMap[label]) weekMap[label] = { week: label, total: 0, completed: 0 };
-    weekMap[label].total++;
-    if (s.status === 'completed' || s.status === 'approved') weekMap[label].completed++;
-  });
-  // Sort by week number and take last 8
-  return Object.values(weekMap)
-    .sort((a, b) => parseInt(a.week.slice(1)) - parseInt(b.week.slice(1)))
-    .slice(-8);
-}
 
-function getWeekNumber(d) {
-  const jan4 = new Date(d.getFullYear(), 0, 4);
-  const diff = Math.floor((d - jan4) / 86400000) + (jan4.getDay() || 7) - 1;
-  return Math.max(1, Math.ceil((diff + 1) / 7));
-}

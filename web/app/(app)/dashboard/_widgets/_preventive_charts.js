@@ -6,7 +6,6 @@
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  AreaChart, Area,
 } from 'recharts';
 
 // ── Custom donut label (center text) ──────────────────────────────────────
@@ -35,13 +34,12 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
-export default function PreventiveCharts({ statusData, catData, weeklyData, total }) {
-  const hasWeekly = weeklyData.length > 1;
+export default function PreventiveCharts({ statusData, catData, total }) {
 
   return (
     <div className="space-y-5">
       {/* Row 1: Donut (status) + Bar (category) */}
-      <div className={`grid gap-4 ${hasWeekly ? 'grid-cols-2' : 'grid-cols-2'}`}>
+      <div className="grid gap-4 grid-cols-2">
         {/* Status donut */}
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
@@ -105,36 +103,7 @@ export default function PreventiveCharts({ statusData, catData, weeklyData, tota
         </div>
       </div>
 
-      {/* Row 2: Weekly trend (only if we have schedule data) */}
-      {hasWeekly && (
-        <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-            Tren Mingguan
-          </p>
-          <ResponsiveContainer width="100%" height={110}>
-            <AreaChart data={weeklyData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradDone" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip content={<ChartTooltip />} />
-              <Area type="monotone" dataKey="total" name="Total" stroke="#3B82F6" strokeWidth={2}
-                fill="url(#gradTotal)" dot={false} activeDot={{ r: 4 }} />
-              <Area type="monotone" dataKey="completed" name="Selesai" stroke="#10B981" strokeWidth={2}
-                fill="url(#gradDone)" dot={false} activeDot={{ r: 4 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+
     </div>
   );
 }

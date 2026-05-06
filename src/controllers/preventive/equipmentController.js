@@ -12,6 +12,7 @@ const User = require('../../models/User');
 const MAPS_DIR = path.join(__dirname, '..', '..', '..', 'data', 'maps');
 const SIPIL_FUNCLOC_JSON = path.join(__dirname, '..', '..', '..', 'data', 'sipil_funcloc_mappings.json');
 const SipilFunclocMapping = require('../../models/SipilFunclocMapping');
+const FunctionalLocation = require('../../models/FunctionalLocation');
 
 // GET /api/equipment
 // Query: ?category=Mekanik  ?search=pompa  ?limit=50  ?offset=0  ?funcLocId=A-A1-01
@@ -350,16 +351,40 @@ const syncSipilFuncloc = async (req, res) => {
     return res.status(400).json({ error: 'JSON file is empty or not an array' });
   }
 
-  // Pre-load all plants once for name lookup.
+  // Build level-2 funcLoc prefix → plantId map from the DB hierarchy.
+  // Level-2 descriptions (e.g. "WTP Krenceng") are matched against plant names
+  // using case-insensitive substring matching in both directions.
+  // JSON entry's explicit plantId overrides this if provided.
+  const [level2Rows] = await FunctionalLocation.sequelize.query(
+    'SELECT func_loc_id, description FROM functional_locations WHERE level = 2'
+  );
   const allPlants = await Plant.findAll({ attributes: ['plantId', 'plantName'] });
   const plantNameById = Object.fromEntries(allPlants.map(p => [p.plantId, p.plantName]));
 
+  const prefixPlantMap = {}; // e.g. { 'A-A2-01': 'P-22L007' }
+  for (const fl of level2Rows) {
+    const desc = fl.description.toLowerCase();
+    const match = allPlants.find(p => {
+      const pName = p.plantName.toLowerCase();
+      return desc.includes(pName) || pName.includes(desc);
+    });
+    if (match) prefixPlantMap[fl.func_loc_id] = match.plantId;
+  }
+
   let synced = 0;
+  const unresolved = [];
+
   for (const entry of entries) {
-    const { funcLocId, name, taskListId, interval, location, plantId } = entry;
+    const { funcLocId, name, taskListId, interval, location } = entry;
     if (!funcLocId || !name) continue;
 
+    // Derive plant from funcLoc prefix (level-2 ancestor).
+    // JSON may still carry an explicit plantId as override — kept for backward compat.
+    const level2Prefix = funcLocId.split('-').slice(0, 3).join('-');
+    const plantId   = entry.plantId || prefixPlantMap[level2Prefix] || null;
     const plantName = plantId ? (plantNameById[plantId] || null) : null;
+
+    if (!plantId) unresolved.push(funcLocId);
 
     await Equipment.upsert({
       equipmentId:        funcLocId,
@@ -367,7 +392,7 @@ const syncSipilFuncloc = async (req, res) => {
       category:           'Sipil',
       functionalLocation: location || null,
       funcLocId:          funcLocId,
-      plantId:            plantId || null,
+      plantId,
       plantName,
     });
 
@@ -377,13 +402,17 @@ const syncSipilFuncloc = async (req, res) => {
       taskListId: taskListId || null,
       interval:   interval || '1wk',
       location:   location || null,
-      plantId:    plantId || null,
+      plantId,
     });
 
     synced++;
   }
 
-  res.json({ message: `${synced} funcloc Sipil berhasil disinkronisasi ke equipment`, synced });
+  res.json({
+    message: `${synced} funcloc Sipil berhasil disinkronisasi ke equipment`,
+    synced,
+    ...(unresolved.length ? { unresolved, warning: `${unresolved.length} funcLoc tidak dapat ditemukan plantId-nya` } : {}),
+  });
 };
 
 module.exports = { getAll, getOne, create, update, renameId, bulkDelete, bulkUpdate, remove, importExcel, getMeasurementHistory, syncSipilFuncloc };

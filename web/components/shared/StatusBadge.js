@@ -8,8 +8,8 @@ const variantClasses = {
   error: 'bg-red-100 text-red-800',
 };
 
-export function StatusBadge({ status }) {
-  const label = STATUS_LABELS[status] || status;
+export function StatusBadge({ status, label: labelOverride }) {
+  const label = labelOverride || STATUS_LABELS[status] || status;
   const variant = STATUS_VARIANTS[status] || 'pending';
   return (
     <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs font-medium', variantClasses[variant])}>

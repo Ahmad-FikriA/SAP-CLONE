@@ -6,14 +6,19 @@ import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api';
 import { StatusBadge, CategoryBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CATEGORIES, STATUS_LABELS } from '@/lib/constants';
+import { CATEGORIES, STATUS_LABELS, KADIS_AREAS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS } from '@/lib/constants';
 import { formatDate, formatDateShort } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Trash2, Wrench, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin } from 'lucide-react';
+import { RefreshCw, Trash2, Wrench, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin, CheckCircle2, Clock, Circle } from 'lucide-react';
 import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import Link from 'next/link';
 
-const STATUS_OPTIONS = ['pending', 'in_progress', 'completed', 'approved', 'rejected'];
+const STATUS_OPTIONS = ['pending', 'awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis', 'approved'];
+
+function kadisStatusLabel(kadisArea) {
+  const area = KADIS_AREAS.find(a => a.id === kadisArea);
+  return area ? `Menunggu Kadis — ${area.label}` : 'Menunggu Kadis';
+}
 
 function detectMeasurementUnit(operationText) {
   if (!operationText) return null;
@@ -104,6 +109,7 @@ export default function SpkPage() {
 
   // Detail view
   const [detailSpk, setDetailSpk]   = useState(null);
+  const [detailFull, setDetailFull] = useState(null); // enriched single-SPK (names resolved)
   const [detailSubs, setDetailSubs] = useState([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
 
@@ -206,13 +212,17 @@ export default function SpkPage() {
 
   async function openDetail(spk) {
     setDetailSpk(spk);
+    setDetailFull(null);
     setDetailSubs([]);
     setLoadingSubs(true);
     try {
-      const data = await apiGet(`/submissions?spkNumber=${spk.spkNumber}`);
-      setDetailSubs(Array.isArray(data) ? data : []);
-    } catch { setDetailSubs([]); }
-    finally { setLoadingSubs(false); }
+      const [fullData, subsData] = await Promise.all([
+        apiGet(`/spk/${spk.spkNumber}`).catch(() => null),
+        apiGet(`/submissions?spkNumber=${spk.spkNumber}`).catch(() => []),
+      ]);
+      setDetailFull(fullData);
+      setDetailSubs(Array.isArray(subsData) ? subsData : []);
+    } finally { setLoadingSubs(false); }
   }
 
   function onWeekChange(year, week) {
@@ -352,11 +362,11 @@ export default function SpkPage() {
             <h2 className="text-xl font-semibold text-gray-800">SPK / Preventive</h2>
             <p className="text-sm text-gray-500">{displayed.length} SPK</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap ">
             <Button variant="outline" size="sm" onClick={load}><RefreshCw size={13} /></Button>
             {canCreate('spk') && (
-              <Link href="/spk/import">
-                <Button variant="outline" size="sm" className="gap-1.5"><Upload size={13} /> Import SAP</Button>
+              <Link href="/spk/import">   
+                <Button variant="outline" size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"><Upload size={13} /> Import SAP</Button>
               </Link>
             )}
             {canCreate('spk') && (
@@ -449,7 +459,11 @@ export default function SpkPage() {
                   <td className="px-3 py-3 text-gray-700 max-w-[200px] truncate">{s.description}</td>
                   <td className="px-3 py-3"><CategoryBadge category={s.category} /></td>
                   <td className="px-3 py-3 text-gray-500 text-xs">{s.interval}</td>
-                  <td className="px-3 py-3"><StatusBadge status={s.status} /></td>
+                  <td className="px-3 py-3"><StatusBadge status={s.status} label={
+                    s.status === 'awaiting_kasie' && s.category ? `Menunggu Kasie ${s.category}`
+                    : s.status === 'awaiting_kadis' ? kadisStatusLabel(s.kadisArea)
+                    : undefined
+                  } /></td>
                   <td className="px-3 py-3">
                     {(s.equipmentModels || []).length === 0 ? (
                       <span className="text-gray-400 text-xs">—</span>
@@ -669,13 +683,17 @@ export default function SpkPage() {
       )}
 
       {/* ── SPK Detail Dialog ─────────────────────────────────────────── */}
-      <Dialog open={!!detailSpk} onOpenChange={(open) => !open && setDetailSpk(null)}>
+      <Dialog open={!!detailSpk} onOpenChange={(open) => { if (!open) { setDetailSpk(null); setDetailFull(null); } }}>
         <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2 flex-wrap">
               <DialogTitle className="font-mono">{detailSpk?.spkNumber}</DialogTitle>
               {detailSpk?.category && <CategoryBadge category={detailSpk.category} />}
-              {detailSpk?.status && <StatusBadge status={detailSpk.status} />}
+              {detailSpk?.status && <StatusBadge status={detailSpk.status} label={
+                detailSpk.status === 'awaiting_kasie' && detailSpk.category ? `Menunggu Kasie ${detailSpk.category}`
+                : detailSpk.status === 'awaiting_kadis' ? kadisStatusLabel(detailSpk.kadisArea)
+                : undefined
+              } />}
             </div>
             {detailSpk?.description && (
               <p className="text-sm text-gray-500 mt-1">{detailSpk.description}</p>
@@ -690,9 +708,24 @@ export default function SpkPage() {
                 <SpkField label="Scheduled Date" value={detailSpk.scheduledDate ? formatDateShort(detailSpk.scheduledDate) : '—'} />
                 <SpkField label="Minggu ke-" value={detailSpk.weekNumber ? `W${detailSpk.weekNumber} / ${detailSpk.weekYear}` : '—'} />
                 <SpkField label="Durasi Aktual" value={detailSpk.durationActual != null ? `${detailSpk.durationActual} menit` : '—'} />
-                <SpkField label="Submitted By" value={detailSpk.submittedBy || '—'} />
+                <SpkField label="Disubmit Oleh" value={detailFull?.submittedByName || detailSpk.submittedBy || '—'} />
                 <SpkField label="Submitted At" value={detailSpk.submittedAt ? formatDate(detailSpk.submittedAt) : '—'} />
                 {detailSpk.orderNumber && <SpkField label="Order Number" value={detailSpk.orderNumber} />}
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Status Peralatan</p>
+                  {(() => {
+                    const st = detailSpk.equipmentStatus || 'Running';
+                    const colors = EQUIPMENT_STATUS_COLORS[st] || EQUIPMENT_STATUS_COLORS['Running'];
+                    return (
+                      <span
+                        className="mt-0.5 inline-block px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{ backgroundColor: colors.bg, color: colors.text }}
+                      >
+                        {EQUIPMENT_STATUS_LABELS[st] || st}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Evaluasi */}
@@ -815,6 +848,62 @@ export default function SpkPage() {
                   </div>
                 );
               })()}
+
+              {/* Approval history */}
+              {detailFull && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Riwayat Approval</p>
+                  <div className="relative pl-5">
+                    {/* vertical line */}
+                    <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gray-200" />
+                    {[
+                      {
+                        label: 'Submit Teknisi',
+                        name: detailFull.submittedByName || detailFull.submittedBy,
+                        at: detailFull.submittedAt,
+                        done: !!detailFull.submittedAt,
+                      },
+                      {
+                        label: 'Kasie',
+                        name: detailFull.kasieApprovedByName || detailFull.kasieApprovedBy,
+                        at: detailFull.kasieApprovedAt,
+                        done: !!detailFull.kasieApprovedAt,
+                      },
+                      {
+                        label: 'Kadis Perawatan',
+                        name: detailFull.kadisPerawatanApprovedByName || detailFull.kadisPerawatanApprovedBy,
+                        at: detailFull.kadisPerawatanApprovedAt,
+                        done: !!detailFull.kadisPerawatanApprovedAt,
+                      },
+                      {
+                        label: 'Kadis',
+                        name: detailFull.kadisApprovedByName || detailFull.kadisApprovedBy,
+                        at: detailFull.kadisApprovedAt,
+                        done: !!detailFull.kadisApprovedAt,
+                      },
+                    ].map((step, i) => (
+                      <div key={i} className="relative flex items-start gap-3 mb-3 last:mb-0">
+                        <div className={`relative z-10 mt-0.5 shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center ${step.done ? 'bg-green-500' : 'bg-gray-200'}`}>
+                          {step.done
+                            ? <CheckCircle2 size={12} className="text-white" />
+                            : <Circle size={10} className="text-gray-400" />
+                          }
+                        </div>
+                        <div>
+                          <p className={`text-xs font-semibold ${step.done ? 'text-gray-800' : 'text-gray-400'}`}>{step.label}</p>
+                          {step.done ? (
+                            <p className="text-xs text-gray-500">
+                              {step.name || '—'} &middot; {formatDate(step.at)}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-gray-400">Menunggu</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Submission history */}
               <div>

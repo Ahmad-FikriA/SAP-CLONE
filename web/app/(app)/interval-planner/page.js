@@ -6,6 +6,7 @@ import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 const INTERVALS = ['1wk', '2wk', '3wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
 
@@ -64,6 +65,10 @@ export default function IntervalPlannerPage() {
   const pendingYearChange = useRef(null);
   const years = buildYears();
 
+  const [expandedWeek, setExpandedWeek] = useState(null); // week number or null
+  const [weekSpks, setWeekSpks] = useState({});           // keyed by `${year}-${week}`
+  const [weekSpkLoading, setWeekSpkLoading] = useState(false);
+
   const isDirty = useCallback(() => {
     const sk = Object.keys(savedSet).sort().join(',');
     const ck = Object.keys(currentSet).sort().join(',');
@@ -97,6 +102,8 @@ export default function IntervalPlannerPage() {
 
   useEffect(() => {
     loadYear(year);
+    setExpandedWeek(null);
+    setWeekSpks({});
     const handler = (e) => {
       if (isDirty()) { e.preventDefault(); e.returnValue = ''; }
     };
@@ -174,6 +181,27 @@ export default function IntervalPlannerPage() {
       setCurrentSet({});
       toast.success(`Jadwal ${year} berhasil dihapus`);
     } catch (e) { toast.error('Gagal menghapus: ' + e.message); }
+  }
+
+  async function handleWeekClick(week) {
+    const key = `${year}-${week}`;
+    if (expandedWeek === week) {
+      setExpandedWeek(null);
+      return;
+    }
+    setExpandedWeek(week);
+    if (!weekSpks[key]) {
+      setWeekSpkLoading(true);
+      try {
+        const res = await apiGet(`/spk?week=${week}&year=${year}&limit=100`);
+        const list = Array.isArray(res) ? res : (res.data ?? []);
+        setWeekSpks(prev => ({ ...prev, [key]: list }));
+      } catch (err) {
+        toast.error('Gagal memuat SPK: ' + err.message);
+      } finally {
+        setWeekSpkLoading(false);
+      }
+    }
   }
 
   // Build grid rows
@@ -273,31 +301,78 @@ export default function IntervalPlannerPage() {
                 }
                 const { week, start, end } = row;
                 const isCurrent = week === currentWeek;
+                const isExpanded = expandedWeek === week;
+                const spkKey = `${year}-${week}`;
+                const spkList = weekSpks[spkKey];
+                const spkLoadingThis = weekSpkLoading && !spkList && isExpanded;
+
                 return (
-                  <tr key={row.key} className={cn('border-b border-gray-100', isCurrent && 'bg-yellow-50')}>
-                    <td className={cn('px-3 py-1.5 font-semibold', isCurrent ? 'text-yellow-700' : 'text-gray-700')}>{week}</td>
-                    <td className="px-3 py-1.5 text-gray-500">{fmtShort(start)} – {fmtShort(end)}</td>
-                    {INTERVALS.map((iv) => {
-                      const key = cellKey(year, week, iv);
-                      const active = !!currentSet[key];
-                      const changed = !!currentSet[key] !== !!savedSet[key];
-                      return (
-                        <td key={iv} className="px-1 py-1.5 text-center">
-                          <button
-                            onClick={() => canUpdate('interval-planner') && toggleCell(year, week, iv)}
-                            className={cn(
-                              'w-8 h-6 rounded text-[10px] font-semibold transition-colors',
-                              active
-                                ? changed ? 'bg-blue-500 text-white ring-2 ring-blue-300' : 'bg-blue-600 text-white'
-                                : changed ? 'bg-red-100 text-red-400 ring-2 ring-red-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                            )}
-                          >
-                            {active ? '✓' : ''}
-                          </button>
+                  <>
+                    <tr key={row.key} className={cn('border-b border-gray-100', isCurrent && 'bg-yellow-50', isExpanded && 'bg-blue-50')}>
+                      <td
+                        className={cn(
+                          'px-3 py-1.5 font-semibold cursor-pointer select-none',
+                          isCurrent ? 'text-yellow-700' : isExpanded ? 'text-blue-600' : 'text-gray-700'
+                        )}
+                        onClick={() => handleWeekClick(week)}
+                      >
+                        <span className="flex items-center gap-1">
+                          {isExpanded
+                            ? <ChevronDown size={11} className="shrink-0" />
+                            : <ChevronRight size={11} className="shrink-0 text-gray-300" />
+                          }
+                          {week}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1.5 text-gray-500">{fmtShort(start)} – {fmtShort(end)}</td>
+                      {INTERVALS.map((iv) => {
+                        const key = cellKey(year, week, iv);
+                        const active = !!currentSet[key];
+                        const changed = !!currentSet[key] !== !!savedSet[key];
+                        return (
+                          <td key={iv} className="px-1 py-1.5 text-center">
+                            <button
+                              onClick={() => canUpdate('interval-planner') && toggleCell(year, week, iv)}
+                              className={cn(
+                                'w-8 h-6 rounded text-[10px] font-semibold transition-colors',
+                                active
+                                  ? changed ? 'bg-blue-500 text-white ring-2 ring-blue-300' : 'bg-blue-600 text-white'
+                                  : changed ? 'bg-red-100 text-red-400 ring-2 ring-red-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                              )}
+                            >
+                              {active ? '✓' : ''}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`${row.key}-spk`} className="border-b border-blue-100 bg-blue-50/40">
+                        <td colSpan={2 + INTERVALS.length} className="px-6 py-2">
+                          {spkLoadingThis ? (
+                            <span className="text-xs text-gray-400">Memuat SPK...</span>
+                          ) : !spkList || spkList.length === 0 ? (
+                            <span className="text-xs text-gray-400">Tidak ada SPK minggu ini</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide self-center mr-1">
+                                {spkList.length} SPK:
+                              </span>
+                              {spkList.map(s => (
+                                <a
+                                  key={s.spkNumber}
+                                  href={`/spk?q=${encodeURIComponent(s.spkNumber)}`}
+                                  className="px-2 py-0.5 bg-white border border-blue-200 rounded text-[11px] font-mono text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors"
+                                >
+                                  {s.spkNumber}
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </td>
-                      );
-                    })}
-                  </tr>
+                      </tr>
+                    )}
+                  </>
                 );
               })}
             </tbody>

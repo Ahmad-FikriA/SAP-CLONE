@@ -33,6 +33,20 @@ export const KADIS_AREAS = [
 ];
 
 
+// Maps backend equipmentStatus values → display labels.
+// Backend stores 'Breakdown'; UI shows 'Under Maintenance'.
+export const EQUIPMENT_STATUS_LABELS = {
+  Running:   'Running',
+  Standby:   'Standby',
+  Breakdown: 'Under Maintenance',
+};
+
+export const EQUIPMENT_STATUS_COLORS = {
+  Running:   { bg: '#DCFCE7', text: '#16A34A' },
+  Standby:   { bg: '#FEF3C7', text: '#D97706' },
+  Breakdown: { bg: '#FEE2E2', text: '#DC2626' },
+};
+
 export const CATEGORY_COLORS = {
   Mekanik: { bg: '#0070D222', text: '#0070D2' },
   Listrik: { bg: '#E67E2222', text: '#E67E22' },
@@ -61,7 +75,7 @@ export const ROLE_COLORS = {
 };
 
 export const STATUS_LABELS = {
-  pending: 'Pending',
+  pending: 'Sedang Dikerjakan',
   in_progress: 'On Progress',
   completed: 'Selesai',
   approved: 'Disetujui',

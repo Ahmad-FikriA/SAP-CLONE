@@ -16,6 +16,7 @@ const Spk = sequelize.define('Spk', {
   systemStatus:   { type: DataTypes.STRING(100),  allowNull: true, field: 'system_status' },
   costCenter:     { type: DataTypes.STRING(20),   allowNull: true, field: 'cost_center' },
   operWorkCtr:    { type: DataTypes.STRING(20),   allowNull: true, field: 'oper_work_ctr' },
+  kadisArea:      { type: DataTypes.STRING(50),   allowNull: true, field: 'kadis_area' },
   evaluasi:         { type: DataTypes.TEXT,          allowNull: true },
   equipmentStatus:  { type: DataTypes.ENUM('Running', 'Standby', 'Breakdown'), allowNull: true, field: 'equipment_status' },
   submittedBy:    { type: DataTypes.STRING(20),   allowNull: true, field: 'submitted_by' },

@@ -4,10 +4,11 @@ const { Op } = require('sequelize');
 const sequelize = require('../../config/database');
 const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
 const Equipment = require('../../models/Equipment');
+const Plant = require('../../models/Plant');
 const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping');
 const User = require('../../models/User');
 const NotificationService = require('../../services/notificationService');
-const { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders } = require('../../services/spkImportService');
+const { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders, detectKadisFromFuncLoc } = require('../../services/spkImportService');
 
 const CATEGORY_GROUP_MAP = {
   Mekanik: 'Mekanik',
@@ -122,6 +123,10 @@ const confirm = async (req, res) => {
       equipmentNameMap[eq.equipmentId] = eq.equipmentName;
     }
 
+    // ── Bulk-fetch plant names (for Sipil upsert plantName resolution) ────────
+    const allPlants = await Plant.findAll({ attributes: ['plantId', 'plantName'] });
+    const plantNameMap = Object.fromEntries(allPlants.map(p => [p.plantId, p.plantName]));
+
     // ── Single transaction for all creates ───────────────────────────────────
     const t = await sequelize.transaction();
     try {
@@ -139,6 +144,7 @@ const confirm = async (req, res) => {
           systemStatus:  order.systemStatus ?? null,
           costCenter:    order.costCenter ?? null,
           operWorkCtr:   order.operWorkCtr ?? null,
+          kadisArea:     detectKadisFromFuncLoc(order.functionalLocation) || null,
         }, { transaction: t });
 
         // 2. SpkEquipment row (one per order in SAP IW38 import)
@@ -161,7 +167,7 @@ const confirm = async (req, res) => {
           if (order.isSipil) {
             // Prefer SAP Location column; fall back to plantId from SipilFunclocMapping (set by sync-sipil)
             const sipilPlantId   = order.locationCode ?? order.plantId ?? null;
-            const sipilPlantName = order.plantName ?? null;
+            const sipilPlantName = sipilPlantId ? (plantNameMap[sipilPlantId] ?? null) : null;
             await Equipment.upsert({
               equipmentId:        spkEqId,
               equipmentName:      spkEqName ?? spkEqId,

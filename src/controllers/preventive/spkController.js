@@ -89,6 +89,7 @@ function fmt(spk) {
     kadisPerawatanApprovedAt: j.kadisPerawatanApprovedAt ?? null,
     kadisApprovedBy: j.kadisApprovedBy ?? null,
     kadisApprovedAt: j.kadisApprovedAt ?? null,
+    kadisArea: j.kadisArea || null,
     equipmentModels: (j.equipmentModels || []).map(em => ({
       equipmentId: em.equipmentId,
       equipmentName: em.equipmentName,
@@ -130,6 +131,30 @@ const getAll = async (req, res) => {
       [Op.gte]: weekStart.toISOString().slice(0, 10),
       [Op.lte]: weekEnd.toISOString().slice(0, 10),
     };
+  }
+
+  // When a non-PP Kadis fetches awaiting_kadis SPKs, filter to their plant only
+  if (
+    req.query.status === 'awaiting_kadis' &&
+    req.user?.role === 'kadis' &&
+    !req.user?.dinas?.toLowerCase().includes('pusat perawatan')
+  ) {
+    const kadisDinas = req.user.dinas || '';
+    const plantEntry = PLANT_KADIS_MAP.find(
+      e => e.dinas.toLowerCase() === kadisDinas.toLowerCase()
+    );
+    if (plantEntry) {
+      const terms = plantEntry.pattern.source.split('|').map(t => t.trim());
+      const likeConditions = terms
+        .map(t => `e.plant_name LIKE ${sequelize.escape('%' + t + '%')}`)
+        .join(' OR ');
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(
+        sequelize.literal(
+          `Spk.spk_number IN (SELECT DISTINCT se.spk_number FROM spk_equipment se INNER JOIN equipment e ON se.equipment_id = e.equipment_id WHERE ${likeConditions})`
+        )
+      );
+    }
   }
 
   // Plant filter — subquery through SpkEquipment → Equipment
@@ -191,7 +216,30 @@ const getOne = async (req, res) => {
     photoUrls = photos.map(p => p.photoPath);
   }
 
-  res.json({ ...fmt(spk), photoUrls });
+  // Resolve approval user IDs → display names
+  const approvalUserIds = [
+    spk.submittedBy,
+    spk.kasieApprovedBy,
+    spk.kadisPerawatanApprovedBy,
+    spk.kadisApprovedBy,
+  ].filter(Boolean);
+  const userNameMap = {};
+  if (approvalUserIds.length) {
+    const approvalUsers = await User.findAll({
+      where: { id: { [Op.in]: approvalUserIds } },
+      attributes: ['id', 'name'],
+    });
+    for (const u of approvalUsers) userNameMap[u.id] = u.name;
+  }
+
+  res.json({
+    ...fmt(spk),
+    photoUrls,
+    submittedByName:              userNameMap[spk.submittedBy] ?? null,
+    kasieApprovedByName:          userNameMap[spk.kasieApprovedBy] ?? null,
+    kadisPerawatanApprovedByName: userNameMap[spk.kadisPerawatanApprovedBy] ?? null,
+    kadisApprovedByName:          userNameMap[spk.kadisApprovedBy] ?? null,
+  });
 };
 
 // POST /api/spk
