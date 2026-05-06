@@ -3,6 +3,7 @@
 const path = require('path');
 const fs   = require('fs');
 const { Op } = require('sequelize');
+const sequelize = require('../../config/database');
 const Equipment = require('../../models/Equipment');
 const Plant = require('../../models/Plant');
 const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
@@ -17,8 +18,18 @@ const FunctionalLocation = require('../../models/FunctionalLocation');
 // GET /api/equipment
 // Query: ?category=Mekanik  ?search=pompa  ?limit=50  ?offset=0  ?funcLocId=A-A1-01
 const getAll = async (req, res) => {
+  const VALID_CAT = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
   const where = {};
-  if (req.query.category) where.category = req.query.category;
+  if (req.query.category) {
+    if (!VALID_CAT.includes(req.query.category)) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
+    const cat = req.query.category;
+    where[Op.or] = [
+      { category: cat },
+      sequelize.literal(`JSON_CONTAINS(extra_categories, '"${cat}"')`),
+    ];
+  }
   if (req.query.plantId) where.plantId = req.query.plantId;
   if (req.query.funcLocId) where.funcLocId = { [Op.like]: `${req.query.funcLocId}%` };
   if (req.query.search) {
@@ -130,7 +141,6 @@ const renameId = async (req, res) => {
   const conflict = await Equipment.findByPk(newId);
   if (conflict) return res.status(409).json({ error: `Equipment ID "${newId}" already exists` });
 
-  const sequelize = require('../../config/database');
   await sequelize.transaction(async (t) => {
     await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction: t });
     await sequelize.query('UPDATE equipment SET equipment_id = ? WHERE equipment_id = ?',                       { replacements: [newId, oldId], transaction: t });

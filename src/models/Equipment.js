@@ -8,6 +8,7 @@ const Equipment = sequelize.define('Equipment', {
   equipmentName: { type: DataTypes.STRING(150), allowNull: false, field: 'equipment_name' },
   functionalLocation: { type: DataTypes.STRING(200), allowNull: true, field: 'functional_location' },
   category: { type: DataTypes.ENUM('Mekanik', 'Listrik', 'Sipil', 'Otomasi'), allowNull: true },
+  extraCategories: { type: DataTypes.JSON, allowNull: true, field: 'extra_categories', defaultValue: null },
   funcLocId: { type: DataTypes.STRING(50), allowNull: true, field: 'func_loc_id' },
   plantId: { type: DataTypes.STRING(20), allowNull: true, field: 'plant_id' },
   plantName: { type: DataTypes.STRING(150), allowNull: true, field: 'plant_name' },
