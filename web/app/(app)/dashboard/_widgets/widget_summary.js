@@ -67,14 +67,15 @@ export function WidgetSummary() {
         users:      usrData.status === 'rejected',
       };
 
-      const spkList  = spkData.status  === 'fulfilled' ? (Array.isArray(spkData.value)  ? spkData.value  : []) : [];
-      const corrList = corrData.status === 'fulfilled' ? (Array.isArray(corrData.value) ? corrData.value : []) : [];
-      const eqTotal  = eqData.status   === 'fulfilled' ? (eqData.value?.total ?? null)  : null;
-      const usrList  = usrData.status  === 'fulfilled' ? (Array.isArray(usrData.value)  ? usrData.value  : []) : [];
+      const spkList  = spkData.status  === 'fulfilled' ? (Array.isArray(spkData.value?.data) ? spkData.value.data : (Array.isArray(spkData.value) ? spkData.value : [])) : [];
+      const corrList = corrData.status === 'fulfilled' ? (Array.isArray(corrData.value?.data) ? corrData.value.data : (Array.isArray(corrData.value) ? corrData.value : [])) : [];
+      const eqDataVal = eqData.status  === 'fulfilled' ? eqData.value : null;
+      const eqTotal  = eqDataVal?.data?.total ?? eqDataVal?.total ?? null;
+      const usrList  = usrData.status  === 'fulfilled' ? (Array.isArray(usrData.value?.data) ? usrData.value.data : (Array.isArray(usrData.value) ? usrData.value : [])) : [];
 
       setStats({
         spk:        newErrors.spk        ? null : spkList.length,
-        corrective: newErrors.corrective ? null : corrList.filter(s => s.status !== 'selesai' && s.status !== 'ditolak').length,
+        corrective: newErrors.corrective ? null : corrList.length,
         equipment:  newErrors.equipment  ? null : eqTotal,
         users:      newErrors.users      ? null : usrList.length,
       });
@@ -88,7 +89,7 @@ export function WidgetSummary() {
 
   const cards = [
     { icon: FileText, label: 'Total SPK Preventive', value: stats.spk,        sub: 'Semua status',  color: 'bg-blue-600',   href: canLink('spk')        ? '/spk'        : null, key: 'spk' },
-    { icon: Wrench,   label: 'Corrective Aktif',     value: stats.corrective, sub: 'Belum selesai', color: 'bg-orange-500', href: canLink('corrective') ? '/corrective' : null, key: 'corrective' },
+    { icon: Wrench,   label: 'Total SPK Corrective', value: stats.corrective, sub: 'Semua status',  color: 'bg-orange-500', href: canLink('corrective') ? '/corrective' : null, key: 'corrective' },
     { icon: Radio,    label: 'Total Equipment',       value: stats.equipment,  sub: 'Semua plant',   color: 'bg-violet-600', href: canLink('equipment')  ? '/equipment'  : null, key: 'equipment' },
     { icon: Users,    label: 'Total User',            value: stats.users,      sub: 'Terdaftar',     color: 'bg-teal-600',   href: canLink('users')      ? '/users'      : null, key: 'users' },
   ];

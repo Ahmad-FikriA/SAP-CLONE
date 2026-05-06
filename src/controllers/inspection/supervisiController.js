@@ -241,19 +241,31 @@ async function notifyExecutorAssignment(job, { updated = false } = {}) {
   }
 }
 
-async function notifySupervisorVisitUpdate({ job, visitStatus, visitDate, executorName }) {
+async function notifySupervisorVisitUpdate({ job, visitStatus, visitDate, executorName, isUndo = false }) {
   try {
     const recipientIds = await findSupervisorRecipientIds(job);
     if (recipientIds.length === 0) return;
 
     const isHadir = visitStatus === "hadir";
+    
+    let type, title, body;
+    if (isUndo) {
+      type = "visit_undone";
+      title = "Laporan Ditarik (Draft)";
+      body = `${executorName} membatalkan submit laporan untuk ${job.nomorJo || "-"} dan mengembalikannya ke draft.`;
+    } else {
+      type = isHadir ? "visit_submitted" : "visit_absent";
+      title = isHadir ? "Laporan Kunjungan Masuk" : "Ketidakhadiran Supervisi";
+      body = isHadir
+        ? `${executorName} mengirim laporan kunjungan untuk ${job.nomorJo || "-"}.`
+        : `${executorName} melaporkan tidak hadir untuk ${job.nomorJo || "-"}.`;
+    }
+
     await NotificationService.notify({
       module: "supervisi",
-      type: isHadir ? "visit_submitted" : "visit_absent",
-      title: isHadir ? "Laporan Kunjungan Masuk" : "Ketidakhadiran Supervisi",
-      body: isHadir
-        ? `${executorName} mengirim laporan kunjungan untuk ${job.nomorJo || "-"}.`
-        : `${executorName} melaporkan tidak hadir untuk ${job.nomorJo || "-"}.`,
+      type,
+      title,
+      body,
       data: {
         jobId: String(job.id || ""),
         nomorJo: String(job.nomorJo || ""),
@@ -1247,6 +1259,20 @@ async function undoVisit(req, res) {
     }
 
     await visit.update({ isDraft: true });
+
+    const executorName =
+      normalizeNullableString(req.user && req.user.name) ||
+      normalizeNullableString(req.user && req.user.nik) ||
+      "Pelaksana";
+
+    // Beritahu supervisor bahwa laporan ditarik kembali
+    await notifySupervisorVisitUpdate({
+      job: visit.job,
+      visitStatus: visit.status,
+      visitDate: visitDateStr,
+      executorName,
+      isUndo: true
+    });
 
     // Inject submitterName
     const nikMap = await buildNikNameMap(visit.submittedBy ? [visit.submittedBy] : []);

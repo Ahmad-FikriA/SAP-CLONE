@@ -1,4 +1,4 @@
-import { apiGet } from '@/lib/api';
+import { apiGet, apiDelete } from '@/lib/api';
 
 /**
  * Ambil daftar jadwal inspeksi dari backend.
@@ -14,6 +14,14 @@ export async function fetchInspeksiSchedules(params = {}) {
   const qs = query.toString();
   const data = await apiGet(`/inspection/schedules${qs ? `?${qs}` : ''}`);
   return data?.data ?? [];
+}
+
+/**
+ * Hapus jadwal inspeksi berdasarkan ID.
+ * @param {number} id
+ */
+export async function deleteInspeksiSchedule(id) {
+  return apiDelete(`/inspection/schedules/${id}`);
 }
 
 /**
@@ -44,6 +52,24 @@ export async function fetchInspeksiScheduleById(id) {
 }
 
 /**
+ * Ambil daftar user untuk mapping NIK → nama eksekutor.
+ * @returns {Promise<Record<string, string>>} Map nik → name
+ */
+export async function fetchInspeksiUsersMap() {
+  try {
+    const data = await apiGet('/users');
+    const users = data?.data ?? data ?? [];
+    const map = {};
+    for (const u of users) {
+      if (u.nik) map[String(u.nik)] = u.name || u.nik;
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Mapping status backend → label display + badge variant
  */
 export const INSPEKSI_STATUS_META = {
@@ -53,8 +79,20 @@ export const INSPEKSI_STATUS_META = {
   cancelled:   { label: 'Dibatalkan', variant: 'cancelled',   isAktif: false },
 };
 
-export const INSPEKSI_TYPE_LABELS = {
-  rutin:     'Rutin',
-  k3:        'K3',
-  supervisi: 'Supervisi',
-};
+/**
+ * Resolve label tipe berdasarkan data schedule:
+ * - Ada userRequest (dari laporan/permintaan) → 'Inspeksi'
+ * - Rutin tanpa request → 'Rutin'
+ * - K3, Supervisi → sesuai type
+ */
+export function resolveInspeksiTypeLabel(schedule) {
+  if (schedule.userRequest || schedule.triggerSource === 'user_darurat') {
+    return 'Inspeksi';
+  }
+  const map = {
+    rutin:     'Rutin',
+    k3:        'K3',
+    supervisi: 'Supervisi',
+  };
+  return map[schedule.type] || schedule.type;
+}

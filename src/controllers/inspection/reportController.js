@@ -159,6 +159,16 @@ function parsePhotoRecords(photos, reportId) {
 }
 
 /**
+ * Parse raw attachment paths into a clean array of non-empty strings.
+ */
+function parseAttachmentPaths(attachments) {
+  if (!Array.isArray(attachments)) return [];
+  return attachments
+    .map((a) => String(a || "").trim())
+    .filter((a) => a.length > 0);
+}
+
+/**
  * Report Controller — Submit, list, approve/reject inspection reports.
  */
 
@@ -172,6 +182,11 @@ async function listReports(req, res) {
 
     if (req.query.status) where.status = req.query.status;
 
+    // Filter per jadwal (dipakai oleh web modal detail)
+    if (req.query.scheduleId) {
+      where.scheduleId = Number(req.query.scheduleId);
+    }
+
     if (requestedSubmittedBy) {
       if (!hasGlobalAccess && requestedSubmittedBy !== requesterNik) {
         return res.status(403).json({
@@ -180,7 +195,9 @@ async function listReports(req, res) {
         });
       }
       where.submittedBy = requestedSubmittedBy;
-    } else if (!hasGlobalAccess) {
+    } else if (!hasGlobalAccess && !req.query.scheduleId) {
+      // Jika bukan akses global & tidak filter per scheduleId,
+      // batasi hanya ke laporan milik sendiri
       if (!requesterNik) {
         return res.status(403).json({
           success: false,
@@ -310,6 +327,7 @@ async function createReport(req, res) {
         kriteria,
         kategoriK3: kategoriK3 || null,
         signaturePath: signaturePath || null,
+        attachments: parseAttachmentPaths(req.body.attachments),
         status: reportStatus,
         submittedBy: req.user.nik,
         submittedAt: isSubmitted ? new Date() : null,
@@ -437,6 +455,10 @@ async function updateReport(req, res) {
         ? report.submittedAt || new Date()
         : null;
 
+    if (req.body.attachments !== undefined) {
+      updatePayload.attachments = parseAttachmentPaths(req.body.attachments);
+    }
+
     await report.update(updatePayload, { transaction: t });
 
     if (req.body.photos !== undefined) {
@@ -521,6 +543,10 @@ async function approveReport(req, res) {
       },
       { transaction: t },
     );
+
+    if (report.schedule) {
+      await report.schedule.update({ status: "approved" }, { transaction: t });
+    }
 
     // If kerusakan found → auto-create follow-up
     // Branching: manusia → assign ke Dinas HSE, selain itu → assign ke Dinas Perawatan

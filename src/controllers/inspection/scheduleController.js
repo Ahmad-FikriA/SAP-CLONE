@@ -91,43 +91,100 @@ async function createSchedule(req, res) {
       intervalPeriod,
     } = req.body;
 
-    const schedule = await InspectionSchedule.create({
-      type: type || "rutin",
-      title,
-      location,
-      scheduledDate,
-      scheduledEndDate,
-      createdBy: req.user.nik,
-      assignedTo,
-      kategoriTeknisi,
-      kategoriK3: kategoriK3 || null,
-      triggerSource: triggerSource || "self",
-      vendorInfo,
-      nomorPoJo,
-      darurat: darurat || false,
-      notes,
-      intervalPeriod,
-    });
+    const start = new Date(scheduledDate);
+    start.setHours(0, 0, 0, 0);
 
-    res.status(201).json({
-      success: true,
-      message: "Schedule created successfully.",
-      data: schedule,
-    });
+    let end = new Date(scheduledEndDate || scheduledDate);
+    end.setHours(0, 0, 0, 0);
 
-    // Kirim notifikasi ke executor yang di-assign (atau Planner jika belum ditentukan)
-    const recipientNik = String(assignedTo || INSPECTION_PLANNER_NIK);
-    notify({
-      module: 'inspection',
-      type: 'schedule_created',
-      title: 'Jadwal Inspeksi Baru',
-      body: `Jadwal inspeksi "${title || schedule.title}" telah dibuat untuk Anda.`,
-      data: {
-        deepLink: 'inspection/draft',
-        scheduleId: String(schedule.id),
-      },
-      recipientIds: [recipientNik],
-    });
+    const isMultiDay = end > start && !intervalPeriod;
+
+    if (isMultiDay) {
+      const datesToSchedule = [];
+      let current = new Date(start);
+      while (current <= end) {
+        datesToSchedule.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+      }
+
+      const schedulesToCreate = datesToSchedule.map(date => ({
+        type: type || "rutin",
+        title,
+        location,
+        scheduledDate: date,
+        scheduledEndDate: date,
+        createdBy: req.user.nik,
+        assignedTo,
+        kategoriTeknisi,
+        kategoriK3: kategoriK3 || null,
+        triggerSource: triggerSource || "self",
+        vendorInfo,
+        nomorPoJo,
+        darurat: darurat || false,
+        notes,
+        intervalPeriod,
+      }));
+
+      const schedules = await InspectionSchedule.bulkCreate(schedulesToCreate);
+
+      res.status(201).json({
+        success: true,
+        message: `Created ${schedules.length} schedules.`,
+        data: schedules[0], // Return first one for compatibility
+      });
+
+      // Notification
+      const recipientNik = String(assignedTo || INSPECTION_PLANNER_NIK);
+      notify({
+        module: 'inspection',
+        type: 'schedule_created',
+        title: 'Jadwal Inspeksi Baru (Multi-hari)',
+        body: `Jadwal inspeksi "${title || schedules[0].title}" telah dibuat untuk Anda (${schedules.length} hari).`,
+        data: {
+          deepLink: 'inspection/draft',
+          scheduleId: String(schedules[0].id),
+        },
+        recipientIds: [recipientNik],
+      });
+    } else {
+      const schedule = await InspectionSchedule.create({
+        type: type || "rutin",
+        title,
+        location,
+        scheduledDate,
+        scheduledEndDate,
+        createdBy: req.user.nik,
+        assignedTo,
+        kategoriTeknisi,
+        kategoriK3: kategoriK3 || null,
+        triggerSource: triggerSource || "self",
+        vendorInfo,
+        nomorPoJo,
+        darurat: darurat || false,
+        notes,
+        intervalPeriod,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Schedule created successfully.",
+        data: schedule,
+      });
+
+      // Kirim notifikasi ke executor yang di-assign (atau Planner jika belum ditentukan)
+      const recipientNik = String(assignedTo || INSPECTION_PLANNER_NIK);
+      notify({
+        module: 'inspection',
+        type: 'schedule_created',
+        title: 'Jadwal Inspeksi Baru',
+        body: `Jadwal inspeksi "${title || schedule.title}" telah dibuat untuk Anda.`,
+        data: {
+          deepLink: 'inspection/draft',
+          scheduleId: String(schedule.id),
+        },
+        recipientIds: [recipientNik],
+      });
+    }
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -282,6 +339,23 @@ async function createRecurringSchedules(req, res) {
   }
 }
 
+// DELETE /api/inspection/schedules/:id
+async function deleteSchedule(req, res) {
+  try {
+    const schedule = await InspectionSchedule.findByPk(req.params.id);
+    if (!schedule) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Schedule not found." });
+    }
+
+    await schedule.destroy();
+    res.json({ success: true, message: "Schedule deleted successfully." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 // CRON JOB — Send reminders for today and overdue schedules
 async function sendInspectionReminders() {
   const LABEL = "[Inspection Cron]";
@@ -346,4 +420,4 @@ async function sendInspectionReminders() {
   }
 }
 
-module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, getNextSpkNumber, createRecurringSchedules, sendInspectionReminders };
+module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, deleteSchedule, getNextSpkNumber, createRecurringSchedules, sendInspectionReminders };

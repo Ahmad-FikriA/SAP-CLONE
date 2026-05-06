@@ -9,6 +9,7 @@ const {
   getSchedule,
   createSchedule,
   updateSchedule,
+  deleteSchedule,
   getNextSpkNumber,
   createRecurringSchedules,
 } = require("../controllers/inspection/scheduleController");
@@ -70,7 +71,6 @@ const {
   listAmends,
 } = require("../controllers/inspection/supervisiAmendController");
 
-const { clearInspectionSupervisiData } = require("../controllers/inspection/adminController");
 
 // All inspection routes require authentication
 router.use(verifyToken);
@@ -82,6 +82,7 @@ router.get("/schedules", listSchedules);
 router.get("/schedules/:id", getSchedule);
 router.post("/schedules", createSchedule);
 router.put("/schedules/:id", updateSchedule);
+router.delete("/schedules/:id", deleteSchedule);
 
 // ── Reports ──────────────────────────────────────────────────────────────────
 router.get("/reports", listReports);
@@ -130,7 +131,5 @@ router.post("/supervisi/jobs/:jobId/amends", uploadAmendDocuments, createAmend);
 router.put("/supervisi/jobs/:jobId/amends/:amendId", uploadAmendDocuments, updateAmend);
 router.delete("/supervisi/jobs/:jobId/amends/:amendId", deleteAmend);
 
-// ── Admin Utilities ─────────────────────────────────────────────────────────
-router.delete("/clear-dummy-data", clearInspectionSupervisiData);
 
 module.exports = router;
