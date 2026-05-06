@@ -5,11 +5,11 @@ import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import {
   MapPin, Loader2, AlertCircle, RefreshCw, Search, X, XCircle, CalendarDays,
-  Briefcase, CheckCircle2, FileEdit, FileText, Banknote, Trash2, Eye
+  Briefcase, CheckCircle2, FileEdit, FileText, Banknote, Trash2, Eye, Ban
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { fetchSupervisiJobs, deleteSupervisiJob, SUPERVISI_STATUS_META } from '@/lib/supervisi-service';
+import { fetchSupervisiJobs, cancelSupervisiJob, deleteSupervisiJob, SUPERVISI_STATUS_META } from '@/lib/supervisi-service';
 import { SupervisiJobPanel } from '@/components/supervisi/SupervisiJobPanel';
 
 // Leaflet hanya berjalan di client
@@ -95,8 +95,18 @@ export default function SupervisiPage() {
   const [loading,     setLoading]     = useState(true);
   const [filter,      setFilter]      = useState('all');
   const [selectedJob, setSelectedJob] = useState(null);
-  const [jobToDelete, setJobToDelete] = useState(null);
-  const [isDeleting,  setIsDeleting]  = useState(false);
+  // State untuk alur BATALKAN (active → cancelled)
+  const [jobToCancel, setJobToCancel] = useState(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelReason,  setCancelReason]  = useState('');
+
+  // State untuk alur HAPUS permanen (cancelled/completed → deleted)
+  const [jobToHapus,  setJobToHapus]  = useState(null);
+  const [isHapusing,  setIsHapusing]  = useState(false);
+
+  // backward‑compat alias (beberapa tempat masih pakai jobToDelete)
+  const jobToDelete    = jobToCancel;
+  const setJobToDelete = setJobToCancel;
   const [tableSearch, setTableSearch] = useState('');
   const [tableStatusFilter, setTableStatusFilter] = useState('');
 
@@ -280,9 +290,9 @@ export default function SupervisiPage() {
   // JO yang sudah terbit (bukan draft)
   const totalJoTerbit = stats.active + stats.completed;
   
-  // Total Nilai Pekerjaan dari job yang sudah terbit
+  // Total Nilai Pekerjaan dari job aktif dan selesai saja (bukan draft/cancelled)
   const totalNilai = validJobs
-    .filter((j) => j.status !== 'draft')
+    .filter((j) => j.status === 'active' || j.status === 'completed')
     .reduce((sum, job) => sum + (parseFloat(job.nilaiPekerjaan) || 0), 0);
 
   const formatRupiah = (value) => {
@@ -317,22 +327,41 @@ export default function SupervisiPage() {
     return true;
   });
 
-  const handleDeleteClick = (job) => {
-    setJobToDelete(job);
+  const handleCancelClick = (job) => setJobToCancel(job);
+  const handleHapusClick  = (job) => setJobToHapus(job);
+
+  const confirmCancelJob = async () => {
+    if (!jobToCancel) return;
+    const reason = cancelReason.trim();
+    if (reason.length < 5) return;
+    setIsCancelling(true);
+    try {
+      await cancelSupervisiJob(jobToCancel.id, reason);
+      toast.success('Pekerjaan supervisi berhasil dibatalkan.');
+      if (selectedJob?.id === jobToCancel.id) setSelectedJob(null);
+      setJobToCancel(null);
+      setCancelReason('');
+      load();
+    } catch (err) {
+      toast.error(err?.message || 'Gagal membatalkan pekerjaan supervisi.');
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
-  const confirmDeleteJob = async () => {
-    if (!jobToDelete) return;
-    setIsDeleting(true);
+  const confirmHapusJob = async () => {
+    if (!jobToHapus) return;
+    setIsHapusing(true);
     try {
-      await deleteSupervisiJob(jobToDelete.id);
-      toast.success('Pekerjaan supervisi berhasil dihapus.');
-      setJobToDelete(null);
+      await deleteSupervisiJob(jobToHapus.id);
+      toast.success('Pekerjaan supervisi berhasil dihapus permanen.');
+      if (selectedJob?.id === jobToHapus.id) setSelectedJob(null);
+      setJobToHapus(null);
       load();
     } catch (err) {
       toast.error(err?.message || 'Gagal menghapus pekerjaan supervisi.');
     } finally {
-      setIsDeleting(false);
+      setIsHapusing(false);
     }
   };
 
@@ -656,6 +685,7 @@ export default function SupervisiPage() {
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
+                          {/* Tombol Detail - selalu tampil */}
                           <Button
                             variant="outline"
                             size="sm"
@@ -664,14 +694,30 @@ export default function SupervisiPage() {
                           >
                             <Eye size={11} /> Detail
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 opacity-80 hover:opacity-100"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(job); }}
-                          >
-                            <Trash2 size={11} /> Hapus
-                          </Button>
+
+                          {/* Tombol Batalkan - hanya untuk active */}
+                          {job.status === 'active' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 opacity-80 hover:opacity-100"
+                              onClick={(e) => { e.stopPropagation(); handleCancelClick(job); }}
+                            >
+                              <Ban size={11} /> Batalkan
+                            </Button>
+                          )}
+
+                          {/* Tombol Hapus - hanya untuk cancelled/completed */}
+                          {(job.status === 'cancelled' || job.status === 'completed') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 opacity-80 hover:opacity-100"
+                              onClick={(e) => { e.stopPropagation(); handleHapusClick(job); }}
+                            >
+                              <Trash2 size={11} /> Hapus
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -687,22 +733,92 @@ export default function SupervisiPage() {
       {/* ── Side panel detail ── */}
       <SupervisiJobPanel job={selectedJob} onClose={() => setSelectedJob(null)} />
 
-      {/* ── Delete Confirmation Modal ── */}
-      <Dialog open={!!jobToDelete} onOpenChange={(open) => !open && !isDeleting && setJobToDelete(null)}>
+      {/* ── Cancel Confirmation Modal ── */}
+      <Dialog
+        open={!!jobToCancel}
+        onOpenChange={(open) => {
+          if (!open && !isCancelling) {
+            setJobToCancel(null);
+            setCancelReason('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-orange-700 flex items-center gap-2">
+              <Ban size={18} /> Batalkan Pekerjaan?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mt-1">
+            Pekerjaan <span className="font-semibold text-slate-700">"{jobToCancel?.namaKerja}"</span> akan dibatalkan. Status berubah menjadi <span className="font-semibold text-orange-600">Dibatalkan</span> dan tidak bisa diaktifkan kembali.
+          </p>
+          <div className="mt-4">
+            <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1.5">
+              Alasan Pembatalan <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 resize-none bg-gray-50"
+              rows={3}
+              placeholder="Jelaskan alasan pembatalan pekerjaan ini..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              disabled={isCancelling}
+            />
+            {cancelReason.trim().length > 0 && cancelReason.trim().length < 5 && (
+              <p className="text-xs text-red-500 mt-1">Alasan terlalu singkat (min. 5 karakter)</p>
+            )}
+          </div>
+          <DialogFooter className="mt-5 gap-2">
+            <Button
+              variant="outline"
+              disabled={isCancelling}
+              onClick={() => { setJobToCancel(null); setCancelReason(''); }}
+            >
+              Kembali
+            </Button>
+            <Button
+              className="gap-2 bg-orange-600 hover:bg-orange-700 text-white"
+              disabled={isCancelling || cancelReason.trim().length < 5}
+              onClick={confirmCancelJob}
+            >
+              {isCancelling ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
+              Ya, Batalkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Hapus Permanen Confirmation Modal ── */}
+      <Dialog
+        open={!!jobToHapus}
+        onOpenChange={(open) => { if (!open && !isHapusing) setJobToHapus(null); }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Hapus Pekerjaan Supervisi</DialogTitle>
+            <DialogTitle className="text-red-700 flex items-center gap-2">
+              <Trash2 size={18} /> Hapus Permanen?
+            </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600 mt-2">
-            Apakah Anda yakin ingin menghapus pekerjaan <span className="font-semibold text-slate-700">"{jobToDelete?.namaKerja}"</span>? Data yang telah dihapus tidak dapat dikembalikan.
+            Data pekerjaan <span className="font-semibold text-slate-700">"{jobToHapus?.namaKerja}"</span> akan <span className="font-bold text-red-600">dihapus permanen</span> dari sistem dan tidak bisa dikembalikan.
           </p>
-          <DialogFooter className="mt-6">
-            <Button variant="outline" disabled={isDeleting} onClick={() => setJobToDelete(null)}>
+          {jobToHapus?.status === 'cancelled' && jobToHapus?.cancelReason && (
+            <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-orange-700"><span className="font-bold">Alasan dibatalkan:</span> {jobToHapus.cancelReason}</p>
+            </div>
+          )}
+          <DialogFooter className="mt-6 gap-2">
+            <Button variant="outline" disabled={isHapusing} onClick={() => setJobToHapus(null)}>
               Batal
             </Button>
-            <Button variant="destructive" disabled={isDeleting} onClick={confirmDeleteJob} className="gap-2">
-              {isDeleting ? <Loader2 size={14} className="animate-spin" /> : null}
-              Ya, Hapus
+            <Button
+              variant="destructive"
+              disabled={isHapusing}
+              onClick={confirmHapusJob}
+              className="gap-2"
+            >
+              {isHapusing ? <Loader2 size={14} className="animate-spin" /> : null}
+              Ya, Hapus Permanen
             </Button>
           </DialogFooter>
         </DialogContent>

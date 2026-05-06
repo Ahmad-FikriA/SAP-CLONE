@@ -1,4 +1,4 @@
-import { apiGet } from '@/lib/api';
+import { apiGet, apiDelete, apiPatch } from '@/lib/api';
 
 /**
  * Ambil semua job supervisi dari backend.
@@ -25,13 +25,28 @@ export async function fetchSupervisiJobById(id) {
 }
 
 /**
- * Hapus satu job supervisi by ID.
+ * Hapus (permanent delete) satu job supervisi by ID.
+ * Hanya untuk Scheduler dan biasanya hanya job draft.
  * @param {number|string} id
  */
 export async function deleteSupervisiJob(id) {
-  const data = await apiGet(`/inspection/supervisi/jobs/${id}`, { method: 'DELETE' });
+  const data = await apiDelete(`/inspection/supervisi/jobs/${id}`);
   return data;
 }
+
+/**
+ * Batalkan satu job supervisi (set status=cancelled + alasan).
+ * @param {number|string} id
+ * @param {string} cancelReason  Alasan pembatalan (wajib, min. 5 karakter)
+ */
+export async function cancelSupervisiJob(id, cancelReason) {
+  const data = await apiPatch(`/inspection/supervisi/jobs/${id}`, {
+    status: 'cancelled',
+    cancelReason,
+  });
+  return data;
+}
+
 
 // ─── Status meta ─────────────────────────────────────────────────────────────
 

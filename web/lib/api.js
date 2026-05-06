@@ -43,6 +43,10 @@ export function apiDelete(path) {
   return apiFetch(path, { method: 'DELETE' });
 }
 
+export function apiPatch(path, body) {
+  return apiFetch(path, { method: 'PATCH', body: JSON.stringify(body) });
+}
+
 /** POST with FormData (file uploads) — does not set Content-Type */
 export function apiUpload(path, formData) {
   return apiFetch(path, { method: 'POST', body: formData });

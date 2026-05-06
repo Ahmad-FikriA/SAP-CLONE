@@ -584,6 +584,23 @@ async function updateJob(req, res) {
     if (hasOwn(req.body, "status")) {
       const normalizedStatus = normalizeNullableString(req.body.status);
       if (normalizedStatus) {
+        // Validasi transisi status: cancel hanya dari active
+        if (normalizedStatus === "cancelled") {
+          if (job.status !== "active") {
+            return res.status(400).json({
+              success: false,
+              message: `Pembatalan hanya bisa dilakukan pada pekerjaan berstatus aktif. Status saat ini: ${job.status}.`,
+            });
+          }
+          const reason = normalizeNullableString(req.body.cancelReason);
+          if (!reason) {
+            return res.status(400).json({
+              success: false,
+              message: "Alasan pembatalan (cancelReason) wajib diisi saat membatalkan pekerjaan.",
+            });
+          }
+          nextData.cancelReason = reason;
+        }
         nextData.status = normalizedStatus;
       }
     }
@@ -738,6 +755,14 @@ async function deleteJob(req, res) {
     const job = await SupervisiJob.findByPk(req.params.id);
     if (!job) {
       return res.status(404).json({ success: false, message: "Job tidak ditemukan." });
+    }
+
+    // Hanya boleh hapus permanen jika sudah dibatalkan atau selesai
+    if (job.status !== "cancelled" && job.status !== "completed") {
+      return res.status(400).json({
+        success: false,
+        message: `Pekerjaan hanya bisa dihapus jika berstatus 'dibatalkan' atau 'selesai'. Status saat ini: ${job.status}.`,
+      });
     }
 
     await job.destroy();

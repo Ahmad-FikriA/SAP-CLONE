@@ -83,6 +83,11 @@ const SupervisiJob = sequelize.define(
       allowNull: false,
       defaultValue: "draft",
     },
+    cancelReason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Alasan pembatalan pekerjaan (diisi saat status = cancelled)",
+    },
     latitude: {
       type: DataTypes.DECIMAL(10, 7),
       allowNull: true,
@@ -215,6 +220,14 @@ async function ensureSupervisiJobSchema() {
       allowNull: true,
       defaultValue: 100.0,
       comment: "Radius geofence kustom dari proyek",
+    });
+  }
+
+  if (!table.cancelReason) {
+    await queryInterface.addColumn(tableName, "cancelReason", {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Alasan pembatalan pekerjaan",
     });
   }
 
