@@ -20,7 +20,6 @@ const NAV = [
   { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan SPK',    Icon: ClipboardCheck },
   { key: 'corrective',        href: '/corrective',         label: 'Corrective Planner', Icon: Wrench },
   { key: 'hse',               href: '/hse',                label: 'HSE Command Center', Icon: ShieldCheck },
-  { key: 'spk-import',        href: '/spk/import',         label: 'Import SAP',         Icon: Upload },
   { divider: true },
   { key: 'equipment',         href: '/equipment',          label: 'Equipment',          Icon: Radio },
   { key: 'maps',              href: '/maps',               label: 'Maps',               Icon: Map },

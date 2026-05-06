@@ -17,7 +17,7 @@ const MapWithMarkers = dynamic(() => import('@/components/map/EquipmentMap'), { 
 const QRCode = dynamic(() => import('react-qr-code'), { ssr: false });
 
 const PAGE_SIZE = 20;
-const EMPTY_FORM = { equipmentId: '', equipmentName: '', functionalLocation: '', funcLocId: '', category: '', plantId: '', latitude: '', longitude: '' };
+const EMPTY_FORM = { equipmentId: '', equipmentName: '', functionalLocation: '', funcLocId: '', category: '', plantId: '', latitude: '', longitude: '', extraCategories: [] };
 
 export default function EquipmentPage() {
   const [equipment, setEquipment]   = useState([]);
@@ -96,6 +96,7 @@ export default function EquipmentPage() {
       plantId: eq.plantId || '',
       latitude: eq.latitude ?? '',
       longitude: eq.longitude ?? '',
+      extraCategories: Array.isArray(eq.extraCategories) ? eq.extraCategories : [],
     });
     setPanelOpen(true);
   }
@@ -119,6 +120,7 @@ export default function EquipmentPage() {
       ...form,
       latitude: form.latitude !== '' ? parseFloat(form.latitude) : null,
       longitude: form.longitude !== '' ? parseFloat(form.longitude) : null,
+      extraCategories: form.extraCategories?.length ? form.extraCategories : null,
     };
     try {
       if (editingId) {
@@ -271,7 +273,14 @@ export default function EquipmentPage() {
                 <td className="px-4 py-3 text-gray-500 text-xs">
                   {eq.functionalLocation || eq.funcLocId || '—'}
                 </td>
-                <td className="px-4 py-3"><CategoryBadge category={eq.category} /></td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    <CategoryBadge category={eq.category} />
+                    {Array.isArray(eq.extraCategories) && eq.extraCategories.map(c => (
+                      <CategoryBadge key={c} category={c} />
+                    ))}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-gray-500 text-xs">{eq.plantId || '—'}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1.5">
@@ -346,6 +355,34 @@ export default function EquipmentPage() {
                 </select>
               </div>
             </div>
+            {/* Secondary categories — all disciplines except the primary one */}
+            {form.category && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Kategori Tambahan</label>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.filter(c => c !== form.category).map(c => {
+                    const checked = (form.extraCategories || []).includes(c);
+                    return (
+                      <label key={c} className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            const prev = form.extraCategories || [];
+                            setForm({
+                              ...form,
+                              extraCategories: checked ? prev.filter(x => x !== c) : [...prev, c],
+                            });
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-xs text-gray-700">{c}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Latitude" value={form.latitude} onChange={(v) => setForm({ ...form, latitude: v })} placeholder="e.g. -6.2000" />
               <Field label="Longitude" value={form.longitude} onChange={(v) => setForm({ ...form, longitude: v })} placeholder="e.g. 106.8000" />
