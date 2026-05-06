@@ -725,6 +725,29 @@ async function updateJob(req, res) {
   }
 }
 
+// DELETE /api/inspection/supervisi/jobs/:id
+async function deleteJob(req, res) {
+  try {
+    if (!isSupervisiScheduler(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Hanya pembuat jadwal supervisi yang dapat menghapus pekerjaan.",
+      });
+    }
+
+    const job = await SupervisiJob.findByPk(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job tidak ditemukan." });
+    }
+
+    await job.destroy();
+
+    res.json({ success: true, message: "Pekerjaan berhasil dihapus." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // VISITS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1299,6 +1322,7 @@ module.exports = {
   getJob,
   createJob,
   updateJob,
+  deleteJob,
   listVisits,
   submitVisit,
   listPelanggaran,

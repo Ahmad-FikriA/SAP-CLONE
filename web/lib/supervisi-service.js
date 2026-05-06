@@ -24,6 +24,15 @@ export async function fetchSupervisiJobById(id) {
   return data?.data ?? null;
 }
 
+/**
+ * Hapus satu job supervisi by ID.
+ * @param {number|string} id
+ */
+export async function deleteSupervisiJob(id) {
+  const data = await apiGet(`/inspection/supervisi/jobs/${id}`, { method: 'DELETE' });
+  return data;
+}
+
 // ─── Status meta ─────────────────────────────────────────────────────────────
 
 export const SUPERVISI_STATUS_META = {

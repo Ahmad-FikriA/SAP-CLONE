@@ -1,17 +1,24 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import {
-  MapPin, Loader2, AlertCircle, RefreshCw,
-  Briefcase, CheckCircle2, FileEdit, FileText, Banknote
+  MapPin, Loader2, AlertCircle, RefreshCw, Search, X, XCircle, CalendarDays,
+  Briefcase, CheckCircle2, FileEdit, FileText, Banknote, Trash2, Eye
 } from 'lucide-react';
-import { fetchSupervisiJobs, SUPERVISI_STATUS_META } from '@/lib/supervisi-service';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { fetchSupervisiJobs, deleteSupervisiJob, SUPERVISI_STATUS_META } from '@/lib/supervisi-service';
 import { SupervisiJobPanel } from '@/components/supervisi/SupervisiJobPanel';
 
 // Leaflet hanya berjalan di client
 const LeafletMap = dynamic(() => import('@/components/map/LeafletMap'), { ssr: false });
+
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
 
 // ── Status filter pills ───────────────────────────────────────────────────────
 const FILTERS = [
@@ -19,13 +26,19 @@ const FILTERS = [
   { id: 'active',    label: 'Aktif'   },
   { id: 'completed', label: 'Selesai' },
   { id: 'draft',     label: 'Draft'   },
+  { id: 'cancelled', label: 'Dibatalkan' },
 ];
+
+const SELECT_CLS =
+  'px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white text-slate-700 ' +
+  'focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer';
 
 // Warna marker per status (hex, untuk divIcon)
 const MARKER_COLORS = {
-  active:    '#22C55E',
-  completed: '#3B82F6',
-  draft:     '#9CA3AF',
+  active:    '#F59E0B', // Kuning
+  completed: '#22C55E', // Hijau
+  draft:     '#3B82F6', // Biru
+  cancelled: '#EF4444', // Merah
 };
 
 function markerColor(status) {
@@ -58,11 +71,39 @@ function getInitialMapCenter(jobs) {
   return null; // tidak ada koordinat sama sekali
 }
 
+const STATUS_ICON = {
+  active:    { Icon: AlertCircle, cls: 'bg-yellow-50 text-yellow-700 border border-yellow-200' },
+  completed: { Icon: CheckCircle2, cls: 'bg-green-50 text-green-700 border border-green-200' },
+  draft:     { Icon: FileEdit,     cls: 'bg-blue-50 text-blue-700 border border-blue-200' },
+  cancelled: { Icon: XCircle,      cls: 'bg-red-50 text-red-700 border border-red-200' },
+};
+
+function StatusBadge({ status }) {
+  const meta   = SUPERVISI_STATUS_META[status] || SUPERVISI_STATUS_META.draft;
+  const config = STATUS_ICON[status] || STATUS_ICON.draft;
+  const Icon = config.Icon;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${config.cls}`}>
+      <Icon size={10} />
+      {meta.label}
+    </span>
+  );
+}
+
 export default function SupervisiPage() {
   const [jobs,        setJobs]        = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [filter,      setFilter]      = useState('all');
   const [selectedJob, setSelectedJob] = useState(null);
+  const [jobToDelete, setJobToDelete] = useState(null);
+  const [isDeleting,  setIsDeleting]  = useState(false);
+  const [tableSearch, setTableSearch] = useState('');
+  const [tableStatusFilter, setTableStatusFilter] = useState('');
+
+  // ── Filter tahun & bulan ────────────────────────────────────────────────────
+  const currentYear  = new Date().getFullYear();
+  const [yearFilter,  setYearFilter]  = useState(String(currentYear));
+  const [monthFilter, setMonthFilter] = useState('');   // '' = semua bulan
 
   // Refs untuk akses Leaflet dari luar komponen
   const mapRef     = useRef(null);
@@ -85,19 +126,46 @@ export default function SupervisiPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Refresh markers ketika jobs atau filter berubah ──────────────────────────
+  // ── Derive opsi tahun dari data ─────────────────────────────────────────────
+  const yearOptions = useMemo(() => {
+    const years = new Set(
+      jobs
+        .map((j) => (j.waktuMulai || j.createdAt)?.slice(0, 4))
+        .filter(Boolean),
+    );
+    years.add(String(currentYear));
+    return [...years].sort((a, b) => b - a);
+  }, [jobs, currentYear]);
+
+  // ── Derived data ────────────────────────────────────────────────────────────
+  const validJobs = useMemo(() => {
+    return jobs.filter((j) => {
+      const date = j.waktuMulai || j.createdAt || '';
+      if (yearFilter  && !date.startsWith(yearFilter)) return false;
+      if (monthFilter && date.slice(5, 7) !== monthFilter.padStart(2, '0')) return false;
+      return true;
+    });
+  }, [jobs, yearFilter, monthFilter]);
+
+  // ── Refresh markers ketika validJobs atau filter berubah ─────────────────────
   useEffect(() => {
     if (!mapRef.current || !LRef.current || !mapReadyRef.current) return;
-    renderMarkers(mapRef.current, LRef.current, jobs, filter);
-  }, [jobs, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+    renderMarkers(mapRef.current, LRef.current, validJobs, filter);
+  }, [validJobs, filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Callback saat peta siap ─────────────────────────────────────────────────
   const onMapReady = useCallback((map, L) => {
     mapRef.current  = map;
     LRef.current    = L;
     mapReadyRef.current = true;
-    if (jobs.length > 0) renderMarkers(map, L, jobs, filter);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (validJobs.length > 0) renderMarkers(map, L, validJobs, filter);
+  }, [validJobs, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const onMapUnmount = useCallback(() => {
+    mapReadyRef.current = false;
+    mapRef.current = null;
+    LRef.current = null;
+  }, []);
 
   // ── Render / re-render markers ──────────────────────────────────────────────
   function renderMarkers(map, L, allJobs, activeFilter) {
@@ -105,44 +173,61 @@ export default function SupervisiPage() {
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    const visible = (activeFilter === 'all'
+    const visible = activeFilter === 'all'
       ? allJobs
-      : allJobs.filter((j) => j.status === activeFilter)
-    ).filter((j) => j.status !== 'cancelled');
+      : allJobs.filter((j) => j.status === activeFilter);
 
     visible.forEach((job) => {
-      const lat = parseFloat(job.latitude);
-      const lng = parseFloat(job.longitude);
-      if (isNaN(lat) || isNaN(lng)) return;
-
       const color = markerColor(job.status);
       const icon  = makePinIcon(L, color);
       const meta  = SUPERVISI_STATUS_META[job.status] || SUPERVISI_STATUS_META.draft;
 
-      const marker = L.marker([lat, lng], { icon });
+      // Extract titik kordinat (dukung multi-lokasi atau legacy tunggal)
+      const points = [];
+      if (Array.isArray(job.locations) && job.locations.length > 0) {
+        job.locations.forEach((loc, idx) => {
+          if (!isNaN(parseFloat(loc.latitude)) && !isNaN(parseFloat(loc.longitude))) {
+            points.push({
+              lat: parseFloat(loc.latitude),
+              lng: parseFloat(loc.longitude),
+              area: loc.namaArea || job.namaArea || `Lokasi ${idx + 1}`,
+            });
+          }
+        });
+      } else {
+        const lat = parseFloat(job.latitude);
+        const lng = parseFloat(job.longitude);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          points.push({ lat, lng, area: job.namaArea });
+        }
+      }
 
-      const popupContent = `
-        <div style="min-width:200px;font-family:system-ui,sans-serif">
-          <p style="font-size:10px;font-weight:700;color:#6B7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">
-            ${meta.label}
-          </p>
-          <p style="font-size:13px;font-weight:700;color:#111827;line-height:1.3;margin:0 0 4px">
-            ${job.namaKerja || '—'}
-          </p>
-          <p style="font-size:11px;color:#6B7280;margin:0 0 2px">📋 ${job.nomorJo || '—'}</p>
-          ${job.picSupervisi ? `<p style="font-size:11px;color:#6B7280;margin:0 0 2px">👤 ${job.picSupervisi}</p>` : ''}
-          ${job.namaArea     ? `<p style="font-size:11px;color:#6B7280;margin:0">📍 ${job.namaArea}</p>` : ''}
-          <button
-            onclick="window.__supervisiSelectJob(${job.id})"
-            style="margin-top:10px;padding:5px 12px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;width:100%"
-          >
-            Lihat Detail →
-          </button>
-        </div>`;
+      // Render marker untuk tiap titik
+      points.forEach((pt) => {
+        const marker = L.marker([pt.lat, pt.lng], { icon });
+        const popupContent = `
+          <div style="min-width:200px;font-family:system-ui,sans-serif">
+            <p style="font-size:10px;font-weight:700;color:#6B7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">
+              ${meta.label}
+            </p>
+            <p style="font-size:13px;font-weight:700;color:#111827;line-height:1.3;margin:0 0 4px">
+              ${job.namaKerja || '—'}
+            </p>
+            <p style="font-size:11px;color:#6B7280;margin:0 0 2px">📋 ${job.nomorJo || '—'}</p>
+            ${job.picSupervisi ? `<p style="font-size:11px;color:#6B7280;margin:0 0 2px">👤 ${job.picSupervisi}</p>` : ''}
+            ${pt.area ? `<p style="font-size:11px;color:#6B7280;margin:0">📍 ${pt.area}</p>` : ''}
+            <button
+              onclick="window.__supervisiSelectJob(${job.id})"
+              style="margin-top:10px;padding:5px 12px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;width:100%"
+            >
+              Lihat Detail →
+            </button>
+          </div>`;
 
-      marker.bindPopup(popupContent, { maxWidth: 260 });
-      marker.addTo(map);
-      markersRef.current.push(marker);
+        marker.bindPopup(popupContent, { maxWidth: 260 });
+        marker.addTo(map);
+        markersRef.current.push(marker);
+      });
     });
 
     // Fit bounds ke semua marker yang tampil
@@ -164,23 +249,39 @@ export default function SupervisiPage() {
     return () => { delete window.__supervisiSelectJob; };
   }, [jobs]);
 
-  // ── Derived data ────────────────────────────────────────────────────────────
-  const filteredJobs = filter === 'all' ? jobs : jobs.filter((j) => j.status === filter);
-  const withCoords   = filteredJobs.filter((j) => j.latitude && j.longitude);
-  const noCoords     = filteredJobs.filter((j) => !j.latitude || !j.longitude);
+  const filteredJobs = filter === 'all' ? validJobs : validJobs.filter((j) => j.status === filter);
+
+  let mapPointsCount = 0;
+  const noCoordsJobs = [];
+
+  filteredJobs.forEach(job => {
+    if (Array.isArray(job.locations) && job.locations.length > 0) {
+      const validLocations = job.locations.filter(loc => !isNaN(parseFloat(loc.latitude)) && !isNaN(parseFloat(loc.longitude)));
+      if (validLocations.length > 0) {
+        mapPointsCount += validLocations.length;
+      } else {
+        noCoordsJobs.push(job);
+      }
+    } else if (job.latitude && job.longitude) {
+      mapPointsCount += 1;
+    } else {
+      noCoordsJobs.push(job);
+    }
+  });
 
   const stats = {
-    active:    jobs.filter((j) => j.status === 'active').length,
-    completed: jobs.filter((j) => j.status === 'completed').length,
-    draft:     jobs.filter((j) => j.status === 'draft').length,
+    active:    validJobs.filter((j) => j.status === 'active').length,
+    completed: validJobs.filter((j) => j.status === 'completed').length,
+    draft:     validJobs.filter((j) => j.status === 'draft').length,
+    cancelled: validJobs.filter((j) => j.status === 'cancelled').length,
   };
-  stats.total = stats.active + stats.completed + stats.draft;
+  stats.total = stats.active + stats.completed + stats.draft + stats.cancelled;
 
   // JO yang sudah terbit (bukan draft)
   const totalJoTerbit = stats.active + stats.completed;
   
   // Total Nilai Pekerjaan dari job yang sudah terbit
-  const totalNilai = jobs
+  const totalNilai = validJobs
     .filter((j) => j.status !== 'draft')
     .reduce((sum, job) => sum + (parseFloat(job.nilaiPekerjaan) || 0), 0);
 
@@ -200,7 +301,40 @@ export default function SupervisiPage() {
   };
 
   // Center awal peta = koordinat job aktif pertama (setelah data loaded)
-  const initialCenter = loading ? null : getInitialMapCenter(jobs);
+  const initialCenter = loading ? null : getInitialMapCenter(validJobs);
+
+  // Table filtering
+  const tableJobs = validJobs.filter((j) => {
+    if (tableStatusFilter && j.status !== tableStatusFilter) return false;
+    if (tableSearch) {
+      const q = tableSearch.toLowerCase();
+      return (
+        j.nomorJo?.toLowerCase().includes(q) ||
+        j.namaKerja?.toLowerCase().includes(q) ||
+        j.picSupervisi?.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  const handleDeleteClick = (job) => {
+    setJobToDelete(job);
+  };
+
+  const confirmDeleteJob = async () => {
+    if (!jobToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteSupervisiJob(jobToDelete.id);
+      toast.success('Pekerjaan supervisi berhasil dihapus.');
+      setJobToDelete(null);
+      load();
+    } catch (err) {
+      toast.error(err?.message || 'Gagal menghapus pekerjaan supervisi.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -221,14 +355,41 @@ export default function SupervisiPage() {
           </p>
         </div>
 
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors disabled:opacity-50 self-start sm:self-auto"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          {/* Filter Periode */}
+          <div className="flex items-center gap-2">
+            <CalendarDays size={18} className="text-slate-400" />
+            <select
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              className={SELECT_CLS}
+            >
+              <option value="">Semua Tahun</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <select
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className={SELECT_CLS}
+            >
+              <option value="">Semua Bulan</option>
+              {MONTH_NAMES.map((m, i) => (
+                <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* ── Executive Summary ── */}
@@ -271,12 +432,13 @@ export default function SupervisiPage() {
 
       {/* ── Stat Cards ── */}
       {!loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           {[
-            { label: 'Total Job',  value: stats.total,     icon: Briefcase,     color: 'bg-blue-50 text-blue-600'  },
-            { label: 'Aktif',      value: stats.active,    icon: CheckCircle2,  color: 'bg-green-50 text-green-600' },
-            { label: 'Selesai',    value: stats.completed, icon: CheckCircle2,  color: 'bg-slate-50 text-slate-500' },
-            { label: 'Draft',      value: stats.draft,     icon: FileEdit,      color: 'bg-amber-50 text-amber-600' },
+            { label: 'Total Job',  value: stats.total,     icon: Briefcase,     color: 'bg-slate-50 text-slate-600'  },
+            { label: 'Aktif',      value: stats.active,    icon: CheckCircle2,  color: 'bg-yellow-50 text-yellow-600' },
+            { label: 'Selesai',    value: stats.completed, icon: CheckCircle2,  color: 'bg-green-50 text-green-600' },
+            { label: 'Draft',      value: stats.draft,     icon: FileEdit,      color: 'bg-blue-50 text-blue-600' },
+            { label: 'Dibatalkan', value: stats.cancelled, icon: XCircle,       color: 'bg-red-50 text-red-600' },
           ].map(({ label, value, icon: Icon, color }) => (
             <div
               key={label}
@@ -315,7 +477,7 @@ export default function SupervisiPage() {
                 {label}
                 {id !== 'all' && !loading && (
                   <span className="ml-1.5 opacity-70">
-                    ({jobs.filter((j) => j.status === id).length})
+                    ({validJobs.filter((j) => j.status === id).length})
                   </span>
                 )}
               </button>
@@ -324,17 +486,13 @@ export default function SupervisiPage() {
 
           {!loading && (
             <span className="ml-auto text-xs text-slate-400 whitespace-nowrap shrink-0">
-              {withCoords.length} titik di peta
-              {noCoords.length > 0 && ` · ${noCoords.length} tanpa koordinat`}
+              {mapPointsCount} titik di peta
+              {noCoordsJobs.length > 0 && ` · ${noCoordsJobs.length} tanpa koordinat`}
             </span>
           )}
         </div>
 
         {/* Peta */}
-        {/*
-         * [z-index fix] isolation:isolate mengurung z-index Leaflet di dalam
-         * elemen ini sehingga tidak bocor ke Side Panel.
-         */}
         <div className="relative" style={{ minHeight: '460px' }}>
           {loading ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-400 bg-slate-50">
@@ -346,12 +504,10 @@ export default function SupervisiPage() {
               className="absolute inset-0"
               style={{ isolation: 'isolate', zIndex: 0 }}
             >
-              {/* Render peta hanya setelah data loaded.
-                  center diturunkan dari koordinat job aktif pertama.
-                  Jika tidak ada koordinat sama sekali, pakai fallback Jakarta. */}
               <LeafletMap
                 key={initialCenter ? initialCenter.join(',') : 'no-coords'}
                 onMapReady={onMapReady}
+                onMapUnmount={onMapUnmount}
                 className="h-full w-full"
                 center={initialCenter ?? [-6.2, 106.8]}
                 zoom={initialCenter ? 13 : 10}
@@ -361,16 +517,16 @@ export default function SupervisiPage() {
         </div>
 
         {/* Panel job tanpa koordinat */}
-        {!loading && noCoords.length > 0 && (
+        {!loading && noCoordsJobs.length > 0 && (
           <div className="border-t border-slate-100 p-5">
             <div className="flex items-center gap-2 mb-3">
               <AlertCircle size={14} className="text-amber-500 shrink-0" />
               <p className="text-sm font-semibold text-slate-700">
-                {noCoords.length} job belum memiliki koordinat lokasi
+                {noCoordsJobs.length} job belum memiliki koordinat lokasi
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {noCoords.map((job) => {
+              {noCoordsJobs.map((job) => {
                 const meta = SUPERVISI_STATUS_META[job.status] || SUPERVISI_STATUS_META.draft;
                 return (
                   <button
@@ -394,8 +550,163 @@ export default function SupervisiPage() {
         )}
       </div>
 
+      {/* ── Tabel List Job ── */}
+      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm mt-8">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Search */}
+          <div className="relative flex-1 min-w-[220px] max-w-sm">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={tableSearch}
+              onChange={(e) => setTableSearch(e.target.value)}
+              placeholder="Cari nomor JO, pekerjaan, PIC..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+
+          {/* Filter Status */}
+          <select
+            value={tableStatusFilter}
+            onChange={(e) => setTableStatusFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          >
+            <option value="">Semua Status</option>
+            <option value="active">Aktif</option>
+            <option value="completed">Selesai</option>
+            <option value="draft">Draft</option>
+            <option value="cancelled">Dibatalkan</option>
+          </select>
+
+          {(tableSearch || tableStatusFilter) && (
+            <button
+              onClick={() => { setTableSearch(''); setTableStatusFilter(''); }}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-2.5 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+            >
+              <X size={12} /> Reset
+            </button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={load}
+            className="ml-auto"
+            disabled={loading}
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          </Button>
+        </div>
+
+        <p className="text-xs text-gray-400">
+          Menampilkan <span className="font-semibold text-gray-600">{tableJobs.length}</span> dari {validJobs.length} Pekerjaan Supervisi
+        </p>
+
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <table className="w-full text-left text-sm text-gray-600">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                {['Nomor JO', 'Nama Pekerjaan', 'PIC Supervisi', 'Status', 'Aksi'].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-8 text-center text-slate-400">
+                    <Loader2 size={24} className="animate-spin mx-auto mb-2" />
+                    Memuat data...
+                  </td>
+                </tr>
+              ) : tableJobs.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-4 py-10 text-center">
+                    <div className="flex flex-col items-center gap-2 text-gray-400">
+                      <Search size={24} className="opacity-40" />
+                      <p className="text-sm">Tidak ada pekerjaan ditemukan</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                tableJobs.map((job) => {
+                  const meta = SUPERVISI_STATUS_META[job.status] || SUPERVISI_STATUS_META.draft;
+                  return (
+                    <tr
+                      key={job.id}
+                      className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
+                      onClick={() => setSelectedJob(job)}
+                    >
+                      <td className="px-4 py-3 font-mono text-xs font-bold text-gray-500 whitespace-nowrap">
+                        {job.nomorJo || '-'}
+                      </td>
+                      <td className="px-4 py-3 max-w-[220px]">
+                        <p className="font-semibold text-gray-800 truncate">{job.namaKerja || '-'}</p>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 max-w-[160px] truncate">
+                        {job.picSupervisi || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={job.status} />
+                      </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1.5 opacity-80 hover:opacity-100"
+                            onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}
+                          >
+                            <Eye size={11} /> Detail
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 opacity-80 hover:opacity-100"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(job); }}
+                          >
+                            <Trash2 size={11} /> Hapus
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+
       {/* ── Side panel detail ── */}
       <SupervisiJobPanel job={selectedJob} onClose={() => setSelectedJob(null)} />
+
+      {/* ── Delete Confirmation Modal ── */}
+      <Dialog open={!!jobToDelete} onOpenChange={(open) => !open && !isDeleting && setJobToDelete(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Hapus Pekerjaan Supervisi</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mt-2">
+            Apakah Anda yakin ingin menghapus pekerjaan <span className="font-semibold text-slate-700">"{jobToDelete?.namaKerja}"</span>? Data yang telah dihapus tidak dapat dikembalikan.
+          </p>
+          <DialogFooter className="mt-6">
+            <Button variant="outline" disabled={isDeleting} onClick={() => setJobToDelete(null)}>
+              Batal
+            </Button>
+            <Button variant="destructive" disabled={isDeleting} onClick={confirmDeleteJob} className="gap-2">
+              {isDeleting ? <Loader2 size={14} className="animate-spin" /> : null}
+              Ya, Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -21,7 +21,7 @@ function fixLeafletIcons(L) {
  *
  * Wrap in next/dynamic with ssr: false at the import site.
  */
-export default function LeafletMap({ onMapReady, className = 'h-96 w-full', center = [-6.2, 106.8], zoom = 13 }) {
+export default function LeafletMap({ onMapReady, onMapUnmount, className = 'h-96 w-full', center = [-6.2, 106.8], zoom = 13 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
 
@@ -51,6 +51,7 @@ export default function LeafletMap({ onMapReady, className = 'h-96 w-full', cent
 
     return () => {
       if (mapRef.current) {
+        if (onMapUnmount) onMapUnmount();
         mapRef.current.remove();
         mapRef.current = null;
       }

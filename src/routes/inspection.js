@@ -56,6 +56,7 @@ const {
   getJob,
   createJob,
   updateJob,
+  deleteJob,
   listVisits,
   submitVisit,
   listPelanggaran,
@@ -120,6 +121,7 @@ router.get("/supervisi/jobs", listJobs);
 router.get("/supervisi/jobs/:id", getJob);
 router.post("/supervisi/jobs", createJob);
 router.put("/supervisi/jobs/:id", uploadJobAmendDocuments, updateJob);
+router.delete("/supervisi/jobs/:id", deleteJob);
 router.get("/supervisi/jobs/:id/visits", listVisits);
 router.post("/supervisi/visits", uploadVisitMedia, submitVisit);
 router.get("/supervisi/pelanggaran", listPelanggaran);

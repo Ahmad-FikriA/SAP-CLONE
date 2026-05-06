@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { ClipboardList, Loader2, CalendarDays } from 'lucide-react';
+import { ClipboardList, Loader2, CalendarDays, RefreshCw, Activity, CheckCircle2 } from 'lucide-react';
 import {
   fetchInspeksiSchedules,
   deleteInspeksiSchedule,
@@ -145,6 +145,14 @@ export default function InspeksiPage() {
                 <option key={i + 1} value={String(i + 1)}>{name}</option>
               ))}
             </select>
+            <button
+              onClick={load}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-1.5 ml-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
           </div>
         )}
       </div>
@@ -160,8 +168,8 @@ export default function InspeksiPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {[
               { label: 'Total SPK', value: stats.total,   icon: ClipboardList, color: 'bg-blue-50 text-blue-600' },
-              { label: 'Aktif',     value: stats.aktif,   icon: ClipboardList, color: 'bg-amber-50 text-amber-600' },
-              { label: 'Selesai',   value: stats.selesai, icon: ClipboardList, color: 'bg-gray-50 text-gray-600' },
+              { label: 'Aktif',     value: stats.aktif,   icon: Activity,      color: 'bg-amber-50 text-amber-600' },
+              { label: 'Selesai',   value: stats.selesai, icon: CheckCircle2,  color: 'bg-green-50 text-green-600' },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${color}`}>

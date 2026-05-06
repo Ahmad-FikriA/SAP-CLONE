@@ -134,10 +134,8 @@ export function InspeksiSpkTable({
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
         >
           <option value="">Semua Status</option>
-          <option value="aktif">🟢 Aktif (Terjadwal + Berjalan)</option>
-          <option value="selesai">⚫ Selesai / Non-Aktif</option>
+          <option value="aktif">Aktif</option>
           <option value="scheduled">Terjadwal</option>
-          <option value="in_progress">Sedang Berjalan</option>
           <option value="completed">Selesai</option>
           <option value="cancelled">Dibatalkan</option>
         </select>
