@@ -154,7 +154,8 @@ const getAll = async (req, res) => {
 
     if (req.query.status) where.status = req.query.status;
 
-    if (role === KADIS_ROLE) {
+    const userRole = (role || "").toLowerCase();
+    if (userRole === "kadis") {
       const { dinas } = req.user;
       const isKadisPusat =
         dinas && dinas.toLowerCase().includes("pusat perawatan");

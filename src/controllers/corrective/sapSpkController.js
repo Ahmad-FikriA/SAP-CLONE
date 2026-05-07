@@ -14,10 +14,31 @@ const getSapSpkList = async (req, res) => {
     const { role, group, dinas } = req.user || {};
 
     // Filter by group if not admin/super-user
-    // Kadis Pusat Perawatan is considered a super-user for corrective
-    const isKadisPP = role === "kadis" && dinas && dinas.toLowerCase().includes("pusat perawatan");
+    const userRole = (role || "").toLowerCase();
+    const isKadisPP = userRole === "kadis" && dinas && dinas.toLowerCase().includes("pusat perawatan");
     
-    if (role !== "admin" && !isKadisPP && group) {
+    const notificationInclude = {
+      model: Notification,
+      as: "notification",
+      attributes: ["kadisPelaporId"],
+      include: [
+        {
+          model: User,
+          as: "kadisPelapor",
+          attributes: ["name", "role", "dinas", "divisi", "group"],
+        },
+      ],
+    };
+
+    if (userRole === "kadis" && !isKadisPP) {
+      const orConditions = [
+        { "$notification.kadis_pelapor_id$": req.user.userId }
+      ];
+      if (req.user.nik) orConditions.push({ report_by: { [Op.like]: `%${req.user.nik}%` } });
+      if (req.user.name) orConditions.push({ report_by: { [Op.like]: `%${req.user.name}%` } });
+      
+      where[Op.or] = orConditions;
+    } else if (userRole !== "admin" && !isKadisPP && group) {
       const prefixes = [];
       if (group.includes("Elektrik")) prefixes.push("E");
       if (group.includes("Otomasi")) prefixes.push("O");
@@ -35,18 +56,7 @@ const getSapSpkList = async (req, res) => {
       where,
       order: [["created_at", "DESC"]],
       include: [
-        {
-          model: Notification,
-          as: "notification",
-          attributes: ["kadisPelaporId"],
-          include: [
-            {
-              model: User,
-              as: "kadisPelapor",
-              attributes: ["name", "role", "dinas", "divisi", "group"],
-            },
-          ],
-        },
+        notificationInclude,
         {
           model: User,
           as: "executor",
