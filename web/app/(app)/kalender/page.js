@@ -1,32 +1,59 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { CalendarRange, Loader2, RefreshCw } from 'lucide-react';
+import {
+  Activity,
+  CalendarDays,
+  CalendarRange,
+  CheckCircle2,
+  ClipboardList,
+  Loader2,
+  MapPin,
+  RefreshCw,
+  X,
+} from 'lucide-react';
 import { fetchInspeksiSchedules } from '@/lib/inspeksi-service';
-import { fetchSupervisiJobs, supervisiJobsToCalendarEvents } from '@/lib/supervisi-service';
+import { fetchSupervisiJobs } from '@/lib/supervisi-service';
 import { JadwalKalender } from '@/components/kalender/JadwalKalender';
 import { InspeksiDetailModal } from '@/components/inspeksi/InspeksiDetailModal';
 
-// ── Filter options ────────────────────────────────────────────────────────────
 const FILTER_OPTIONS = [
-  { id: 'all',       label: 'Tampilkan Semua',  emoji: '🗓️'  },
-  { id: 'inspeksi',  label: 'Hanya Inspeksi',   emoji: '📋'  },
-  { id: 'supervisi', label: 'Hanya Supervisi',  emoji: '👁️'  },
+  { id: 'all', label: 'Semua', icon: CalendarRange },
+  { id: 'inspeksi', label: 'Inspeksi', icon: ClipboardList },
+  { id: 'supervisi', label: 'Supervisi', icon: MapPin },
 ];
+
+const ACTIVE_INSPEKSI = new Set(['scheduled', 'in_progress']);
+
+function formatDate(value) {
+  if (!value) return '-';
+  return new Date(value).toLocaleDateString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function firstSupervisiLocation(job) {
+  if (Array.isArray(job?.locations) && job.locations.length > 0) {
+    return job.locations[0]?.namaArea || job.namaArea || '-';
+  }
+  return job?.namaArea || '-';
+}
 
 export default function KalenderPage() {
   const [inspeksiSchedules, setInspeksiSchedules] = useState([]);
-  const [supervisiJobs,     setSupervisiJobs]     = useState([]);
-  const [loadingInspeksi,   setLoadingInspeksi]   = useState(true);
-  const [loadingSupervisi,  setLoadingSupervisi]  = useState(true);
-  const [filter,            setFilter]            = useState('all');
-  const [detailOpen,        setDetailOpen]        = useState(false);
-  const [detailSchedule,    setDetailSchedule]    = useState(null);
+  const [supervisiJobs, setSupervisiJobs] = useState([]);
+  const [loadingInspeksi, setLoadingInspeksi] = useState(true);
+  const [loadingSupervisi, setLoadingSupervisi] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailSchedule, setDetailSchedule] = useState(null);
 
   const loading = loadingInspeksi || loadingSupervisi;
 
-  // ── Fetch paralel ───────────────────────────────────────────────────────────
   const loadInspeksi = useCallback(async () => {
     setLoadingInspeksi(true);
     try {
@@ -61,178 +88,218 @@ export default function KalenderPage() {
     loadSupervisi();
   }
 
-  // ── Detail modal ────────────────────────────────────────────────────────────
   function openDetail(event) {
-    // Event dari supervisi: tampilkan info sederhana (tidak pakai InspeksiDetailModal)
     setDetailSchedule(event);
     setDetailOpen(true);
   }
 
-  // ── Statistik gabungan ──────────────────────────────────────────────────────
-  const inspeksiAktif   = inspeksiSchedules.filter((s) => ['scheduled', 'in_progress'].includes(s.status)).length;
-  const supervisiAktif  = supervisiJobs.filter((j) => j.status === 'active').length;
+  const stats = useMemo(() => {
+    const inspeksiAktif = inspeksiSchedules.filter((s) => ACTIVE_INSPEKSI.has(s.status)).length;
+    const supervisiAktif = supervisiJobs.filter((j) => j.status === 'active').length;
+    const supervisiSelesai = supervisiJobs.filter((j) => j.status === 'completed').length;
+
+    return {
+      inspeksiAktif,
+      supervisiAktif,
+      supervisiSelesai,
+      totalAktif: inspeksiAktif + supervisiAktif,
+      totalData: inspeksiSchedules.length + supervisiJobs.length,
+    };
+  }, [inspeksiSchedules, supervisiJobs]);
+
+  const visibleSummary = filter === 'all'
+    ? `${stats.inspeksiAktif} inspeksi aktif dan ${stats.supervisiAktif} supervisi aktif`
+    : filter === 'inspeksi'
+      ? `${stats.inspeksiAktif} jadwal inspeksi aktif`
+      : `${stats.supervisiAktif} jadwal supervisi aktif`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ── Page Header ── */}
-      <div className="bg-[#0a2540] text-white px-6 pt-8 pb-6">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-              <CalendarRange size={20} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Kalender Jadwal</h1>
-              <p className="text-white/50 text-xs mt-0.5">Inspeksi & Supervisi · Jadwal Aktif</p>
-            </div>
+    <div className="min-h-screen bg-slate-50 p-6 space-y-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg bg-[#0a2540] flex items-center justify-center shrink-0">
+            <CalendarRange size={20} className="text-white" />
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Kalender Jadwal</h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Monitoring jadwal aktif Inspeksi dan Supervisi.
+            </p>
+          </div>
         </div>
 
-        {/* Stat cards */}
-        {!loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-            {[
-              { label: 'Inspeksi Aktif',  value: inspeksiAktif,                    color: 'from-blue-500/30 to-blue-600/20',     text: 'text-blue-200'   },
-              { label: 'Supervisi Aktif', value: supervisiAktif,                   color: 'from-purple-500/30 to-purple-600/20', text: 'text-purple-200' },
-              { label: 'Total Inspeksi',  value: inspeksiSchedules.length,         color: 'from-white/10 to-white/5',            text: 'text-white'      },
-              { label: 'Total Supervisi', value: supervisiJobs.length,             color: 'from-white/5 to-white/0',             text: 'text-white/60'   },
-            ].map(({ label, value, color, text }) => (
-              <div key={label} className={`bg-gradient-to-br ${color} rounded-xl px-4 py-3 border border-white/10`}>
-                <p className={`text-2xl font-bold ${text}`}>{value}</p>
-                <p className="text-xs text-white/50 mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
-        )}
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          Refresh
+        </button>
       </div>
 
-      {/* ── Filter Toggle ── */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3 flex-wrap">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Filter:</span>
-        {FILTER_OPTIONS.map(({ id, label, emoji }) => {
-          const active = filter === id;
-          return (
-            <button
-              key={id}
-              id={`filter-kalender-${id}`}
-              onClick={() => setFilter(id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                active
-                  ? id === 'all'
-                    ? 'bg-[#0a2540] text-white border-[#0a2540]'
-                    : id === 'inspeksi'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-purple-600 text-white border-purple-600'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <span>{emoji}</span>
-              {label}
-            </button>
-          );
-        })}
-
-        {/* Legenda warna */}
-        {!loading && (
-          <div className="ml-auto hidden sm:flex items-center gap-4 text-[11px] text-gray-500">
-            {filter !== 'supervisi' && (
-              <>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Rutin</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" />K3</span>
-              </>
-            )}
-            {filter !== 'inspeksi' && (
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-purple-600" />Supervisi</span>
-            )}
-          </div>
-        )}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard icon={Activity} label="Total Aktif" value={stats.totalAktif} tone="slate" />
+        <MetricCard icon={ClipboardList} label="Inspeksi Aktif" value={stats.inspeksiAktif} tone="blue" />
+        <MetricCard icon={MapPin} label="Supervisi Aktif" value={stats.supervisiAktif} tone="emerald" />
+        <MetricCard icon={CheckCircle2} label="Supervisi Selesai" value={stats.supervisiSelesai} tone="cyan" />
       </div>
 
-      {/* ── Kalender ── */}
-      <div className="p-6">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-28 text-gray-400 gap-3">
-            <Loader2 size={32} className="animate-spin" />
-            <p className="text-sm">Memuat jadwal...</p>
-            <div className="flex items-center gap-4 mt-2 text-xs">
-              {loadingInspeksi  && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />Inspeksi</span>}
-              {loadingSupervisi && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />Supervisi</span>}
+      <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <CalendarDays size={17} className="text-slate-500" />
+              <h2 className="text-base font-bold text-slate-900">Jadwal Aktif</h2>
             </div>
+            <p className="text-xs text-slate-500 mt-1">{visibleSummary}</p>
           </div>
-        ) : (
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="text-base font-bold text-gray-800">Kalender Jadwal Aktif</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {filter === 'all'
-                    ? `${inspeksiAktif} inspeksi · ${supervisiAktif} supervisi aktif`
-                    : filter === 'inspeksi'
-                      ? `${inspeksiAktif} jadwal inspeksi aktif`
-                      : `${supervisiAktif} jadwal supervisi aktif`}
-                </p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {FILTER_OPTIONS.map(({ id, label, icon: Icon }) => {
+              const active = filter === id;
+              return (
+                <button
+                  key={id}
+                  id={`filter-kalender-${id}`}
+                  onClick={() => setFilter(id)}
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-bold transition-colors ${
+                    active
+                      ? id === 'supervisi'
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : id === 'inspeksi'
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-[#0a2540] text-white border-[#0a2540]'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icon size={14} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-4 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+            Inspeksi
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+            Supervisi
+          </span>
+          <span className="ml-auto hidden sm:inline text-slate-400">{stats.totalData} total data terhubung</span>
+        </div>
+
+        <div className="p-5">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-28 text-slate-400 gap-3">
+              <Loader2 size={32} className="animate-spin" />
+              <p className="text-sm">Memuat jadwal...</p>
+              <div className="flex items-center gap-4 mt-2 text-xs">
+                {loadingInspeksi && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                    Inspeksi
+                  </span>
+                )}
+                {loadingSupervisi && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Supervisi
+                  </span>
+                )}
               </div>
             </div>
-
+          ) : (
             <JadwalKalender
               inspeksiSchedules={inspeksiSchedules}
               supervisiJobs={supervisiJobs}
               filter={filter}
               onViewDetail={openDetail}
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* ── Modal detail (untuk inspeksi) ── */}
       <InspeksiDetailModal
         schedule={detailSchedule}
         open={detailOpen && detailSchedule?.source !== 'supervisi'}
         onClose={() => { setDetailOpen(false); setDetailSchedule(null); }}
       />
 
-      {/* Modal sederhana untuk supervisi event dari kalender */}
       {detailOpen && detailSchedule?.source === 'supervisi' && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => { setDetailOpen(false); setDetailSchedule(null); }} />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto">
-              <div className="bg-[#0a2540] text-white px-5 py-4 rounded-t-2xl flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Detail Supervisi</p>
-                  <h3 className="text-sm font-bold">{detailSchedule.title}</h3>
-                  <p className="text-xs text-white/60">{detailSchedule.nomorJo}</p>
-                </div>
-                <button onClick={() => { setDetailOpen(false); setDetailSchedule(null); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/70">
-                  <span className="text-lg leading-none">×</span>
-                </button>
-              </div>
-              <div className="px-5 py-4 space-y-3 text-sm">
-                {[
-                  ['Nomor JO',      detailSchedule.nomorJo],
-                  ['PIC Supervisi', detailSchedule.assignedTo],
-                  ['Lokasi',        detailSchedule.location],
-                  ['Mulai',         detailSchedule.scheduledDate],
-                  ['Berakhir',      detailSchedule.scheduledEndDate],
-                ].map(([label, value]) => value ? (
-                  <div key={label} className="flex gap-3">
-                    <span className="text-xs font-semibold text-gray-400 w-28 shrink-0">{label}</span>
-                    <span className="text-gray-800">{value}</span>
-                  </div>
-                ) : null)}
-              </div>
-            </div>
-          </div>
-        </>
+        <SupervisiCalendarDetail
+          event={detailSchedule}
+          onClose={() => { setDetailOpen(false); setDetailSchedule(null); }}
+        />
       )}
+    </div>
+  );
+}
+
+function MetricCard({ icon: Icon, label, value, tone }) {
+  const tones = {
+    slate: 'bg-slate-900 text-white border-slate-900',
+    blue: 'bg-blue-50 text-blue-700 border-blue-100',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    cyan: 'bg-cyan-50 text-cyan-700 border-cyan-100',
+  };
+
+  return (
+    <div className={`rounded-lg border px-4 py-4 ${tones[tone] || tones.slate}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon size={15} />
+        <p className="text-[10px] font-bold uppercase tracking-wide">{label}</p>
+      </div>
+      <p className="text-3xl font-extrabold leading-none">{value}</p>
+    </div>
+  );
+}
+
+function SupervisiCalendarDetail({ event, onClose }) {
+  const raw = event?._raw || {};
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-md pointer-events-auto overflow-hidden">
+          <div className="bg-[#0a2540] text-white px-5 py-4 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Detail Supervisi</p>
+              <h3 className="text-sm font-bold truncate mt-1">{event.title}</h3>
+              <p className="text-xs text-white/60 mt-0.5">{event.nomorJo || '-'}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/70 shrink-0"
+              aria-label="Tutup detail"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="px-5 py-4 space-y-3 text-sm">
+            <DetailRow label="Nomor JO" value={event.nomorJo} />
+            <DetailRow label="PIC Supervisi" value={event.assignedTo} />
+            <DetailRow label="Lokasi" value={firstSupervisiLocation(raw)} />
+            <DetailRow label="Mulai" value={formatDate(event.scheduledDate)} />
+            <DetailRow label="Berakhir" value={formatDate(event.scheduledEndDate)} />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function DetailRow({ label, value }) {
+  if (!value) return null;
+  return (
+    <div className="flex gap-3">
+      <span className="text-xs font-semibold text-slate-400 w-28 shrink-0">{label}</span>
+      <span className="text-slate-800">{value}</span>
     </div>
   );
 }

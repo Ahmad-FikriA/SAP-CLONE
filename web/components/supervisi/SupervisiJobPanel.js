@@ -69,6 +69,47 @@ function filenameFromPath(path) {
   return (path || '').split('/').pop() || 'dokumen';
 }
 
+async function copyTextToClipboard(text) {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+}
+
+function CopyableCoordinateText({ value }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy(event) {
+    event.stopPropagation();
+    await copyTextToClipboard(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1400);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1 rounded text-left text-[11px] font-mono text-gray-400 mt-0.5 cursor-copy hover:text-[#0a2540] focus:outline-none focus:ring-2 focus:ring-[#0a2540]/20"
+      title="Klik untuk salin koordinat"
+      aria-label={`Salin koordinat ${value}`}
+    >
+      <span>{value}</span>
+      {copied && <span className="font-sans text-[10px] text-emerald-600">Disalin</span>}
+    </button>
+  );
+}
+
 // ─── Main Modal (centered, like InspeksiDetailModal) ─────────────────────────
 export function SupervisiJobPanel({ job, onClose }) {
   const open = !!job;
@@ -207,15 +248,16 @@ export function SupervisiJobPanel({ job, onClose }) {
           {hasMaps && (
             <SectionWrap title={`Titik Lokasi (${job.locations.length})`} icon={<MapPin size={13} />}>
               <div className="space-y-2">
-                {job.locations.map((loc, i) => (
-                  <div key={loc.id || i} className="bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100">
-                    <p className="text-sm font-semibold text-gray-800">{loc.namaArea || `Lokasi ${i + 1}`}</p>
-                    <p className="text-[11px] font-mono text-gray-400 mt-0.5">
-                      {parseFloat(loc.latitude).toFixed(6)}, {parseFloat(loc.longitude).toFixed(6)}
-                    </p>
-                    <p className="text-[11px] text-gray-400">Radius: {loc.radius} m</p>
-                  </div>
-                ))}
+                {job.locations.map((loc, i) => {
+                  const coordinateText = `${parseFloat(loc.latitude).toFixed(6)}, ${parseFloat(loc.longitude).toFixed(6)}`;
+                  return (
+                    <div key={loc.id || i} className="bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100">
+                      <p className="text-sm font-semibold text-gray-800">{loc.namaArea || `Lokasi ${i + 1}`}</p>
+                      <CopyableCoordinateText value={coordinateText} />
+                      <p className="text-[11px] text-gray-400">Radius: {loc.radius} m</p>
+                    </div>
+                  );
+                })}
               </div>
             </SectionWrap>
           )}

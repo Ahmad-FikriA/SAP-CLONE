@@ -250,7 +250,7 @@ export function WidgetSupervisi() {
                         </div>
                         <StatusPill status={job.status} />
                       </div>
-                      <div className="mt-2 ml-[52px] h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="mt-2 ml-13 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div className="h-full bg-blue-500 rounded-full" style={{ width: `${progress}%` }} />
                       </div>
                     </div>
