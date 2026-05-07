@@ -111,7 +111,7 @@ export function useCorrective() {
   }
 
   async function approveKadisPpAction(orderNumber) {
-    await apiPost(`/corrective/sap-spk/${orderNumber}/approve-kadis-pp`);
+    await apiPost(`/corrective/sap-spk/${orderNumber}/approve-kadis-pp`, {});
     toast.success("Berhasil disetujui");
     await loadAll();
   }
@@ -119,6 +119,18 @@ export function useCorrective() {
   async function rejectKadisPpAction(orderNumber, rejectionNote) {
     await apiPost(`/corrective/sap-spk/${orderNumber}/reject-kadis-pp`, { rejection_note: rejectionNote });
     toast.success("Berhasil ditolak");
+    await loadAll();
+  }
+
+  async function approveKadisPelaporAction(orderNumber) {
+    await apiPost(`/corrective/sap-spk/${orderNumber}/approve-kadis-pelapor`, {});
+    toast.success("Berhasil disetujui oleh Pelapor");
+    await loadAll();
+  }
+
+  async function rejectKadisPelaporAction(orderNumber, rejectionNote) {
+    await apiPost(`/corrective/sap-spk/${orderNumber}/reject-kadis-pelapor`, { rejection_note: rejectionNote });
+    toast.success("Berhasil ditolak oleh Pelapor");
     await loadAll();
   }
 
@@ -154,6 +166,7 @@ export function useCorrective() {
     uploadExcel, confirmBulkInsert, submitManualSpk,
     approvePlannerAction, rejectPlannerAction, updateSapNumberAction,
     approveKadisPpAction, rejectKadisPpAction,
+    approveKadisPelaporAction, rejectKadisPelaporAction,
     deleteRequestAction, deleteAllRequestsAction,
     deleteSpkAction, deleteAllSpksAction,
   };

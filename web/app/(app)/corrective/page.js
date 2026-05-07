@@ -1,18 +1,28 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  RefreshCw, Upload, Inbox, FileText, CheckCircle2, Trash2,
-  LayoutDashboard, Plus,
+  RefreshCw,
+  Upload,
+  Inbox,
+  FileText,
+  CheckCircle2,
+  Trash2,
+  LayoutDashboard,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { canCreate, canDelete } from "@/lib/auth";
+import { canCreate, canDelete, getUser } from "@/lib/auth";
 
 import { useCorrective } from "./_hooks/useCorrective";
 import { SummaryCards } from "./_components/SummaryCards";
@@ -26,17 +36,50 @@ import { ExcelPreviewDialog } from "./_components/ExcelPreviewDialog";
 import { ManualCreateDialog } from "./_components/ManualCreateDialog";
 
 export default function CorrectivePage() {
+  const [user, setUser] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setUser(getUser());
+  }, []);
+
+  const isPlanner =
+    isMounted &&
+    (user?.role === "admin" ||
+      (user?.group && user.group.toLowerCase().includes("perencanaan")));
+
+  const isKadisPp =
+    isMounted &&
+    (user?.role === "admin" ||
+      (user?.role === "kadis" && user?.dinas?.toLowerCase().includes("pusat perawatan")));
+
   const data = useCorrective();
   const {
-    requests, spks, history, loading, filteredRequests,
-    filterApprovalStatus, setFilterApprovalStatus,
-    filterSpkStatus, setFilterSpkStatus,
+    requests,
+    spks,
+    history,
+    loading,
+    filteredRequests,
+    filterApprovalStatus,
+    setFilterApprovalStatus,
+    filterSpkStatus,
+    setFilterSpkStatus,
     loadAll,
-    uploadExcel, confirmBulkInsert, submitManualSpk,
-    approvePlannerAction, rejectPlannerAction, updateSapNumberAction,
-    approveKadisPpAction, rejectKadisPpAction,
-    deleteRequestAction, deleteAllRequestsAction,
-    deleteSpkAction, deleteAllSpksAction,
+    uploadExcel,
+    confirmBulkInsert,
+    submitManualSpk,
+    approvePlannerAction,
+    rejectPlannerAction,
+    updateSapNumberAction,
+    approveKadisPpAction,
+    rejectKadisPpAction,
+    approveKadisPelaporAction,
+    rejectKadisPelaporAction,
+    deleteRequestAction,
+    deleteAllRequestsAction,
+    deleteSpkAction,
+    deleteAllSpksAction,
   } = data;
 
   const [tab, setTab] = useState("requests");
@@ -75,10 +118,10 @@ export default function CorrectivePage() {
     setConfirmBusy(true);
     try {
       await confirmState.onConfirm(confirmNotes);
-      setConfirmState(null);
     } catch (e) {
       toast.error(e.message);
     } finally {
+      setConfirmState(null);
       setConfirmBusy(false);
     }
   }
@@ -120,7 +163,11 @@ export default function CorrectivePage() {
   }
 
   function triggerEditSapNumber(req) {
-    setApproveSapState({ id: req.id, isEdit: true, initialValue: req.sapOrderNumber || "" });
+    setApproveSapState({
+      id: req.id,
+      isEdit: true,
+      initialValue: req.sapOrderNumber || "",
+    });
   }
 
   async function confirmApproveSap(sapNumber) {
@@ -148,7 +195,8 @@ export default function CorrectivePage() {
       "Tolak Laporan Notifikasi",
       `Silakan masukkan alasan penolakan untuk laporan ${id}. Alasan ini akan dikirimkan kepada pelapor.`,
       async (notes) => {
-        if (!notes || !notes.trim()) throw new Error("Alasan penolakan wajib diisi");
+        if (!notes || !notes.trim())
+          throw new Error("Alasan penolakan wajib diisi");
         await rejectPlannerAction(id, notes);
         setSelectedRequest(null);
       },
@@ -161,7 +209,9 @@ export default function CorrectivePage() {
     confirmAction(
       "Setujui Pekerjaan (Kadis PP)",
       `Anda yakin pekerjaan untuk SPK ${orderNumber} sudah selesai dengan baik?`,
-      async () => { await approveKadisPpAction(orderNumber); },
+      async () => {
+        await approveKadisPpAction(orderNumber);
+      },
     );
   }
 
@@ -170,8 +220,33 @@ export default function CorrectivePage() {
       "Tolak Pekerjaan (Kadis PP)",
       `Masukkan alasan mengapa pekerjaan SPK ${orderNumber} ditolak:`,
       async (notes) => {
-        if (!notes || !notes.trim()) throw new Error("Alasan penolakan wajib diisi");
+        if (!notes || !notes.trim())
+          throw new Error("Alasan penolakan wajib diisi");
         await rejectKadisPpAction(orderNumber, notes);
+      },
+      true,
+    );
+  }
+
+  // ── Approve / Reject Kadis Pelapor ───────────────────────────────────────
+  function triggerApproveKadisPelapor(orderNumber) {
+    confirmAction(
+      "Setujui Pekerjaan (Kadis Pelapor)",
+      `Anda yakin pekerjaan untuk SPK ${orderNumber} telah selesai sesuai harapan?`,
+      async () => {
+        await approveKadisPelaporAction(orderNumber);
+      },
+    );
+  }
+
+  function triggerRejectKadisPelapor(orderNumber) {
+    confirmAction(
+      "Tolak Pekerjaan (Kadis Pelapor)",
+      `Masukkan alasan mengapa pekerjaan SPK ${orderNumber} ditolak:`,
+      async (notes) => {
+        if (!notes || !notes.trim())
+          throw new Error("Alasan penolakan wajib diisi");
+        await rejectKadisPelaporAction(orderNumber, notes);
       },
       true,
     );
@@ -179,30 +254,65 @@ export default function CorrectivePage() {
 
   // ── Delete Handlers ─────────────────────────────────────────────────────
   function handleDeleteAllRequests() {
-    confirmAction("Hapus Semua Notifikasi", "Anda yakin ingin menghapus SELURUH data notifikasi yang belum dibuat SPK?",
-      async () => { await deleteAllRequestsAction(); });
+    confirmAction(
+      "Hapus Semua Notifikasi",
+      "Anda yakin ingin menghapus SELURUH data notifikasi yang belum dibuat SPK?",
+      async () => {
+        await deleteAllRequestsAction();
+      },
+    );
   }
 
   function handleDeleteRequest(id) {
-    confirmAction("Hapus Notifikasi", `Anda yakin ingin menghapus notifikasi ${id}?`,
-      async () => { await deleteRequestAction(id); });
+    confirmAction(
+      "Hapus Notifikasi",
+      `Anda yakin ingin menghapus notifikasi ${id}?`,
+      async () => {
+        await deleteRequestAction(id);
+      },
+    );
   }
 
   function handleDeleteAllSpks() {
-    confirmAction("Hapus Semua SPK SAP", "Anda yakin ingin menghapus SELURUH data SPK SAP aktif dan riwayat?",
-      async () => { await deleteAllSpksAction(); });
+    confirmAction(
+      "Hapus Semua SPK SAP",
+      "Anda yakin ingin menghapus SELURUH data SPK SAP aktif dan riwayat?",
+      async () => {
+        await deleteAllSpksAction();
+      },
+    );
   }
 
   function handleDeleteSpk(orderNumber) {
-    confirmAction("Hapus SPK SAP", `Anda yakin ingin menghapus SPK ${orderNumber}?`,
-      async () => { await deleteSpkAction(orderNumber); });
+    confirmAction(
+      "Hapus SPK SAP",
+      `Anda yakin ingin menghapus SPK ${orderNumber}?`,
+      async () => {
+        await deleteSpkAction(orderNumber);
+      },
+    );
   }
 
   // ── Tabs ────────────────────────────────────────────────────────────────
   const TABS = [
-    { key: "requests", label: "Notifikasi", icon: Inbox, count: filteredRequests.length },
-    { key: "spk", label: "SPK Aktif (SAP)", icon: FileText, count: spks.length },
-    { key: "history", label: "History", icon: CheckCircle2, count: history.length },
+    {
+      key: "requests",
+      label: "Notifikasi",
+      icon: Inbox,
+      count: filteredRequests.length,
+    },
+    {
+      key: "spk",
+      label: "SPK Aktif (SAP)",
+      icon: FileText,
+      count: spks.length,
+    },
+    {
+      key: "history",
+      label: "History",
+      icon: CheckCircle2,
+      count: history.length,
+    },
   ];
 
   return (
@@ -215,7 +325,7 @@ export default function CorrectivePage() {
               <LayoutDashboard size={16} className="text-white" />
             </div>
             <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
-              Corrective Planner
+              {isPlanner ? "Corrective Planner" : "Corrective"}
             </h2>
           </div>
           <p className="text-slate-500 text-sm ml-9">
@@ -223,19 +333,40 @@ export default function CorrectivePage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <input type="file" ref={fileInputRef} className="hidden" accept=".xlsx, .xls" onChange={handleFileUpload} />
-          {canCreate('corrective') && (
-            <Button variant="outline" className="shadow-md bg-white hover:bg-slate-50 border-slate-200" onClick={() => setShowManualForm(true)}>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".xlsx, .xls"
+            onChange={handleFileUpload}
+          />
+          {canCreate("corrective") && isPlanner && (
+            <Button
+              variant="outline"
+              className="shadow-md bg-white hover:bg-slate-50 border-slate-200"
+              onClick={() => setShowManualForm(true)}
+            >
               <Plus size={16} className="mr-2" /> Create Manual
             </Button>
           )}
-          {canCreate('corrective') && (
-            <Button variant="default" className="shadow-md bg-blue-600 hover:bg-blue-700" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+          {canCreate("corrective") && isPlanner && (
+            <Button
+              variant="default"
+              className="shadow-md bg-blue-600 hover:bg-blue-700"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
               <Upload size={16} className="mr-2" />
               {uploading ? "Mengunggah..." : "Import SAP"}
             </Button>
           )}
-          <Button variant="outline" size="icon" onClick={loadAll} disabled={loading} className="shrink-0 bg-white shadow-sm hover:bg-slate-50">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={loadAll}
+            disabled={loading}
+            className="shrink-0 bg-white shadow-sm hover:bg-slate-50"
+          >
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </Button>
         </div>
@@ -256,12 +387,24 @@ export default function CorrectivePage() {
                 onClick={() => setTab(t.key)}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all rounded-md whitespace-nowrap",
-                  isActive ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/50",
+                  isActive
+                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/50",
                 )}
               >
-                <Icon size={16} className={isActive ? "text-blue-600" : "text-slate-400"} />
+                <Icon
+                  size={16}
+                  className={isActive ? "text-blue-600" : "text-slate-400"}
+                />
                 {t.label}
-                <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold ml-1", isActive ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-600")}>
+                <span
+                  className={cn(
+                    "px-2 py-0.5 rounded-full text-xs font-semibold ml-1",
+                    isActive
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-slate-200 text-slate-600",
+                  )}
+                >
                   {t.count}
                 </span>
               </button>
@@ -270,29 +413,44 @@ export default function CorrectivePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {tab === "requests" && filteredRequests.length > 0 && canDelete('corrective') && (
-            <Button variant="destructive" className="shadow-sm" onClick={handleDeleteAllRequests}>
-              <Trash2 size={16} className="mr-2" /> Hapus Semua
-            </Button>
-          )}
+          {tab === "requests" &&
+            filteredRequests.length > 0 &&
+            canDelete("corrective") && (
+              <Button
+                variant="destructive"
+                className="shadow-sm"
+                onClick={handleDeleteAllRequests}
+              >
+                <Trash2 size={16} className="mr-2" /> Hapus Semua
+              </Button>
+            )}
           {tab === "spk" && (
-            <select value={filterSpkStatus} onChange={(e) => setFilterSpkStatus(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all">
+            <select
+              value={filterSpkStatus}
+              onChange={(e) => setFilterSpkStatus(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+            >
               <option value="">Semua Status SPK</option>
               <option value="baru_import">Tugas Baru</option>
               <option value="eksekusi">Eksekusi</option>
               <option value="menunggu_review_kadis_pp">Review Kadis PP</option>
-              <option value="menunggu_review_kadis_pelapor">Review Pelapor</option>
+              <option value="menunggu_review_kadis_pelapor">
+                Review Pelapor
+              </option>
             </select>
           )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div key={tab} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div
+        key={tab}
+        className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500"
+      >
         {tab === "requests" && (
           <RequestsTable
-            loading={loading} filteredRequests={filteredRequests}
+            loading={loading}
+            filteredRequests={filteredRequests}
             onSelectRequest={setSelectedRequest}
             onApprovePlanner={triggerApprovePlanner}
             onEditSapNumber={triggerEditSapNumber}
@@ -301,16 +459,24 @@ export default function CorrectivePage() {
         )}
         {tab === "spk" && (
           <SpkTable
-            loading={loading} spks={spks}
+            loading={loading}
+            spks={spks}
+            isKadisPp={isKadisPp}
+            userId={user?.id}
+            userNik={user?.nik}
+            userRole={user?.role}
             onSelectSpk={setSelectedSpk}
             onApproveKadisPp={triggerApproveKadisPp}
             onRejectKadisPp={triggerRejectKadisPp}
+            onApproveKadisPelapor={triggerApproveKadisPelapor}
+            onRejectKadisPelapor={triggerRejectKadisPelapor}
             onDeleteSpk={handleDeleteSpk}
           />
         )}
         {tab === "history" && (
           <HistoryTable
-            loading={loading} history={history}
+            loading={loading}
+            history={history}
             onSelectSpk={setSelectedSpk}
             onDeleteSpk={handleDeleteSpk}
           />
@@ -335,13 +501,24 @@ export default function CorrectivePage() {
       <SpkDetailDialog
         selectedSpk={selectedSpk}
         onClose={() => setSelectedSpk(null)}
+        isKadisPp={isKadisPp}
+        userId={user?.id}
+        userNik={user?.nik}
+        userRole={user?.role}
         onApproveKadisPp={triggerApproveKadisPp}
         onRejectKadisPp={triggerRejectKadisPp}
+        onApproveKadisPelapor={triggerApproveKadisPelapor}
+        onRejectKadisPelapor={triggerRejectKadisPelapor}
       />
 
       <ExcelPreviewDialog
-        previewData={previewData} skippedData={skippedData} savingExcel={savingExcel}
-        onClose={() => { setPreviewData(null); setSkippedData(null); }}
+        previewData={previewData}
+        skippedData={skippedData}
+        savingExcel={savingExcel}
+        onClose={() => {
+          setPreviewData(null);
+          setSkippedData(null);
+        }}
         onConfirm={handleConfirmUpload}
       />
 
@@ -352,7 +529,10 @@ export default function CorrectivePage() {
       />
 
       {/* Confirm Dialog */}
-      <Dialog open={!!confirmState} onOpenChange={(o) => !o && setConfirmState(null)}>
+      <Dialog
+        open={!!confirmState}
+        onOpenChange={(o) => !o && setConfirmState(null)}
+      >
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle>{confirmState?.title}</DialogTitle>
@@ -370,7 +550,11 @@ export default function CorrectivePage() {
             )}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setConfirmState(null)} disabled={confirmBusy}>
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmState(null)}
+              disabled={confirmBusy}
+            >
               Batal
             </Button>
             <Button onClick={runConfirm} disabled={confirmBusy}>

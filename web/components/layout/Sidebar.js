@@ -108,7 +108,12 @@ export default function Sidebar() {
             return <div key={i} className="my-2 border-t border-white/10" />;
           }
           if (!canRead(item.key)) return null;
-          const { href, label, Icon } = item;
+          const { href, Icon } = item;
+          let label = item.label;
+          if (item.key === 'corrective') {
+            const isPlanner = user?.role === 'admin' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
+            if (!isPlanner) label = 'Corrective';
+          }
           const active = isActive(href);
           return (
             <Link

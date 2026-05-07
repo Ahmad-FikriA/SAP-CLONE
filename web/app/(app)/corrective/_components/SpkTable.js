@@ -11,8 +11,9 @@ import { CorrectiveStatusBadge, EmptyState, fmtDate } from "./ui-primitives";
 import { cn } from "@/lib/utils";
 
 export function SpkTable({
-  loading, spks,
-  onSelectSpk, onApproveKadisPp, onRejectKadisPp, onDeleteSpk,
+  loading, spks, isKadisPp, userId, userNik, userRole,
+  onSelectSpk, onApproveKadisPp, onRejectKadisPp,
+  onApproveKadisPelapor, onRejectKadisPelapor, onDeleteSpk,
 }) {
   return (
     <Table>
@@ -41,21 +42,31 @@ export function SpkTable({
           </TableRow>
         ) : (
           spks.map((spk) => {
-            const isNeedReview = spk.status === "menunggu_review_kadis_pp";
+            const isNeedReviewPp = spk.status === "menunggu_review_kadis_pp";
+            const isNeedReviewPelapor = spk.status === "menunggu_review_kadis_pelapor";
+            const isMyReport = spk.notification?.kadisPelaporId === userId || spk.notification?.kadis_pelapor_id === userId;
+            const canReviewPelapor = isNeedReviewPelapor && (userRole === "admin" || isMyReport);
+            const canReviewPp = isNeedReviewPp && isKadisPp;
+            
             return (
               <TableRow
                 key={spk.order_number}
                 className={cn(
                   "cursor-pointer transition-colors",
-                  isNeedReview ? "bg-amber-50/60 hover:bg-amber-100/60" : "hover:bg-slate-50/80"
+                  isNeedReviewPp ? "bg-amber-50/60 hover:bg-amber-100/60" :
+                  isNeedReviewPelapor ? "bg-purple-50/60 hover:bg-purple-100/60" :
+                  "hover:bg-slate-50/80"
                 )}
                 onClick={() => onSelectSpk(spk)}
               >
                 <TableCell className="font-mono text-xs font-semibold text-slate-800">
                   <div className="flex items-center gap-2">
                     {spk.order_number}
-                    {isNeedReview && (
-                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Butuh Approval Kadis PP" />
+                    {(isNeedReviewPp || isNeedReviewPelapor) && (
+                      <span className={cn(
+                        "w-2 h-2 rounded-full animate-pulse",
+                        isNeedReviewPelapor ? "bg-purple-500" : "bg-amber-500"
+                      )} title={isNeedReviewPelapor ? "Butuh Approval Pelapor" : "Butuh Approval Kadis PP"} />
                     )}
                   </div>
                 </TableCell>
@@ -74,12 +85,25 @@ export function SpkTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="text-xs font-bold text-slate-700">
-                    {spk.dur_plan || 0} Jam / {spk.num_of_work || 0} Orang
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-tight font-bold">
-                    Planned
-                  </div>
+                  {spk.actual_work || spk.actual_personnel ? (
+                    <>
+                      <div className="text-xs font-bold text-blue-700">
+                        {spk.actual_work || 0} Jam / {spk.actual_personnel || 0} Orang
+                      </div>
+                      <div className="text-[10px] text-blue-500/80 mt-0.5 uppercase tracking-tight font-bold">
+                        Actual
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs font-bold text-slate-700">
+                        {spk.dur_plan || 0} Jam / {spk.num_of_work || 0} Orang
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-tight font-bold">
+                        Planned
+                      </div>
+                    </>
+                  )}
                 </TableCell>
                 <TableCell>
                   <CorrectiveStatusBadge
@@ -92,7 +116,7 @@ export function SpkTable({
                   {spk.sys_status ? (
                     <span className={cn(
                       "text-[10px] font-bold font-mono tracking-tight px-1.5 py-0.5 rounded border",
-                      isNeedReview ? "bg-amber-100 border-amber-200 text-amber-700" : "bg-slate-100 border-slate-200 text-slate-500"
+                    isNeedReviewPp ? "bg-amber-100 border-amber-200 text-amber-700" : isNeedReviewPelapor ? "bg-purple-100 border-purple-200 text-purple-700" : "bg-slate-100 border-slate-200 text-slate-500"
                     )} title={spk.sys_status}>
                       {spk.sys_status.length > 9 ? spk.sys_status.substring(0, 9) + "....." : spk.sys_status}
                     </span>
@@ -103,13 +127,21 @@ export function SpkTable({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex justify-end items-center gap-1">
-                    {isNeedReview && canUpdate('corrective') ? (
+                    {canReviewPp ? (
                       <Button
                         size="sm"
                         className="h-8 shadow-sm bg-amber-500 hover:bg-amber-600 text-white"
                         onClick={() => onSelectSpk(spk)}
                       >
-                        Review Eksekusi
+                        Review Kadis PP
+                      </Button>
+                    ) : canReviewPelapor ? (
+                      <Button
+                        size="sm"
+                        className="h-8 shadow-sm bg-purple-500 hover:bg-purple-600 text-white"
+                        onClick={() => onSelectSpk(spk)}
+                      >
+                        Review Pelapor
                       </Button>
                     ) : (
                       <Button
