@@ -208,7 +208,7 @@ export function WidgetSupervisi() {
             <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
               <div className="flex items-center gap-2 text-emerald-700 mb-1">
                 <Banknote size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wide">Nilai Aktif + Selesai</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide">Nilai Pekerjaan</span>
               </div>
               <p className="text-xl font-extrabold text-emerald-800 truncate">{formatRupiah(data.totalNilai)}</p>
             </div>
