@@ -5,45 +5,14 @@ import { apiGet } from '@/lib/api';
 import Link from 'next/link';
 import { Wrench, ArrowRight, RefreshCw, AlertTriangle, Activity, CheckCircle2, ClipboardSignature } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { SpkDetailDialog } from '@/app/(app)/corrective/_components/SpkDetailDialog';
 
-const PRIORITY_COLORS = {
-  low:      'bg-gray-100 text-gray-600',
-  medium:   'bg-yellow-100 text-yellow-700',
-  high:     'bg-orange-100 text-orange-700',
-  urgent:   'bg-red-100 text-red-700',
-  critical: 'bg-red-200 text-red-800',
-};
-
-const SPK_STATUS_LABELS = {
-  baru_import: "Baru",
-  eksekusi: "Eksekusi",
-  menunggu_review_kadis_pp: "Review Kadis PP",
-  menunggu_review_kadis_pelapor: "Review Pelapor",
-  selesai: "Selesai",
-  ditolak: "Ditolak",
-};
-
-const SPK_STATUS_COLORS = {
-  baru_import: "bg-blue-100 text-blue-700 border-blue-200",
-  eksekusi: "bg-orange-100 text-orange-700 border-orange-200",
-  menunggu_review_kadis_pp: "bg-purple-100 text-purple-700 border-purple-200",
-  menunggu_review_kadis_pelapor: "bg-indigo-100 text-indigo-700 border-indigo-200",
-  selesai: "bg-green-100 text-green-700 border-green-200",
-  ditolak: "bg-red-100 text-red-600 border-red-200",
-};
-
-function fmtDate(iso) {
-  if (!iso) return '-';
-  return new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-}
 
 export function WidgetCorrective() {
   const [requests, setRequests] = useState([]);
   const [spks, setSpks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedSpk, setSelectedSpk] = useState(null);
+
 
   async function load() {
     setLoading(true);
@@ -78,9 +47,7 @@ export function WidgetCorrective() {
   const validSpks = spks.filter(s => s.status !== "ditolak").length;
   const completionRate = validSpks > 0 ? Math.round((completedSpks / validSpks) * 100) : 0;
 
-  const recentSpks = [...activeSpks]
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 4);
+
 
   // Chart Data
   let chartData = [
@@ -219,42 +186,7 @@ export function WidgetCorrective() {
             </div>
           </div>
 
-          {/* Recent SPKs List */}
-          <div className="pt-2 border-t border-gray-100 flex-1 flex flex-col">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-              Update SPK Terbaru
-            </p>
-            {recentSpks.length > 0 ? (
-              <div className="space-y-2">
-                {recentSpks.map((spk) => (
-                  <div 
-                    key={spk.order_number} 
-                    onClick={() => setSelectedSpk(spk)}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors group"
-                  >
-                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: chartData.find(c => c.name.toLowerCase().includes(spk.status.split('_')[0]))?.color || '#9ca3af' }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-mono text-xs font-bold text-gray-700 truncate group-hover:text-orange-600 transition-colors">
-                        {spk.order_number}
-                      </p>
-                      <p className="text-[10px] text-gray-500 truncate">
-                        {spk.description || spk.equipment_name || 'Tanpa deskripsi'}
-                      </p>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded border text-[10px] font-bold shrink-0 ${SPK_STATUS_COLORS[spk.status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                      {SPK_STATUS_LABELS[spk.status] || spk.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-xl bg-gray-50/50 py-5">
-                 <CheckCircle2 size={24} className="text-gray-300 mb-2" />
-                 <p className="text-xs font-bold text-gray-400">Belum ada SPK aktif</p>
-                 <p className="text-[10px] text-gray-400 text-center px-4 mt-1">SPK yang sedang berjalan akan muncul di sini</p>
-              </div>
-            )}
-          </div>
+
         </div>
       )}
 
@@ -265,13 +197,7 @@ export function WidgetCorrective() {
         </Link>
       </div>
 
-      {/* Detail Dialog */}
-      {selectedSpk && (
-        <SpkDetailDialog 
-          selectedSpk={selectedSpk} 
-          onClose={() => setSelectedSpk(null)} 
-        />
-      )}
+
     </div>
   );
 }

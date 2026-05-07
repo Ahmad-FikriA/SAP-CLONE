@@ -7,9 +7,9 @@ import {
 import { CheckCircle2, Trash2 } from "lucide-react";
 import { canDelete } from "@/lib/auth";
 import { SAP_STATUS_COLORS, SAP_STATUS_LABELS } from "./constants";
-import { CorrectiveStatusBadge, EmptyState, fmtDate } from "./ui-primitives";
+import { CorrectiveStatusBadge, EmptyState, fmtDate, SkeletonRows } from "./ui-primitives";
 
-export function HistoryTable({ loading, history, onSelectSpk, onDeleteSpk }) {
+export function HistoryTable({ loading, history, equipment = [], onSelectSpk, onDeleteSpk }) {
   return (
     <Table>
       <TableHeader className="bg-slate-50/80">
@@ -23,11 +23,7 @@ export function HistoryTable({ loading, history, onSelectSpk, onDeleteSpk }) {
       </TableHeader>
       <TableBody>
         {loading ? (
-          <TableRow>
-            <TableCell colSpan={5} className="h-24 text-center text-slate-400">
-              Memuat data...
-            </TableCell>
-          </TableRow>
+          <SkeletonRows cols={5} rows={5} />
         ) : history.length === 0 ? (
           <TableRow>
             <TableCell colSpan={5} className="h-48 text-center">
@@ -35,18 +31,26 @@ export function HistoryTable({ loading, history, onSelectSpk, onDeleteSpk }) {
             </TableCell>
           </TableRow>
         ) : (
-          history.map((spk) => (
-            <TableRow
-              key={spk.order_number}
-              className="cursor-pointer hover:bg-slate-50/80 transition-colors"
-              onClick={() => onSelectSpk(spk)}
-            >
-              <TableCell className="font-mono text-xs font-semibold text-slate-800">
-                {spk.order_number}
-              </TableCell>
-              <TableCell className="text-slate-600 truncate max-w-[200px]">
-                {spk.equipment_name || "—"}
-              </TableCell>
+          history.map((spk) => {
+            const equipmentItem = equipment.find(e => 
+              String(e.equipmentId || e.equipment_id).trim() === String(spk.equipment_name).trim()
+            );
+            const equipmentDisplayName = equipmentItem 
+              ? (equipmentItem.equipmentName || equipmentItem.equipment_name) 
+              : spk.equipment_name;
+
+            return (
+              <TableRow
+                key={spk.order_number}
+                className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                onClick={() => onSelectSpk(spk)}
+              >
+                <TableCell className="font-mono text-xs font-semibold text-slate-800">
+                  {spk.order_number}
+                </TableCell>
+                <TableCell className="text-slate-600 truncate max-w-[200px]" title={equipmentDisplayName}>
+                  {equipmentDisplayName || "—"}
+                </TableCell>
               <TableCell>
                 <CorrectiveStatusBadge
                   value={spk.status}
@@ -86,8 +90,9 @@ export function HistoryTable({ loading, history, onSelectSpk, onDeleteSpk }) {
                   )}
                 </div>
               </TableCell>
-            </TableRow>
-          ))
+              </TableRow>
+            );
+          })
         )}
       </TableBody>
     </Table>

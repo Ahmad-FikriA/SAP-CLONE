@@ -31,6 +31,8 @@ export function SpkDetailDialog({
   onRejectKadisPp,
   onApproveKadisPelapor,
   onRejectKadisPelapor,
+  equipment = [],
+  functionalLocations = [],
 }) {
   return (
     <Dialog open={!!selectedSpk} onOpenChange={(o) => !o && onClose()}>
@@ -127,10 +129,35 @@ export function SpkDetailDialog({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Section title="Lokasi & Peralatan">
-                <Row label="Equipment" value={selectedSpk.equipment_name} />
+                <Row 
+                  label="Equipment" 
+                  value={(() => {
+                    const eqItem = equipment.find(e => String(e.equipmentId || e.equipment_id).trim() === String(selectedSpk.equipment_name).trim());
+                    const name = eqItem ? (eqItem.equipmentName || eqItem.equipment_name) : null;
+                    return (
+                      <div className="flex flex-col">
+                        <span className="text-slate-800 font-bold">{name || "-"}</span>
+                        {selectedSpk.equipment_name && (
+                          <span className="text-[11px] text-slate-400 font-mono mt-0.5">{selectedSpk.equipment_name}</span>
+                        )}
+                      </div>
+                    );
+                  })()} 
+                />
                 <Row
                   label="Functional Loc"
-                  value={selectedSpk.functional_location}
+                  value={(() => {
+                    const flItem = functionalLocations.find(f => String(f.funcLocId || f.func_loc_id).trim() === String(selectedSpk.functional_location).trim());
+                    const desc = flItem ? flItem.description : null;
+                    return (
+                      <div className="flex flex-col">
+                        <span className="text-slate-800 font-bold">{desc || "-"}</span>
+                        {selectedSpk.functional_location && (
+                          <span className="text-[11px] text-slate-400 font-mono mt-0.5">{selectedSpk.functional_location}</span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 />
                 <Row label="Location" value={selectedSpk.location} />
                 <Row label="Cost Center" value={selectedSpk.cost_center} />

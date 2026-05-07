@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { apiGet, apiPost, apiDelete, apiUpload } from "@/lib/api";
 
@@ -8,16 +8,22 @@ export function useCorrective() {
   const [requests, setRequests] = useState([]);
   const [spks, setSpks] = useState([]);
   const [history, setHistory] = useState([]);
+  const [equipment, setEquipment] = useState([]);
+  const [functionalLocations, setFunctionalLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterApprovalStatus, setFilterApprovalStatus] = useState("");
   const [filterSpkStatus, setFilterSpkStatus] = useState("");
+  const initialLoadDone = useRef(false);
 
   const loadAll = useCallback(async () => {
-    setLoading(true);
+    // Only show loading skeleton on the very first load
+    if (!initialLoadDone.current) setLoading(true);
     try {
-      const [reqData, sapSpkRes] = await Promise.all([
+      const [reqData, sapSpkRes, eqRes, flRes] = await Promise.all([
         apiGet("/corrective/requests"),
         apiGet("/corrective/sap-spk"),
+        apiGet("/equipment?limit=10000"),
+        apiGet("/functional-locations?limit=10000"),
       ]);
       // Hide from Notifikasi tab only when the SPK is already matched with SAP import
       const matchedStatuses = ["spk_issued", "spk_masuk", "eksekusi", "menunggu_review_kadis_pp", "menunggu_review_kadis_pelapor", "selesai"];
@@ -37,16 +43,22 @@ export function useCorrective() {
       setHistory(
         allSpks.filter((s) => s.status === "selesai" || s.status === "ditolak"),
       );
+
+      // Store equipment and functional location data for mapping
+      setEquipment(Array.isArray(eqRes?.data) ? eqRes.data : (Array.isArray(eqRes) ? eqRes : []));
+      setFunctionalLocations(Array.isArray(flRes?.data) ? flRes.data : (Array.isArray(flRes) ? flRes : []));
+
     } catch (e) {
       toast.error("Gagal memuat data: " + e.message);
     } finally {
       setLoading(false);
+      initialLoadDone.current = true;
     }
   }, [filterSpkStatus]);
 
   useEffect(() => {
     loadAll();
-    const interval = setInterval(loadAll, 30000);
+    const interval = setInterval(loadAll, 5000);
     return () => clearInterval(interval);
   }, [loadAll]);
 
@@ -162,6 +174,7 @@ export function useCorrective() {
 
   return {
     requests, spks, history, loading, filteredRequests,
+    equipment, functionalLocations,
     filterApprovalStatus, setFilterApprovalStatus,
     filterSpkStatus, setFilterSpkStatus,
     loadAll,

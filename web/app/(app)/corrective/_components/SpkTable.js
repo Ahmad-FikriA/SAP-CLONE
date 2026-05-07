@@ -7,11 +7,12 @@ import {
 import { FileText, Trash2 } from "lucide-react";
 import { canUpdate, canDelete } from "@/lib/auth";
 import { SAP_STATUS_COLORS, SAP_STATUS_LABELS } from "./constants";
-import { CorrectiveStatusBadge, EmptyState, fmtDate } from "./ui-primitives";
+import { CorrectiveStatusBadge, EmptyState, fmtDate, SkeletonRows } from "./ui-primitives";
 import { cn } from "@/lib/utils";
 
 export function SpkTable({
-  loading, spks, isKadisPp, userId, userNik, userRole,
+  loading, spks, equipment = [], functionalLocations = [],
+  isKadisPp, userId, userNik, userRole,
   onSelectSpk, onApproveKadisPp, onRejectKadisPp,
   onApproveKadisPelapor, onRejectKadisPelapor, onDeleteSpk,
 }) {
@@ -29,11 +30,7 @@ export function SpkTable({
       </TableHeader>
       <TableBody>
         {loading ? (
-          <TableRow>
-            <TableCell colSpan={6} className="h-24 text-center text-slate-400">
-              Memuat data...
-            </TableCell>
-          </TableRow>
+          <SkeletonRows cols={6} rows={5} />
         ) : spks.length === 0 ? (
           <TableRow>
             <TableCell colSpan={6} className="h-48 text-center">
@@ -47,6 +44,19 @@ export function SpkTable({
             const isMyReport = spk.notification?.kadisPelaporId === userId || spk.notification?.kadis_pelapor_id === userId;
             const canReviewPelapor = isNeedReviewPelapor && (userRole === "admin" || isMyReport);
             const canReviewPp = isNeedReviewPp && isKadisPp;
+
+            // Mapping raw codes to human-readable names
+            const equipmentItem = equipment.find(e => 
+              String(e.equipmentId || e.equipment_id).trim() === String(spk.equipment_name).trim()
+            );
+            const equipmentDisplayName = equipmentItem 
+              ? (equipmentItem.equipmentName || equipmentItem.equipment_name) 
+              : spk.equipment_name;
+
+            const flItem = functionalLocations.find(f => 
+              String(f.funcLocId || f.func_loc_id).trim() === String(spk.functional_location).trim()
+            );
+            const flDisplayName = flItem ? flItem.description : spk.functional_location;
             
             return (
               <TableRow
@@ -73,15 +83,15 @@ export function SpkTable({
                 <TableCell className="max-w-[200px]">
                   <div
                     className="font-medium text-slate-800 truncate"
-                    title={spk.equipment_name}
+                    title={equipmentDisplayName}
                   >
-                    {spk.equipment_name || "—"}
+                    {equipmentDisplayName || "—"}
                   </div>
                   <div
                     className="text-[11px] text-slate-500 truncate"
-                    title={spk.functional_location}
+                    title={flDisplayName}
                   >
-                    {spk.functional_location || "—"}
+                    {flDisplayName || "—"}
                   </div>
                 </TableCell>
                 <TableCell>

@@ -61,6 +61,8 @@ export default function CorrectivePage() {
     requests,
     spks: rawSpks,
     history: rawHistory,
+    equipment,
+    functionalLocations,
     loading,
     filteredRequests,
     filterApprovalStatus,
@@ -487,7 +489,7 @@ export default function CorrectivePage() {
               </select>
             </>
           )}
-          {tab === "history" && (
+          {tab === "history" && isPlanner && (
             <Button
               variant="outline"
               className="shadow-md bg-white hover:bg-green-50 border-green-200 text-green-700"
@@ -526,6 +528,8 @@ export default function CorrectivePage() {
             <SpkTable
               loading={loading}
               spks={spkPag.paginatedItems}
+              equipment={equipment}
+              functionalLocations={functionalLocations}
               isKadisPp={isKadisPp}
               userId={user?.id}
               userNik={user?.nik}
@@ -545,6 +549,7 @@ export default function CorrectivePage() {
             <HistoryTable
               loading={loading}
               history={histPag.paginatedItems}
+              equipment={equipment}
               onSelectSpk={setSelectedSpk}
               onDeleteSpk={handleDeleteSpk}
             />
@@ -570,6 +575,8 @@ export default function CorrectivePage() {
 
       <SpkDetailDialog
         selectedSpk={selectedSpk}
+        equipment={equipment}
+        functionalLocations={functionalLocations}
         onClose={() => setSelectedSpk(null)}
         isKadisPp={isKadisPp}
         userId={user?.id}

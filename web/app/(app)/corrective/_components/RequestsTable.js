@@ -7,7 +7,7 @@ import {
 import { Inbox, Edit2, Trash2 } from "lucide-react";
 import { canUpdate, canDelete } from "@/lib/auth";
 import { APPROVAL_COLORS, APPROVAL_LABELS, NOTIF_STATUS_COLORS, NOTIF_STATUS_LABELS } from "./constants";
-import { CorrectiveStatusBadge, EmptyState, fmtDate } from "./ui-primitives";
+import { CorrectiveStatusBadge, EmptyState, fmtDate, SkeletonRows } from "./ui-primitives";
 
 export function RequestsTable({
   loading, filteredRequests,
@@ -27,11 +27,7 @@ export function RequestsTable({
       </TableHeader>
       <TableBody>
         {loading ? (
-          <TableRow>
-            <TableCell colSpan={6} className="h-24 text-center text-slate-400">
-              Memuat data...
-            </TableCell>
-          </TableRow>
+          <SkeletonRows cols={6} rows={5} />
         ) : filteredRequests.length === 0 ? (
           <TableRow>
             <TableCell colSpan={6} className="h-48 text-center">

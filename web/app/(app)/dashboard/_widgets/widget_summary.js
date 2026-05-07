@@ -46,8 +46,11 @@ export function WidgetSummary() {
   const [stats, setStats] = useState({ spk: null, corrective: null, equipment: null, users: null });
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState({ spk: false, corrective: false, equipment: false, users: false });
+  const [isMounted, setIsMounted] = useState(false);
 
-  function canLink(key) { return canRead(key); }
+  useEffect(() => { setIsMounted(true); }, []);
+
+  function canLink(key) { return isMounted && canRead(key); }
 
   async function load() {
     setLoading(true);

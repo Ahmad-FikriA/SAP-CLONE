@@ -91,6 +91,23 @@ export function EmptyState({ icon: Icon, text }) {
   );
 }
 
+export function SkeletonRows({ cols = 6, rows = 5 }) {
+  const widths = ["w-24", "w-32", "w-20", "w-16", "w-28", "w-14"];
+  const subWidths = ["w-16", "w-24", "w-12", "w-20", "w-10", "w-18"];
+  return Array.from({ length: rows }, (_, r) => (
+    <tr key={r} className="animate-pulse border-b border-slate-100 last:border-0">
+      {Array.from({ length: cols }, (_, c) => (
+        <td key={c} className="px-4 py-3">
+          <div className={cn("h-3.5 bg-slate-200/70 rounded-full mb-1.5", widths[c % widths.length])} />
+          {c < 3 && (
+            <div className={cn("h-2.5 bg-slate-100 rounded-full", subWidths[c % subWidths.length])} />
+          )}
+        </td>
+      ))}
+    </tr>
+  ));
+}
+
 export function PersonCard({ title, name, nik, role, divisi, dinas, group, fallback }) {
   if (!name && !fallback) return null;
 
