@@ -20,6 +20,7 @@ import {
   Trash2,
   LayoutDashboard,
   Plus,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canCreate, canDelete, getUser } from "@/lib/auth";
@@ -34,6 +35,7 @@ import { SpkDetailDialog } from "./_components/SpkDetailDialog";
 import { ApproveSapDialog } from "./_components/ApproveSapDialog";
 import { ExcelPreviewDialog } from "./_components/ExcelPreviewDialog";
 import { ManualCreateDialog } from "./_components/ManualCreateDialog";
+import { usePagination, PaginationControls } from "./_components/Pagination";
 
 export default function CorrectivePage() {
   const [user, setUser] = useState(null);
@@ -57,8 +59,8 @@ export default function CorrectivePage() {
   const data = useCorrective();
   const {
     requests,
-    spks,
-    history,
+    spks: rawSpks,
+    history: rawHistory,
     loading,
     filteredRequests,
     filterApprovalStatus,
@@ -82,7 +84,40 @@ export default function CorrectivePage() {
     deleteAllSpksAction,
   } = data;
 
+  // Kadis non-PP: only see their own SPKs based on notification.kadisPelaporId
+  const isKadisNonPp =
+    isMounted &&
+    user?.role === "kadis" &&
+    !(user?.dinas?.toLowerCase().includes("pusat perawatan"));
+
+  const spks = isKadisNonPp
+    ? rawSpks.filter((s) => s.notification?.kadisPelaporId === user.id)
+    : rawSpks;
+  const history = isKadisNonPp
+    ? rawHistory.filter((s) => s.notification?.kadisPelaporId === user.id)
+    : rawHistory;
+
+  const [filterWorkCenter, setFilterWorkCenter] = useState("");
+
+  // Apply work center filter on SPKs
+  const filteredSpks = filterWorkCenter
+    ? spks.filter((s) => (s.work_center || "").toLowerCase().startsWith(filterWorkCenter.toLowerCase()))
+    : spks;
+
   const [tab, setTab] = useState("requests");
+
+  // Pagination
+  const [reqPage, setReqPage] = useState(1);
+  const [spkPage, setSpkPage] = useState(1);
+  const [histPage, setHistPage] = useState(1);
+
+  // Reset page when filters/tab change
+  useEffect(() => { setSpkPage(1); }, [filterWorkCenter, filterSpkStatus]);
+  useEffect(() => { setReqPage(1); setSpkPage(1); setHistPage(1); }, [tab]);
+
+  const reqPag = usePagination(filteredRequests, reqPage, setReqPage);
+  const spkPag = usePagination(filteredSpks, spkPage, setSpkPage);
+  const histPag = usePagination(history, histPage, setHistPage);
 
   // Detail dialogs
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -425,19 +460,45 @@ export default function CorrectivePage() {
               </Button>
             )}
           {tab === "spk" && (
-            <select
-              value={filterSpkStatus}
-              onChange={(e) => setFilterSpkStatus(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+            <>
+              <select
+                value={filterWorkCenter}
+                onChange={(e) => setFilterWorkCenter(e.target.value)}
+                className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+              >
+                <option value="">Semua Work Center</option>
+                <option value="E">Elektrik</option>
+                <option value="M">Mekanik</option>
+                <option value="S">Sipil</option>
+                <option value="O">Otomasi</option>
+              </select>
+              <select
+                value={filterSpkStatus}
+                onChange={(e) => setFilterSpkStatus(e.target.value)}
+                className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+              >
+                <option value="">Semua Status SPK</option>
+                <option value="baru_import">Tugas Baru</option>
+                <option value="eksekusi">Eksekusi</option>
+                <option value="menunggu_review_kadis_pp">Review Kadis PP</option>
+                <option value="menunggu_review_kadis_pelapor">
+                  Review Pelapor
+                </option>
+              </select>
+            </>
+          )}
+          {tab === "history" && (
+            <Button
+              variant="outline"
+              className="shadow-md bg-white hover:bg-green-50 border-green-200 text-green-700"
+              onClick={() => {
+                const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+                const base = process.env.NEXT_PUBLIC_API_URL + "/api";
+                window.open(`${base}/corrective/sap-spk/export-history?token=${token}`, "_blank");
+              }}
             >
-              <option value="">Semua Status SPK</option>
-              <option value="baru_import">Tugas Baru</option>
-              <option value="eksekusi">Eksekusi</option>
-              <option value="menunggu_review_kadis_pp">Review Kadis PP</option>
-              <option value="menunggu_review_kadis_pelapor">
-                Review Pelapor
-              </option>
-            </select>
+              <Download size={16} className="mr-2" /> Export Excel
+            </Button>
           )}
         </div>
       </div>
@@ -448,38 +509,47 @@ export default function CorrectivePage() {
         className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500"
       >
         {tab === "requests" && (
-          <RequestsTable
-            loading={loading}
-            filteredRequests={filteredRequests}
-            onSelectRequest={setSelectedRequest}
-            onApprovePlanner={triggerApprovePlanner}
-            onEditSapNumber={triggerEditSapNumber}
-            onDeleteRequest={handleDeleteRequest}
-          />
+          <>
+            <RequestsTable
+              loading={loading}
+              filteredRequests={reqPag.paginatedItems}
+              onSelectRequest={setSelectedRequest}
+              onApprovePlanner={triggerApprovePlanner}
+              onEditSapNumber={triggerEditSapNumber}
+              onDeleteRequest={handleDeleteRequest}
+            />
+            <PaginationControls page={reqPag.safePage} totalPages={reqPag.totalPages} totalItems={reqPag.totalItems} onPageChange={setReqPage} />
+          </>
         )}
         {tab === "spk" && (
-          <SpkTable
-            loading={loading}
-            spks={spks}
-            isKadisPp={isKadisPp}
-            userId={user?.id}
-            userNik={user?.nik}
-            userRole={user?.role}
-            onSelectSpk={setSelectedSpk}
-            onApproveKadisPp={triggerApproveKadisPp}
-            onRejectKadisPp={triggerRejectKadisPp}
-            onApproveKadisPelapor={triggerApproveKadisPelapor}
-            onRejectKadisPelapor={triggerRejectKadisPelapor}
-            onDeleteSpk={handleDeleteSpk}
-          />
+          <>
+            <SpkTable
+              loading={loading}
+              spks={spkPag.paginatedItems}
+              isKadisPp={isKadisPp}
+              userId={user?.id}
+              userNik={user?.nik}
+              userRole={user?.role}
+              onSelectSpk={setSelectedSpk}
+              onApproveKadisPp={triggerApproveKadisPp}
+              onRejectKadisPp={triggerRejectKadisPp}
+              onApproveKadisPelapor={triggerApproveKadisPelapor}
+              onRejectKadisPelapor={triggerRejectKadisPelapor}
+              onDeleteSpk={handleDeleteSpk}
+            />
+            <PaginationControls page={spkPag.safePage} totalPages={spkPag.totalPages} totalItems={spkPag.totalItems} onPageChange={setSpkPage} />
+          </>
         )}
         {tab === "history" && (
-          <HistoryTable
-            loading={loading}
-            history={history}
-            onSelectSpk={setSelectedSpk}
-            onDeleteSpk={handleDeleteSpk}
-          />
+          <>
+            <HistoryTable
+              loading={loading}
+              history={histPag.paginatedItems}
+              onSelectSpk={setSelectedSpk}
+              onDeleteSpk={handleDeleteSpk}
+            />
+            <PaginationControls page={histPag.safePage} totalPages={histPag.totalPages} totalItems={histPag.totalItems} onPageChange={setHistPage} />
+          </>
         )}
       </div>
 

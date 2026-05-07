@@ -30,6 +30,9 @@ router.get("/", verifyToken, sapSpkController.getSapSpkList);
 // ── Reason of Variance codes (for dropdown) ──────────────────────────────────
 router.get("/reason-codes", verifyToken, sapSpkController.getReasonOfVarianceCodes);
 
+// ── Export History to Excel (IW49 format) ────────────────────────────────────
+router.get("/export-history", verifyToken, sapSpkController.exportHistory);
+
 // ── Upload Excel endpoint (Returns Preview) ──────────────────────────────────
 router.post(
   "/upload-excel",

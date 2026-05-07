@@ -20,7 +20,7 @@ const getSapSpkList = async (req, res) => {
     const notificationInclude = {
       model: Notification,
       as: "notification",
-      attributes: ["kadisPelaporId"],
+      attributes: ["kadisPelaporId", "requiredStart", "requiredEnd"],
       include: [
         {
           model: User,
@@ -30,15 +30,7 @@ const getSapSpkList = async (req, res) => {
       ],
     };
 
-    if (userRole === "kadis" && !isKadisPP) {
-      const orConditions = [
-        { "$notification.kadis_pelapor_id$": req.user.userId }
-      ];
-      if (req.user.nik) orConditions.push({ report_by: { [Op.like]: `%${req.user.nik}%` } });
-      if (req.user.name) orConditions.push({ report_by: { [Op.like]: `%${req.user.name}%` } });
-      
-      where[Op.or] = orConditions;
-    } else if (userRole !== "admin" && !isKadisPP && group) {
+    if (userRole !== "admin" && !isKadisPP && userRole !== "kadis" && group) {
       const prefixes = [];
       if (group.includes("Elektrik")) prefixes.push("E");
       if (group.includes("Otomasi")) prefixes.push("O");
@@ -861,6 +853,86 @@ const rejectKadisPelapor = async (req, res) => {
   }
 };
 
+// ── Export History to Excel (IW49 Confirmation format) ───────────────────────
+const exportHistory = async (req, res) => {
+  try {
+    const spks = await SapSpkCorrective.findAll({
+      where: { status: { [Op.in]: ["selesai", "ditolak"] } },
+      order: [["created_at", "DESC"]],
+    });
+
+    const workbook = new exceljs.Workbook();
+    const ws = workbook.addWorksheet("Confirmation");
+
+    // Headers matching IW49 template exactly
+    const headers = [
+      "Order", "Description", "System status", "Cost Center", "Control Key",
+      "Confirmation", "Oper.Work Center", "Activity", "Op. Short Text",
+      "Normal duration", "Norm.duratn un.", "Duration Plan", "Unit for Work",
+      "Duration Actual", "Actual work", "Posting Date", "Confirmation Text",
+      "Reason of Variance", "Work Start", "Work Finish", "Start Time",
+      "Finish Time", "MaintActivType", "Location", "Functional Loc.",
+      "Equipment", "numofwork",
+    ];
+
+    // Style header row
+    const headerRow = ws.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, size: 10 };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9E1F2" } };
+      cell.border = {
+        top: { style: "thin" }, bottom: { style: "thin" },
+        left: { style: "thin" }, right: { style: "thin" },
+      };
+      cell.alignment = { vertical: "middle", wrapText: true };
+    });
+
+    // Auto-width
+    ws.columns = headers.map((h) => ({ width: Math.max(h.length + 2, 12) }));
+
+    for (const s of spks) {
+      ws.addRow([
+        s.order_number,
+        s.description,
+        s.sys_status,
+        s.cost_center,
+        s.ctrl_key,
+        s.confirm_number,
+        s.work_center,
+        s.activity,
+        s.short_text || s.description,
+        s.normal_dur != null ? Number(s.normal_dur) : null,
+        s.normal_dur_un,
+        s.dur_plan != null ? Number(s.dur_plan) : null,
+        s.unit_for_work,
+        s.dur_act != null ? Number(s.dur_act) : null,
+        s.actual_work != null ? Number(s.actual_work) : (s.total_actual_hour != null ? Number(s.total_actual_hour) : null),
+        s.posting_date,
+        s.actual_conf_text || s.conf_text,
+        s.actual_reason_of_var || s.reason_of_var,
+        s.actual_work_start || s.work_start,
+        s.actual_work_finish || s.work_finish,
+        s.actual_start_time || s.start_time,
+        s.actual_finish_time || s.finish_time,
+        s.maint_activ_type,
+        s.location,
+        s.functional_location,
+        s.equipment_name,
+        s.actual_personnel || (s.num_of_work != null ? Number(s.num_of_work) : null),
+      ]);
+    }
+
+    const filename = `IW49_Confirmation_History_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Error exporting history:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
 module.exports = {
   getSapSpkList,
   uploadExcel,
@@ -875,5 +947,6 @@ module.exports = {
   rejectKadisPelapor,
   deleteSapSpk,
   deleteAllSapSpk,
+  exportHistory,
 };
 

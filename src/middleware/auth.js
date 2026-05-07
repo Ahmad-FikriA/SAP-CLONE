@@ -11,11 +11,19 @@ const JWT_SECRET = process.env.JWT_SECRET || 'kti-mock-secret-dev';
  */
 async function verifyToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  let token = null;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
+    // Fallback: accept token via query param (for file download URLs)
+    token = req.query.token;
+  }
+
+  if (!token) {
     return res.status(401).json({ error: 'Authorization header missing or malformed' });
   }
 
-  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     let user = null;

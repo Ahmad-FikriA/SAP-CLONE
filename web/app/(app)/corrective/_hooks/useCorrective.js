@@ -19,7 +19,9 @@ export function useCorrective() {
         apiGet("/corrective/requests"),
         apiGet("/corrective/sap-spk"),
       ]);
-      setRequests(Array.isArray(reqData) ? reqData.filter(r => r.approvalStatus === "pending" || r.approvalStatus === "rejected") : []);
+      // Hide from Notifikasi tab only when the SPK is already matched with SAP import
+      const matchedStatuses = ["spk_issued", "spk_masuk", "eksekusi", "menunggu_review_kadis_pp", "menunggu_review_kadis_pelapor", "selesai"];
+      setRequests(Array.isArray(reqData) ? reqData.filter(r => !matchedStatuses.includes(r.approvalStatus)) : []);
 
       const allSpks = Array.isArray(sapSpkRes?.data) ? sapSpkRes.data : [];
       let filteredSpks = allSpks;

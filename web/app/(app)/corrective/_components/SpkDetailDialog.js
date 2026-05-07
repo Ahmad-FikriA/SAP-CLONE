@@ -153,8 +153,12 @@ export function SpkDetailDialog({
               </Section>
               <Section title="Jadwal & Aktual SAP">
                 <Row
-                  label="Tgl Posting"
-                  value={fmtDate(selectedSpk.posting_date)}
+                  label="Tgl Diminta Dikerjakan"
+                  value={
+                    selectedSpk.notification?.requiredStart || selectedSpk.notification?.requiredEnd
+                      ? `${fmtDate(selectedSpk.notification?.requiredStart) || "-"} s/d ${fmtDate(selectedSpk.notification?.requiredEnd) || "-"}`
+                      : "-"
+                  }
                 />
                 <Row
                   label="Work Start"
