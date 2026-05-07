@@ -33,6 +33,39 @@ function haversineMetres(lat1, lon1, lat2, lon2) {
 }
 
 const GEOFENCE_RADIUS_METRES = 200;
+const APP_TIME_ZONE = "Asia/Jakarta";
+const APP_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function getAppDateString(date = new Date()) {
+  const parts = APP_DATE_FORMATTER.formatToParts(date).reduce((acc, part) => {
+    if (part.type !== "literal") acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function normalizeDateOnly(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().split("T")[0];
+  return String(value).slice(0, 10);
+}
+
+function addDaysDateOnly(dateString, days) {
+  const [year, month, day] = String(dateString).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().split("T")[0];
+}
+
+function maxDateOnly(values) {
+  const sorted = values.map(normalizeDateOnly).filter(Boolean).sort();
+  return sorted.length > 0 ? sorted[sorted.length - 1] : null;
+}
 
 // ── File upload config ────────────────────────────────────────────────────────
 const uploadDir = path.join(__dirname, "../../../uploads/supervisi");
@@ -290,7 +323,7 @@ async function notifySupervisorVisitUpdate({ job, visitStatus, visitDate, execut
  * @param {number|null} jobId - Jika diisi, hanya konversi draft untuk job tertentu.
  */
 async function convertStaleDrafts(jobId = null) {
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD (server UTC)
+  const today = getAppDateString();
   const where = {
     isDraft: true,
     visitDate: { [Op.lt]: today },
@@ -840,10 +873,8 @@ async function submitVisit(req, res) {
     };
     const isDraftBool = parseDraft(req.query.isDraft) || parseDraft(req.body.isDraft);
 
-    // Use server time — never trust the client's date
-    const serverNow = new Date();
-    // Format as YYYY-MM-DD in UTC to stay consistent with DATEONLY column
-    const visitDate = serverNow.toISOString().split('T')[0];
+    // Use server time in Asia/Jakarta; never trust the client's date.
+    const visitDate = getAppDateString();
 
     if (!jobId || !status) {
       return res.status(400).json({ success: false, message: "jobId dan status wajib diisi." });
@@ -1076,11 +1107,8 @@ async function markMissedVisitsAsPelanggaran() {
   console.log(`${LABEL} Running missed-visit check at`, new Date().toISOString());
 
   try {
-    const today = new Date();
-    const todayOnly = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    const yesterday = new Date(todayOnly);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    const todayStr = getAppDateString();
+    const yesterdayStr = addDaysDateOnly(todayStr, -1);
 
     // Hanya proses job active yang kemarin masih berada di rentang jadwal.
     // amendBerakhir disertakan untuk kompatibilitas field amend legacy.
@@ -1108,23 +1136,21 @@ async function markMissedVisitsAsPelanggaran() {
     for (const job of activeJobs) {
       if (!job.waktuMulai || !job.waktuBerakhir) continue;
 
-      const jobStart = new Date(job.waktuMulai);
-      const defaultEnd = new Date(job.waktuBerakhir);
-      const legacyAmendEnd = job.amendBerakhir ? new Date(job.amendBerakhir) : null;
-      const childAmendEnds = (job.amends || [])
-        .map((a) => (a && a.amendBerakhir ? new Date(a.amendBerakhir) : null))
+      const jobStartStr = normalizeDateOnly(job.waktuMulai);
+      const defaultEndStr = normalizeDateOnly(job.waktuBerakhir);
+      const legacyAmendEndStr = normalizeDateOnly(job.amendBerakhir);
+      const childAmendEndStrs = (job.amends || [])
+        .map((a) => normalizeDateOnly(a && a.amendBerakhir))
         .filter(Boolean);
 
-      const effectiveEnd = [defaultEnd, legacyAmendEnd, ...childAmendEnds]
-        .filter(Boolean)
-        .sort((a, b) => b.getTime() - a.getTime())[0];
+      const effectiveEndStr = maxDateOnly([defaultEndStr, legacyAmendEndStr, ...childAmendEndStrs]);
 
-      if (!effectiveEnd) continue;
+      if (!jobStartStr || !effectiveEndStr) continue;
 
       // Kumpulkan semua (visitDate, locationId) yang sudah ada
       const existingVisitKeys = new Set(
         (job.visits || []).map((v) => {
-          const d = typeof v.visitDate === "string" ? v.visitDate : v.visitDate.toISOString().split("T")[0];
+          const d = normalizeDateOnly(v.visitDate);
           return `${d}__${v.locationId || ""}`;
         })
       );
@@ -1136,12 +1162,11 @@ async function markMissedVisitsAsPelanggaran() {
           : [{ id: null }]; // Single-location job (no locationId)
 
       // Scope cron: kemarin harus berada dalam range waktuMulai–effectiveEndDate.
-      if (yesterday < jobStart || yesterday > effectiveEnd) continue;
+      if (yesterdayStr < jobStartStr || yesterdayStr > effectiveEndStr) continue;
 
       // Iterasi setiap hari terlewat dari start hingga kemarin.
-      let cur = new Date(jobStart);
-      while (cur <= yesterday && cur <= effectiveEnd) {
-        const dateStr = cur.toISOString().split("T")[0];
+      let dateStr = jobStartStr;
+      while (dateStr <= yesterdayStr && dateStr <= effectiveEndStr) {
 
         for (const loc of locations) {
           const locId = loc.id ? String(loc.id) : null;
@@ -1174,7 +1199,7 @@ async function markMissedVisitsAsPelanggaran() {
         }
 
         // Maju ke hari berikutnya
-        cur.setUTCDate(cur.getUTCDate() + 1);
+        dateStr = addDaysDateOnly(dateStr, 1);
       }
     }
 
@@ -1297,7 +1322,7 @@ async function undoVisit(req, res) {
     }
 
     // Only allow undo on the same calendar day (server time)
-    const serverToday = new Date().toISOString().split("T")[0];
+    const serverToday = getAppDateString();
     const visitDateStr = String(visit.visitDate);
     if (visitDateStr !== serverToday) {
       return res.status(400).json({

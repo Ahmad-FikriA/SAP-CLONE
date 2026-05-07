@@ -7,3 +7,5 @@ export { WidgetCorrective }  from './widget_corrective';
 
 // ── Add your module widget below this line ──
 export { WidgetK3Inspection } from './widget_k3_inspection';
+export { WidgetInspection }   from './widget_inspection';
+export { WidgetSupervisi }    from './widget_supervisi';

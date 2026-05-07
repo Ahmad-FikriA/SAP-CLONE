@@ -1,4 +1,4 @@
-import { apiGet, apiDelete, apiPatch, apiPut } from '@/lib/api';
+import { apiGet, apiDelete, apiPut } from '@/lib/api';
 
 /**
  * Ambil semua job supervisi dari backend.
@@ -40,7 +40,7 @@ export async function deleteSupervisiJob(id) {
  * @param {string} cancelReason  Alasan pembatalan (wajib, min. 5 karakter)
  */
 export async function cancelSupervisiJob(id, cancelReason) {
-  const data = await apiPatch(`/inspection/supervisi/jobs/${id}`, {
+  const data = await apiPut(`/inspection/supervisi/jobs/${id}`, {
     status: 'cancelled',
     cancelReason,
   });

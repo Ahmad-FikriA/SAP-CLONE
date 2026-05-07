@@ -125,6 +125,43 @@ describe('Inspection and Supervisi regressions', () => {
     expect(reloadedSchedule.status).toBe('in_progress');
   });
 
+  it('approves an inspection report without writing an unsupported schedule status', async () => {
+    const schedule = await InspectionSchedule.create({
+      type: 'rutin',
+      title: 'Codex Approve Report Schedule',
+      location: 'Unit Test',
+      scheduledDate: '2026-04-23',
+      createdBy: '10000262',
+      assignedTo: '10000275',
+      triggerSource: 'planner',
+      status: 'completed',
+    });
+    cleanup.scheduleIds.push(schedule.id);
+
+    const report = await InspectionReport.create({
+      scheduleId: schedule.id,
+      inspectorName: 'Agus Miftakh',
+      inspectionDate: '2026-04-23',
+      status: 'submitted',
+      submittedBy: '10000275',
+      submittedAt: new Date(),
+      hasKerusakan: false,
+    });
+    cleanup.reportIds.push(report.id);
+
+    const response = await request(app)
+      .put(`/api/inspection/reports/${report.id}/approve`)
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({ notes: 'Regression approve report' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.status).toBe('approved');
+
+    const reloadedSchedule = await InspectionSchedule.findByPk(schedule.id);
+    expect(reloadedSchedule.status).toBe('completed');
+  });
+
   it('creates a supervisi job when PIC matches the executor group in user data', async () => {
     const response = await request(app)
       .post('/api/inspection/supervisi/jobs')

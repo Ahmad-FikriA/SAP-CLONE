@@ -56,9 +56,6 @@ async function listRequests(req, res) {
     const hasGlobalAccess = canViewAllRequests(req.user);
     const requestedByQuery = normalizeNik(req.query.requestedBy);
 
-    // 🔍 DEBUG — hapus setelah masalah teridentifikasi
-    console.log(`[listRequests] nik=${requesterNik} hasGlobalAccess=${hasGlobalAccess} requestedByQuery="${requestedByQuery}" status="${req.query.status || ''}"`);
-
     // Filter by status
     if (req.query.status) where.status = req.query.status;
 
@@ -86,7 +83,6 @@ async function listRequests(req, res) {
       order: [["createdAt", "DESC"]],
     });
 
-    console.log(`[listRequests] returning ${data.length} records, where=${JSON.stringify(where)}`);
     res.json({ success: true, message: "Requests retrieved.", data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

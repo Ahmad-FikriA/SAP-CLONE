@@ -545,7 +545,7 @@ async function approveReport(req, res) {
     );
 
     if (report.schedule) {
-      await report.schedule.update({ status: "approved" }, { transaction: t });
+      await report.schedule.update({ status: "completed" }, { transaction: t });
     }
 
     // If kerusakan found → auto-create follow-up

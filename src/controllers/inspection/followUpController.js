@@ -67,7 +67,7 @@ async function getFollowUp(req, res) {
           include: [{ association: "schedule" }, { association: "photos" }],
         },
         {
-          association: "suratPelanggarans",
+          association: "suratPelanggaran",
         },
       ],
     });

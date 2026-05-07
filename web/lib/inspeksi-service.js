@@ -79,6 +79,13 @@ export const INSPEKSI_STATUS_META = {
   cancelled:   { label: 'Dibatalkan', variant: 'cancelled',   isAktif: false },
 };
 
+export const INSPEKSI_TYPE_LABELS = {
+  rutin: 'Rutin',
+  inspeksi: 'Inspeksi',
+  k3: 'K3',
+  supervisi: 'Supervisi',
+};
+
 /**
  * Resolve label tipe berdasarkan data schedule:
  * - Ada userRequest (dari laporan/permintaan) → 'Inspeksi'
@@ -87,12 +94,7 @@ export const INSPEKSI_STATUS_META = {
  */
 export function resolveInspeksiTypeLabel(schedule) {
   if (schedule.userRequest || schedule.triggerSource === 'user_darurat') {
-    return 'Inspeksi';
+    return INSPEKSI_TYPE_LABELS.inspeksi;
   }
-  const map = {
-    rutin:     'Rutin',
-    k3:        'K3',
-    supervisi: 'Supervisi',
-  };
-  return map[schedule.type] || schedule.type;
+  return INSPEKSI_TYPE_LABELS[schedule.type] || schedule.type;
 }

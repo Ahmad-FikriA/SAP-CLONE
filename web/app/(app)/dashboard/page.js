@@ -1,6 +1,13 @@
 'use client';
 
-import { WidgetSummary, WidgetPreventive, WidgetCorrective, WidgetK3Inspection } from './_widgets';
+import {
+  WidgetSummary,
+  WidgetPreventive,
+  WidgetCorrective,
+  WidgetK3Inspection,
+  WidgetInspection,
+  WidgetSupervisi,
+} from './_widgets';
 import { getUser } from '@/lib/auth';
 import { useEffect, useState } from 'react';
 
@@ -34,6 +41,8 @@ export default function DashboardPage() {
         <WidgetPreventive />
         <WidgetCorrective />
         <WidgetK3Inspection />
+        <WidgetInspection />
+        <WidgetSupervisi />
       </div>
     </div>
   );
