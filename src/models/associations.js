@@ -271,6 +271,10 @@ GeneralTaskListActivity.belongsTo(GeneralTaskList, {
   as: "taskList",
 });
 
+// ── SPK ↔ GeneralTaskList ─────────────────────────────────────────────────────
+Spk.belongsTo(GeneralTaskList, { foreignKey: 'taskListId', as: 'taskList', constraints: false });
+GeneralTaskList.hasMany(Spk, { foreignKey: 'taskListId', as: 'spks', constraints: false });
+
 // ── Equipment x GeneralTaskList interval mappings ────────────────────────────
 Equipment.hasMany(EquipmentIntervalMapping, { foreignKey: 'equipmentId', as: 'intervalMappings', onDelete: 'CASCADE' });
 EquipmentIntervalMapping.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });

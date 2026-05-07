@@ -74,6 +74,7 @@ function EquipmentHistoryContent() {
   const [equip, setEquip] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedType, setSelectedType] = useState(null);
 
   useEffect(() => {
     if (!equipmentId) return;
@@ -109,7 +110,7 @@ function EquipmentHistoryContent() {
     const csv = [header, ...rows]
       .map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
       .join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -127,15 +128,36 @@ function EquipmentHistoryContent() {
 
   const chartTypes = useMemo(() => [...new Set(enriched.map(r => r.measLabel))], [enriched]);
 
+  // Auto-select first type when types change (e.g. on first load)
+  useEffect(() => {
+    if (chartTypes.length > 0 && !chartTypes.includes(selectedType)) {
+      setSelectedType(chartTypes[0]);
+    }
+  }, [chartTypes]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const chartData = useMemo(() => {
     const byDate = {};
-    [...enriched].reverse().forEach(r => {
+    const source = selectedType
+      ? enriched.filter(r => r.measLabel === selectedType)
+      : enriched;
+    [...source].reverse().forEach(r => {
       const d = fmtDate(r.submittedAt);
       if (!byDate[d]) byDate[d] = { date: d };
       byDate[d][r.measLabel] = r.measurementValue;
     });
     return Object.values(byDate);
-  }, [enriched]);
+  }, [enriched, selectedType]);
+
+  const selectedUnit = useMemo(() => {
+    const r = enriched.find(r => r.measLabel === selectedType);
+    return r?.measUnit || '';
+  }, [enriched, selectedType]);
+
+  const tableRows = useMemo(() =>
+    selectedType ? enriched.filter(r => r.measLabel === selectedType) : enriched,
+  [enriched, selectedType]);
+
+  const selectedColorIndex = selectedType ? chartTypes.indexOf(selectedType) : 0;
 
   if (!equipmentId) {
     return (
@@ -185,25 +207,51 @@ function EquipmentHistoryContent() {
       {/* Chart */}
       {!loading && chartData.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Tren Nilai Ukur</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Tren Nilai Ukur
+              {selectedUnit && (
+                <span className="ml-1.5 text-blue-500 normal-case font-normal">({selectedUnit})</span>
+              )}
+            </h2>
+            {chartTypes.length > 1 && (
+              <select
+                value={selectedType || ''}
+                onChange={e => setSelectedType(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {chartTypes.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            )}
+          </div>
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
+              <YAxis
+                tick={{ fontSize: 11 }}
+                label={selectedUnit ? {
+                  value: selectedUnit,
+                  angle: -90,
+                  position: 'insideLeft',
+                  offset: -2,
+                  style: { fontSize: 10, fill: '#6b7280' },
+                } : undefined}
+              />
               <Tooltip content={<ChartTooltip />} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              {chartTypes.map((type, i) => (
+              {selectedType && (
                 <Line
-                  key={type}
                   type="monotone"
-                  dataKey={type}
-                  stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                  dataKey={selectedType}
+                  stroke={LINE_COLORS[selectedColorIndex % LINE_COLORS.length]}
                   strokeWidth={2}
                   dot={{ r: 4 }}
                   connectNulls
                 />
-              ))}
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -214,13 +262,15 @@ function EquipmentHistoryContent() {
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Riwayat Detail
-            {enriched.length > 0 && <span className="ml-2 text-blue-600 normal-case font-normal">{enriched.length} entri</span>}
+            {tableRows.length > 0 && (
+              <span className="ml-2 text-blue-600 normal-case font-normal">{tableRows.length} entri</span>
+            )}
           </h2>
         </div>
 
         {loading ? (
           <div className="py-16 text-center text-gray-400 text-sm">Memuat data...</div>
-        ) : enriched.length === 0 ? (
+        ) : tableRows.length === 0 ? (
           <div className="py-16 text-center text-gray-400 text-sm">Belum ada data pengukuran untuk equipment ini</div>
         ) : (
           <div className="overflow-x-auto">
@@ -236,7 +286,7 @@ function EquipmentHistoryContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {enriched.map((r, i) => (
+                {tableRows.map((r, i) => (
                   <tr key={i} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{fmtDate(r.submittedAt)}</td>
                     <td className="px-4 py-3 font-mono text-xs text-blue-700">{r.spkNumber}</td>

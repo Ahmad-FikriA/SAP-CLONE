@@ -47,6 +47,11 @@ const INCLUDE_FULL = [
     model: SpkActivity, as: 'activitiesModel',
     attributes: ['activityNumber', 'equipmentId', 'operationText', 'resultComment', 'durationPlan', 'durationActual', 'isVerified', 'measurementType', 'measurementUnit', 'measurementValue'],
   },
+  {
+    model: GeneralTaskList, as: 'taskList',
+    attributes: ['taskListId', 'taskListName'],
+    required: false,
+  },
 ];
 
 // Derive ISO week number and year from a DATEONLY string (YYYY-MM-DD)
@@ -90,6 +95,8 @@ function fmt(spk) {
     kadisApprovedBy: j.kadisApprovedBy ?? null,
     kadisApprovedAt: j.kadisApprovedAt ?? null,
     kadisArea: j.kadisArea || null,
+    taskListId: j.taskListId ?? null,
+    taskListName: j.taskList?.taskListName ?? null,
     equipmentModels: (j.equipmentModels || []).map(em => ({
       equipmentId: em.equipmentId,
       equipmentName: em.equipmentName,
@@ -338,12 +345,13 @@ const submit = async (req, res) => {
   const { durationActual, activityResultsModel = [], photoPaths = [], evaluasi, latitude, longitude, workStart, locationQuality, lateReason, equipmentStatus = 'Running' } = req.body;
   const subId = `SUB-${uuid().slice(0, 8).toUpperCase()}`;
 
-  // ── 24h duplicate prevention ────────────────────────────────────────────────
+  // ── 8h duplicate prevention (per equipment + category + task list) ───────────
+  // Block key: equipmentId + category + intervalPeriod + taskListId
+  // Skip entirely when taskListId is null (identity unknown → can't block safely)
   const equipmentIds = (spk.equipmentModels ?? []).map(e => e.equipmentId);
-  if (equipmentIds.length > 0) {
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  if (equipmentIds.length > 0 && spk.taskListId) {
+    const cutoff = new Date(Date.now() - 8 * 60 * 60 * 1000);
 
-    // Find any SPK with the same intervalPeriod + overlapping equipment submitted in last 24h
     const conflictingSpkNumbers = await SpkEquipment.findAll({
       where: { equipmentId: { [Op.in]: equipmentIds } },
       attributes: ['spkNumber'],
@@ -351,8 +359,10 @@ const submit = async (req, res) => {
         model: Spk,
         as: 'spk',
         where: {
+          category:       spk.category,
           intervalPeriod: spk.intervalPeriod,
-          spkNumber: { [Op.ne]: spk.spkNumber },
+          taskListId:     spk.taskListId,
+          spkNumber:      { [Op.ne]: spk.spkNumber },
         },
         attributes: [],
         required: true,
@@ -364,17 +374,17 @@ const submit = async (req, res) => {
       const spkNums = [...new Set(conflictingSpkNumbers.map(r => r.spkNumber))];
       const recentSubmission = await Submission.findOne({
         where: {
-          spkNumber: { [Op.in]: spkNums },
+          spkNumber:   { [Op.in]: spkNums },
           submittedAt: { [Op.gte]: cutoff },
         },
-        order: [['submittedAt', 'DESC']],
+        order:      [['submittedAt', 'DESC']],
         attributes: ['submittedAt'],
       });
 
       if (recentSubmission) {
-        const nextAvailableAt = new Date(recentSubmission.submittedAt.getTime() + 24 * 60 * 60 * 1000);
+        const nextAvailableAt = new Date(recentSubmission.submittedAt.getTime() + 8 * 60 * 60 * 1000);
         return res.status(409).json({
-          error: 'Equipment ini sudah memiliki laporan dalam 24 jam terakhir',
+          error: `SPK ${spk.category} untuk equipment ini sudah disubmit dalam 8 jam terakhir`,
           lastSubmittedAt: recentSubmission.submittedAt.toISOString(),
           nextAvailableAt: nextAvailableAt.toISOString(),
         });
@@ -588,6 +598,14 @@ const CATEGORY_GROUP_MAP = {
   Otomasi: 'Otomasi',
 };
 
+// Plant name → kadisArea ID (matches KADIS_AREAS ids in frontend constants.js)
+const PLANT_TO_KADIS_AREA = [
+  { pattern: /Krenceng/i,           id: 'kadis_krenceng' },
+  { pattern: /Waduk|Re-use/i,       id: 'kadis_airbaku' },
+  { pattern: /Cidanau|Cipasauran/i, id: 'kadis_cipasauran_cidanau' },
+  { pattern: /Keamanan/i,           id: 'kadis_keamanan' },
+];
+
 // Plant name → Kadis dinas routing map
 // plantName comes from Equipment.plantName (set during SAP import), not the raw funcloc code.
 const PLANT_KADIS_MAP = [
@@ -668,14 +686,17 @@ const approveKadisPerawatan = async (req, res) => {
     return res.status(403).json({ error: 'Only Kadis Perawatan (dinas: Pusat Perawatan) can approve this step' });
   }
 
+  const plantName = spk.equipmentModels?.[0]?.equipmentDetails?.plantName ?? null;
+  const areaEntry = PLANT_TO_KADIS_AREA.find(e => plantName && e.pattern.test(plantName));
+
   await spk.update({
     status: 'awaiting_kadis',
+    kadisArea: areaEntry?.id ?? null,
     kadisPerawatanApprovedBy: req.user.userId,
     kadisPerawatanApprovedAt: new Date(),
   });
 
   // Notify the correct Kadis using plant name routing
-  const plantName = spk.equipmentModels?.[0]?.equipmentDetails?.plantName ?? null;
   const expectedDinasForNotif = getExpectedKadisDinas(plantName);
   if (expectedDinasForNotif) {
     const kadisUsers = await User.findAll({

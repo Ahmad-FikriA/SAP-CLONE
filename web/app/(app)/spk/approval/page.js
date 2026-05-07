@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { apiGet, apiPost } from '@/lib/api';
 import { getUser, canUpdate } from '@/lib/auth';
 import { formatDate } from '@/lib/date-utils';
-import { STATUS_LABELS, CATEGORY_COLORS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS } from '@/lib/constants';
+import { STATUS_LABELS, CATEGORY_COLORS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS, KADIS_AREAS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { RefreshCw, CheckCircle, Clock, ChevronRight, ImageIcon, X } from 'lucide-react';
@@ -71,8 +71,12 @@ function approveEndpoint(status) {
   return null;
 }
 
-function StatusBadge({ status }) {
-  const label = STATUS_LABELS[status] || status;
+function StatusBadge({ status, kadisArea }) {
+  let label = STATUS_LABELS[status] || status;
+  if (status === 'awaiting_kadis' && kadisArea) {
+    const area = KADIS_AREAS.find(a => a.id === kadisArea);
+    if (area) label = `Menunggu ${area.label}`;
+  }
   const color = STATUS_COLORS[status] || 'bg-gray-100 text-gray-600';
   return <span className={`px-2 py-0.5 rounded text-xs font-semibold ${color}`}>{label}</span>;
 }
@@ -114,8 +118,15 @@ export default function SpkApprovalPage() {
 
   const load = useCallback(async (u) => {
     const role = u?.role;
-    const statuses = PENDING_STATUSES[role];
+    let statuses = PENDING_STATUSES[role];
     if (!statuses) { setSpks([]); setLoading(false); return; }
+
+    // Kadis Pusat Perawatan only sees their own queue (awaiting_kadis_perawatan).
+    // Area Kadis (Krenceng, Air Baku, etc.) only sees awaiting_kadis.
+    if (role === 'kadis') {
+      const isPusatPerawatan = (u?.dinas || '').toLowerCase().includes('pusat perawatan');
+      statuses = isPusatPerawatan ? ['awaiting_kadis_perawatan'] : ['awaiting_kadis'];
+    }
 
     // Kasie: only fetch SPKs matching their discipline
     if (KASIE_ROLES.has(role)) {
@@ -306,7 +317,7 @@ export default function SpkApprovalPage() {
                     {spk.equipmentModels?.[0]?.equipmentName || '—'}
                   </p>
                   <div className="flex items-center justify-between">
-                    <StatusBadge status={spk.status} />
+                    <StatusBadge status={spk.status} kadisArea={spk.kadisArea} />
                     <span className="text-[10px] text-gray-400">
                       {spk.submittedAt ? formatDate(spk.submittedAt) : '—'}
                     </span>
@@ -408,7 +419,7 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {}
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-lg font-semibold font-mono text-gray-900">{spk.spkNumber}</h3>
               <CategoryBadge category={spk.category} />
-              <StatusBadge status={spk.status} />
+              <StatusBadge status={spk.status} kadisArea={spk.kadisArea} />
             </div>
             <p className="text-sm text-gray-500">{spk.description || '—'}</p>
           </div>

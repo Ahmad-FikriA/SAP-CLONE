@@ -138,9 +138,6 @@ function parseExcelBuffer(buffer) {
 
     const activityRaw = String(get(row, 'activity') ?? '').trim();
 
-    // Skip the SAP header operation (0010)
-    if (activityRaw === '0010') continue;
-
     if (!orderMap.has(orderNumber)) {
       // Parse scheduled date — may be an Excel serial number or already a string
       const dateRaw = get(row, 'bas. start date');

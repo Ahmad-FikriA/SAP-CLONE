@@ -706,6 +706,12 @@ export default function SpkPage() {
               <div className="grid grid-cols-3 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <SpkField label="Interval" value={detailSpk.interval || '—'} />
                 <SpkField label="Scheduled Date" value={detailSpk.scheduledDate ? formatDateShort(detailSpk.scheduledDate) : '—'} />
+                {detailFull?.taskListId && (
+                  <SpkField
+                    label="Daftar Kegiatan"
+                    value={detailFull.taskListName ? `${detailFull.taskListId} — ${detailFull.taskListName}` : detailFull.taskListId}
+                  />
+                )}
                 <SpkField label="Minggu ke-" value={detailSpk.weekNumber ? `W${detailSpk.weekNumber} / ${detailSpk.weekYear}` : '—'} />
                 <SpkField label="Durasi Aktual" value={detailSpk.durationActual != null ? `${detailSpk.durationActual} menit` : '—'} />
                 <SpkField label="Disubmit Oleh" value={detailFull?.submittedByName || detailSpk.submittedBy || '—'} />

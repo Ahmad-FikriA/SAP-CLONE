@@ -145,6 +145,7 @@ const confirm = async (req, res) => {
           costCenter:    order.costCenter ?? null,
           operWorkCtr:   order.operWorkCtr ?? null,
           kadisArea:     detectKadisFromFuncLoc(order.functionalLocation) || null,
+          taskListId:    order.taskListId ?? null,
         }, { transaction: t });
 
         // 2. SpkEquipment row (one per order in SAP IW38 import)
