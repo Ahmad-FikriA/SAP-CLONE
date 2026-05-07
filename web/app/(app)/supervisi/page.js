@@ -9,7 +9,13 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { fetchSupervisiJobs, cancelSupervisiJob, deleteSupervisiJob, SUPERVISI_STATUS_META } from '@/lib/supervisi-service';
+import {
+  fetchSupervisiJobs,
+  cancelSupervisiJob,
+  deleteSupervisiJob,
+  updateSupervisiJobLocation,
+  SUPERVISI_STATUS_META,
+} from '@/lib/supervisi-service';
 import { SupervisiJobPanel } from '@/components/supervisi/SupervisiJobPanel';
 
 // Leaflet hanya berjalan di client
@@ -45,7 +51,77 @@ function markerColor(status) {
   return MARKER_COLORS[status] || '#9CA3AF';
 }
 
-// ── Buat custom divIcon berbentuk pin ─────────────────────────────────────────
+// Helper lokasi supervisi untuk marker dan payload update.
+function toFiniteNumber(value) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeRadius(value) {
+  const parsed = toFiniteNumber(value);
+  if (parsed == null) return 100;
+  return Math.min(Math.max(parsed, 1), 300);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function getJobLocations(job) {
+  const rawLocations = Array.isArray(job.locations) ? job.locations : [];
+  const locations = rawLocations
+    .map((loc, index) => {
+      const latitude = toFiniteNumber(loc.latitude);
+      const longitude = toFiniteNumber(loc.longitude);
+      if (latitude == null || longitude == null) return null;
+      return {
+        id: String(loc.id || `loc-${index + 1}`),
+        namaArea: loc.namaArea || job.namaArea || `Lokasi ${index + 1}`,
+        latitude,
+        longitude,
+        radius: normalizeRadius(loc.radius ?? job.radius),
+      };
+    })
+    .filter(Boolean);
+
+  if (locations.length > 0) return locations;
+
+  const latitude = toFiniteNumber(job.latitude);
+  const longitude = toFiniteNumber(job.longitude);
+  if (latitude == null || longitude == null) return [];
+
+  return [{
+    id: 'legacy',
+    namaArea: job.namaArea || 'Lokasi 1',
+    latitude,
+    longitude,
+    radius: normalizeRadius(job.radius),
+  }];
+}
+
+function buildLocationUpdatePayload(job, locationIndex, latitude, longitude) {
+  const locations = getJobLocations(job).map((loc, index) => (
+    index === locationIndex
+      ? { ...loc, latitude, longitude }
+      : loc
+  ));
+
+  const first = locations[0];
+  return {
+    locations,
+    latitude: first?.latitude ?? null,
+    longitude: first?.longitude ?? null,
+    radius: first?.radius ?? null,
+    namaArea: first?.namaArea || null,
+  };
+}
+
+// Buat custom divIcon berbentuk pin.
 function makePinIcon(L, color) {
   return L.divIcon({
     className: '',
@@ -62,11 +138,17 @@ function makePinIcon(L, color) {
 
 // ── Pilih center awal peta: koordinat job aktif pertama yg punya lokasi ────────
 function getInitialMapCenter(jobs) {
-  const active = jobs.find((j) => j.status === 'active' && j.latitude && j.longitude);
-  if (active) return [parseFloat(active.latitude), parseFloat(active.longitude)];
+  const active = jobs.find((j) => j.status === 'active' && getJobLocations(j).length > 0);
+  if (active) {
+    const [first] = getJobLocations(active);
+    return [first.latitude, first.longitude];
+  }
 
-  const anyWithCoords = jobs.find((j) => j.latitude && j.longitude);
-  if (anyWithCoords) return [parseFloat(anyWithCoords.latitude), parseFloat(anyWithCoords.longitude)];
+  const anyWithCoords = jobs.find((j) => getJobLocations(j).length > 0);
+  if (anyWithCoords) {
+    const [first] = getJobLocations(anyWithCoords);
+    return [first.latitude, first.longitude];
+  }
 
   return null; // tidak ada koordinat sama sekali
 }
@@ -120,6 +202,7 @@ export default function SupervisiPage() {
   const LRef       = useRef(null);
   const markersRef = useRef([]);
   const mapReadyRef = useRef(false); // apakah peta sudah mount
+  const skipNextFitBoundsRef = useRef(false);
 
   // ── Fetch data ──────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -178,6 +261,46 @@ export default function SupervisiPage() {
   }, []);
 
   // ── Render / re-render markers ──────────────────────────────────────────────
+  const handleLocationDragEnd = useCallback(async ({ job, locationIndex, marker, previousLatLng, nextLatLng }) => {
+    if (!job?.id) {
+      marker.setLatLng(previousLatLng);
+      toast.error('Job supervisi tidak valid.');
+      return;
+    }
+
+    marker.dragging?.disable();
+
+    try {
+      const payload = buildLocationUpdatePayload(
+        job,
+        locationIndex,
+        Number(nextLatLng.lat.toFixed(7)),
+        Number(nextLatLng.lng.toFixed(7)),
+      );
+      const savedJob = await updateSupervisiJobLocation(job.id, payload);
+
+      const applyUpdatedLocation = (current) => ({
+        ...current,
+        ...(savedJob || {}),
+        ...payload,
+      });
+
+      skipNextFitBoundsRef.current = true;
+      setJobs((prev) => prev.map((item) => (
+        item.id === job.id ? applyUpdatedLocation(item) : item
+      )));
+      setSelectedJob((prev) => (
+        prev?.id === job.id ? applyUpdatedLocation(prev) : prev
+      ));
+      toast.success('Lokasi job supervisi diperbarui.');
+    } catch (err) {
+      marker.setLatLng(previousLatLng);
+      toast.error(err?.message || 'Gagal memperbarui lokasi job supervisi.');
+    } finally {
+      marker.dragging?.enable();
+    }
+  }, []);
+
   function renderMarkers(map, L, allJobs, activeFilter) {
     // Bersihkan marker lama
     markersRef.current.forEach((m) => m.remove());
@@ -192,49 +315,59 @@ export default function SupervisiPage() {
       const icon  = makePinIcon(L, color);
       const meta  = SUPERVISI_STATUS_META[job.status] || SUPERVISI_STATUS_META.draft;
 
-      // Extract titik kordinat (dukung multi-lokasi atau legacy tunggal)
-      const points = [];
-      if (Array.isArray(job.locations) && job.locations.length > 0) {
-        job.locations.forEach((loc, idx) => {
-          if (!isNaN(parseFloat(loc.latitude)) && !isNaN(parseFloat(loc.longitude))) {
-            points.push({
-              lat: parseFloat(loc.latitude),
-              lng: parseFloat(loc.longitude),
-              area: loc.namaArea || job.namaArea || `Lokasi ${idx + 1}`,
-            });
-          }
-        });
-      } else {
-        const lat = parseFloat(job.latitude);
-        const lng = parseFloat(job.longitude);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          points.push({ lat, lng, area: job.namaArea });
-        }
-      }
+      const points = getJobLocations(job).map((loc, idx) => ({
+        lat: loc.latitude,
+        lng: loc.longitude,
+        area: loc.namaArea,
+        locationId: loc.id,
+        locationIndex: idx,
+      }));
 
       // Render marker untuk tiap titik
       points.forEach((pt) => {
-        const marker = L.marker([pt.lat, pt.lng], { icon });
+        let previousLatLng = L.latLng(pt.lat, pt.lng);
+        const marker = L.marker([pt.lat, pt.lng], { icon, draggable: true });
         const popupContent = `
           <div style="min-width:200px;font-family:system-ui,sans-serif">
             <p style="font-size:10px;font-weight:700;color:#6B7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">
-              ${meta.label}
+              ${escapeHtml(meta.label)}
             </p>
             <p style="font-size:13px;font-weight:700;color:#111827;line-height:1.3;margin:0 0 4px">
-              ${job.namaKerja || '—'}
+              ${escapeHtml(job.namaKerja || '-')}
             </p>
-            <p style="font-size:11px;color:#6B7280;margin:0 0 2px">📋 ${job.nomorJo || '—'}</p>
-            ${job.picSupervisi ? `<p style="font-size:11px;color:#6B7280;margin:0 0 2px">👤 ${job.picSupervisi}</p>` : ''}
-            ${pt.area ? `<p style="font-size:11px;color:#6B7280;margin:0">📍 ${pt.area}</p>` : ''}
+            <p style="font-size:11px;color:#6B7280;margin:0 0 2px">JO: ${escapeHtml(job.nomorJo || '-')}</p>
+            ${job.picSupervisi ? `<p style="font-size:11px;color:#6B7280;margin:0 0 2px">PIC: ${escapeHtml(job.picSupervisi)}</p>` : ''}
+            ${pt.area ? `<p style="font-size:11px;color:#6B7280;margin:0">Area: ${escapeHtml(pt.area)}</p>` : ''}
             <button
               onclick="window.__supervisiSelectJob(${job.id})"
               style="margin-top:10px;padding:5px 12px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;width:100%"
             >
-              Lihat Detail →
+              Lihat Detail ->
             </button>
           </div>`;
 
         marker.bindPopup(popupContent, { maxWidth: 260 });
+        marker.on('add', () => {
+          const el = marker.getElement();
+          if (el) el.style.cursor = 'grab';
+        });
+        marker.on('dragstart', () => {
+          previousLatLng = marker.getLatLng();
+          map.closePopup();
+          const el = marker.getElement();
+          if (el) el.style.cursor = 'grabbing';
+        });
+        marker.on('dragend', () => {
+          const el = marker.getElement();
+          if (el) el.style.cursor = 'grab';
+          handleLocationDragEnd({
+            job,
+            locationIndex: pt.locationIndex,
+            marker,
+            previousLatLng,
+            nextLatLng: marker.getLatLng(),
+          });
+        });
         marker.addTo(map);
         markersRef.current.push(marker);
       });
@@ -242,8 +375,12 @@ export default function SupervisiPage() {
 
     // Fit bounds ke semua marker yang tampil
     if (markersRef.current.length > 0) {
-      const group = L.featureGroup(markersRef.current);
-      map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 14 });
+      if (skipNextFitBoundsRef.current) {
+        skipNextFitBoundsRef.current = false;
+      } else {
+        const group = L.featureGroup(markersRef.current);
+        map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 14 });
+      }
     }
   }
 
@@ -265,15 +402,9 @@ export default function SupervisiPage() {
   const noCoordsJobs = [];
 
   filteredJobs.forEach(job => {
-    if (Array.isArray(job.locations) && job.locations.length > 0) {
-      const validLocations = job.locations.filter(loc => !isNaN(parseFloat(loc.latitude)) && !isNaN(parseFloat(loc.longitude)));
-      if (validLocations.length > 0) {
-        mapPointsCount += validLocations.length;
-      } else {
-        noCoordsJobs.push(job);
-      }
-    } else if (job.latitude && job.longitude) {
-      mapPointsCount += 1;
+    const validLocations = getJobLocations(job);
+    if (validLocations.length > 0) {
+      mapPointsCount += validLocations.length;
     } else {
       noCoordsJobs.push(job);
     }

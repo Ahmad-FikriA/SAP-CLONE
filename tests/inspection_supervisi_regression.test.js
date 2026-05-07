@@ -154,4 +154,69 @@ describe('Inspection and Supervisi regressions', () => {
 
     cleanup.jobIds.push(response.body.data.id);
   });
+
+  it('updates supervisi job coordinates from the scheduler endpoint', async () => {
+    const createResponse = await request(app)
+      .post('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        namaKerja: `Codex Supervisi Location ${Date.now()}`,
+        nomorJo: `JO-CODEX-LOC-${Date.now()}`,
+        nilaiPekerjaan: 1500000,
+        pelaksana: 'Vendor Test',
+        waktuMulai: '2026-04-23',
+        waktuBerakhir: '2026-04-24',
+        namaPengawas: 'Group supervisi Sipil dan Perpipaan',
+        picSupervisi: 'Deni Yuniardi',
+        latitude: -6.2,
+        longitude: 106.8,
+        radius: 100,
+        namaArea: 'Lokasi Test',
+        locations: [
+          {
+            id: 'loc-a',
+            namaArea: 'Lokasi Test',
+            latitude: -6.2,
+            longitude: 106.8,
+            radius: 100,
+          },
+        ],
+        status: 'active',
+      });
+
+    expect(createResponse.status).toBe(201);
+    cleanup.jobIds.push(createResponse.body.data.id);
+
+    const updateResponse = await request(app)
+      .put(`/api/inspection/supervisi/jobs/${createResponse.body.data.id}`)
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        latitude: -6.2054321,
+        longitude: 106.8123456,
+        radius: 120,
+        namaArea: 'Lokasi Geser',
+        locations: [
+          {
+            id: 'loc-a',
+            namaArea: 'Lokasi Geser',
+            latitude: -6.2054321,
+            longitude: 106.8123456,
+            radius: 120,
+          },
+        ],
+      });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.success).toBe(true);
+    expect(Number(updateResponse.body.data.latitude)).toBeCloseTo(-6.2054321, 6);
+    expect(Number(updateResponse.body.data.longitude)).toBeCloseTo(106.8123456, 6);
+    expect(updateResponse.body.data.locations).toHaveLength(1);
+    expect(Number(updateResponse.body.data.locations[0].latitude)).toBeCloseTo(-6.2054321, 6);
+
+    const reloaded = await SupervisiJob.findByPk(createResponse.body.data.id);
+    expect(Number(reloaded.latitude)).toBeCloseTo(-6.2054321, 6);
+    expect(Number(reloaded.longitude)).toBeCloseTo(106.8123456, 6);
+    expect(reloaded.locations).toHaveLength(1);
+    expect(Number(reloaded.locations[0].longitude)).toBeCloseTo(106.8123456, 6);
+  });
 });

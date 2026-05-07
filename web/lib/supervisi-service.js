@@ -1,4 +1,4 @@
-import { apiGet, apiDelete, apiPatch } from '@/lib/api';
+import { apiGet, apiDelete, apiPatch, apiPut } from '@/lib/api';
 
 /**
  * Ambil semua job supervisi dari backend.
@@ -45,6 +45,16 @@ export async function cancelSupervisiJob(id, cancelReason) {
     cancelReason,
   });
   return data;
+}
+
+/**
+ * Perbarui koordinat lokasi job supervisi dari peta web.
+ * @param {number|string} id
+ * @param {Object} payload - { locations, latitude, longitude, radius, namaArea }
+ */
+export async function updateSupervisiJobLocation(id, payload) {
+  const data = await apiPut(`/inspection/supervisi/jobs/${id}`, payload);
+  return data?.data ?? data;
 }
 
 
