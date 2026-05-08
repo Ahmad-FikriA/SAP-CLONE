@@ -3,6 +3,7 @@
 const sequelize = require("./config/database");
 const models = require("./models/associations");
 const User = require("./models/User");
+const { execSync } = require("child_process");
 
 const migrate = async () => {
   try {
@@ -11,7 +12,7 @@ const migrate = async () => {
     console.log("Connection established successfully.");
 
     console.log("Synchronizing database models...");
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log("Database models synchronized.");
 
     let admin = await User.findOne({ where: { nik: "999999" } });
@@ -36,6 +37,12 @@ const migrate = async () => {
     } else {
       console.log("Admin user already exists.");
     }
+
+    console.log("Running manual schema updates...");
+    execSync("node src/migrate_users.js", { stdio: "inherit" });
+    execSync("node src/migrate_corrective_spk.js", { stdio: "inherit" });
+    execSync("node src/migrate_k3_safety.js", { stdio: "inherit" });
+    execSync("node src/migrate_inspection_enums.js", { stdio: "inherit" });
 
     console.log("Bulk migration completed successfully.");
     process.exit(0);
