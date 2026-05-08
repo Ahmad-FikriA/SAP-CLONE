@@ -14,15 +14,15 @@ const migrate = async () => {
     await sequelize.sync({ alter: true });
     console.log("Database models synchronized.");
 
-    let admin = await User.findOne({ where: { nik: "admin" } });
+    let admin = await User.findOne({ where: { nik: "999999" } });
     if (!admin) {
       console.log("Creating default admin user...");
       admin = await User.create({
         id: require("crypto").randomUUID
           ? require("crypto").randomUUID()
           : Math.random().toString(36).substring(7),
-        nik: "admin",
-        password: "admin",
+        nik: "999999",
+        password: "password123",
         name: "Super Admin",
         role: "admin",
         email: "admin@example.com",
