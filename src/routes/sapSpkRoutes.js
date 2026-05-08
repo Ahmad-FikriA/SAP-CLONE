@@ -41,6 +41,14 @@ router.post(
   sapSpkController.uploadExcel
 );
 
+// ── Upload History Excel endpoint (TECO directly to Selesai) ─────────────────
+router.post(
+  "/upload-history",
+  verifyToken,
+  upload.single("excelFile"),
+  sapSpkController.uploadHistoryExcel
+);
+
 // ── Bulk Insert endpoint (Confirms Upload) ───────────────────────────────────
 router.post(
   "/bulk-insert",

@@ -933,6 +933,166 @@ const exportHistory = async (req, res) => {
   }
 };
 
+// 7. Upload Excel History (TECO directly to Selesai)
+const uploadHistoryExcel = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ status: "error", message: "No Excel file uploaded" });
+    }
+
+    const workbook = new exceljs.Workbook();
+    await workbook.xlsx.readFile(req.file.path);
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      return res.status(400).json({ status: "error", message: "Excel file is empty" });
+    }
+
+    let headerRowIndex = 1;
+    let headers = [];
+    worksheet.getRow(headerRowIndex).eachCell((cell, colNumber) => {
+      headers[colNumber] = cell.value ? cell.value.toString().trim() : "";
+    });
+
+    const findCol = (namePatterns) => {
+      for (let i = 1; i < headers.length; i++) {
+        if (!headers[i]) continue;
+        const h = headers[i].toLowerCase();
+        for (const pattern of namePatterns) {
+          if (h.includes(pattern)) return i;
+        }
+      }
+      return null;
+    };
+
+    const colMap = {
+      order_number: findCol(["order"]),
+      description: findCol(["description"]),
+      sys_status: findCol(["sys", "status", "system status"]),
+      cost_center: findCol(["cost center"]),
+      ctrl_key: findCol(["control key", "ctrl key", "ctrlkey"]),
+      confirm_number: findCol(["confirm", "confirmation"]),
+      work_center: findCol(["work center", "workcenter", "oper.work center"]),
+      activity: findCol(["activity"]),
+      short_text: findCol(["short text", "op. short text"]),
+      normal_dur: findCol(["normal dur", "norm dur", "normal duration"]),
+      normal_dur_un: findCol(["duratn un", "dur un", "dur. un", "norm.duratn un", "norm.duratn un."]),
+      dur_plan: findCol(["duration plan", "dur plan", "dur. plan"]),
+      unit_for_work: findCol(["unit for work", "un."]),
+      dur_act: findCol(["duration actual", "dur act", "dur. act"]),
+      posting_date: findCol(["posting date"]),
+      conf_text: findCol(["confirmation text", "conf text", "conf. text"]),
+      reason_of_var: findCol(["reason of var", "reason of variance"]),
+      work_start: findCol(["work start"]),
+      work_finish: findCol(["work finish"]),
+      start_time: findCol(["start time"]),
+      finish_time: findCol(["finish time"]),
+      report_by: findCol(["reported by", "report by", "report. by"]),
+      equipment_name: findCol(["equipment"]),
+      functional_location: findCol(["functional loc", "functional location", "functional loc."]),
+      maint_activ_type: findCol(["maintactivtype", "maint activ type", "maint. activ. type"]),
+      actual_work: findCol(["actual work"]),
+      num_of_work: findCol(["no. of work", "num of work", "no.of work", "number of work", "numofwork"]),
+      location: findCol(["location"]),
+    };
+
+    if (!colMap.order_number) {
+      return res.status(400).json({ status: "error", message: "Cannot find 'Order' column in the Excel file" });
+    }
+
+    const rowsToUpsert = [];
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === headerRowIndex) return;
+
+      const getVal = (key) => {
+        const colIdx = colMap[key];
+        if (!colIdx) return "-";
+        let val = row.getCell(colIdx).value;
+        if (val === null || val === undefined || val === "") return "-";
+        if (typeof val === "object" && val.text) val = val.text;
+        if (val instanceof Date) {
+          return val.toISOString().split("T")[0];
+        }
+        return val.toString().trim() || "-";
+      };
+
+      const orderNum = getVal("order_number");
+      if (!orderNum || orderNum === "-") return;
+      
+      const sysStatus = getVal("sys_status");
+      if (!sysStatus || !sysStatus.includes("TECO")) return;
+
+      rowsToUpsert.push({
+        order_number: orderNum,
+        description: getVal("description"),
+        sys_status: sysStatus,
+        cost_center: getVal("cost_center"),
+        ctrl_key: getVal("ctrl_key"),
+        confirm_number: getVal("confirm_number"),
+        work_center: getVal("work_center"),
+        activity: getVal("activity"),
+        short_text: getVal("short_text"),
+        normal_dur: getVal("normal_dur") !== "-" ? parseFloat(getVal("normal_dur")) : null,
+        normal_dur_un: getVal("normal_dur_un"),
+        dur_plan: getVal("dur_plan") !== "-" ? parseFloat(getVal("dur_plan")) : null,
+        unit_for_work: getVal("unit_for_work"),
+        dur_act: getVal("dur_act") !== "-" ? parseFloat(getVal("dur_act")) : null,
+        posting_date: getVal("posting_date") !== "-" ? getVal("posting_date") : null,
+        conf_text: getVal("conf_text"),
+        reason_of_var: getVal("reason_of_var"),
+        work_start: getVal("work_start") !== "-" ? getVal("work_start") : null,
+        work_finish: getVal("work_finish") !== "-" ? getVal("work_finish") : null,
+        start_time: getVal("start_time") !== "-" ? getVal("start_time") : null,
+        finish_time: getVal("finish_time") !== "-" ? getVal("finish_time") : null,
+        report_by: getVal("report_by"),
+        equipment_name: getVal("equipment_name"),
+        functional_location: getVal("functional_location"),
+        maint_activ_type: getVal("maint_activ_type"),
+        actual_work: getVal("actual_work") !== "-" ? parseFloat(getVal("actual_work")) : null,
+        num_of_work: getVal("num_of_work") !== "-" ? parseInt(getVal("num_of_work")) : null,
+        location: getVal("location"),
+        status: "selesai",
+        job_result_description: "Diimpor langsung dari History Excel",
+        kadis_pusat_approved_by: "Admin",
+        kadis_pelapor_approved_by: "Admin"
+      });
+    });
+
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    if (rowsToUpsert.length === 0) {
+      return res.status(200).json({ status: "success", message: "Tidak ada data SPK dengan status TECO yang ditemukan di dalam Excel." });
+    }
+
+    await SapSpkCorrective.bulkCreate(rowsToUpsert, {
+      updateOnDuplicate: [
+        "description", "sys_status", "cost_center", "ctrl_key", "confirm_number",
+        "work_center", "activity", "short_text", "normal_dur", "normal_dur_un",
+        "dur_plan", "unit_for_work", "dur_act", "posting_date", "conf_text",
+        "reason_of_var", "work_start", "work_finish", "start_time", "finish_time",
+        "report_by", "equipment_name", "functional_location", "maint_activ_type",
+        "actual_work", "num_of_work", "location", "status", "job_result_description",
+        "kadis_pusat_approved_by", "kadis_pelapor_approved_by"
+      ]
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: `Berhasil mengimpor ${rowsToUpsert.length} data history TECO.`,
+      data: rowsToUpsert.length,
+    });
+  } catch (error) {
+    console.error("Error upload history:", error);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
 module.exports = {
   getSapSpkList,
   uploadExcel,
@@ -948,5 +1108,5 @@ module.exports = {
   deleteSapSpk,
   deleteAllSapSpk,
   exportHistory,
+  uploadHistoryExcel,
 };
-

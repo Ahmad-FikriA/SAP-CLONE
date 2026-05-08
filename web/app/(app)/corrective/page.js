@@ -84,6 +84,7 @@ export default function CorrectivePage() {
     deleteAllRequestsAction,
     deleteSpkAction,
     deleteAllSpksAction,
+    uploadHistoryExcelAction,
   } = data;
 
   // Kadis non-PP: only see their own SPKs based on notification.kadisPelaporId
@@ -131,6 +132,7 @@ export default function CorrectivePage() {
   const [skippedData, setSkippedData] = useState(null);
   const [savingExcel, setSavingExcel] = useState(false);
   const fileInputRef = useRef(null);
+  const fileInputHistoryRef = useRef(null);
 
   // Approve SAP dialog
   const [approveSapState, setApproveSapState] = useState(null);
@@ -177,6 +179,20 @@ export default function CorrectivePage() {
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleHistoryFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await uploadHistoryExcelAction(file);
+    } catch (err) {
+      toast.error(err.message || "Terjadi kesalahan saat upload history");
+    } finally {
+      setUploading(false);
+      if (fileInputHistoryRef.current) fileInputHistoryRef.current.value = "";
     }
   }
 
@@ -490,17 +506,37 @@ export default function CorrectivePage() {
             </>
           )}
           {tab === "history" && isPlanner && (
-            <Button
-              variant="outline"
-              className="shadow-md bg-white hover:bg-green-50 border-green-200 text-green-700"
-              onClick={() => {
-                const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
-                const base = process.env.NEXT_PUBLIC_API_URL + "/api";
-                window.open(`${base}/corrective/sap-spk/export-history?token=${token}`, "_blank");
-              }}
-            >
-              <Download size={16} className="mr-2" /> Export Excel
-            </Button>
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                ref={fileInputHistoryRef}
+                className="hidden"
+                accept=".xlsx, .xls"
+                onChange={handleHistoryFileUpload}
+              />
+              {user?.role === "admin" && (
+                <Button
+                  variant="outline"
+                  className="shadow-md bg-white hover:bg-slate-50 border-slate-200"
+                  onClick={() => fileInputHistoryRef.current?.click()}
+                  disabled={uploading}
+                >
+                  <Upload size={16} className="mr-2" />
+                  {uploading ? "Mengunggah..." : "Import History TECO"}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="shadow-md bg-white hover:bg-green-50 border-green-200 text-green-700"
+                onClick={() => {
+                  const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+                  const base = process.env.NEXT_PUBLIC_API_URL + "/api";
+                  window.open(`${base}/corrective/sap-spk/export-history?token=${token}`, "_blank");
+                }}
+              >
+                <Download size={16} className="mr-2" /> Export Excel
+              </Button>
+            </div>
           )}
         </div>
       </div>

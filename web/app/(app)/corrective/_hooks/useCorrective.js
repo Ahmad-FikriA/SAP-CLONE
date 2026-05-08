@@ -172,6 +172,18 @@ export function useCorrective() {
     await loadAll();
   }
 
+  async function uploadHistoryExcelAction(file) {
+    const formData = new FormData();
+    formData.append("excelFile", file);
+    const resData = await apiUpload("/corrective/sap-spk/upload-history", formData);
+    if (resData.status === "success") {
+      toast.success(resData.message);
+      await loadAll();
+      return resData.data;
+    }
+    throw new Error(resData.message || "Gagal mengupload file history");
+  }
+
   return {
     requests, spks, history, loading, filteredRequests,
     equipment, functionalLocations,
@@ -183,6 +195,6 @@ export function useCorrective() {
     approveKadisPpAction, rejectKadisPpAction,
     approveKadisPelaporAction, rejectKadisPelaporAction,
     deleteRequestAction, deleteAllRequestsAction,
-    deleteSpkAction, deleteAllSpksAction,
+    deleteSpkAction, deleteAllSpksAction, uploadHistoryExcelAction,
   };
 }
