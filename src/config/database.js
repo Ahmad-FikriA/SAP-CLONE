@@ -14,8 +14,7 @@ const sequelize = new Sequelize(process.env.URI, {
   dialectOptions: {
     options: {
       encrypt: false,
-      trustServerCertificate: true,
-      instanceName: process.env.DB_INSTANCE || 'SQLEXPRESS',
+      trustServerCertificate: true
     }
   }
 });

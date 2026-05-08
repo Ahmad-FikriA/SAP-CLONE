@@ -13,7 +13,7 @@ router.get('/', verifyToken, usersController.getAll);
 router.get('/stats', verifyToken, usersController.getStats);
 
 
-router.post('/bulk-delete', verifyToken, usersController.bulkDelete);
+
 
 
 router.post('/', verifyToken, usersController.create);

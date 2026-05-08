@@ -55,19 +55,7 @@ const update = async (req, res) => {
 };
 
 
-const bulkDelete = async (req, res) => {
-  try {
-    const { ids } = req.body;
-    if (!Array.isArray(ids) || !ids.length) {
-      return res.status(400).json({ error: 'ids array required' });
-    }
-    const count = await User.destroy({ where: { id: { [Op.in]: ids } } });
-    res.json({ message: `Deleted ${count} user(s)` });
-  } catch (err) {
-    console.error('[Users] bulkDelete error:', err.message);
-    res.status(500).json({ error: 'Gagal menghapus users' });
-  }
-};
+
 
 const remove = async (req, res) => {
   try {
@@ -133,5 +121,5 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, update, bulkDelete, remove, getStats };
+module.exports = { getAll, create, update, remove, getStats };
 
