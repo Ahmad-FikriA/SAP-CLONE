@@ -12,7 +12,6 @@ const K3Report = sequelize.define('K3Report', {
   },
   reportNumber: {
     type: DataTypes.STRING(30),
-    unique: true,
     allowNull: false,
     field: 'report_number',
   },
@@ -193,6 +192,9 @@ const K3Report = sequelize.define('K3Report', {
   tableName: 'k3_reports',
   underscored: true,
   timestamps: true,
+  indexes: [
+    { unique: true, fields: ['report_number'] }
+  ]
 });
 
 module.exports = K3Report;

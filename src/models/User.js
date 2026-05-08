@@ -7,7 +7,7 @@ const User = sequelize.define(
   "User",
   {
     id: { type: DataTypes.STRING(20), primaryKey: true },
-    nik: { type: DataTypes.STRING(50), allowNull: false, unique: true },
+    nik: { type: DataTypes.STRING(50), allowNull: false },
     password: { type: DataTypes.STRING(255), allowNull: false },
     name: { type: DataTypes.STRING(100), allowNull: false },
     role: {
@@ -46,6 +46,7 @@ const User = sequelize.define(
     tableName: "users",
     underscored: true,
     indexes: [
+      { unique: true, fields: ["nik"] },
       { fields: ["role"] },
       { fields: ["dinas"] },
       { fields: ["group"] },
