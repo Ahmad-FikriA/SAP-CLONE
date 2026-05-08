@@ -304,6 +304,10 @@ app.put(
   settingsController.updateRoleTemplates,
 );
 
+app.get("/", (req, res) => {
+  res.send("KTI MANTIS API is running");
+});
+
 app.use(errorHandler);
 
 const sequelize = require("./config/database");
