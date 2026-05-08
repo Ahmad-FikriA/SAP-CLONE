@@ -220,26 +220,26 @@ async function ensureSupervisiJobSchema() {
     });
   }
 
-  await queryInterface.changeColumn(tableName, "nilaiPekerjaan", {
-    type: DataTypes.DECIMAL(20, 2),
-    allowNull: true,
-    comment: "Nilai kontrak pekerjaan (Rupiah)",
-  });
-  await queryInterface.changeColumn(tableName, "pelaksana", {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    comment: "Nama vendor / kontraktor pelaksana pekerjaan",
-  });
-  await queryInterface.changeColumn(tableName, "waktuMulai", {
-    type: DataTypes.DATEONLY,
-    allowNull: true,
-    comment: "Tanggal mulai pekerjaan",
-  });
-  await queryInterface.changeColumn(tableName, "waktuBerakhir", {
-    type: DataTypes.DATEONLY,
-    allowNull: true,
-    comment: "Tanggal berakhir pekerjaan",
-  });
+  try {
+    await queryInterface.changeColumn(tableName, "nilaiPekerjaan", {
+      type: DataTypes.DECIMAL(20, 2),
+      allowNull: true,
+    });
+    await queryInterface.changeColumn(tableName, "pelaksana", {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    });
+    await queryInterface.changeColumn(tableName, "waktuMulai", {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    });
+    await queryInterface.changeColumn(tableName, "waktuBerakhir", {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    });
+  } catch (err) {
+    console.warn("[SupervisiJob] changeColumn warning:", err.message);
+  }
 }
 
 module.exports = SupervisiJob;
