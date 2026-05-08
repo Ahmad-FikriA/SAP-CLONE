@@ -19,9 +19,7 @@ const migrate = async () => {
     if (!admin) {
       console.log("Creating default admin user...");
       admin = await User.create({
-        id: require("crypto").randomUUID
-          ? require("crypto").randomUUID()
-          : Math.random().toString(36).substring(7),
+        id: "ADMIN-" + Date.now().toString().slice(-10),
         nik: "999999",
         password: "password123",
         name: "Super Admin",
