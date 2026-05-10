@@ -1,14 +1,9 @@
 "use strict";
 
-const path = require("path");
-const fs = require("fs");
-const multer = require("multer");
 const { Op } = require("sequelize");
 const SupervisiJob = require("../../models/SupervisiJob");
 const SupervisiVisit = require("../../models/SupervisiVisit");
 const SupervisiAmend = require("../../models/SupervisiAmend");
-const User = require("../../models/User");
-const NotificationService = require("../../services/notificationService");
 const {
   getSupervisiAccess,
   hasSupervisiAccess,
@@ -19,298 +14,77 @@ const {
   canAccessSupervisiJob,
   forbiddenMessage,
 } = require("./supervisiAccess");
+const {
+  addCurrentUserNameFallback,
+  addDaysDateOnly,
+  buildNikNameMap,
+  buildRadiusExemptionPatch,
+  calculateDistanceOutsideRadius,
+  evaluateSupervisiGeofence,
+  enrichJobWithNames,
+  getAppDateString,
+  hasFiniteCoordinates,
+  hasOwn,
+  isRadiusExemptionActive,
+  maxDateOnly,
+  normalizeDateOnly,
+  normalizeNullableString,
+  parseDraftFlag,
+  parseLocations,
+  parseNullableDate,
+  parseNullableFloat,
+  parseStringArray,
+} = require("./supervisiHelpers");
+const {
+  filesToSupervisiPaths,
+  uploadJobAmendDocuments,
+  uploadVisitMedia,
+} = require("./supervisiUpload");
+const {
+  notifyExecutorAssignment,
+  notifySupervisorVisitUpdate,
+} = require("./supervisiNotifications");
 
-// ── Haversine distance (metres) ───────────────────────────────────────────────
-function haversineMetres(lat1, lon1, lat2, lon2) {
-  const R = 6371000; // Earth radius in metres
-  const toRad = (v) => (v * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+const NILAI_PEKERJAAN_MAX_INTEGER_DIGITS = 19;
 
-const GEOFENCE_RADIUS_METRES = 200;
-const APP_TIME_ZONE = "Asia/Jakarta";
-const APP_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  timeZone: APP_TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
+function parseNilaiPekerjaan(value) {
+  if (value === undefined) return { value: undefined };
+  if (value === null || value === "") return { value: null };
 
-function getAppDateString(date = new Date()) {
-  const parts = APP_DATE_FORMATTER.formatToParts(date).reduce((acc, part) => {
-    if (part.type !== "literal") acc[part.type] = part.value;
-    return acc;
-  }, {});
-  return `${parts.year}-${parts.month}-${parts.day}`;
-}
+  const rawText = String(value).trim().replace(/\s/g, "").replace(/^rp/i, "");
+  let numericText = rawText;
 
-function normalizeDateOnly(value) {
-  if (!value) return null;
-  if (value instanceof Date) return value.toISOString().split("T")[0];
-  return String(value).slice(0, 10);
-}
-
-function addDaysDateOnly(dateString, days) {
-  const [year, month, day] = String(dateString).split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().split("T")[0];
-}
-
-function maxDateOnly(values) {
-  const sorted = values.map(normalizeDateOnly).filter(Boolean).sort();
-  return sorted.length > 0 ? sorted[sorted.length - 1] : null;
-}
-
-// ── File upload config ────────────────────────────────────────────────────────
-const uploadDir = path.join(__dirname, "../../../uploads/supervisi");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `sv_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`);
-  },
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB max per file
-});
-
-// Export multer middleware untuk dipakai di routes
-const uploadVisitMedia = upload.fields([
-  { name: "photos", maxCount: 20 },
-  { name: "documents", maxCount: 5 }
-]);
-const uploadJobAmendDocuments = upload.fields([
-  { name: "amendDocuments", maxCount: 10 },
-]);
-
-function hasOwn(obj, key) {
-  return Object.prototype.hasOwnProperty.call(obj, key);
-}
-
-function normalizeNullableString(value) {
-  if (value === undefined || value === null) return null;
-  const text = String(value).trim();
-  return text.length > 0 ? text : null;
-}
-
-function parseNullableFloat(value) {
-  if (value === undefined) return undefined;
-  if (value === null || value === "") return null;
-  const parsed = parseFloat(value);
-  return Number.isNaN(parsed) ? null : parsed;
-}
-
-function parseNullableDate(value) {
-  if (value === undefined) return undefined;
-  if (value === null || value === "") return null;
-  return String(value);
-}
-
-function parseStringArray(value) {
-  if (value === undefined) return undefined;
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => normalizeNullableString(item))
-      .filter(Boolean);
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(rawText)) {
+    numericText = rawText.replace(/\./g, "").replace(",", ".");
+  } else if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(rawText)) {
+    numericText = rawText.replace(/,/g, "");
+  } else {
+    numericText = rawText.replace(/,/g, "");
   }
-  if (value === null || value === "") return [];
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        return parsed
-          .map((item) => normalizeNullableString(item))
-          .filter(Boolean);
-      }
-    } catch (_err) {
-      return [];
+
+  if (/e/i.test(numericText)) {
+    const parsed = Number(numericText);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return { error: "Nilai pekerjaan harus berupa angka positif." };
     }
-  }
-  return [];
-}
-
-const SUPERVISI_MONITOR_NIK = "10000191";
-
-function normalizeName(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-// ── Name lookup helpers ───────────────────────────────────────────────────────
-
-/**
- * Buat map { nik → name } dari sekumpulan NIK unik.
- * Satu query ke tabel users untuk semua NIK sekaligus.
- */
-async function buildNikNameMap(niks) {
-  if (!niks || niks.length === 0) return {};
-  const uniqueNiks = [...new Set(niks.filter(Boolean))];
-  if (uniqueNiks.length === 0) return {};
-  try {
-    const users = await User.findAll({
-      where: { nik: { [Op.in]: uniqueNiks } },
-      attributes: ["nik", "name"],
-    });
-    const map = {};
-    for (const u of users) {
-      if (u.nik) map[u.nik] = u.name || null;
-    }
-    return map;
-  } catch (_err) {
-    return {};
-  }
-}
-
-/**
- * Tambahkan creatorName ke job plain object, dan submitterName ke setiap visit.
- */
-function enrichJobWithNames(jobData, nikNameMap) {
-  const obj = typeof jobData.toJSON === "function" ? jobData.toJSON() : { ...jobData };
-  // Inject nama pembuat job
-  obj.creatorName = nikNameMap[obj.createdBy] || null;
-  // Inject nama pengirim visit
-  if (Array.isArray(obj.visits)) {
-    obj.visits = obj.visits.map((v) => {
-      const visit = typeof v.toJSON === "function" ? v.toJSON() : { ...v };
-      visit.submitterName = nikNameMap[visit.submittedBy] || null;
-      return visit;
-    });
-  }
-  return obj;
-}
-
-function addCurrentUserNameFallback(nikNameMap, user) {
-  const nik = normalizeNullableString(user && user.nik);
-  const name = normalizeNullableString(user && user.name);
-  if (nik && name && !nikNameMap[nik]) {
-    nikNameMap[nik] = name;
-  }
-}
-
-async function findExecutorRecipientIds(picSupervisi) {
-  const targetName = normalizeNullableString(picSupervisi);
-  if (!targetName) return [];
-
-  // Prefer exact name match first.
-  const exactUsers = await User.findAll({
-    where: {
-      name: targetName,
-      [Op.or]: [
-        { group: { [Op.like]: "%supervisi%" } },
-        { group: { [Op.like]: "%inspeksi%" } },
-      ],
-    },
-    attributes: ["id"],
-  });
-  if (exactUsers.length > 0) {
-    return [...new Set(exactUsers.map((user) => user.id))];
+    numericText = parsed.toFixed(2);
   }
 
-  // Fallback to case-insensitive matching for legacy name casing.
-  const fallbackUsers = await User.findAll({
-    where: {
-      [Op.or]: [
-        { group: { [Op.like]: "%supervisi%" } },
-        { group: { [Op.like]: "%inspeksi%" } },
-      ],
-    },
-    attributes: ["id", "name"],
-  });
-  return [
-    ...new Set(
-      fallbackUsers
-        .filter((user) => normalizeName(user.name) === normalizeName(targetName))
-        .map((user) => user.id),
-    ),
-  ];
-}
-
-async function findSupervisorRecipientIds(job) {
-  const targetNiks = [
-    normalizeNullableString(job && job.createdBy),
-    SUPERVISI_MONITOR_NIK,
-  ].filter(Boolean);
-  if (targetNiks.length === 0) return [];
-
-  const users = await User.findAll({
-    where: { nik: { [Op.in]: targetNiks } },
-    attributes: ["id"],
-  });
-  return [...new Set(users.map((user) => user.id))];
-}
-
-async function notifyExecutorAssignment(job, { updated = false } = {}) {
-  try {
-    const recipientIds = await findExecutorRecipientIds(job.picSupervisi);
-    if (recipientIds.length === 0) return;
-
-    const title = updated ? "Jadwal Supervisi Diperbarui" : "Jadwal Supervisi Baru";
-    const body = updated
-      ? `Jadwal ${job.nomorJo || "-"} telah diperbarui dan ditugaskan ke Anda.`
-      : `Anda mendapat jadwal supervisi ${job.nomorJo || "-"} (${job.namaKerja || "-"}).`;
-
-    await NotificationService.notify({
-      module: "supervisi",
-      type: updated ? "job_updated" : "job_assigned",
-      title,
-      body,
-      data: {
-        jobId: String(job.id || ""),
-        nomorJo: String(job.nomorJo || ""),
-        deepLink: "supervisi/dashboard",
-      },
-      recipientIds,
-    });
-  } catch (err) {
-    console.error("[Supervisi] Failed to notify executor assignment:", err.message);
+  if (!/^\d+(\.\d+)?$/.test(numericText)) {
+    return { error: "Nilai pekerjaan harus berupa angka positif." };
   }
-}
 
-async function notifySupervisorVisitUpdate({ job, visitStatus, visitDate, executorName, isUndo = false }) {
-  try {
-    const recipientIds = await findSupervisorRecipientIds(job);
-    if (recipientIds.length === 0) return;
+  const [integerPart, fractionPart = ""] = numericText.split(".");
+  const normalizedInteger = integerPart.replace(/^0+(?=\d)/, "") || "0";
 
-    const isHadir = visitStatus === "hadir";
-    
-    let type, title, body;
-    if (isUndo) {
-      type = "visit_undone";
-      title = "Laporan Ditarik (Draft)";
-      body = `${executorName} membatalkan submit laporan untuk ${job.nomorJo || "-"} dan mengembalikannya ke draft.`;
-    } else {
-      type = isHadir ? "visit_submitted" : "visit_absent";
-      title = isHadir ? "Laporan Kunjungan Masuk" : "Ketidakhadiran Supervisi";
-      body = isHadir
-        ? `${executorName} mengirim laporan kunjungan untuk ${job.nomorJo || "-"}.`
-        : `${executorName} melaporkan tidak hadir untuk ${job.nomorJo || "-"}.`;
-    }
-
-    await NotificationService.notify({
-      module: "supervisi",
-      type,
-      title,
-      body,
-      data: {
-        jobId: String(job.id || ""),
-        nomorJo: String(job.nomorJo || ""),
-        visitDate: String(visitDate || ""),
-        status: String(visitStatus || ""),
-        deepLink: "supervisi/dashboard",
-      },
-      recipientIds,
-    });
-  } catch (err) {
-    console.error("[Supervisi] Failed to notify visit update:", err.message);
+  if (normalizedInteger.length > NILAI_PEKERJAAN_MAX_INTEGER_DIGITS) {
+    return {
+      error: `Nilai pekerjaan maksimal ${NILAI_PEKERJAAN_MAX_INTEGER_DIGITS} digit.`,
+    };
   }
+
+  const normalizedFraction = fractionPart.slice(0, 2).padEnd(2, "0");
+  return { value: `${normalizedInteger}.${normalizedFraction}` };
 }
 
 /**
@@ -503,10 +277,26 @@ async function createJob(req, res) {
       });
     }
 
+    const parsedNilaiPekerjaan = parseNilaiPekerjaan(nilaiPekerjaan);
+    if (parsedNilaiPekerjaan.error) {
+      return res.status(400).json({
+        success: false,
+        message: parsedNilaiPekerjaan.error,
+      });
+    }
+
+    const radiusExemptionPatch = buildRadiusExemptionPatch(req.body, null, req.user);
+    if (radiusExemptionPatch.error) {
+      return res.status(400).json({
+        success: false,
+        message: radiusExemptionPatch.error,
+      });
+    }
+
     const job = await SupervisiJob.create({
       namaKerja: normalizedNamaKerja,
       nomorJo: normalizedNomorJo,
-      nilaiPekerjaan: nilaiPekerjaan ? parseFloat(nilaiPekerjaan) : null,
+      nilaiPekerjaan: parsedNilaiPekerjaan.value,
       pelaksana: pelaksana || null,
       waktuMulai: waktuMulai || null,
       waktuBerakhir: waktuBerakhir || null,
@@ -518,28 +308,11 @@ async function createJob(req, res) {
       namaArea: normalizeNullableString(namaArea),
       status: isDraft ? "draft" : "active",
       createdBy: req.user.nik,
+      ...radiusExemptionPatch.patch,
     });
 
-    // Proses multi lokasi (Maks 300m)
-    let parsedLocations = [];
-    if (req.body.locations) {
-      if (Array.isArray(req.body.locations)) {
-        parsedLocations = req.body.locations;
-      } else if (typeof req.body.locations === 'string') {
-        try {
-          parsedLocations = JSON.parse(req.body.locations);
-        } catch(e) {}
-      }
-    }
-    
-    if (Array.isArray(parsedLocations) && parsedLocations.length > 0) {
-      const formattedLocations = parsedLocations.map(loc => ({
-        id: loc.id || Math.random().toString(36).substring(2, 10),
-        namaArea: String(loc.namaArea || "").trim(),
-        latitude: parseFloat(loc.latitude),
-        longitude: parseFloat(loc.longitude),
-        radius: Math.min(parseFloat(loc.radius || 100) || 100, 300.0)
-      })).filter(loc => !isNaN(loc.latitude) && !isNaN(loc.longitude));
+    const formattedLocations = parseLocations(req.body.locations);
+    if (formattedLocations.length > 0) {
       await job.update({ locations: formattedLocations });
     }
 
@@ -576,7 +349,14 @@ async function updateJob(req, res) {
       nextData.nomorJo = String(req.body.nomorJo || "").trim();
     }
     if (hasOwn(req.body, "nilaiPekerjaan")) {
-      nextData.nilaiPekerjaan = parseNullableFloat(req.body.nilaiPekerjaan);
+      const parsedNilaiPekerjaan = parseNilaiPekerjaan(req.body.nilaiPekerjaan);
+      if (parsedNilaiPekerjaan.error) {
+        return res.status(400).json({
+          success: false,
+          message: parsedNilaiPekerjaan.error,
+        });
+      }
+      nextData.nilaiPekerjaan = parsedNilaiPekerjaan.value;
     }
     if (hasOwn(req.body, "pelaksana")) {
       nextData.pelaksana = normalizeNullableString(req.body.pelaksana);
@@ -641,24 +421,25 @@ async function updateJob(req, res) {
       nextData.amendDocuments = parseStringArray(req.body.amendDocuments);
     }
     if (hasOwn(req.body, "locations")) {
-      if (Array.isArray(req.body.locations)) {
-        nextData.locations = req.body.locations.map(loc => ({
-          id: String(loc.id || Math.random().toString(36).substring(2, 10)),
-          namaArea: String(loc.namaArea || "").trim(),
-          latitude: parseFloat(loc.latitude),
-          longitude: parseFloat(loc.longitude),
-          radius: Math.min(parseFloat(loc.radius || 100) || 100, 300.0)
-        })).filter(loc => !isNaN(loc.latitude) && !isNaN(loc.longitude));
-      } else {
-        nextData.locations = [];
-      }
+      nextData.locations = parseLocations(req.body.locations);
     }
     if (hasOwn(req.body, "existingAmendDocuments")) {
       nextData.amendDocuments = parseStringArray(req.body.existingAmendDocuments);
     }
 
-    const uploadedAmendDocs = ((req.files && req.files.amendDocuments) || []).map(
-      (file) => `/uploads/supervisi/${file.filename}`,
+    const radiusExemptionPatch = buildRadiusExemptionPatch(req.body, job, req.user);
+    if (radiusExemptionPatch.error) {
+      return res.status(400).json({
+        success: false,
+        message: radiusExemptionPatch.error,
+      });
+    }
+    if (radiusExemptionPatch.hasPayload) {
+      Object.assign(nextData, radiusExemptionPatch.patch);
+    }
+
+    const uploadedAmendDocs = filesToSupervisiPaths(
+      (req.files && req.files.amendDocuments) || [],
     );
     if (uploadedAmendDocs.length > 0) {
       const existingDocs = nextData.amendDocuments ?? (job.amendDocuments || []);
@@ -762,7 +543,8 @@ async function updateJob(req, res) {
         hasOwn(req.body, "waktuBerakhir") ||
         hasOwn(req.body, "namaKerja") ||
         hasOwn(req.body, "nomorJo") ||
-        hasOwn(req.body, "locations")
+        hasOwn(req.body, "locations") ||
+        radiusExemptionPatch.hasPayload
       );
 
     if (shouldNotifyExecutor) {
@@ -847,7 +629,7 @@ async function listVisits(req, res) {
 
 // POST /api/inspection/supervisi/visits
 // Multipart form: jobId, status, keterangan/alasanTidakHadir,
-//                 visitLatitude, visitLongitude + photos[]
+//                 optional visitLatitude/visitLongitude + photos[]
 // NOTE: visitDate is ALWAYS derived from the server clock — the client value is
 //       intentionally ignored to prevent device date/time manipulation.
 async function submitVisit(req, res) {
@@ -865,13 +647,8 @@ async function submitVisit(req, res) {
 
     // Tentukan apakah submission ini adalah draft atau final.
     // Baca dari query param ATAU body — query param lebih andal untuk multipart.
-    const parseDraft = (val) => {
-      if (val === true || val === 1) return true;
-      if (!val) return false;
-      const str = Array.isArray(val) ? val[0] : String(val);
-      return str.trim() === "true" || str.trim() === "1";
-    };
-    const isDraftBool = parseDraft(req.query.isDraft) || parseDraft(req.body.isDraft);
+    const isDraftBool =
+      parseDraftFlag(req.query.isDraft) || parseDraftFlag(req.body.isDraft);
 
     // Use server time in Asia/Jakarta; never trust the client's date.
     const visitDate = getAppDateString();
@@ -907,40 +684,71 @@ async function submitVisit(req, res) {
     let jarakDariPusat = null;
     const vLat = parseNullableFloat(visitLatitude);
     const vLon = parseNullableFloat(visitLongitude);
+    const hasVisitCoordinates = hasFiniteCoordinates(vLat, vLon);
     const normalizedLocationId = locationId ? String(locationId).trim() : null;
+    const queryWhere = { jobId: parseInt(jobId), visitDate };
+    if (normalizedLocationId) {
+      queryWhere.locationId = normalizedLocationId;
+    } else {
+      queryWhere.locationId = null;
+    }
+    const existingVisit = await SupervisiVisit.findOne({ where: queryWhere });
 
     // ── Geofence calculation ─────────────────────────────────────────────────
     if (status === "hadir") {
-      // Saat final submit, GPS wajib ada. Saat draft, GPS opsional.
-      if (!isDraftBool && (vLat === null || vLon === null || isNaN(vLat) || isNaN(vLon))) {
-        return res.status(400).json({
-          success: false,
-          message: "Koordinat GPS wajib dikirim saat hadir. Pastikan lokasi aktif.",
-        });
-      }
+      const existingLat = parseNullableFloat(existingVisit && existingVisit.visitLatitude);
+      const existingLon = parseNullableFloat(existingVisit && existingVisit.visitLongitude);
+      const effectiveLat = hasVisitCoordinates ? vLat : existingLat;
+      const effectiveLon = hasVisitCoordinates ? vLon : existingLon;
+      const exemptionActive = isRadiusExemptionActive(job, visitDate);
 
-      // Hitung jarak dari pusat geofence jika koordinat tersedia
-      if (vLat !== null && vLon !== null && !isNaN(vLat) && !isNaN(vLon)) {
-        let targetLocation = null;
-        if (job.locations && Array.isArray(job.locations)) {
-          targetLocation = job.locations.find(loc => String(loc.id) === normalizedLocationId);
+      if (!exemptionActive && !isDraftBool) {
+        const geofence = evaluateSupervisiGeofence(
+          job,
+          normalizedLocationId,
+          vLat,
+          vLon,
+        );
+
+        if (geofence.status === "missing_visit") {
+          return res.status(400).json({
+            success: false,
+            message: "GPS submit wajib dikirim untuk laporan hadir supervisi.",
+          });
         }
-        const tLat = targetLocation ? parseFloat(targetLocation.latitude) : parseFloat(job.latitude);
-        const tLon = targetLocation ? parseFloat(targetLocation.longitude) : parseFloat(job.longitude);
-        const tRad = targetLocation ? parseFloat(targetLocation.radius) : parseFloat(job.radius || 100);
-        if (!isNaN(tLat) && !isNaN(tLon)) {
-          const dist = haversineMetres(tLat, tLon, vLat, vLon);
-          jarakDariPusat = dist > tRad ? Math.round(dist - tRad) : 0;
+
+        if (geofence.status === "missing_target") {
+          return res.status(400).json({
+            success: false,
+            message: "Titik lokasi/radius supervisi belum valid. Hubungi planner.",
+          });
         }
+
+        jarakDariPusat = geofence.outsideMeters;
+        if (geofence.status === "outside") {
+          return res.status(422).json({
+            success: false,
+            message: `Submit ditolak karena posisi berada ${geofence.outsideMeters} meter di luar radius ${Math.round(geofence.radius)} meter.`,
+            data: {
+              distanceMeters: geofence.distanceMeters,
+              outsideMeters: geofence.outsideMeters,
+              radius: geofence.radius,
+            },
+          });
+        }
+      } else if (hasFiniteCoordinates(effectiveLat, effectiveLon)) {
+        jarakDariPusat = calculateDistanceOutsideRadius(
+          job,
+          normalizedLocationId,
+          effectiveLat,
+          effectiveLon,
+        );
       }
     }
 
-    // Kumpulkan paths foto dan dokumen yang diupload
-    const photoPaths = ((req.files && req.files.photos) || []).map(
-      (f) => `/uploads/supervisi/${f.filename}`
-    );
-    const documentPaths = ((req.files && req.files.documents) || []).map(
-      (f) => `/uploads/supervisi/${f.filename}`
+    const photoPaths = filesToSupervisiPaths((req.files && req.files.photos) || []);
+    const documentPaths = filesToSupervisiPaths(
+      (req.files && req.files.documents) || [],
     );
 
     // existingPhotos/existingDocuments: URL foto/dokumen yang MASIH ada di draft
@@ -954,14 +762,6 @@ async function submitVisit(req, res) {
     // Konversi draft kedaluwarsa milik job ini sebelum upsert
     await convertStaleDrafts(parseInt(jobId));
 
-    // Upsert — jika sudah ada visit untuk hari ini dan lokasi ini, update
-    const queryWhere = { jobId: parseInt(jobId), visitDate };
-    if (normalizedLocationId) {
-      queryWhere.locationId = normalizedLocationId;
-    } else {
-      queryWhere.locationId = null;
-    }
-
     const [visit, created] = await SupervisiVisit.findOrCreate({
       where: queryWhere,
       defaults: {
@@ -973,8 +773,8 @@ async function submitVisit(req, res) {
         submittedBy: req.user.nik,
         submittedAt: new Date(),
         isPelanggaran: !isDraftBool && status === "tidak_hadir",
-        visitLatitude: vLat,
-        visitLongitude: vLon,
+        visitLatitude: hasVisitCoordinates ? vLat : null,
+        visitLongitude: hasVisitCoordinates ? vLon : null,
         locationId: normalizedLocationId,
         jarakDariPusat: jarakDariPusat,
         isDraft: isDraftBool,
@@ -1000,8 +800,8 @@ async function submitVisit(req, res) {
         submittedBy: req.user.nik,
         submittedAt: new Date(),
         isPelanggaran: !isDraftBool && status === "tidak_hadir",
-        visitLatitude: vLat !== null ? vLat : visit.visitLatitude,
-        visitLongitude: vLon !== null ? vLon : visit.visitLongitude,
+        visitLatitude: hasVisitCoordinates ? vLat : visit.visitLatitude,
+        visitLongitude: hasVisitCoordinates ? vLon : visit.visitLongitude,
         locationId: normalizedLocationId,
         jarakDariPusat: jarakDariPusat !== null ? jarakDariPusat : visit.jarakDariPusat,
         isDraft: isDraftBool,

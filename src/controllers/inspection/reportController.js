@@ -106,6 +106,17 @@ function canViewAllReports(user) {
   );
 }
 
+function canReviewReports(user) {
+  const profile = buildAccessProfile(user || {});
+  const appRole = profile?.appRole;
+  const flags = profile?.flags || {};
+
+  return (
+    appRole === "kadis" ||
+    Boolean(flags.isInspectionApprover || flags.isInspectionPlanner)
+  );
+}
+
 function normalizeReportStatus(status, fallback = "draft") {
   if (status === "submitted") return "submitted";
   if (status === "draft") return "draft";
@@ -522,6 +533,14 @@ async function approveReport(req, res) {
   const t = await sequelize.transaction();
 
   try {
+    if (!canReviewReports(req.user)) {
+      await t.rollback();
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses untuk meninjau laporan inspeksi.",
+      });
+    }
+
     const report = await InspectionReport.findByPk(req.params.id, {
       include: [{ association: "schedule" }],
       transaction: t,
@@ -621,6 +640,14 @@ async function rejectReport(req, res) {
   const t = await sequelize.transaction();
 
   try {
+    if (!canReviewReports(req.user)) {
+      await t.rollback();
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses untuk meninjau laporan inspeksi.",
+      });
+    }
+
     const report = await InspectionReport.findByPk(req.params.id, {
       include: [{ association: "schedule" }],
       transaction: t,

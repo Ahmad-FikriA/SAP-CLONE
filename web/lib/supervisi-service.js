@@ -57,6 +57,11 @@ export async function updateSupervisiJobLocation(id, payload) {
   return data?.data ?? data;
 }
 
+export async function updateSupervisiRadiusExemption(id, payload) {
+  const data = await apiPut(`/inspection/supervisi/jobs/${id}`, payload);
+  return data?.data ?? data;
+}
+
 
 // ─── Status meta ─────────────────────────────────────────────────────────────
 

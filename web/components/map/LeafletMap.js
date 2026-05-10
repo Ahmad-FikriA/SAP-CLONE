@@ -34,6 +34,7 @@ export default function LeafletMap({
   useEffect(() => {
     let map;
     let L;
+    let cancelled = false;
 
     async function init() {
       // Dynamic import so Leaflet only runs on client
@@ -41,7 +42,7 @@ export default function LeafletMap({
       await import('leaflet/dist/leaflet.css');
       fixLeafletIcons(L);
 
-      if (mapRef.current || !containerRef.current) return;
+      if (cancelled || mapRef.current || !containerRef.current) return;
 
       map = L.map(containerRef.current).setView(center, zoom);
       mapRef.current = map;
@@ -77,9 +78,16 @@ export default function LeafletMap({
     init();
 
     return () => {
+      cancelled = true;
       if (mapRef.current) {
+        const currentMap = mapRef.current;
         if (onMapUnmount) onMapUnmount();
-        mapRef.current.remove();
+        currentMap.stop();
+        currentMap.scrollWheelZoom?.disable();
+        currentMap.doubleClickZoom?.disable();
+        currentMap.dragging?.disable();
+        currentMap.off();
+        currentMap.remove();
         mapRef.current = null;
       }
     };

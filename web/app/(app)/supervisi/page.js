@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import {
   MapPin, Loader2, AlertCircle, RefreshCw, Search, X, XCircle, CalendarDays,
-  Briefcase, CheckCircle2, FileEdit, FileText, Banknote, Trash2, Eye, Ban
+  Briefcase, CheckCircle2, FileEdit, FileText, Banknote, Trash2, Eye, Ban,
+  CalendarOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -14,6 +15,7 @@ import {
   cancelSupervisiJob,
   deleteSupervisiJob,
   updateSupervisiJobLocation,
+  updateSupervisiRadiusExemption,
   SUPERVISI_STATUS_META,
 } from '@/lib/supervisi-service';
 import { SupervisiJobPanel } from '@/components/supervisi/SupervisiJobPanel';
@@ -61,6 +63,20 @@ function normalizeRadius(value) {
   const parsed = toFiniteNumber(value);
   if (parsed == null) return 100;
   return Math.min(Math.max(parsed, 1), 300);
+}
+
+function normalizeLatLngForSave(latLng) {
+  return {
+    lat: Number(latLng.lat.toFixed(7)),
+    lng: Number(latLng.lng.toFixed(7)),
+  };
+}
+
+function formatLatLng(latLng) {
+  const latitude = toFiniteNumber(latLng?.lat ?? latLng?.latitude);
+  const longitude = toFiniteNumber(latLng?.lng ?? latLng?.longitude);
+  if (latitude == null || longitude == null) return '-';
+  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 }
 
 function escapeHtml(value) {
@@ -119,6 +135,30 @@ function buildLocationUpdatePayload(job, locationIndex, latitude, longitude) {
     radius: first?.radius ?? null,
     namaArea: first?.namaArea || null,
   };
+}
+
+function dateOnly(value) {
+  return value ? String(value).slice(0, 10) : '';
+}
+
+function todayInJakartaDateOnly() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date()).reduce((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function isRadiusExemptionActive(job) {
+  const start = dateOnly(job?.radiusExemptionStartDate);
+  const end = dateOnly(job?.radiusExemptionEndDate);
+  const today = todayInJakartaDateOnly();
+  return Boolean(start && end && start <= today && today <= end);
 }
 
 // Buat custom divIcon berbentuk pin.
@@ -185,6 +225,15 @@ export default function SupervisiPage() {
   // State untuk alur HAPUS permanen (cancelled/completed → deleted)
   const [jobToHapus,  setJobToHapus]  = useState(null);
   const [isHapusing,  setIsHapusing]  = useState(false);
+  const [jobToRadiusExempt, setJobToRadiusExempt] = useState(null);
+  const [isSavingRadiusExemption, setIsSavingRadiusExemption] = useState(false);
+  const [pendingPinMove, setPendingPinMove] = useState(null);
+  const [isSavingPinMove, setIsSavingPinMove] = useState(false);
+  const [radiusExemptionForm, setRadiusExemptionForm] = useState({
+    startDate: '',
+    endDate: '',
+    reason: '',
+  });
 
   // backward‑compat alias (beberapa tempat masih pakai jobToDelete)
   const jobToDelete    = jobToCancel;
@@ -203,6 +252,7 @@ export default function SupervisiPage() {
   const markersRef = useRef([]);
   const mapReadyRef = useRef(false); // apakah peta sudah mount
   const skipNextFitBoundsRef = useRef(false);
+  const pendingPinMoveRef = useRef(null);
 
   // ── Fetch data ──────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -261,44 +311,36 @@ export default function SupervisiPage() {
   }, []);
 
   // ── Render / re-render markers ──────────────────────────────────────────────
-  const handleLocationDragEnd = useCallback(async ({ job, locationIndex, marker, previousLatLng, nextLatLng }) => {
+  const handleLocationDragEnd = useCallback(({ job, locationIndex, marker, previousLatLng, nextLatLng }) => {
     if (!job?.id) {
       marker.setLatLng(previousLatLng);
       toast.error('Job supervisi tidak valid.');
       return;
     }
 
-    marker.dragging?.disable();
-
-    try {
-      const payload = buildLocationUpdatePayload(
-        job,
-        locationIndex,
-        Number(nextLatLng.lat.toFixed(7)),
-        Number(nextLatLng.lng.toFixed(7)),
-      );
-      const savedJob = await updateSupervisiJobLocation(job.id, payload);
-
-      const applyUpdatedLocation = (current) => ({
-        ...current,
-        ...(savedJob || {}),
-        ...payload,
-      });
-
-      skipNextFitBoundsRef.current = true;
-      setJobs((prev) => prev.map((item) => (
-        item.id === job.id ? applyUpdatedLocation(item) : item
-      )));
-      setSelectedJob((prev) => (
-        prev?.id === job.id ? applyUpdatedLocation(prev) : prev
-      ));
-      toast.success('Lokasi job supervisi diperbarui.');
-    } catch (err) {
+    if (pendingPinMoveRef.current) {
       marker.setLatLng(previousLatLng);
-      toast.error(err?.message || 'Gagal memperbarui lokasi job supervisi.');
-    } finally {
-      marker.dragging?.enable();
+      toast.error('Selesaikan konfirmasi pemindahan pin yang sedang terbuka.');
+      return;
     }
+
+    const previous = normalizeLatLngForSave(previousLatLng);
+    const next = normalizeLatLngForSave(nextLatLng);
+    if (previous.lat === next.lat && previous.lng === next.lng) return;
+
+    marker.dragging?.disable();
+    const location = getJobLocations(job)[locationIndex];
+    const pendingMove = {
+      job,
+      locationIndex,
+      marker,
+      previousLatLng,
+      nextLatLng,
+      locationName: location?.namaArea || `Lokasi ${locationIndex + 1}`,
+    };
+
+    pendingPinMoveRef.current = pendingMove;
+    setPendingPinMove(pendingMove);
   }, []);
 
   function renderMarkers(map, L, allJobs, activeFilter) {
@@ -384,6 +426,61 @@ export default function SupervisiPage() {
     }
   }
 
+  const closePinMoveDialog = () => {
+    if (isSavingPinMove) return;
+    const pendingMove = pendingPinMoveRef.current;
+    if (pendingMove) {
+      pendingMove.marker.setLatLng(pendingMove.previousLatLng);
+      pendingMove.marker.dragging?.enable();
+    }
+    pendingPinMoveRef.current = null;
+    setPendingPinMove(null);
+  };
+
+  const confirmPinMove = async () => {
+    const pendingMove = pendingPinMoveRef.current;
+    if (!pendingMove) return;
+
+    const { job, locationIndex, marker, previousLatLng, nextLatLng } = pendingMove;
+    const next = normalizeLatLngForSave(nextLatLng);
+
+    setIsSavingPinMove(true);
+    try {
+      const payload = buildLocationUpdatePayload(
+        job,
+        locationIndex,
+        next.lat,
+        next.lng,
+      );
+      const savedJob = await updateSupervisiJobLocation(job.id, payload);
+
+      const applyUpdatedLocation = (current) => ({
+        ...current,
+        ...(savedJob || {}),
+        ...payload,
+      });
+
+      skipNextFitBoundsRef.current = true;
+      setJobs((prev) => prev.map((item) => (
+        item.id === job.id ? applyUpdatedLocation(item) : item
+      )));
+      setSelectedJob((prev) => (
+        prev?.id === job.id ? applyUpdatedLocation(prev) : prev
+      ));
+      pendingPinMoveRef.current = null;
+      setPendingPinMove(null);
+      toast.success('Lokasi job supervisi diperbarui.');
+    } catch (err) {
+      marker.setLatLng(previousLatLng);
+      pendingPinMoveRef.current = null;
+      setPendingPinMove(null);
+      toast.error(err?.message || 'Gagal memperbarui lokasi job supervisi.');
+    } finally {
+      marker.dragging?.enable();
+      setIsSavingPinMove(false);
+    }
+  };
+
   // ── Global handler untuk tombol popup ───────────────────────────────────────
   useEffect(() => {
     window.__supervisiSelectJob = (id) => {
@@ -460,6 +557,78 @@ export default function SupervisiPage() {
 
   const handleCancelClick = (job) => setJobToCancel(job);
   const handleHapusClick  = (job) => setJobToHapus(job);
+  const handleRadiusExemptionClick = (job) => {
+    setJobToRadiusExempt(job);
+    setRadiusExemptionForm({
+      startDate: dateOnly(job.radiusExemptionStartDate),
+      endDate: dateOnly(job.radiusExemptionEndDate),
+      reason: job.radiusExemptionReason || '',
+    });
+  };
+
+  const applyUpdatedJob = (savedJob) => {
+    if (!savedJob?.id) return;
+    setJobs((prev) => prev.map((item) => (
+      item.id === savedJob.id ? { ...item, ...savedJob } : item
+    )));
+    setSelectedJob((prev) => (
+      prev?.id === savedJob.id ? { ...prev, ...savedJob } : prev
+    ));
+  };
+
+  const closeRadiusExemptionDialog = () => {
+    setJobToRadiusExempt(null);
+    setRadiusExemptionForm({ startDate: '', endDate: '', reason: '' });
+  };
+
+  const confirmRadiusExemption = async () => {
+    if (!jobToRadiusExempt) return;
+    const startDate = radiusExemptionForm.startDate;
+    const endDate = radiusExemptionForm.endDate;
+    if (!startDate || !endDate) {
+      toast.error('Tanggal mulai dan akhir wajib diisi.');
+      return;
+    }
+    if (endDate < startDate) {
+      toast.error('Tanggal akhir tidak boleh lebih awal dari tanggal mulai.');
+      return;
+    }
+
+    setIsSavingRadiusExemption(true);
+    try {
+      const savedJob = await updateSupervisiRadiusExemption(jobToRadiusExempt.id, {
+        radiusExemptionStartDate: startDate,
+        radiusExemptionEndDate: endDate,
+        radiusExemptionReason: radiusExemptionForm.reason.trim(),
+      });
+      applyUpdatedJob(savedJob);
+      toast.success('Kewajiban radius berhasil dinonaktifkan untuk rentang tanggal tersebut.');
+      closeRadiusExemptionDialog();
+    } catch (err) {
+      toast.error(err?.message || 'Gagal menyimpan pengecualian radius.');
+    } finally {
+      setIsSavingRadiusExemption(false);
+    }
+  };
+
+  const clearRadiusExemption = async () => {
+    if (!jobToRadiusExempt) return;
+    setIsSavingRadiusExemption(true);
+    try {
+      const savedJob = await updateSupervisiRadiusExemption(jobToRadiusExempt.id, {
+        radiusExemptionStartDate: null,
+        radiusExemptionEndDate: null,
+        radiusExemptionReason: null,
+      });
+      applyUpdatedJob(savedJob);
+      toast.success('Kewajiban radius kembali aktif.');
+      closeRadiusExemptionDialog();
+    } catch (err) {
+      toast.error(err?.message || 'Gagal mengaktifkan kembali kewajiban radius.');
+    } finally {
+      setIsSavingRadiusExemption(false);
+    }
+  };
 
   const confirmCancelJob = async () => {
     if (!jobToCancel) return;
@@ -665,7 +834,6 @@ export default function SupervisiPage() {
               style={{ isolation: 'isolate', zIndex: 0 }}
             >
               <LeafletMap
-                key={initialCenter ? initialCenter.join(',') : 'no-coords'}
                 onMapReady={onMapReady}
                 onMapUnmount={onMapUnmount}
                 className="h-full w-full"
@@ -828,14 +996,28 @@ export default function SupervisiPage() {
 
                           {/* Tombol Batalkan - hanya untuk active */}
                           {job.status === 'active' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 opacity-80 hover:opacity-100"
-                              onClick={(e) => { e.stopPropagation(); handleCancelClick(job); }}
-                            >
-                              <Ban size={11} /> Batalkan
-                            </Button>
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={`h-7 text-xs gap-1 opacity-80 hover:opacity-100 ${
+                                  isRadiusExemptionActive(job)
+                                    ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
+                                    : 'text-teal-700 border-teal-200 hover:bg-teal-50 hover:border-teal-300'
+                                }`}
+                                onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}
+                              >
+                                <CalendarOff size={11} /> Radius
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 opacity-80 hover:opacity-100"
+                                onClick={(e) => { e.stopPropagation(); handleCancelClick(job); }}
+                              >
+                                <Ban size={11} /> Batalkan
+                              </Button>
+                            </>
                           )}
 
                           {/* Tombol Hapus - hanya untuk cancelled/completed */}
@@ -863,6 +1045,52 @@ export default function SupervisiPage() {
 
       {/* ── Side panel detail ── */}
       <SupervisiJobPanel job={selectedJob} onClose={() => setSelectedJob(null)} />
+
+      {/* Konfirmasi pemindahan pin lokasi */}
+      <Dialog
+        open={!!pendingPinMove}
+        onOpenChange={(open) => {
+          if (!open) closePinMoveDialog();
+        }}
+      >
+        <DialogContent className="max-w-md" showCloseButton={!isSavingPinMove}>
+          <DialogHeader>
+            <DialogTitle className="text-blue-700 flex items-center gap-2">
+              <MapPin size={18} /> Pindahkan Pin Lokasi?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mt-1">
+            Pin <span className="font-semibold text-slate-700">{pendingPinMove?.locationName || 'Lokasi'}</span> untuk pekerjaan <span className="font-semibold text-slate-700">{pendingPinMove?.job?.namaKerja || '-'}</span> akan dipindahkan.
+          </p>
+          <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2.5 space-y-1.5 text-xs">
+            <div className="flex items-start justify-between gap-3">
+              <span className="font-semibold text-slate-500">Koordinat lama</span>
+              <span className="font-mono text-slate-700 text-right">{formatLatLng(pendingPinMove?.previousLatLng)}</span>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <span className="font-semibold text-slate-500">Koordinat baru</span>
+              <span className="font-mono text-blue-700 text-right">{formatLatLng(pendingPinMove?.nextLatLng)}</span>
+            </div>
+          </div>
+          <DialogFooter className="mt-5 gap-2">
+            <Button
+              variant="outline"
+              disabled={isSavingPinMove}
+              onClick={closePinMoveDialog}
+            >
+              Batal
+            </Button>
+            <Button
+              className="gap-2 bg-blue-700 hover:bg-blue-800 text-white"
+              disabled={isSavingPinMove}
+              onClick={confirmPinMove}
+            >
+              {isSavingPinMove ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+              Ya, Pindahkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Cancel Confirmation Modal ── */}
       <Dialog
@@ -920,6 +1148,102 @@ export default function SupervisiPage() {
       </Dialog>
 
       {/* ── Hapus Permanen Confirmation Modal ── */}
+      {/* Radius Exemption Modal */}
+      <Dialog
+        open={!!jobToRadiusExempt}
+        onOpenChange={(open) => {
+          if (!open && !isSavingRadiusExemption) closeRadiusExemptionDialog();
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-teal-700 flex items-center gap-2">
+              <CalendarOff size={18} /> Nonaktifkan Kewajiban Radius
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mt-1">
+            Eksekutor dapat submit laporan hadir tanpa wajib berada di dalam radius selama rentang tanggal yang dipilih.
+          </p>
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1.5">
+                  Mulai
+                </label>
+                <input
+                  type="date"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-400 bg-gray-50"
+                  value={radiusExemptionForm.startDate}
+                  onChange={(e) => setRadiusExemptionForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                  disabled={isSavingRadiusExemption}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1.5">
+                  Akhir
+                </label>
+                <input
+                  type="date"
+                  min={radiusExemptionForm.startDate || undefined}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-400 bg-gray-50"
+                  value={radiusExemptionForm.endDate}
+                  onChange={(e) => setRadiusExemptionForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                  disabled={isSavingRadiusExemption}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1.5">
+                Alasan
+              </label>
+              <textarea
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-400 resize-none bg-gray-50"
+                rows={3}
+                placeholder="Contoh: area proyek sulit dijangkau GPS selama pekerjaan emergency."
+                value={radiusExemptionForm.reason}
+                onChange={(e) => setRadiusExemptionForm((prev) => ({ ...prev, reason: e.target.value }))}
+                disabled={isSavingRadiusExemption}
+              />
+            </div>
+            {jobToRadiusExempt?.radiusExemptionStartDate && jobToRadiusExempt?.radiusExemptionEndDate && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                <p className="text-xs text-emerald-700">
+                  Saat ini nonaktif {dateOnly(jobToRadiusExempt.radiusExemptionStartDate)} sampai {dateOnly(jobToRadiusExempt.radiusExemptionEndDate)}.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="mt-5 gap-2">
+            {jobToRadiusExempt?.radiusExemptionStartDate && jobToRadiusExempt?.radiusExemptionEndDate && (
+              <Button
+                variant="outline"
+                disabled={isSavingRadiusExemption}
+                onClick={clearRadiusExemption}
+                className="text-slate-700"
+              >
+                Aktifkan Lagi
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              disabled={isSavingRadiusExemption}
+              onClick={closeRadiusExemptionDialog}
+            >
+              Batal
+            </Button>
+            <Button
+              className="gap-2 bg-teal-700 hover:bg-teal-800 text-white"
+              disabled={isSavingRadiusExemption}
+              onClick={confirmRadiusExemption}
+            >
+              {isSavingRadiusExemption ? <Loader2 size={14} className="animate-spin" /> : <CalendarOff size={14} />}
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hapus Permanen Confirmation Modal */}
       <Dialog
         open={!!jobToHapus}
         onOpenChange={(open) => { if (!open && !isHapusing) setJobToHapus(null); }}

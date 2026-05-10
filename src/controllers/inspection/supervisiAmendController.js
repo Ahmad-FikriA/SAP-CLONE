@@ -1,8 +1,5 @@
 "use strict";
 
-const path = require("path");
-const fs = require("fs");
-const multer = require("multer");
 const SupervisiAmend = require("../../models/SupervisiAmend");
 const SupervisiJob = require("../../models/SupervisiJob");
 const {
@@ -11,38 +8,11 @@ const {
   canAccessSupervisiJob,
   forbiddenMessage,
 } = require("./supervisiAccess");
-
-// ── File upload config ────────────────────────────────────────────────────────
-const uploadDir = path.join(__dirname, "../../../uploads/supervisi");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `sv_amend_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB max per file
-});
-
-const uploadAmendDocuments = upload.array("documents", 10);
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function parseStringArray(value) {
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (value === null || value === "" || value === undefined) return [];
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed.filter(Boolean);
-    } catch (_) {}
-  }
-  return [];
-}
+const { parseStringArray } = require("./supervisiHelpers");
+const {
+  filesToSupervisiPaths,
+  uploadAmendDocuments,
+} = require("./supervisiUpload");
 
 // POST /api/inspection/supervisi/jobs/:jobId/amends
 async function createAmend(req, res) {
@@ -80,10 +50,7 @@ async function createAmend(req, res) {
       });
     }
 
-    // Kumpulkan paths dokumen yang diupload
-    const uploadedPaths = ((req.files) || []).map(
-      (f) => `/uploads/supervisi/${f.filename}`,
-    );
+    const uploadedPaths = filesToSupervisiPaths(req.files || []);
 
     const amend = await SupervisiAmend.create({
       jobId,
@@ -135,10 +102,8 @@ async function updateAmend(req, res) {
     }
 
     // Gabungkan dokumen lama yang dipertahankan + dokumen baru
-    const keptDocs = parseStringArray(existingDocuments);
-    const newDocs = ((req.files) || []).map(
-      (f) => `/uploads/supervisi/${f.filename}`,
-    );
+    const keptDocs = parseStringArray(existingDocuments) || [];
+    const newDocs = filesToSupervisiPaths(req.files || []);
     const allDocs = [...keptDocs, ...newDocs];
 
     await amend.update({

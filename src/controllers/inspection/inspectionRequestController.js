@@ -48,6 +48,10 @@ function canViewAllRequests(user) {
   );
 }
 
+function canReviewRequests(user) {
+  return canViewAllRequests(user);
+}
+
 // GET /api/inspection/requests
 async function listRequests(req, res) {
   try {
@@ -203,6 +207,13 @@ async function createRequest(req, res) {
 // Body: { notes?, scheduledDate?, assignedTo?, title?, nomorPoJo? }
 async function approveRequest(req, res) {
   try {
+    if (!canReviewRequests(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses untuk meninjau permintaan inspeksi.",
+      });
+    }
+
     const request = await InspectionRequest.findByPk(req.params.id);
 
     if (!request) {
@@ -285,6 +296,13 @@ async function approveRequest(req, res) {
 // Body: { notes }
 async function rejectRequest(req, res) {
   try {
+    if (!canReviewRequests(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses untuk meninjau permintaan inspeksi.",
+      });
+    }
+
     const request = await InspectionRequest.findByPk(req.params.id);
 
     if (!request) {

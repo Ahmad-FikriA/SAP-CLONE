@@ -6,7 +6,7 @@ import {
   MapPin, User, Calendar, Briefcase, Hash, DollarSign, Eye,
   BarChart2, ChevronDown, ChevronUp, CheckCircle2, XCircle,
   AlertCircle, Clock, FileText, Image as ImageIcon, Pencil, ExternalLink,
-  Download, AlertTriangle,
+  Download, AlertTriangle, CalendarOff,
 } from 'lucide-react';
 import { SUPERVISI_STATUS_META } from '@/lib/supervisi-service';
 
@@ -32,6 +32,30 @@ function fmtShort(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('id-ID', {
     day: '2-digit', month: 'short', year: 'numeric',
   });
+}
+
+function dateOnly(value) {
+  return value ? String(value).slice(0, 10) : '';
+}
+
+function todayInJakartaDateOnly() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date()).reduce((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function isRadiusExemptionActive(job) {
+  const start = dateOnly(job?.radiusExemptionStartDate);
+  const end = dateOnly(job?.radiusExemptionEndDate);
+  const today = todayInJakartaDateOnly();
+  return Boolean(start && end && start <= today && today <= end);
 }
 
 function fmtRupiah(val) {
@@ -124,6 +148,8 @@ export function SupervisiJobPanel({ job, onClose }) {
   const hasMaps = Array.isArray(job.locations) && job.locations.length > 0;
   const visits  = Array.isArray(job.visits) ? job.visits : [];
   const amends  = Array.isArray(job.amends)  ? job.amends  : [];
+  const hasRadiusExemption = Boolean(job.radiusExemptionStartDate && job.radiusExemptionEndDate);
+  const radiusExemptionActive = isRadiusExemptionActive(job);
 
   const effectiveEndDate = amends.length > 0
     ? amends[amends.length - 1].amendBerakhir
@@ -229,6 +255,34 @@ export function SupervisiJobPanel({ job, onClose }) {
           )}
 
           {/* ── Informasi Pekerjaan ── */}
+          {hasRadiusExemption && (
+            <div className={`border rounded-xl px-4 py-3 ${
+              radiusExemptionActive
+                ? 'bg-emerald-50 border-emerald-200'
+                : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <CalendarOff
+                  size={14}
+                  className={radiusExemptionActive ? 'text-emerald-600 shrink-0' : 'text-slate-500 shrink-0'}
+                />
+                <p className={`text-[11px] font-bold uppercase tracking-widest ${
+                  radiusExemptionActive ? 'text-emerald-600' : 'text-slate-500'
+                }`}>
+                  Kewajiban Radius Nonaktif
+                </p>
+              </div>
+              <p className={`text-sm leading-relaxed ${
+                radiusExemptionActive ? 'text-emerald-700' : 'text-slate-600'
+              }`}>
+                Berlaku {fmtShort(dateOnly(job.radiusExemptionStartDate))} sampai {fmtShort(dateOnly(job.radiusExemptionEndDate))}.
+              </p>
+              {job.radiusExemptionReason && (
+                <p className="text-xs text-slate-500 mt-1">{job.radiusExemptionReason}</p>
+              )}
+            </div>
+          )}
+
           <SectionWrap title="Informasi Pekerjaan" icon={<Briefcase size={13} />}>
             <div className="grid grid-cols-2 gap-4">
               <InfoRow Icon={Hash}        label="Nomor JO"        value={<span className="font-mono font-semibold">{job.nomorJo || '—'}</span>} />
