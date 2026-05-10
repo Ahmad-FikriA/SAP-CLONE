@@ -346,8 +346,8 @@ const bulkInsertSapSpk = async (req, res) => {
             attributes: ["nik"],
           });
           if (pelaporUser?.nik) {
-            // Update status to spk_issued
-            await notif.update({ approvalStatus: "spk_issued" });
+            // Update status to menunggu_review_awal_kadis_pp
+            await notif.update({ approvalStatus: "menunggu_review_awal_kadis_pp" });
 
             await NotificationService.notify({
               module: "corrective",
@@ -580,6 +580,27 @@ const executeSapSpk = async (req, res) => {
       { where: { sapOrderNumber: order_number } }
     );
 
+    // Notify Kadis PP
+    const kadisPpUsers = await User.findAll({
+      where: {
+        role: "kadis",
+        dinas: {
+          [Op.like]: "%pusat perawatan%"
+        }
+      }
+    });
+    const kadisPpIds = kadisPpUsers.map(u => u.id);
+    if (kadisPpIds.length > 0) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "review_kadis_pp",
+        recipientIds: kadisPpIds,
+        title: "Review Pekerjaan Selesai",
+        body: `Pekerjaan SPK ${spk.order_number} telah diselesaikan teknisi. Mohon review hasil kerja.`,
+        data: { spkId: spk.order_number },
+      });
+    }
+
     res.status(200).json({
       status: "success",
       message: "SPK berhasil dilengkapi dan dikirim untuk review Kadis PP",
@@ -712,8 +733,8 @@ const approveKadisPp = async (req, res) => {
         type: "review_kadis_pelapor",
         targetId: [spk.notification.kadisPelaporId],
         title: "Review Pekerjaan Selesai",
-        body: `Pekerjaan SPK ${spk.orderNumber} telah selesai. Mohon review pekerjaan ini.`,
-        data: { id: spk.notification.id, spkId: spk.orderNumber },
+        body: `Pekerjaan SPK ${spk.order_number} telah selesai. Mohon review pekerjaan ini.`,
+        data: { id: spk.notification.id, spkId: spk.order_number },
       });
     }
 
@@ -755,8 +776,8 @@ const rejectKadisPp = async (req, res) => {
         type: "spk_rejected",
         targetNik: [spk.execution_nik],
         title: "Laporan SPK Ditolak Kadis PP",
-        body: `SPK ${spk.orderNumber} ditolak: ${rejection_note}. Mohon perbaiki laporan/pekerjaan.`,
-        data: { spkId: spk.orderNumber },
+        body: `SPK ${spk.order_number} ditolak: ${rejection_note}. Mohon perbaiki laporan/pekerjaan.`,
+        data: { spkId: spk.order_number },
       });
     }
 
@@ -798,8 +819,8 @@ const approveKadisPelapor = async (req, res) => {
         type: "spk_completed",
         targetNik: [spk.execution_nik],
         title: "SPK Selesai",
-        body: `SPK ${spk.orderNumber} telah disetujui sepenuhnya oleh pelapor.`,
-        data: { spkId: spk.orderNumber },
+        body: `SPK ${spk.order_number} telah disetujui sepenuhnya oleh pelapor.`,
+        data: { spkId: spk.order_number },
       });
     }
 
@@ -841,8 +862,8 @@ const rejectKadisPelapor = async (req, res) => {
         type: "spk_rejected",
         targetNik: [spk.execution_nik],
         title: "Laporan SPK Ditolak Pelapor",
-        body: `SPK ${spk.orderNumber} ditolak pelapor: ${rejection_note}. Mohon perbaiki.`,
-        data: { spkId: spk.orderNumber },
+        body: `SPK ${spk.order_number} ditolak pelapor: ${rejection_note}. Mohon perbaiki.`,
+        data: { spkId: spk.order_number },
       });
     }
 
@@ -1089,6 +1110,34 @@ const uploadHistoryExcel = async (req, res) => {
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+const deleteSapSpk = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ status: "error", message: "Only admin can delete SPK" });
+    }
+    const { order_number } = req.params;
+    const deleted = await SapSpkCorrective.destroy({ where: { order_number } });
+    if (!deleted) {
+      return res.status(404).json({ status: "error", message: "SPK not found" });
+    }
+    res.status(200).json({ status: "success", message: "SPK deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
+const deleteAllSapSpk = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ status: "error", message: "Only admin can bulk delete SPK" });
+    }
+    await SapSpkCorrective.destroy({ where: {} });
+    res.status(200).json({ status: "success", message: "All SPKs deleted successfully" });
+  } catch (error) {
     res.status(500).json({ status: "error", message: error.message });
   }
 };

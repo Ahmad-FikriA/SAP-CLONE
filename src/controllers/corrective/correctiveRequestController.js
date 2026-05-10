@@ -508,7 +508,7 @@ const updateSapNumber = async (req, res) => {
 
     const spkExists = await SapSpkCorrective.findByPk(sapOrderNumber);
     if (spkExists) {
-      await notification.update({ approvalStatus: "spk_issued" });
+      await notification.update({ approvalStatus: "menunggu_review_awal_kadis_pp" });
 
       if (notification.kadisPelaporId) {
         const pelaporUser = await User.findByPk(notification.kadisPelaporId, {
@@ -574,7 +574,7 @@ const approvePlanner = async (req, res) => {
 
     const spkExists = await SapSpkCorrective.findByPk(sapOrderNumber);
     if (spkExists) {
-      await notification.update({ approvalStatus: "spk_issued" });
+      await notification.update({ approvalStatus: "menunggu_review_awal_kadis_pp" });
     }
 
     const fresh = await Notification.findByPk(
@@ -587,11 +587,15 @@ const approvePlanner = async (req, res) => {
         attributes: ["nik"],
       });
       if (pelaporUser?.nik) {
+        const bodyText = spkExists 
+          ? `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah disetujui dan SPK (${sapOrderNumber}) sudah tersedia.`
+          : `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah disetujui oleh Planner. Proses selanjutnya menunggu pembuatan SPK.`;
+
         await NotificationService.notify({
           module: "corrective",
           type: "request_approved_for_reporter",
           title: "Laporan Anda Telah Disetujui",
-          body: `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah disetujui oleh Planner. Proses selanjutnya menunggu pembuatan SPK.`,
+          body: bodyText,
           data: {
             requestId: notification.notificationId,
             deepLink: "corrective/request-detail",
