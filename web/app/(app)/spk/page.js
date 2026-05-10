@@ -15,6 +15,8 @@ import Link from 'next/link';
 
 const STATUS_OPTIONS = ['pending', 'awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis', 'approved'];
 
+const UPLOADS_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '');
+
 function kadisStatusLabel(kadisArea) {
   const area = KADIS_AREAS.find(a => a.id === kadisArea);
   return area ? `Menunggu Kadis — ${area.label}` : 'Menunggu Kadis';
@@ -90,6 +92,7 @@ export default function SpkPage() {
   const [plantFilter, setPlantFilter] = useState('');
   const [plants, setPlants] = useState([]);
   const [hasAbnormal, setHasAbnormal] = useState(false);
+  const [lightbox, setLightbox] = useState(null); // photo path string for detail view
 
   // Side panel
   const [panelOpen, setPanelOpen]   = useState(false);
@@ -1020,6 +1023,27 @@ export default function SpkPage() {
       <ConfirmDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}
         title={`Hapus ${selected.length} SPK?`} description="Aksi ini tidak dapat diurungkan."
         onConfirm={handleBulkDelete} confirmLabel="Hapus Semua" destructive />
+
+      {/* Photo lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/70 hover:text-white"
+            onClick={() => setLightbox(null)}
+          >
+            <X size={24} />
+          </button>
+          <img
+            src={`${UPLOADS_BASE}/${lightbox.replace(/^\//, '')}`}
+            alt="Foto lapangan"
+            className="max-h-[85vh] max-w-full rounded-lg shadow-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
