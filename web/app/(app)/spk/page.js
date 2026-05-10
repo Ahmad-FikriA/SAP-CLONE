@@ -723,6 +723,24 @@ export default function SpkPage() {
             {detailSpk?.description && (
               <p className="text-sm text-gray-500 mt-1">{detailSpk.description}</p>
             )}
+            {(() => {
+              const results = detailSubs[0]?.activityResultsModel || [];
+              if (results.length === 0) return null;
+              const normalCount = results.filter(r => r.isNormal !== false).length;
+              const abnormalCount = results.filter(r => r.isNormal === false).length;
+              return (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700">
+                    ✓ {normalCount} Normal
+                  </span>
+                  {abnormalCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700">
+                      ⚠ {abnormalCount} Tidak Normal
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
           </DialogHeader>
 
           {detailSpk && (
