@@ -50,6 +50,7 @@ function fmt(sub) {
     submittedAt: j.submittedAt,
     durationActual: j.durationActual,
     evaluasi: j.evaluasi,
+    lateReason: j.lateReason ?? null,
     latitude: j.latitude,
     longitude: j.longitude,
     photoPaths: (j.photos || []).map(p => p.photoPath),
