@@ -1049,6 +1049,26 @@ export default function SpkPage() {
                                 </td>
                               </tr>
                             )}
+                            {(sub.evaluasi || sub.lateReason) && (
+                              <tr>
+                                <td colSpan={4} className="px-3 pb-3 pt-0">
+                                  <div className="space-y-1.5">
+                                    {sub.evaluasi && (
+                                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5">
+                                        <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Evaluasi Teknisi</p>
+                                        <p className="text-xs text-gray-700">{sub.evaluasi}</p>
+                                      </div>
+                                    )}
+                                    {sub.lateReason && (
+                                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                                        <p className="text-[10px] font-semibold text-amber-600 uppercase mb-1">Alasan Terlambat</p>
+                                        <p className="text-xs text-amber-800">{sub.lateReason}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
                           </Fragment>
                         ))}
                       </tbody>
