@@ -68,6 +68,8 @@ export default function IntervalPlannerPage() {
   const [expandedWeek, setExpandedWeek] = useState(null); // week number or null
   const [weekSpks, setWeekSpks] = useState({});           // keyed by `${year}-${week}`
   const [weekSpkLoading, setWeekSpkLoading] = useState(false);
+  const [mappings, setMappings] = useState([]);
+  const [selectedInterval, setSelectedInterval] = useState(null);
 
   const isDirty = useCallback(() => {
     const sk = Object.keys(savedSet).sort().join(',');
@@ -99,6 +101,12 @@ export default function IntervalPlannerPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    apiGet('/equipment-mappings').then(data => {
+      if (Array.isArray(data)) setMappings(data);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadYear(year);
@@ -273,18 +281,26 @@ export default function IntervalPlannerPage() {
         </div>
       )}
 
-      {/* Grid */}
+      {/* Grid + side panel */}
+      <div className="flex gap-4 items-start">
       {loading ? (
-        <p className="text-sm text-gray-400 py-8 text-center">Memuat jadwal...</p>
+        <p className="flex-1 text-sm text-gray-400 py-8 text-center">Memuat jadwal...</p>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-auto">
+        <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-xl overflow-auto">
           <table className="w-full text-xs border-collapse">
             <thead className="sticky top-0 bg-gray-50 z-10">
               <tr>
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 border-b border-gray-200 w-16">Minggu</th>
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 border-b border-gray-200 w-36">Tanggal</th>
                 {INTERVALS.map((iv) => (
-                  <th key={iv} className="px-2 py-2.5 text-center font-semibold text-gray-600 border-b border-gray-200 w-14">{iv}</th>
+                  <th key={iv}
+                    className="px-2 py-2.5 text-center border-b border-gray-200 w-14 cursor-pointer select-none"
+                    onClick={() => setSelectedInterval(prev => prev === iv ? null : iv)}
+                  >
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold transition-colors ${
+                      selectedInterval === iv ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'
+                    }`}>{iv}</span>
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -358,15 +374,21 @@ export default function IntervalPlannerPage() {
                               <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide self-center mr-1">
                                 {spkList.length} SPK:
                               </span>
-                              {spkList.map(s => (
-                                <a
-                                  key={s.spkNumber}
-                                  href={`/spk?q=${encodeURIComponent(s.spkNumber)}`}
-                                  className="px-2 py-0.5 bg-white border border-blue-200 rounded text-[11px] font-mono text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors"
-                                >
-                                  {s.spkNumber}
-                                </a>
-                              ))}
+                              {spkList.map(s => {
+                                const done = s.status === 'approved';
+                                return (
+                                  <a
+                                    key={s.spkNumber}
+                                    href={`/spk?q=${encodeURIComponent(s.spkNumber)}`}
+                                    className={done
+                                      ? 'px-2 py-0.5 bg-white border border-green-300 rounded text-[11px] font-mono text-green-700 hover:bg-green-600 hover:text-white hover:border-green-600 transition-colors'
+                                      : 'px-2 py-0.5 bg-white border border-blue-200 rounded text-[11px] font-mono text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors'
+                                    }
+                                  >
+                                    {s.spkNumber}
+                                  </a>
+                                );
+                              })}
                             </div>
                           )}
                         </td>
@@ -379,6 +401,63 @@ export default function IntervalPlannerPage() {
           </table>
         </div>
       )}
+
+      {/* Coverage side panel */}
+      {selectedInterval && (
+        <div className="w-72 shrink-0 border border-gray-200 rounded-xl bg-white shadow-sm p-4 sticky top-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-800">
+              Interval <span className="font-mono text-blue-600">{selectedInterval}</span>
+            </p>
+            <button
+              onClick={() => setSelectedInterval(null)}
+              className="text-gray-400 hover:text-gray-600 text-xs"
+            >
+              ✕
+            </button>
+          </div>
+
+          {(() => {
+            const filtered = mappings.filter(m => m.interval === selectedInterval);
+            if (filtered.length === 0) {
+              return (
+                <p className="text-xs text-gray-400 text-center py-6">
+                  Belum ada equipment yang dipetakan ke interval ini.
+                </p>
+              );
+            }
+            return (
+              <ul className="space-y-2">
+                {filtered.map(m => (
+                  <li key={m.id} className="bg-gray-50 rounded-lg px-3 py-2">
+                    <p className="text-xs font-semibold text-gray-800 truncate">{m.equipmentName}</p>
+                    <p className="text-[11px] text-gray-400 font-mono truncate">{m.equipmentId}</p>
+                    {m.taskListName && (
+                      <p className="text-[11px] text-blue-600 mt-0.5 truncate">
+                        {m.taskListId} — {m.taskListName}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
+
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <a
+              href="/equipment/mappings"
+              className="block text-center text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              Kelola Mapping →
+            </a>
+          </div>
+
+          <p className="mt-2 text-[10px] text-gray-400 text-center">
+            {mappings.filter(m => m.interval === selectedInterval).length} equipment terpetakan
+          </p>
+        </div>
+      )}
+      </div>
     </div>
   );
 }
