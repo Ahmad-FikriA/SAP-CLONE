@@ -9,7 +9,7 @@ const Spk = sequelize.define('Spk', {
   description:    { type: DataTypes.STRING(500), allowNull: false },
   intervalPeriod: { type: DataTypes.STRING(30),  allowNull: true, field: 'interval_period' },
   category:       { type: DataTypes.ENUM('Mekanik','Listrik','Sipil','Otomasi'), allowNull: false },
-  status:         { type: DataTypes.ENUM('pending','in_progress','completed','awaiting_kasie','awaiting_kadis_perawatan','awaiting_kadis','approved'), allowNull: false, defaultValue: 'pending' },
+  status:         { type: DataTypes.ENUM('pending','in_progress','completed','awaiting_kasie','awaiting_kadis_perawatan','awaiting_kadis','approved','rejected'), allowNull: false, defaultValue: 'pending' },
   durationActual: { type: DataTypes.DECIMAL(6,2), allowNull: true, field: 'duration_actual' },
   scheduledDate:  { type: DataTypes.DATEONLY,     allowNull: true, field: 'scheduled_date' },
   orderNumber:    { type: DataTypes.STRING(30),   allowNull: true, field: 'order_number' },

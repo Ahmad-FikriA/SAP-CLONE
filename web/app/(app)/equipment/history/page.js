@@ -52,6 +52,10 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+function toIsoDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
@@ -66,15 +70,25 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
+const PRESETS = [
+  { label: '30 Hari', days: 30 },
+  { label: '90 Hari', days: 90 },
+  { label: 'Semua',   days: null },
+];
+
 function EquipmentHistoryContent() {
   const params = useSearchParams();
   const router = useRouter();
   const equipmentId = params.get('id');
 
-  const [equip, setEquip] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [equip, setEquip]         = useState(null);
+  const [history, setHistory]     = useState([]);
+  const [loading, setLoading]     = useState(false);
   const [selectedType, setSelectedType] = useState(null);
+  const [chartType, setChartType] = useState('monotone'); // 'monotone'=Spline | 'linear'=Line
+  const [dateFrom, setDateFrom]   = useState('');
+  const [dateTo, setDateTo]       = useState('');
+  const [activePreset, setActivePreset] = useState(null); // days number or null for "Semua"
 
   useEffect(() => {
     if (!equipmentId) return;
@@ -92,6 +106,20 @@ function EquipmentHistoryContent() {
       toast.error('Gagal memuat: ' + e.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function applyPreset(days) {
+    setActivePreset(days);
+    if (days === null) {
+      setDateFrom('');
+      setDateTo('');
+    } else {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - days);
+      setDateFrom(toIsoDate(from));
+      setDateTo(toIsoDate(to));
     }
   }
 
@@ -126,9 +154,24 @@ function EquipmentHistoryContent() {
     return { ...r, measLabel: meas?.label || r.activityNumber, measUnit: meas?.unit || '' };
   }), [history]);
 
-  const chartTypes = useMemo(() => [...new Set(enriched.map(r => r.measLabel))], [enriched]);
+  // Apply date range filter — export uses `enriched` (unfiltered)
+  const filteredEnriched = useMemo(() => {
+    if (!dateFrom && !dateTo) return enriched;
+    return enriched.filter(r => {
+      if (!r.submittedAt) return true;
+      const d = r.submittedAt.slice(0, 10);
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo   && d > dateTo)   return false;
+      return true;
+    });
+  }, [enriched, dateFrom, dateTo]);
 
-  // Auto-select first type when types change (e.g. on first load)
+  const chartTypes = useMemo(
+    () => [...new Set(filteredEnriched.map(r => r.measLabel))],
+    [filteredEnriched],
+  );
+
+  // Auto-select first type when types change
   useEffect(() => {
     if (chartTypes.length > 0 && !chartTypes.includes(selectedType)) {
       setSelectedType(chartTypes[0]);
@@ -138,24 +181,24 @@ function EquipmentHistoryContent() {
   const chartData = useMemo(() => {
     const byDate = {};
     const source = selectedType
-      ? enriched.filter(r => r.measLabel === selectedType)
-      : enriched;
+      ? filteredEnriched.filter(r => r.measLabel === selectedType)
+      : filteredEnriched;
     [...source].reverse().forEach(r => {
       const d = fmtDate(r.submittedAt);
       if (!byDate[d]) byDate[d] = { date: d };
       byDate[d][r.measLabel] = r.measurementValue;
     });
     return Object.values(byDate);
-  }, [enriched, selectedType]);
+  }, [filteredEnriched, selectedType]);
 
   const selectedUnit = useMemo(() => {
-    const r = enriched.find(r => r.measLabel === selectedType);
+    const r = filteredEnriched.find(r => r.measLabel === selectedType);
     return r?.measUnit || '';
-  }, [enriched, selectedType]);
+  }, [filteredEnriched, selectedType]);
 
   const tableRows = useMemo(() =>
-    selectedType ? enriched.filter(r => r.measLabel === selectedType) : enriched,
-  [enriched, selectedType]);
+    selectedType ? filteredEnriched.filter(r => r.measLabel === selectedType) : filteredEnriched,
+  [filteredEnriched, selectedType]);
 
   const selectedColorIndex = selectedType ? chartTypes.indexOf(selectedType) : 0;
 
@@ -204,27 +247,89 @@ function EquipmentHistoryContent() {
         </div>
       )}
 
+      {/* Date range filter bar */}
+      {enriched.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex flex-wrap items-center gap-3">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide shrink-0">
+            Filter Tanggal
+          </span>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => { setDateFrom(e.target.value); setActivePreset('custom'); }}
+              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-xs text-gray-400">s/d</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => { setDateTo(e.target.value); setActivePreset('custom'); }}
+              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-1.5">
+            {PRESETS.map(({ label, days }) => {
+              const isActive = activePreset === days;
+              return (
+                <button
+                  key={label}
+                  onClick={() => applyPreset(days)}
+                  className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {(dateFrom || dateTo) && activePreset !== null && (
+            <button
+              onClick={() => applyPreset(null)}
+              className="text-xs text-gray-400 hover:text-gray-600 underline"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Chart */}
       {!loading && chartData.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide shrink-0">
               Tren Nilai Ukur
               {selectedUnit && (
                 <span className="ml-1.5 text-blue-500 normal-case font-normal">({selectedUnit})</span>
               )}
             </h2>
-            {chartTypes.length > 1 && (
+            <div className="flex items-center gap-2">
+              {/* Chart type */}
               <select
-                value={selectedType || ''}
-                onChange={e => setSelectedType(e.target.value)}
+                value={chartType}
+                onChange={e => setChartType(e.target.value)}
                 className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {chartTypes.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
+                <option value="monotone">Spline</option>
+                <option value="linear">Line</option>
               </select>
-            )}
+              {/* Measurement type */}
+              {chartTypes.length > 1 && (
+                <select
+                  value={selectedType || ''}
+                  onChange={e => setSelectedType(e.target.value)}
+                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {chartTypes.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
@@ -244,7 +349,7 @@ function EquipmentHistoryContent() {
               <Legend wrapperStyle={{ fontSize: 12 }} />
               {selectedType && (
                 <Line
-                  type="monotone"
+                  type={chartType}
                   dataKey={selectedType}
                   stroke={LINE_COLORS[selectedColorIndex % LINE_COLORS.length]}
                   strokeWidth={2}
@@ -257,6 +362,13 @@ function EquipmentHistoryContent() {
         </div>
       )}
 
+      {/* No data after filtering */}
+      {!loading && enriched.length > 0 && chartData.length === 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+          Tidak ada data pada rentang tanggal yang dipilih.
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100">
@@ -265,13 +377,22 @@ function EquipmentHistoryContent() {
             {tableRows.length > 0 && (
               <span className="ml-2 text-blue-600 normal-case font-normal">{tableRows.length} entri</span>
             )}
+            {enriched.length > 0 && tableRows.length < enriched.length && (
+              <span className="ml-1 text-gray-400 normal-case font-normal">
+                (dari {enriched.length} total)
+              </span>
+            )}
           </h2>
         </div>
 
         {loading ? (
           <div className="py-16 text-center text-gray-400 text-sm">Memuat data...</div>
         ) : tableRows.length === 0 ? (
-          <div className="py-16 text-center text-gray-400 text-sm">Belum ada data pengukuran untuk equipment ini</div>
+          <div className="py-16 text-center text-gray-400 text-sm">
+            {enriched.length === 0
+              ? 'Belum ada data pengukuran untuk equipment ini'
+              : 'Tidak ada data pada rentang tanggal yang dipilih'}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

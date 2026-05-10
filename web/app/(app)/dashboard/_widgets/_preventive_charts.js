@@ -89,7 +89,7 @@ export default function PreventiveCharts({ statusData, catData, total }) {
                 margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
                 <XAxis type="number" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} width={52} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} width={90} />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: '#f9fafb' }} />
                 <Bar dataKey="completed" name="Selesai" stackId="a" radius={[0, 0, 0, 0]}>
                   {catData.map((entry, i) => (

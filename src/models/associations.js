@@ -11,6 +11,7 @@ const Plant = require("./Plant");
 const FunctionalLocation = require("./FunctionalLocation");
 const Equipment = require("./Equipment");
 const { Spk, SpkEquipment, SpkActivity } = require("./Spk");
+const SpkRejectionLog = require('./SpkRejectionLog');
 const {
   Submission,
   SubmissionPhoto,
@@ -58,6 +59,14 @@ Spk.hasMany(SpkActivity, {
   onDelete: "CASCADE",
 });
 SpkActivity.belongsTo(Spk, { foreignKey: "spkNumber", as: "spk" });
+
+// ── SPK ↔ SpkRejectionLog ────────────────────────────────────────────────────
+Spk.hasMany(SpkRejectionLog, {
+  foreignKey: 'spkNumber',
+  as: 'rejectionLogs',
+  onDelete: 'CASCADE',
+});
+SpkRejectionLog.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk' });
 
 // ── Submission ↔ Spk ─────────────────────────────────────────────────────────
 Submission.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk', constraints: false });
@@ -289,6 +298,7 @@ module.exports = {
   Spk,
   SpkEquipment,
   SpkActivity,
+  SpkRejectionLog,
   Submission,
   SubmissionPhoto,
   SubmissionActivityResult,

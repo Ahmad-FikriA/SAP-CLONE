@@ -10,6 +10,7 @@ const { GeneralTaskList, GeneralTaskListActivity } = require('../../models/Gener
 const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping');
 const NotificationService = require('../../services/notificationService');
 const User = require('../../models/User');
+const SpkRejectionLog = require('../../models/SpkRejectionLog');
 
 /**
  * Delete all child records for the given spkNumbers inside an existing transaction,
@@ -51,6 +52,10 @@ const INCLUDE_FULL = [
     model: GeneralTaskList, as: 'taskList',
     attributes: ['taskListId', 'taskListName'],
     required: false,
+  },
+  {
+    model: SpkRejectionLog, as: 'rejectionLogs',
+    attributes: ['id', 'rejectedBy', 'rejectedAt', 'rejectionReason', 'rejectedLevel', 'resubmittedAt'],
   },
 ];
 
@@ -106,10 +111,30 @@ function fmt(spk) {
       longitude: em.equipmentDetails?.longitude ?? null,
     })),
     activitiesModel: j.activitiesModel || [],
+    rejectionLogs: (j.rejectionLogs || []).map(log => ({
+      id: log.id,
+      rejectedBy: log.rejectedBy,
+      rejectedAt: log.rejectedAt,
+      rejectionReason: log.rejectionReason,
+      rejectedLevel: log.rejectedLevel,
+      resubmittedAt: log.resubmittedAt ?? null,
+    })),
+    abnormalCount: parseInt(j.abnormalCount ?? '0', 10),
   };
 }
 
 const VALID_CATEGORIES = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
+
+const ABNORMAL_COUNT_ATTR = [
+  sequelize.literal(`(
+    SELECT COUNT(*)
+    FROM submission_activity_results sar
+    INNER JOIN submissions s ON s.id = sar.submission_id
+    WHERE s.spk_number = Spk.spk_number
+      AND sar.is_normal = false
+  )`),
+  'abnormalCount'
+];
 
 // GET /api/spk
 const getAll = async (req, res) => {
@@ -174,6 +199,20 @@ const getAll = async (req, res) => {
     );
   }
 
+  // Abnormal filter — only SPKs with at least one abnormal activity result
+  if (req.query.hasAbnormal === 'true') {
+    where[Op.and] = where[Op.and] || [];
+    where[Op.and].push(
+      sequelize.literal(`EXISTS (
+        SELECT 1
+        FROM submission_activity_results sar
+        INNER JOIN submissions s ON s.id = sar.submission_id
+        WHERE s.spk_number = Spk.spk_number
+          AND sar.is_normal = false
+      )`)
+    );
+  }
+
   // If equipmentId is given, replace the SpkEquipment include with a filtered one
   // (INNER JOIN — only SPKs that have this equipment)
   let include = INCLUDE_FULL;
@@ -196,17 +235,21 @@ const getAll = async (req, res) => {
   if (req.query.limit !== undefined) {
     const limit  = Math.min(parseInt(req.query.limit,  10) || 50, 200);
     const offset = parseInt(req.query.offset, 10) || 0;
-    const { count, rows } = await Spk.findAndCountAll({ where, include, order, limit, offset });
+    const { count, rows } = await Spk.findAndCountAll({ where, include, order, limit, offset, attributes: { include: [ABNORMAL_COUNT_ATTR] } });
     return res.json({ total: count, limit, offset, data: rows.map(fmt) });
   }
 
-  const data = await Spk.findAll({ where, include, order });
+  const data = await Spk.findAll({ where, include, order, attributes: { include: [ABNORMAL_COUNT_ATTR] } });
   res.json(data.map(fmt));
 };
 
 // GET /api/spk/:spkNumber
 const getOne = async (req, res) => {
-  const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
+  const spk = await Spk.findOne({
+    where: { spkNumber: req.params.spkNumber },
+    include: INCLUDE_FULL,
+    attributes: { include: [ABNORMAL_COUNT_ATTR] },
+  });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
 
   // Include submission photo paths so approvers can see technician's documentation
@@ -415,6 +458,17 @@ const submit = async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
+    // If resubmitting after rejection, stamp the latest open rejection log
+    if (spk.status === 'rejected') {
+      await SpkRejectionLog.update(
+        { resubmittedAt: new Date() },
+        {
+          where: { spkNumber: spk.spkNumber, resubmittedAt: null },
+          transaction: t,
+        }
+      );
+    }
+
     // Create submission record
     const sub = await Submission.create({
       id: subId, spkNumber: spk.spkNumber, durationActual: durationActual ?? null,
@@ -772,6 +826,146 @@ const approveKadis = async (req, res) => {
   res.json(fmt(fresh));
 };
 
+// POST /api/spk/:spkNumber/reject-kasie
+const rejectKasie = async (req, res) => {
+  const spk = await Spk.findByPk(req.params.spkNumber);
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+  if (spk.status !== 'awaiting_kasie') {
+    return res.status(400).json({ error: `SPK status is '${spk.status}', expected 'awaiting_kasie'` });
+  }
+
+  const role = req.user?.role;
+  const validKasieRoles = ['supervisor', 'kepala_seksi', 'kasie'];
+  if (!validKasieRoles.includes(role)) {
+    return res.status(403).json({ error: 'Only Kasie/Supervisor can reject this step' });
+  }
+
+  const { rejectionReason } = req.body;
+  if (!rejectionReason || rejectionReason.trim().length < 10) {
+    return res.status(422).json({ error: 'Alasan penolakan wajib diisi (min. 10 karakter)' });
+  }
+
+  await SpkRejectionLog.create({
+    spkNumber: spk.spkNumber,
+    rejectedBy: req.user.userId,
+    rejectedAt: new Date(),
+    rejectionReason: rejectionReason.trim(),
+    rejectedLevel: 'kasie',
+  });
+
+  await spk.update({ status: 'rejected' });
+
+  if (spk.submittedBy) {
+    const submitter = await User.findOne({ where: { nik: spk.submittedBy }, attributes: ['id'] });
+    if (submitter) {
+      await NotificationService.notify({
+        module: 'preventive',
+        type: 'spk_rejected',
+        title: 'SPK Ditolak',
+        body: `SPK ${spk.spkNumber} ditolak oleh Kasie: ${rejectionReason.trim()}`,
+        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        recipientIds: [submitter.id],
+      });
+    }
+  }
+
+  const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
+  res.json(fmt(fresh));
+};
+
+// POST /api/spk/:spkNumber/reject-kadis-perawatan
+const rejectKadisPerawatan = async (req, res) => {
+  const spk = await Spk.findByPk(req.params.spkNumber);
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+  if (spk.status !== 'awaiting_kadis_perawatan') {
+    return res.status(400).json({ error: `SPK status is '${spk.status}', expected 'awaiting_kadis_perawatan'` });
+  }
+
+  const role = req.user?.role;
+  const dinas = req.user?.dinas || '';
+  if (role !== 'kadis' || !dinas.toLowerCase().includes('pusat perawatan')) {
+    return res.status(403).json({ error: 'Only Kadis Perawatan (dinas: Pusat Perawatan) can reject this step' });
+  }
+
+  const { rejectionReason } = req.body;
+  if (!rejectionReason || rejectionReason.trim().length < 10) {
+    return res.status(422).json({ error: 'Alasan penolakan wajib diisi (min. 10 karakter)' });
+  }
+
+  await SpkRejectionLog.create({
+    spkNumber: spk.spkNumber,
+    rejectedBy: req.user.userId,
+    rejectedAt: new Date(),
+    rejectionReason: rejectionReason.trim(),
+    rejectedLevel: 'kadis_perawatan',
+  });
+
+  await spk.update({ status: 'rejected' });
+
+  if (spk.submittedBy) {
+    const submitter = await User.findOne({ where: { nik: spk.submittedBy }, attributes: ['id'] });
+    if (submitter) {
+      await NotificationService.notify({
+        module: 'preventive',
+        type: 'spk_rejected',
+        title: 'SPK Ditolak',
+        body: `SPK ${spk.spkNumber} ditolak oleh Kadis Perawatan: ${rejectionReason.trim()}`,
+        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        recipientIds: [submitter.id],
+      });
+    }
+  }
+
+  const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
+  res.json(fmt(fresh));
+};
+
+// POST /api/spk/:spkNumber/reject-kadis
+const rejectKadis = async (req, res) => {
+  const spk = await Spk.findByPk(req.params.spkNumber);
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+  if (spk.status !== 'awaiting_kadis') {
+    return res.status(400).json({ error: `SPK status is '${spk.status}', expected 'awaiting_kadis'` });
+  }
+
+  const role = req.user?.role;
+  if (role !== 'kadis') {
+    return res.status(403).json({ error: 'Only Kadis can reject this step' });
+  }
+
+  const { rejectionReason } = req.body;
+  if (!rejectionReason || rejectionReason.trim().length < 10) {
+    return res.status(422).json({ error: 'Alasan penolakan wajib diisi (min. 10 karakter)' });
+  }
+
+  await SpkRejectionLog.create({
+    spkNumber: spk.spkNumber,
+    rejectedBy: req.user.userId,
+    rejectedAt: new Date(),
+    rejectionReason: rejectionReason.trim(),
+    rejectedLevel: 'kadis',
+  });
+
+  await spk.update({ status: 'rejected' });
+
+  if (spk.submittedBy) {
+    const submitter = await User.findOne({ where: { nik: spk.submittedBy }, attributes: ['id'] });
+    if (submitter) {
+      await NotificationService.notify({
+        module: 'preventive',
+        type: 'spk_rejected',
+        title: 'SPK Ditolak',
+        body: `SPK ${spk.spkNumber} ditolak oleh Kadis: ${rejectionReason.trim()}`,
+        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        recipientIds: [submitter.id],
+      });
+    }
+  }
+
+  const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
+  res.json(fmt(fresh));
+};
+
 // POST /api/spk/batch-generate
 const batchGenerate = async (req, res) => {
   const { week, year, interval, category, equipmentIds = [] } = req.body;
@@ -916,4 +1110,4 @@ const batchGenerate = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync, generateFromTaskList, approveKasie, approveKadisPerawatan, approveKadis, batchGenerate };
+module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync, generateFromTaskList, approveKasie, approveKadisPerawatan, approveKadis, rejectKasie, rejectKadisPerawatan, rejectKadis, batchGenerate };

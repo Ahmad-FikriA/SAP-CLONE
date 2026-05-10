@@ -13,11 +13,14 @@ const Charts = dynamic(() => import('./_preventive_charts'), { ssr: false, loadi
 
 // ── Colour tokens ──────────────────────────────────────────────────────────
 const STATUS_META = {
-  pending:     { label: 'Pending',    color: '#FBBF24' },
-  in_progress: { label: 'Dalam Pengerjaan',color: '#3B82F6' },
-  completed:   { label: 'Selesai',    color: '#10B981' },
-  approved:    { label: 'Disetujui', color: '#059669' },
-  rejected:    { label: 'Ditolak',    color: '#EF4444' },
+  pending:                  { label: 'Pending',                  color: '#FBBF24' },
+  in_progress:              { label: 'Dalam Pengerjaan',         color: '#3B82F6' },
+  awaiting_kasie:           { label: 'Menunggu Kasie',          color: '#F97316' },
+  awaiting_kadis_perawatan: { label: 'Menunggu Kadis Perawatan',color: '#8B5CF6' },
+  awaiting_kadis:           { label: 'Menunggu Kadis',          color: '#A78BFA' },
+  completed:                { label: 'Selesai',                  color: '#10B981' },
+  approved:                 { label: 'Disetujui',               color: '#059669' },
+  rejected:                 { label: 'Ditolak',                  color: '#EF4444' },
 };
 
 const CAT_COLORS = {
@@ -51,12 +54,12 @@ export function WidgetPreventive() {
 
   // Category bar data
   const cats = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
-  const catData = cats.map((cat) => ({
-    name: cat,
-    total: spkList.filter((s) => s.category === cat).length,
-    completed: spkList.filter((s) => s.category === cat && (s.status === 'completed' || s.status === 'approved')).length,
-    color: CAT_COLORS[cat],
-  })).filter((d) => d.total > 0);
+  const catData = cats.map((cat) => {
+    const total     = spkList.filter((s) => s.category === cat).length;
+    const completed = spkList.filter((s) => s.category === cat && (s.status === 'completed' || s.status === 'approved')).length;
+    const pct       = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { name: `${cat} (${pct}%)`, total, completed, color: CAT_COLORS[cat] };
+  }).filter((d) => d.total > 0);
 
 
   return (

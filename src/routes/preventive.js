@@ -33,6 +33,9 @@ spkRouter.post('/:spkNumber/submit', verifyToken, spkController.submit);
 spkRouter.post('/:spkNumber/approve-kasie', verifyToken, spkController.approveKasie);
 spkRouter.post('/:spkNumber/approve-kadis-perawatan', verifyToken, spkController.approveKadisPerawatan);
 spkRouter.post('/:spkNumber/approve-kadis', verifyToken, spkController.approveKadis);
+spkRouter.post('/:spkNumber/reject-kasie', verifyToken, spkController.rejectKasie);
+spkRouter.post('/:spkNumber/reject-kadis-perawatan', verifyToken, spkController.rejectKadisPerawatan);
+spkRouter.post('/:spkNumber/reject-kadis', verifyToken, spkController.rejectKadis);
 spkRouter.post('/:spkNumber/sync', verifyToken, spkController.sync);
 
 // ── Equipment ────────────────────────────────────────────────────────────────

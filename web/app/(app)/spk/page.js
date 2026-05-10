@@ -89,6 +89,7 @@ export default function SpkPage() {
   const [yearFilter, setYearFilter] = useState('');
   const [plantFilter, setPlantFilter] = useState('');
   const [plants, setPlants] = useState([]);
+  const [hasAbnormal, setHasAbnormal] = useState(false);
 
   // Side panel
   const [panelOpen, setPanelOpen]   = useState(false);
@@ -337,6 +338,7 @@ export default function SpkPage() {
       );
       if (!matchSpk && !matchDesc && !matchEq) return false;
     }
+    if (hasAbnormal && !s.abnormalCount) return false;
     return true;
   });
 
@@ -411,9 +413,20 @@ export default function SpkPage() {
               {plants.map((p) => <option key={p.plantId} value={p.plantId}>{p.plantName}</option>)}
             </select>
           )}
-          {(search || statusFilter || weekFilter || yearFilter || category || plantFilter) && (
+          <button
+            onClick={() => setHasAbnormal(v => !v)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+              hasAbnormal
+                ? 'bg-red-50 text-red-700 border-red-300'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <span>⚠</span>
+            <span>Ada Hasil Abnormal</span>
+          </button>
+          {(search || statusFilter || weekFilter || yearFilter || category || plantFilter || hasAbnormal) && (
             <button
-              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); setCategory(''); setPlantFilter(''); }}
+              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); setCategory(''); setPlantFilter(''); setHasAbnormal(false); }}
               className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
             >
               <X size={12} /> Reset Filter
@@ -459,11 +472,20 @@ export default function SpkPage() {
                   <td className="px-3 py-3 text-gray-700 max-w-[200px] truncate">{s.description}</td>
                   <td className="px-3 py-3"><CategoryBadge category={s.category} /></td>
                   <td className="px-3 py-3 text-gray-500 text-xs">{s.interval}</td>
-                  <td className="px-3 py-3"><StatusBadge status={s.status} label={
-                    s.status === 'awaiting_kasie' && s.category ? `Menunggu Kasie ${s.category}`
-                    : s.status === 'awaiting_kadis' ? kadisStatusLabel(s.kadisArea)
-                    : undefined
-                  } /></td>
+                  <td className="px-3 py-3">
+                    <div className="flex flex-col gap-1">
+                      <StatusBadge status={s.status} label={
+                        s.status === 'awaiting_kasie' && s.category ? `Menunggu Kasie ${s.category}`
+                        : s.status === 'awaiting_kadis' ? kadisStatusLabel(s.kadisArea)
+                        : undefined
+                      } />
+                      {s.abnormalCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700 w-fit">
+                          ⚠ {s.abnormalCount} abnormal
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-3">
                     {(s.equipmentModels || []).length === 0 ? (
                       <span className="text-gray-400 text-xs">—</span>
@@ -907,6 +929,38 @@ export default function SpkPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Rejection history */}
+              {detailFull && (detailFull.rejectionLogs || []).length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Riwayat Penolakan</p>
+                  <div className="space-y-2">
+                    {(detailFull.rejectionLogs || []).map((log, i) => {
+                      const levelLabel = log.rejectedLevel === 'kasie' ? 'Kasie'
+                        : log.rejectedLevel === 'kadis_perawatan' ? 'Kadis Perawatan'
+                        : 'Kadis';
+                      return (
+                        <div key={i} className="bg-red-50 border border-red-100 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded uppercase">
+                              {levelLabel}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {log.rejectedBy} &middot; {formatDate(log.rejectedAt)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-red-800">{log.rejectionReason}</p>
+                          {log.resubmittedAt && (
+                            <p className="text-xs text-green-600 mt-1 italic">
+                              Kirim ulang: {formatDate(log.resubmittedAt)}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

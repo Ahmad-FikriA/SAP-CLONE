@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/date-utils';
 import { STATUS_LABELS, CATEGORY_COLORS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS, KADIS_AREAS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { RefreshCw, CheckCircle, Clock, ChevronRight, ImageIcon, X } from 'lucide-react';
+import { RefreshCw, CheckCircle, Clock, ChevronRight, ImageIcon, X, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -71,6 +71,13 @@ function approveEndpoint(status) {
   return null;
 }
 
+function rejectEndpoint(status) {
+  if (status === 'awaiting_kasie')           return 'reject-kasie';
+  if (status === 'awaiting_kadis_perawatan') return 'reject-kadis-perawatan';
+  if (status === 'awaiting_kadis')           return 'reject-kadis';
+  return null;
+}
+
 function StatusBadge({ status, kadisArea }) {
   let label = STATUS_LABELS[status] || status;
   if (status === 'awaiting_kadis' && kadisArea) {
@@ -107,6 +114,10 @@ export default function SpkApprovalPage() {
   const [approving, setApproving] = useState(false);
   const [lightbox, setLightbox] = useState(null);      // photo path string
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [hasAbnormal, setHasAbnormal] = useState(false);
+  const [rejectOpen, setRejectOpen]             = useState(false);
+  const [rejecting, setRejecting]               = useState(false);
+  const [rejectionReason, setRejectionReason]   = useState('');
 
   useEffect(() => { setUser(getUser()); }, []);
 
@@ -206,9 +217,39 @@ export default function SpkApprovalPage() {
 
   const canApprove = detail && !!approveEndpoint(detail.spk.status);
 
+  async function handleReject() {
+    if (!detail) return;
+    const endpoint = rejectEndpoint(detail.spk.status);
+    if (!endpoint) { toast.error('Status tidak valid untuk penolakan'); return; }
+    if (rejectionReason.trim().length < 10) {
+      toast.error('Alasan penolakan minimal 10 karakter');
+      return;
+    }
+    setRejecting(true);
+    try {
+      await apiPost(`/spk/${encodeURIComponent(detail.spk.spkNumber)}/${endpoint}`, {
+        rejectionReason: rejectionReason.trim(),
+      });
+      toast.success('SPK berhasil ditolak');
+      setRejectOpen(false);
+      setRejectionReason('');
+      setSelected(null);
+      setDetail(null);
+      await load(user);
+    } catch (e) {
+      toast.error('Gagal menolak: ' + e.message);
+    } finally {
+      setRejecting(false);
+    }
+  }
+
+  const canReject = detail && !!rejectEndpoint(detail.spk.status);
+
   const uniqueCategories = [...new Set(spks.map(s => s.category).filter(Boolean))].sort();
   const showCategoryChips = !KASIE_ROLES.has(user?.role) && uniqueCategories.length > 1;
-  const filteredSpks = categoryFilter ? spks.filter(s => s.category === categoryFilter) : spks;
+  const filteredSpks = spks
+    .filter(s => !categoryFilter || s.category === categoryFilter)
+    .filter(s => !hasAbnormal || s.abnormalCount > 0);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -240,6 +281,24 @@ export default function SpkApprovalPage() {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
+
+        {/* Abnormal filter chip */}
+        {!loading && spks.length > 0 && (
+          <div className="px-3 py-2 border-b border-gray-200">
+            <button
+              onClick={() => setHasAbnormal(v => !v)}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                hasAbnormal
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              <span>⚠</span>
+              <span>Ada Hasil Abnormal</span>
+            </button>
+          </div>
+        )}
 
         {/* Category filter chips — Kadis/Admin only, when multiple categories present */}
         {showCategoryChips && !loading && spks.length > 0 && (
@@ -316,6 +375,11 @@ export default function SpkApprovalPage() {
                   <p className="text-xs text-gray-500 truncate mb-1">
                     {spk.equipmentModels?.[0]?.equipmentName || '—'}
                   </p>
+                  {spk.abnormalCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700 mb-1">
+                      ⚠ {spk.abnormalCount} abnormal
+                    </span>
+                  )}
                   <div className="flex items-center justify-between">
                     <StatusBadge status={spk.status} kadisArea={spk.kadisArea} />
                     <span className="text-[10px] text-gray-400">
@@ -348,6 +412,8 @@ export default function SpkApprovalPage() {
             detail={detail}
             canApprove={canApprove}
             onApprove={() => setConfirmOpen(true)}
+            canReject={canReject}
+            onReject={() => { setRejectionReason(''); setRejectOpen(true); }}
             onPhotoClick={(path) => setLightbox(path)}
             userMap={userMap}
           />
@@ -370,6 +436,45 @@ export default function SpkApprovalPage() {
             </Button>
             <Button onClick={handleApprove} disabled={approving || !canUpdate('spk-approval')}>
               {approving ? 'Menyetujui...' : 'Setujui'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reject dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={rejectOpen} onOpenChange={(open) => { setRejectOpen(open); if (!open) setRejectionReason(''); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Tolak SPK</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            Tolak SPK <span className="font-semibold font-mono">{detail?.spk?.spkNumber}</span>?
+          </p>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+              Alasan Penolakan <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Tuliskan alasan penolakan (min. 10 karakter)..."
+              rows={3}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+            {rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10 && (
+              <p className="text-xs text-red-500 mt-1">Minimal 10 karakter</p>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setRejectOpen(false)} disabled={rejecting}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={rejecting || rejectionReason.trim().length < 10 || !canUpdate('spk-approval')}
+            >
+              {rejecting ? 'Menolak...' : 'Tolak SPK'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -401,7 +506,7 @@ export default function SpkApprovalPage() {
 
 // ── Detail Panel ──────────────────────────────────────────────────────────────
 
-function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {} }) {
+function DetailPanel({ detail, canApprove, onApprove, canReject, onReject, onPhotoClick, userMap = {} }) {
   const { spk, submission } = detail;
   const activities = spk.activitiesModel || [];
   const results    = submission?.activityResultsModel || [];
@@ -423,11 +528,25 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {}
             </div>
             <p className="text-sm text-gray-500">{spk.description || '—'}</p>
           </div>
-          {canApprove && canUpdate('spk-approval') && (
-            <Button onClick={onApprove} className="gap-2 shrink-0">
-              <CheckCircle size={15} />
-              Setujui SPK
-            </Button>
+          {canUpdate('spk-approval') && (canApprove || canReject) && (
+            <div className="flex gap-2 shrink-0">
+              {canReject && (
+                <Button
+                  variant="outline"
+                  onClick={onReject}
+                  className="gap-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                >
+                  <XCircle size={15} />
+                  Tolak SPK
+                </Button>
+              )}
+              {canApprove && (
+                <Button onClick={onApprove} className="gap-2">
+                  <CheckCircle size={15} />
+                  Setujui SPK
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -585,6 +704,38 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {}
           />
         </div>
       </Section>
+
+      {/* Rejection history */}
+      {(spk.rejectionLogs || []).length > 0 && (
+        <div className="bg-white rounded-xl border border-red-100 p-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Riwayat Penolakan</p>
+          <div className="space-y-3">
+            {(spk.rejectionLogs || []).map((log, i) => {
+              const levelLabel = log.rejectedLevel === 'kasie' ? 'Kasie'
+                : log.rejectedLevel === 'kadis_perawatan' ? 'Kadis Perawatan'
+                : 'Kadis';
+              return (
+                <div key={i} className="bg-red-50 border border-red-100 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded uppercase">
+                      {levelLabel}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {log.rejectedBy} &middot; {formatDate(log.rejectedAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-red-800">{log.rejectionReason}</p>
+                  {log.resubmittedAt && (
+                    <p className="text-xs text-green-600 mt-1 italic">
+                      Teknisi kirim ulang: {formatDate(log.resubmittedAt)}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

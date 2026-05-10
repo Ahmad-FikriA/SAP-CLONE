@@ -104,7 +104,6 @@ export default function TrackRecordPage() {
   const totalSpkAll = stats.reduce((s, u) => s + u.totalSpk, 0);
   const totalApprovedAll = stats.reduce((s, u) => s + u.approvedSpk, 0);
   const activeCount = stats.filter(u => u.totalSpk > 0).length;
-  const maxSpk = stats[0]?.totalSpk || 1;
 
   return (
     <div className="p-6 space-y-5">
@@ -233,21 +232,21 @@ export default function TrackRecordPage() {
                     </div>
                   </td>
 
-                  {/* Relative bar */}
+                  {/* Completion rate */}
                   <td className="px-4 py-3">
-                    {u.totalSpk > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 rounded-full transition-all"
-                            style={{ width: `${Math.round((u.totalSpk / maxSpk) * 100)}%` }}
-                          />
+                    {u.totalSpk > 0 ? (() => {
+                      const pct = Math.round((u.approvedSpk / u.totalSpk) * 100);
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-500 tabular-nums w-12 text-right">
+                            {pct}%
+                          </span>
                         </div>
-                        <span className="text-xs text-gray-400 tabular-nums w-12 text-right">
-                          {Math.round((u.totalSpk / maxSpk) * 100)}%
-                        </span>
-                      </div>
-                    ) : (
+                      );
+                    })() : (
                       <span className="text-xs text-gray-300">—</span>
                     )}
                   </td>
