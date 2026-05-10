@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Fragment } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api';
 import { StatusBadge, CategoryBadge } from '@/components/shared/StatusBadge';
@@ -79,6 +80,7 @@ function suggestNumber(category, list) {
 }
 
 export default function SpkPage() {
+  const searchParams = useSearchParams();
   const [spkList, setSpkList]       = useState([]);
   const [loading, setLoading]       = useState(true);
   const [category, setCategory]     = useState('');
@@ -86,7 +88,7 @@ export default function SpkPage() {
   const [selected, setSelected]     = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('q') || '');
   const [weekFilter, setWeekFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [plantFilter, setPlantFilter] = useState('');
