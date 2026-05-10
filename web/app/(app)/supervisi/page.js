@@ -4,9 +4,12 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
+import {
   MapPin, Loader2, AlertCircle, RefreshCw, Search, X, XCircle, CalendarDays,
   Briefcase, CheckCircle2, FileEdit, FileText, Banknote, Trash2, Eye, Ban,
-  CalendarOff
+  CalendarOff, TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -240,6 +243,8 @@ export default function SupervisiPage() {
   const setJobToDelete = setJobToCancel;
   const [tableSearch, setTableSearch] = useState('');
   const [tableStatusFilter, setTableStatusFilter] = useState('');
+  const [showFullFormat, setShowFullFormat] = useState(false);
+
 
   // ── Filter tahun & bulan ────────────────────────────────────────────────────
   const currentYear  = new Date().getFullYear();
@@ -523,12 +528,14 @@ export default function SupervisiPage() {
     .filter((j) => j.status === 'active' || j.status === 'completed')
     .reduce((sum, job) => sum + (parseFloat(job.nilaiPekerjaan) || 0), 0);
 
-  const formatRupiah = (value) => {
+  const formatRupiah = (value, shorten = true) => {
     if (!value) return 'Rp 0';
-    if (value >= 1e9) {
-      return `Rp ${(value / 1e9).toFixed(1)} Miliar`;
-    } else if (value >= 1e6) {
-      return `Rp ${(value / 1e6).toFixed(1)} Juta`;
+    if (shorten) {
+      if (value >= 1e9) {
+        return `Rp ${(value / 1e9).toFixed(1)} Miliar`;
+      } else if (value >= 1e6) {
+        return `Rp ${(value / 1e6).toFixed(1)} Juta`;
+      }
     }
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -537,6 +544,72 @@ export default function SupervisiPage() {
       maximumFractionDigits: 0,
     }).format(value);
   };
+
+  // ── Chart data ────────────────────────────────────────────────────────────────
+  const nilaiChartData = useMemo(() => {
+    const relevantJobs = jobs
+      .filter((j) => {
+        if (j.status !== 'active' && j.status !== 'completed') return false;
+        const date = j.waktuMulai || j.createdAt || '';
+        if (yearFilter && !date.startsWith(yearFilter)) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const da = a.waktuMulai || a.createdAt || '';
+        const db = b.waktuMulai || b.createdAt || '';
+        return da.localeCompare(db);
+      });
+
+    if (monthFilter) {
+      const daysInMonth = new Date(
+        parseInt(yearFilter || new Date().getFullYear()),
+        parseInt(monthFilter), 0
+      ).getDate();
+      const prefix = `${yearFilter || new Date().getFullYear()}-${monthFilter.padStart(2, '0')}`;
+      const dailyMap = {};
+      relevantJobs.forEach((j) => {
+        const d = (j.waktuMulai || j.createdAt || '').slice(0, 10);
+        if (!d.startsWith(prefix)) return;
+        dailyMap[d] = (dailyMap[d] || 0) + (parseFloat(j.nilaiPekerjaan) || 0);
+      });
+      let cumulative = 0;
+      return Array.from({ length: daysInMonth }, (_, i) => {
+        const day = String(i + 1).padStart(2, '0');
+        const key = `${prefix}-${day}`;
+        cumulative += dailyMap[key] || 0;
+        return { label: `${i + 1}`, nilai: cumulative, raw: cumulative };
+      });
+    }
+
+    const monthlyMap = {};
+    relevantJobs.forEach((j) => {
+      const d = j.waktuMulai || j.createdAt || '';
+      const key = d.slice(0, 7);
+      if (!key) return;
+      monthlyMap[key] = (monthlyMap[key] || 0) + (parseFloat(j.nilaiPekerjaan) || 0);
+    });
+    const sortedKeys = Object.keys(monthlyMap).sort();
+    let cumulative = 0;
+    return sortedKeys.map((key) => {
+      cumulative += monthlyMap[key];
+      const [, mm] = key.split('-');
+      return {
+        label: MONTH_NAMES[parseInt(mm) - 1]?.slice(0, 3) || mm,
+        nilai: cumulative,
+        raw: cumulative,
+      };
+    });
+  }, [jobs, yearFilter, monthFilter]);
+
+  const nilaiChange = useMemo(() => {
+    if (nilaiChartData.length < 2) return null;
+    const last = nilaiChartData[nilaiChartData.length - 1]?.raw || 0;
+    const prev = nilaiChartData[nilaiChartData.length - 2]?.raw || 0;
+    if (!prev) return null;
+    return ((last - prev) / prev) * 100;
+  }, [nilaiChartData]);
+
+
 
   // Center awal peta = koordinat job aktif pertama (setelah data loaded)
   const initialCenter = loading ? null : getInitialMapCenter(validJobs);
@@ -721,39 +794,107 @@ export default function SupervisiPage() {
         </div>
       </div>
 
-      {/* ── Executive Summary ── */}
+      {/* ── Total Nilai Card (full-width, crypto-style) ── */}
       {!loading && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Card JO Terbit */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">JO Terbit</p>
-              <p className="text-3xl font-extrabold text-slate-900">{totalJoTerbit}</p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <FileText size={28} strokeWidth={2.5} />
-            </div>
-          </div>
+        <div className="relative overflow-hidden rounded-2xl shadow-xl" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 40%, #047857 100%)' }}>
+          {/* BG orbs */}
+          <div className="absolute -right-16 -top-16 w-72 h-72 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute right-32 -bottom-12 w-48 h-48 bg-emerald-300/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute left-1/2 top-0 w-96 h-32 bg-teal-400/5 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Card Total Nilai (Premium) */}
-          <div className="md:col-span-2 relative overflow-hidden bg-gradient-to-br from-emerald-600 via-teal-700 to-emerald-900 p-6 rounded-2xl shadow-lg flex items-center justify-between group">
-            {/* Decorative Ornaments */}
-            <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
-            <div className="absolute right-16 -bottom-8 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-700"></div>
-            
-            <div className="relative z-10 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="relative z-10 p-6 pb-0">
+            {/* Header row: label kiri, nilai besar, % change */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
               <div>
-                <div className="flex items-center gap-2 mb-1.5 opacity-90 text-emerald-50">
-                  <Banknote size={18} strokeWidth={2.5} />
-                  <p className="text-[11px] font-bold uppercase tracking-wider">Total Nilai Pekerjaan</p>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 text-emerald-300">
+                    <Banknote size={13} strokeWidth={2.5} />
+                    <p className="text-[10px] font-bold uppercase tracking-widest">Total Nilai Pekerjaan</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowFullFormat(!showFullFormat)}
+                    className="text-[9px] font-bold uppercase tracking-widest bg-white/10 hover:bg-white/20 text-emerald-100 px-2 py-0.5 rounded transition-colors"
+                  >
+                    {showFullFormat ? 'Ringkas' : 'Detail'}
+                  </button>
                 </div>
-                <p className="text-3xl md:text-4xl font-extrabold text-white tracking-tight drop-shadow-md">
-                  {formatRupiah(totalNilai)}
+                <p 
+                  className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-none drop-shadow cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => setShowFullFormat(!showFullFormat)}
+                  title="Klik untuk ubah format angka"
+                >
+                  {formatRupiah(totalNilai, !showFullFormat)}
                 </p>
+                {nilaiChange !== null && (
+                  <div className={`flex items-center gap-1 mt-2 text-xs font-semibold ${
+                    nilaiChange >= 0 ? 'text-emerald-300' : 'text-red-300'
+                  }`}>
+                    <TrendingUp size={11} className={nilaiChange < 0 ? 'rotate-180' : ''} />
+                    {nilaiChange >= 0 ? '+' : ''}{nilaiChange.toFixed(1)}%
+                  </div>
+                )}
               </div>
-              <div className="hidden sm:flex w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm items-center justify-center text-white border border-white/30 shadow-inner">
-                <Banknote size={24} />
-              </div>
+              <p className="text-[10px] text-emerald-200/60 font-semibold shrink-0">
+                {nilaiChartData.length > 0 ? `${nilaiChartData.length} periode` : ''}
+              </p>
+            </div>
+
+            {/* Chart — fixed height + min-height untuk hindari width -1 error */}
+            <div style={{ width: '100%', height: '160px', minHeight: '160px' }}>
+              {nilaiChartData.length >= 2 ? (
+                <ResponsiveContainer width="99%" height="100%">
+                  <AreaChart data={nilaiChartData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="nilaiGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6ee7b7" stopOpacity={0.45} />
+                        <stop offset="100%" stopColor="#6ee7b7" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 600 }}
+                      axisLine={false} tickLine={false}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 9 }}
+                      axisLine={false} tickLine={false} width={70}
+                      tickFormatter={(v) => {
+                        if (v >= 1e9) return `${(v/1e9).toFixed(1)}M`;
+                        if (v >= 1e6) return `${(v/1e6).toFixed(0)}Jt`;
+                        if (v >= 1e3) return `${(v/1e3).toFixed(0)}rb`;
+                        return v;
+                      }}
+                    />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null;
+                        return (
+                          <div style={{ background:'rgba(5,30,50,0.95)', border:'1px solid rgba(110,231,183,0.3)', borderRadius:'12px', padding:'10px 14px', backdropFilter:'blur(12px)' }}>
+                            <p style={{ color:'rgba(110,231,183,0.8)', fontSize:'10px', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>{label}</p>
+                            <p style={{ color:'#ffffff', fontSize:'15px', fontWeight:800 }}>{formatRupiah(payload[0].value)}</p>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Area
+                      type="monotone" dataKey="nilai"
+                      stroke="#6ee7b7" strokeWidth={2.5}
+                      fill="url(#nilaiGradient)"
+                      dot={false}
+                      activeDot={{ r: 5, fill: '#6ee7b7', stroke: 'rgba(110,231,183,0.3)', strokeWidth: 3 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-2">
+                  <TrendingUp size={28} className="text-emerald-400/40" />
+                  <p className="text-sm text-emerald-300/60 font-medium">
+                    {nilaiChartData.length === 0 ? 'Belum ada data pekerjaan pada periode ini' : 'Butuh minimal 2 periode untuk menampilkan chart'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -761,29 +902,28 @@ export default function SupervisiPage() {
 
       {/* ── Stat Cards ── */}
       {!loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {[
-            { label: 'Total Job',  value: stats.total,     icon: Briefcase,     color: 'bg-slate-50 text-slate-600'  },
-            { label: 'Aktif',      value: stats.active,    icon: CheckCircle2,  color: 'bg-yellow-50 text-yellow-600' },
-            { label: 'Selesai',    value: stats.completed, icon: CheckCircle2,  color: 'bg-green-50 text-green-600' },
-            { label: 'Draft',      value: stats.draft,     icon: FileEdit,      color: 'bg-blue-50 text-blue-600' },
-            { label: 'Dibatalkan', value: stats.cancelled, icon: XCircle,       color: 'bg-red-50 text-red-600' },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div
-              key={label}
-              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4"
-            >
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
-                <Icon size={22} />
+            { label: 'JO Terbit',  value: totalJoTerbit,  icon: FileText,     color: 'bg-indigo-50 text-indigo-600', textColor: 'text-indigo-700' },
+            { label: 'Total Job',  value: stats.total,    icon: Briefcase,    color: 'bg-slate-50 text-slate-600',   textColor: 'text-slate-800'  },
+            { label: 'Aktif',      value: stats.active,   icon: CheckCircle2, color: 'bg-amber-50 text-amber-600',   textColor: 'text-amber-700'  },
+            { label: 'Selesai',    value: stats.completed,icon: CheckCircle2, color: 'bg-green-50 text-green-600',   textColor: 'text-green-700'  },
+            { label: 'Draft',      value: stats.draft,    icon: FileEdit,     color: 'bg-blue-50 text-blue-600',     textColor: 'text-blue-700'   },
+            { label: 'Dibatalkan', value: stats.cancelled,icon: XCircle,      color: 'bg-red-50 text-red-600',       textColor: 'text-red-700'    },
+          ].map(({ label, value, icon: Icon, color, textColor }) => (
+            <div key={label} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+                <Icon size={18} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-                <p className="text-2xl font-extrabold text-slate-900">{value}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-tight">{label}</p>
+                <p className={`text-xl font-extrabold leading-tight ${textColor}`}>{value}</p>
               </div>
             </div>
           ))}
         </div>
       )}
+
 
       {/* ── Peta + Filter dalam satu card ── */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
