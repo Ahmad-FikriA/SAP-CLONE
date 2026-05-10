@@ -48,8 +48,8 @@ export default function PreventiveCharts({ statusData, catData, total }) {
           {statusData.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-8">Belum ada data</p>
           ) : (
-            <ResponsiveContainer width="100%" height={170}>
-              <PieChart>
+            <ResponsiveContainer width="100%" height={190}>
+              <PieChart margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
                 <Pie
                   data={statusData}
                   cx="50%" cy="50%"

@@ -1033,7 +1033,7 @@ export default function SpkPage() {
                                   <div className="flex flex-wrap gap-2">
                                     {sub.photoPaths.map((path, i) => (
                                       <button
-                                        key={i}
+                                        key={path}
                                         onClick={(e) => { e.stopPropagation(); setLightbox(path); }}
                                         className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-colors shrink-0"
                                       >
