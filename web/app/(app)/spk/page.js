@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api';
 import { StatusBadge, CategoryBadge } from '@/components/shared/StatusBadge';
@@ -1000,30 +1000,56 @@ export default function SpkPage() {
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                          {['Work Start', 'Work Finish', 'Durasi (mnt)', 'Foto', 'Lokasi'].map((h) => (
+                          {['Work Start', 'Work Finish', 'Durasi (mnt)', 'Lokasi'].map((h) => (
                             <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {detailSubs.map((sub) => (
-                          <tr key={sub.id}>
-                            <td className="px-3 py-2 text-gray-600">{sub.workStart ? formatDate(sub.workStart) : '—'}</td>
-                            <td className="px-3 py-2 text-gray-600">{formatDate(sub.submittedAt)}</td>
-                            <td className="px-3 py-2 text-gray-500">{sub.durationActual ?? '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{(sub.photoPaths || []).length}</td>
-                            <td className="px-3 py-2">
-                              {sub.latitude != null ? (
-                                <a href={`https://maps.google.com/?q=${sub.latitude},${sub.longitude}`}
-                                  target="_blank" rel="noreferrer"
-                                  className="inline-flex items-center gap-1 text-blue-600 hover:underline"
-                                  onClick={(e) => e.stopPropagation()}>
-                                  <MapPin size={10} />
-                                  {parseFloat(sub.latitude).toFixed(4)}, {parseFloat(sub.longitude).toFixed(4)}
-                                </a>
-                              ) : '—'}
-                            </td>
-                          </tr>
+                          <Fragment key={sub.id}>
+                            <tr>
+                              <td className="px-3 py-2 text-gray-600">{sub.workStart ? formatDate(sub.workStart) : '—'}</td>
+                              <td className="px-3 py-2 text-gray-600">{formatDate(sub.submittedAt)}</td>
+                              <td className="px-3 py-2 text-gray-500">{sub.durationActual ?? '—'}</td>
+                              <td className="px-3 py-2">
+                                {sub.latitude != null ? (
+                                  <a href={`https://maps.google.com/?q=${sub.latitude},${sub.longitude}`}
+                                    target="_blank" rel="noreferrer"
+                                    className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                                    onClick={(e) => e.stopPropagation()}>
+                                    <MapPin size={10} />
+                                    {parseFloat(sub.latitude).toFixed(4)}, {parseFloat(sub.longitude).toFixed(4)}
+                                  </a>
+                                ) : '—'}
+                              </td>
+                            </tr>
+                            {(sub.photoPaths || []).length > 0 && (
+                              <tr>
+                                <td colSpan={4} className="px-3 pb-3 pt-1">
+                                  <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5">
+                                    Foto Lapangan ({sub.photoPaths.length})
+                                  </p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {sub.photoPaths.map((path, i) => (
+                                      <button
+                                        key={i}
+                                        onClick={(e) => { e.stopPropagation(); setLightbox(path); }}
+                                        className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-colors shrink-0"
+                                      >
+                                        <img
+                                          src={`${UPLOADS_BASE}/${path.replace(/^\//, '')}`}
+                                          alt={`Foto ${i + 1}`}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
                         ))}
                       </tbody>
                     </table>
