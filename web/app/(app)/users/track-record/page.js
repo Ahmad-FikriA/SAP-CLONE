@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { toast } from 'sonner';
 import { apiGet } from '@/lib/api';
 import { formatDate } from '@/lib/date-utils';
@@ -61,12 +61,25 @@ function SummaryCard({ icon: Icon, label, value, sub, color }) {
 export default function TrackRecordPage() {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [onlyActive, setOnlyActive] = useState(false);
+  const [onlyActive, setOnlyActive] = useState(true);
+  const [selectedUsers, setSelectedUsers] = useState(new Set());
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef(null);
   const [expandedId, setExpandedId] = useState(null);
   const [drillData, setDrillData] = useState({});
   const [drillLoading, setDrillLoading] = useState(false);
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setPickerOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -100,7 +113,10 @@ export default function TrackRecordPage() {
     }
   }
 
-  const displayed = onlyActive ? stats.filter(u => u.totalSpk > 0) : stats;
+  const displayed = stats.filter(u => {
+    if (selectedUsers.size > 0) return selectedUsers.has(u.id);
+    return !onlyActive || u.totalSpk > 0;
+  });
   const totalSpkAll = stats.reduce((s, u) => s + u.totalSpk, 0);
   const totalApprovedAll = stats.reduce((s, u) => s + u.approvedSpk, 0);
   const activeCount = stats.filter(u => u.totalSpk > 0).length;
@@ -114,15 +130,72 @@ export default function TrackRecordPage() {
           <p className="text-sm text-gray-500">Rekap jumlah SPK per pengguna</p>
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={onlyActive}
-              onChange={e => setOnlyActive(e.target.checked)}
-              className="accent-blue-600"
-            />
-            Hanya yang aktif
-          </label>
+          {/* User picker */}
+          <div className="relative" ref={pickerRef}>
+            <button
+              onClick={() => setPickerOpen(v => !v)}
+              className={cn(
+                'flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg transition-colors',
+                selectedUsers.size > 0
+                  ? 'border-blue-400 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+              )}
+            >
+              <Users size={13} />
+              {selectedUsers.size > 0 ? `${selectedUsers.size} dipilih` : 'Pilih Teknisi'}
+              <ChevronDown size={13} />
+            </button>
+
+            {pickerOpen && (
+              <div className="absolute right-0 mt-1 w-60 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1 max-h-72 overflow-y-auto">
+                <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pilih teknisi</span>
+                  {selectedUsers.size > 0 && (
+                    <button
+                      onClick={() => setSelectedUsers(new Set())}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+                {stats.map(u => (
+                  <label key={u.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.has(u.id)}
+                      onChange={() => {
+                        setSelectedUsers(prev => {
+                          const next = new Set(prev);
+                          if (next.has(u.id)) next.delete(u.id); else next.add(u.id);
+                          return next;
+                        });
+                      }}
+                      className="accent-blue-600 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-800 truncate">{u.name || u.id}</p>
+                      <p className="text-[11px] text-gray-400">{u.totalSpk} SPK</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Only active — hidden when user picker is active */}
+          {selectedUsers.size === 0 && (
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={onlyActive}
+                onChange={e => setOnlyActive(e.target.checked)}
+                className="accent-blue-600"
+              />
+              Hanya yang aktif
+            </label>
+          )}
+
           <button
             onClick={load}
             disabled={loading}

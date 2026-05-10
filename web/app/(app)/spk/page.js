@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, Fragment } from 'react';
+import { useState, useEffect, useRef, Fragment, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api';
@@ -80,6 +80,10 @@ function suggestNumber(category, list) {
 }
 
 export default function SpkPage() {
+  return <Suspense><SpkPageInner /></Suspense>;
+}
+
+function SpkPageInner() {
   const searchParams = useSearchParams();
   const [spkList, setSpkList]       = useState([]);
   const [loading, setLoading]       = useState(true);
