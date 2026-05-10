@@ -723,24 +723,6 @@ export default function SpkPage() {
             {detailSpk?.description && (
               <p className="text-sm text-gray-500 mt-1">{detailSpk.description}</p>
             )}
-            {(() => {
-              const results = detailSubs[0]?.activityResultsModel || [];
-              if (results.length === 0) return null;
-              const normalCount = results.filter(r => r.isNormal !== false).length;
-              const abnormalCount = results.filter(r => r.isNormal === false).length;
-              return (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700">
-                    ✓ {normalCount} Normal
-                  </span>
-                  {abnormalCount > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700">
-                      ⚠ {abnormalCount} Tidak Normal
-                    </span>
-                  )}
-                </div>
-              );
-            })()}
           </DialogHeader>
 
           {detailSpk && (
@@ -816,77 +798,49 @@ export default function SpkPage() {
               )}
 
               {/* Activities */}
-              {detailSpk.activitiesModel?.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                    Aktivitas ({detailSpk.activitiesModel.length})
-                  </p>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          {['No.', 'Operasi', 'Plan (mnt)', 'Aktual (mnt)', 'Hasil', 'Verified'].map((h) => (
-                            <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {detailSpk.activitiesModel.map((a) => (
-                          <tr key={a.activityNumber}>
-                            <td className="px-3 py-2 font-mono text-gray-500">{a.activityNumber}</td>
-                            <td className="px-3 py-2 text-gray-700 max-w-[220px]">{a.operationText}</td>
-                            <td className="px-3 py-2 text-gray-500">{a.durationPlan ?? '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{a.durationActual ?? '—'}</td>
-                            <td className="px-3 py-2 text-gray-500 max-w-[160px] truncate">{a.resultComment || '—'}</td>
-                            <td className="px-3 py-2">
-                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${a.isVerified ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
-                                {a.isVerified ? '✓ Ya' : '—'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Hasil Ukur — from latest submission's activity results */}
-              {(() => {
-                const latestSub = detailSubs[0];
-                const results = latestSub?.activityResultsModel || [];
-                const hasMeasurements = results.some(r => r.measurementValue != null);
-                if (!hasMeasurements || !detailSpk.activitiesModel?.length) return null;
-                const resultMap = new Map(results.map(r => [r.activityNumber, r]));
+              {detailSpk.activitiesModel?.length > 0 && (() => {
+                const subResults = detailSubs[0]?.activityResultsModel || [];
+                const resultMap = new Map(subResults.map(r => [r.activityNumber, r]));
+                const hasSubData = subResults.length > 0;
                 return (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Hasil Ukur</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                      Aktivitas ({detailSpk.activitiesModel.length})
+                    </p>
                     <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
-                            {['No.', 'Uraian Pekerjaan', 'Nilai Ukur', 'Komentar', 'Status'].map((h) => (
+                            {['No.', 'Operasi', 'Plan (mnt)', 'Aktual (mnt)', 'Hasil', 'Nilai Ukur', 'Verified', 'Status'].map((h) => (
                               <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {detailSpk.activitiesModel.map((act) => {
-                            const res = resultMap.get(act.activityNumber);
-                            if (!res?.measurementValue) return null;
-                            const unit = res.measurementUnit || detectMeasurementUnit(act.operationText);
+                          {detailSpk.activitiesModel.map((a) => {
+                            const res = resultMap.get(a.activityNumber);
+                            const unit = res?.measurementUnit || detectMeasurementUnit(a.operationText);
                             return (
-                              <tr key={act.activityNumber} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 font-mono text-gray-500">{act.activityNumber}</td>
-                                <td className="px-3 py-2 text-gray-700 max-w-[240px]">{act.operationText || '—'}</td>
+                              <tr key={a.activityNumber} className={res?.isNormal === false ? 'bg-red-50/40' : ''}>
+                                <td className="px-3 py-2 font-mono text-gray-500">{a.activityNumber}</td>
+                                <td className="px-3 py-2 text-gray-700 max-w-[220px]">{a.operationText}</td>
+                                <td className="px-3 py-2 text-gray-500">{a.durationPlan ?? '—'}</td>
+                                <td className="px-3 py-2 text-gray-500">{a.durationActual ?? '—'}</td>
+                                <td className="px-3 py-2 text-gray-500 max-w-[160px] truncate">{a.resultComment || '—'}</td>
                                 <td className="px-3 py-2 font-mono font-semibold text-gray-800">
-                                  {res.measurementValue}{unit ? ` ${unit}` : ''}
+                                  {res?.measurementValue != null ? `${res.measurementValue}${unit ? ` ${unit}` : ''}` : '—'}
                                 </td>
-                                <td className="px-3 py-2 text-gray-500 max-w-[180px]">{res.resultComment || '—'}</td>
                                 <td className="px-3 py-2">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${res.isNormal ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                                    {res.isNormal ? 'Normal' : 'Tidak Normal'}
+                                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${a.isVerified ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
+                                    {a.isVerified ? '✓ Ya' : '—'}
                                   </span>
+                                </td>
+                                <td className="px-3 py-2">
+                                  {hasSubData ? (
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${res?.isNormal === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                      {res?.isNormal === false ? 'Tidak Normal' : 'Normal'}
+                                    </span>
+                                  ) : '—'}
                                 </td>
                               </tr>
                             );
