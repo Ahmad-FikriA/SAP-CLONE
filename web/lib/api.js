@@ -6,6 +6,7 @@ export async function apiFetch(path, options = {}) {
   const isFormData = options.body instanceof FormData;
   const headers = {
     Authorization: `Bearer ${getToken()}`,
+    'X-Client-Platform': 'web',
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers || {}),
   };
@@ -55,7 +56,10 @@ export function apiUpload(path, formData) {
 /** GET that returns a Blob (for file downloads) */
 export async function apiBlob(path) {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+      'X-Client-Platform': 'web',
+    },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));

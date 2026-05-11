@@ -43,4 +43,16 @@ describe('Supervisi access rules', () => {
 
     expect(getSupervisiAccess(user).kind).toBe('none');
   });
+
+  it('grants monitor access for web reads when explicitly flagged as web client', () => {
+    const user = {
+      nik: 'codex-viewer',
+      name: 'Viewer Web',
+      role: 'teknisi',
+      group: 'Produksi',
+      permissions: { supervisi: ['R'] },
+    };
+
+    expect(getSupervisiAccess(user, { allowWebPermissionRead: true }).kind).toBe('monitor');
+  });
 });
