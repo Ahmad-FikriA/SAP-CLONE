@@ -46,6 +46,7 @@ export function InspeksiSpkTable({
   onRefresh,
   onViewDetail,
   onDelete,
+  canDelete = false,
 }) {
   const [search,         setSearch]         = useState('');
   const [statusFilter,   setStatusFilter]   = useState('');
@@ -102,11 +103,12 @@ export function InspeksiSpkTable({
 
   function handleDeleteClick(e, s) {
     e.stopPropagation();
+    if (!canDelete) return;
     setDeleteCandidate(s);
   }
 
   function confirmDelete() {
-    if (deleteCandidate) {
+    if (deleteCandidate && canDelete) {
       onDelete?.(deleteCandidate);
       setDeleteCandidate(null);
     }
@@ -270,14 +272,16 @@ export function InspeksiSpkTable({
                       >
                         <Eye size={11} /> Detail
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 opacity-70 group-hover:opacity-100"
-                        onClick={(e) => handleDeleteClick(e, s)}
-                      >
-                        <Trash2 size={11} /> Hapus
-                      </Button>
+                      {canDelete && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 opacity-70 group-hover:opacity-100"
+                          onClick={(e) => handleDeleteClick(e, s)}
+                        >
+                          <Trash2 size={11} /> Hapus
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -299,7 +303,7 @@ export function InspeksiSpkTable({
             <Button variant="outline" onClick={() => setDeleteCandidate(null)}>
               Batal
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button variant="destructive" onClick={confirmDelete} disabled={!canDelete}>
               Ya, Hapus
             </Button>
           </DialogFooter>

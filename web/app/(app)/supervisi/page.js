@@ -21,6 +21,7 @@ import {
   updateSupervisiRadiusExemption,
   SUPERVISI_STATUS_META,
 } from '@/lib/supervisi-service';
+import { canUpdate, canDelete } from '@/lib/auth';
 import { SupervisiJobPanel } from '@/components/supervisi/SupervisiJobPanel';
 
 // Leaflet hanya berjalan di client
@@ -244,6 +245,8 @@ export default function SupervisiPage() {
   const [tableSearch, setTableSearch] = useState('');
   const [tableStatusFilter, setTableStatusFilter] = useState('');
   const [showFullFormat, setShowFullFormat] = useState(false);
+  const canUpdateSupervisi = canUpdate('supervisi');
+  const canDeleteSupervisi = canDelete('supervisi');
 
 
   // ── Filter tahun & bulan ────────────────────────────────────────────────────
@@ -299,7 +302,7 @@ export default function SupervisiPage() {
   useEffect(() => {
     if (!mapRef.current || !LRef.current || !mapReadyRef.current) return;
     renderMarkers(mapRef.current, LRef.current, validJobs, filter);
-  }, [validJobs, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [validJobs, filter, canUpdateSupervisi]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Callback saat peta siap ─────────────────────────────────────────────────
   const onMapReady = useCallback((map, L) => {
@@ -307,7 +310,7 @@ export default function SupervisiPage() {
     LRef.current    = L;
     mapReadyRef.current = true;
     if (validJobs.length > 0) renderMarkers(map, L, validJobs, filter);
-  }, [validJobs, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [validJobs, filter, canUpdateSupervisi]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onMapUnmount = useCallback(() => {
     mapReadyRef.current = false;
@@ -317,6 +320,12 @@ export default function SupervisiPage() {
 
   // ── Render / re-render markers ──────────────────────────────────────────────
   const handleLocationDragEnd = useCallback(({ job, locationIndex, marker, previousLatLng, nextLatLng }) => {
+    if (!canUpdateSupervisi) {
+      marker.setLatLng(previousLatLng);
+      toast.error('Anda tidak memiliki akses untuk memperbarui lokasi supervisi.');
+      return;
+    }
+
     if (!job?.id) {
       marker.setLatLng(previousLatLng);
       toast.error('Job supervisi tidak valid.');
@@ -346,7 +355,7 @@ export default function SupervisiPage() {
 
     pendingPinMoveRef.current = pendingMove;
     setPendingPinMove(pendingMove);
-  }, []);
+  }, [canUpdateSupervisi]);
 
   function renderMarkers(map, L, allJobs, activeFilter) {
     // Bersihkan marker lama
@@ -373,7 +382,7 @@ export default function SupervisiPage() {
       // Render marker untuk tiap titik
       points.forEach((pt) => {
         let previousLatLng = L.latLng(pt.lat, pt.lng);
-        const marker = L.marker([pt.lat, pt.lng], { icon, draggable: true });
+        const marker = L.marker([pt.lat, pt.lng], { icon, draggable: canUpdateSupervisi });
         const popupContent = `
           <div style="min-width:200px;font-family:system-ui,sans-serif">
             <p style="font-size:10px;font-weight:700;color:#6B7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">
@@ -396,25 +405,27 @@ export default function SupervisiPage() {
         marker.bindPopup(popupContent, { maxWidth: 260 });
         marker.on('add', () => {
           const el = marker.getElement();
-          if (el) el.style.cursor = 'grab';
+          if (el) el.style.cursor = canUpdateSupervisi ? 'grab' : 'pointer';
         });
-        marker.on('dragstart', () => {
-          previousLatLng = marker.getLatLng();
-          map.closePopup();
-          const el = marker.getElement();
-          if (el) el.style.cursor = 'grabbing';
-        });
-        marker.on('dragend', () => {
-          const el = marker.getElement();
-          if (el) el.style.cursor = 'grab';
-          handleLocationDragEnd({
-            job,
-            locationIndex: pt.locationIndex,
-            marker,
-            previousLatLng,
-            nextLatLng: marker.getLatLng(),
+        if (canUpdateSupervisi) {
+          marker.on('dragstart', () => {
+            previousLatLng = marker.getLatLng();
+            map.closePopup();
+            const el = marker.getElement();
+            if (el) el.style.cursor = 'grabbing';
           });
-        });
+          marker.on('dragend', () => {
+            const el = marker.getElement();
+            if (el) el.style.cursor = 'grab';
+            handleLocationDragEnd({
+              job,
+              locationIndex: pt.locationIndex,
+              marker,
+              previousLatLng,
+              nextLatLng: marker.getLatLng(),
+            });
+          });
+        }
         marker.addTo(map);
         markersRef.current.push(marker);
       });
@@ -445,6 +456,11 @@ export default function SupervisiPage() {
   const confirmPinMove = async () => {
     const pendingMove = pendingPinMoveRef.current;
     if (!pendingMove) return;
+    if (!canUpdateSupervisi) {
+      closePinMoveDialog();
+      toast.error('Anda tidak memiliki akses untuk memperbarui lokasi supervisi.');
+      return;
+    }
 
     const { job, locationIndex, marker, previousLatLng, nextLatLng } = pendingMove;
     const next = normalizeLatLngForSave(nextLatLng);
@@ -628,9 +644,25 @@ export default function SupervisiPage() {
     return true;
   });
 
-  const handleCancelClick = (job) => setJobToCancel(job);
-  const handleHapusClick  = (job) => setJobToHapus(job);
+  const handleCancelClick = (job) => {
+    if (!canUpdateSupervisi) {
+      toast.error('Anda tidak memiliki akses untuk membatalkan pekerjaan supervisi.');
+      return;
+    }
+    setJobToCancel(job);
+  };
+  const handleHapusClick  = (job) => {
+    if (!canDeleteSupervisi) {
+      toast.error('Anda tidak memiliki akses untuk menghapus pekerjaan supervisi.');
+      return;
+    }
+    setJobToHapus(job);
+  };
   const handleRadiusExemptionClick = (job) => {
+    if (!canUpdateSupervisi) {
+      toast.error('Anda tidak memiliki akses untuk mengubah radius supervisi.');
+      return;
+    }
     setJobToRadiusExempt(job);
     setRadiusExemptionForm({
       startDate: dateOnly(job.radiusExemptionStartDate),
@@ -656,6 +688,11 @@ export default function SupervisiPage() {
 
   const confirmRadiusExemption = async () => {
     if (!jobToRadiusExempt) return;
+    if (!canUpdateSupervisi) {
+      toast.error('Anda tidak memiliki akses untuk mengubah radius supervisi.');
+      return;
+    }
+
     const startDate = radiusExemptionForm.startDate;
     const endDate = radiusExemptionForm.endDate;
     if (!startDate || !endDate) {
@@ -686,6 +723,11 @@ export default function SupervisiPage() {
 
   const clearRadiusExemption = async () => {
     if (!jobToRadiusExempt) return;
+    if (!canUpdateSupervisi) {
+      toast.error('Anda tidak memiliki akses untuk mengubah radius supervisi.');
+      return;
+    }
+
     setIsSavingRadiusExemption(true);
     try {
       const savedJob = await updateSupervisiRadiusExemption(jobToRadiusExempt.id, {
@@ -705,6 +747,11 @@ export default function SupervisiPage() {
 
   const confirmCancelJob = async () => {
     if (!jobToCancel) return;
+    if (!canUpdateSupervisi) {
+      toast.error('Anda tidak memiliki akses untuk membatalkan pekerjaan supervisi.');
+      return;
+    }
+
     const reason = cancelReason.trim();
     if (reason.length < 5) return;
     setIsCancelling(true);
@@ -724,6 +771,11 @@ export default function SupervisiPage() {
 
   const confirmHapusJob = async () => {
     if (!jobToHapus) return;
+    if (!canDeleteSupervisi) {
+      toast.error('Anda tidak memiliki akses untuk menghapus pekerjaan supervisi.');
+      return;
+    }
+
     setIsHapusing(true);
     try {
       await deleteSupervisiJob(jobToHapus.id);
@@ -1135,7 +1187,7 @@ export default function SupervisiPage() {
                           </Button>
 
                           {/* Tombol Batalkan - hanya untuk active */}
-                          {job.status === 'active' && (
+                          {job.status === 'active' && canUpdateSupervisi && (
                             <>
                               <Button
                                 variant="outline"
@@ -1161,7 +1213,7 @@ export default function SupervisiPage() {
                           )}
 
                           {/* Tombol Hapus - hanya untuk cancelled/completed */}
-                          {(job.status === 'cancelled' || job.status === 'completed') && (
+                          {canDeleteSupervisi && (job.status === 'cancelled' || job.status === 'completed') && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -1222,7 +1274,7 @@ export default function SupervisiPage() {
             </Button>
             <Button
               className="gap-2 bg-blue-700 hover:bg-blue-800 text-white"
-              disabled={isSavingPinMove}
+              disabled={isSavingPinMove || !canUpdateSupervisi}
               onClick={confirmPinMove}
             >
               {isSavingPinMove ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
@@ -1277,7 +1329,7 @@ export default function SupervisiPage() {
             </Button>
             <Button
               className="gap-2 bg-orange-600 hover:bg-orange-700 text-white"
-              disabled={isCancelling || cancelReason.trim().length < 5}
+              disabled={isCancelling || cancelReason.trim().length < 5 || !canUpdateSupervisi}
               onClick={confirmCancelJob}
             >
               {isCancelling ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
@@ -1357,7 +1409,7 @@ export default function SupervisiPage() {
             {jobToRadiusExempt?.radiusExemptionStartDate && jobToRadiusExempt?.radiusExemptionEndDate && (
               <Button
                 variant="outline"
-                disabled={isSavingRadiusExemption}
+                disabled={isSavingRadiusExemption || !canUpdateSupervisi}
                 onClick={clearRadiusExemption}
                 className="text-slate-700"
               >
@@ -1373,7 +1425,7 @@ export default function SupervisiPage() {
             </Button>
             <Button
               className="gap-2 bg-teal-700 hover:bg-teal-800 text-white"
-              disabled={isSavingRadiusExemption}
+              disabled={isSavingRadiusExemption || !canUpdateSupervisi}
               onClick={confirmRadiusExemption}
             >
               {isSavingRadiusExemption ? <Loader2 size={14} className="animate-spin" /> : <CalendarOff size={14} />}
@@ -1408,7 +1460,7 @@ export default function SupervisiPage() {
             </Button>
             <Button
               variant="destructive"
-              disabled={isHapusing}
+              disabled={isHapusing || !canDeleteSupervisi}
               onClick={confirmHapusJob}
               className="gap-2"
             >

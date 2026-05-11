@@ -4,7 +4,10 @@ const fs   = require('fs');
 const path = require('path');
 const jwt  = require('jsonwebtoken');
 const User = require('../../models/User');
-const { buildAccessProfile } = require('../../services/accessProfile');
+const {
+  buildAccessProfile,
+  applyWebPermissionsToAccessProfile,
+} = require('../../services/accessProfile');
 
 const JWT_SECRET     = process.env.JWT_SECRET || 'kti-mock-secret-dev';
 const TEMPLATES_PATH = path.join(__dirname, '..', '..', '..', 'data', 'role_templates.json');
@@ -26,9 +29,12 @@ const login = async (req, res) => {
   const user = await User.findOne({ where: { nik, password } });
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const accessProfile  = buildAccessProfile(user);
   const roleTemplates  = loadRoleTemplates();
   const permissions    = user.permissions ?? roleTemplates[user.role] ?? null; // null = unrestricted
+  const accessProfile  = applyWebPermissionsToAccessProfile(
+    buildAccessProfile(user),
+    permissions,
+  );
 
   const token = jwt.sign(
     {
@@ -39,6 +45,7 @@ const login = async (req, res) => {
       dinas: user.dinas || '',
       group: user.group || '',
       divisi: user.divisi || '',
+      permissions,
     },
     JWT_SECRET,
     { expiresIn: '24h' }

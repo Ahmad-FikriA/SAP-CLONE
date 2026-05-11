@@ -111,6 +111,12 @@ function getSupervisiAccess(user) {
     return { kind: "monitor", nik, displayName };
   }
 
+  // Jika user diberi akses baca ("R") melalui fitur manajemen user di web
+  // Catatan: di frontend, permissions === null dianggap "unrestricted" (bebas akses)
+  if (user && (user.permissions === null || (user.permissions && Array.isArray(user.permissions.supervisi) && user.permissions.supervisi.includes("R")))) {
+    return { kind: "monitor", nik, displayName };
+  }
+
   if (SUPERVISI_SCHEDULER_NIKS.has(nik)) {
     return { kind: "scheduler", nik, displayName };
   }

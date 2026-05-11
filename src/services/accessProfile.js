@@ -83,6 +83,8 @@ function parseAppRole(roleStr) {
 
 function buildAccessProfile(user) {
   const nik = normalizeNik(user && user.nik);
+  const rawRole = String((user && user.role) || "").toLowerCase().trim();
+  const isAdmin = rawRole === "admin";
   const role = parseAppRole(user && user.role);
   const dinas = String((user && user.dinas) || "");
   const divisi = String((user && user.divisi) || "");
@@ -109,8 +111,8 @@ function buildAccessProfile(user) {
   const isKadivPPHSE = role === "kadiv" && containsText(divisi, "pphse");
 
   const normalizedGroup = normalizeGroup(group);
-  const isSupervisiScheduler = nik === SUPERVISI_SCHEDULER_NIK;
-  const isSupervisiMonitor = nik === SUPERVISI_MONITOR_NIK;
+  const isSupervisiScheduler = isAdmin || nik === SUPERVISI_SCHEDULER_NIK;
+  const isSupervisiMonitor = isAdmin || nik === SUPERVISI_MONITOR_NIK;
   const isSupervisiDenied = SUPERVISI_DENIED_NIKS.has(nik);
   const userName = String((user && user.name) || "").trim().toLowerCase();
   const isSupervisiGroup = !isSupervisiDenied &&
@@ -131,7 +133,7 @@ function buildAccessProfile(user) {
     nik !== INSPECTION_EXECUTOR_NIK_2 &&
     (nik === INSPECTION_PLANNER_NIK ||
       (role === "kasie" && inDinasInspeksiRaw && inGroupInspeksiRaw));
-  const isInspectionMonitor = nik === INSPECTION_MONITOR_NIK || role === "kadiv";
+  const isInspectionMonitor = isAdmin || nik === INSPECTION_MONITOR_NIK || role === "kadiv";
   const isInspectionPerawatan = !hasInspectionRoleOverride && isDinasPerawatan;
   const isDinasInspeksi = !isInspectionExecutor && inDinasInspeksiRaw;
 
@@ -168,7 +170,52 @@ function buildAccessProfile(user) {
   };
 }
 
+function hasReadPermission(permissions, pageKey) {
+  if (!permissions) return true;
+  if (Array.isArray(permissions)) return permissions.includes(pageKey);
+  if (typeof permissions !== "object") return true;
+  return Array.isArray(permissions[pageKey]) && permissions[pageKey].includes("R");
+}
+
+function applyWebPermissionsToAccessProfile(accessProfile, permissions) {
+  if (!accessProfile || !permissions) return accessProfile;
+
+  const canReadInspection = hasReadPermission(permissions, "inspeksi");
+  const canReadSupervisi = hasReadPermission(permissions, "supervisi");
+  const modules = new Set(accessProfile.modules || []);
+  const flags = { ...(accessProfile.flags || {}) };
+
+  if (!canReadInspection) {
+    modules.delete("inspection");
+    flags.isDinasInspeksi = false;
+    flags.hasInspectionRoleOverride = false;
+    flags.isInspectionApprover = false;
+    flags.isInspectionExecutor = false;
+    flags.isInspectionPlanner = false;
+    flags.isInspectionMonitor = false;
+    flags.isInspectionPerawatan = false;
+  }
+
+  if (!canReadSupervisi) {
+    modules.delete("supervisi");
+    flags.isSupervisiScheduler = false;
+    flags.isSupervisiMonitor = false;
+    flags.isSupervisiGroup = false;
+    flags.isSupervisiExecutor = false;
+    flags.canAccessSupervisi = false;
+    flags.canManageSupervisiJobs = false;
+    flags.canSubmitSupervisiVisit = false;
+  }
+
+  return {
+    ...accessProfile,
+    modules: Array.from(modules),
+    flags,
+  };
+}
+
 module.exports = {
   buildAccessProfile,
   parseAppRole,
+  applyWebPermissionsToAccessProfile,
 };
