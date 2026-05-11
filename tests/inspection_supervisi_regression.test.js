@@ -29,6 +29,7 @@ describe('Inspection and Supervisi regressions', () => {
       group: null,
       divisi: 'Inpeksi & Supervisi',
       dinas: 'Inpeksi & Supervisi',
+      permissions: { supervisi: ['R'], inspeksi: ['R'] },
     },
     process.env.JWT_SECRET || 'kti-mock-secret-dev',
   );
@@ -41,6 +42,7 @@ describe('Inspection and Supervisi regressions', () => {
       group: 'Inspeksi',
       divisi: null,
       dinas: null,
+      permissions: { supervisi: ['R'] },
     },
     process.env.JWT_SECRET || 'kti-mock-secret-dev',
   );

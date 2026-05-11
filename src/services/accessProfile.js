@@ -170,48 +170,11 @@ function buildAccessProfile(user) {
   };
 }
 
-function hasReadPermission(permissions, pageKey) {
-  if (!permissions) return true;
-  if (Array.isArray(permissions)) return permissions.includes(pageKey);
-  if (typeof permissions !== "object") return true;
-  return Array.isArray(permissions[pageKey]) && permissions[pageKey].includes("R");
-}
-
 function applyWebPermissionsToAccessProfile(accessProfile, permissions) {
-  if (!accessProfile || !permissions) return accessProfile;
-
-  const canReadInspection = hasReadPermission(permissions, "inspeksi");
-  const canReadSupervisi = hasReadPermission(permissions, "supervisi");
-  const modules = new Set(accessProfile.modules || []);
-  const flags = { ...(accessProfile.flags || {}) };
-
-  if (!canReadInspection) {
-    modules.delete("inspection");
-    flags.isDinasInspeksi = false;
-    flags.hasInspectionRoleOverride = false;
-    flags.isInspectionApprover = false;
-    flags.isInspectionExecutor = false;
-    flags.isInspectionPlanner = false;
-    flags.isInspectionMonitor = false;
-    flags.isInspectionPerawatan = false;
-  }
-
-  if (!canReadSupervisi) {
-    modules.delete("supervisi");
-    flags.isSupervisiScheduler = false;
-    flags.isSupervisiMonitor = false;
-    flags.isSupervisiGroup = false;
-    flags.isSupervisiExecutor = false;
-    flags.canAccessSupervisi = false;
-    flags.canManageSupervisiJobs = false;
-    flags.canSubmitSupervisiVisit = false;
-  }
-
-  return {
-    ...accessProfile,
-    modules: Array.from(modules),
-    flags,
-  };
+  void permissions;
+  // Web CRUD permissions are display controls only. App/API capability must
+  // stay derived from NIK, role, dinas, divisi, and group.
+  return accessProfile;
 }
 
 module.exports = {

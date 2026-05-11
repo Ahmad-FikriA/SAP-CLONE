@@ -5,7 +5,7 @@ const {
   applyWebPermissionsToAccessProfile,
 } = require('../src/services/accessProfile');
 
-describe('Access profile permission bridge', () => {
+describe('Access profile permissions', () => {
   const inspectionPlanner = {
     nik: '10000262',
     name: 'Imam Muttaqin',
@@ -15,30 +15,31 @@ describe('Access profile permission bridge', () => {
     group: '',
   };
 
-  it('removes inspection and supervisi app access when web read permissions are missing', () => {
+  it('does not remove app access when web read permissions are missing', () => {
     const profile = applyWebPermissionsToAccessProfile(
       buildAccessProfile(inspectionPlanner),
       { dashboard: ['R'] },
     );
 
-    expect(profile.modules).not.toContain('inspection');
-    expect(profile.modules).not.toContain('supervisi');
-    expect(profile.flags.isInspectionPlanner).toBe(false);
-    expect(profile.flags.isInspectionApprover).toBe(false);
-    expect(profile.flags.canAccessSupervisi).toBe(false);
-    expect(profile.flags.canManageSupervisiJobs).toBe(false);
+    expect(profile.modules).toContain('inspection');
+    expect(profile.modules).toContain('supervisi');
+    expect(profile.flags.isInspectionPlanner).toBe(true);
+    expect(profile.flags.isInspectionApprover).toBe(true);
+    expect(profile.flags.canAccessSupervisi).toBe(true);
+    expect(profile.flags.canManageSupervisiJobs).toBe(true);
   });
 
-  it('keeps only the app modules allowed by matching web read permissions', () => {
+  it('keeps app supervisi access independent from web read permissions', () => {
     const profile = applyWebPermissionsToAccessProfile(
       buildAccessProfile(inspectionPlanner),
       { inspeksi: ['R'] },
     );
 
     expect(profile.modules).toContain('inspection');
-    expect(profile.modules).not.toContain('supervisi');
+    expect(profile.modules).toContain('supervisi');
     expect(profile.flags.isInspectionPlanner).toBe(true);
-    expect(profile.flags.canAccessSupervisi).toBe(false);
+    expect(profile.flags.canAccessSupervisi).toBe(true);
+    expect(profile.flags.canManageSupervisiJobs).toBe(true);
   });
 
   it('keeps admin aligned with backend supervisi privileges', () => {
