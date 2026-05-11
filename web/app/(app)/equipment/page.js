@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiPut, apiDelete, apiUpload } from '@/lib/api';
 import { CategoryBadge } from '@/components/shared/StatusBadge';
@@ -20,10 +21,16 @@ const PAGE_SIZE = 20;
 const EMPTY_FORM = { equipmentId: '', equipmentName: '', functionalLocation: '', funcLocId: '', category: '', plantId: '', latitude: '', longitude: '', extraCategories: [] };
 
 export default function EquipmentPage() {
+  return <Suspense><EquipmentPageInner /></Suspense>;
+}
+
+function EquipmentPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [equipment, setEquipment]   = useState([]);
   const [plants, setPlants]         = useState([]);
   const [total, setTotal]           = useState(0);
-  const [page, setPage]             = useState(0);
+  const [page, setPage]             = useState(() => Math.max(0, parseInt(searchParams.get('page') || '0', 10)));
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
   const [category, setCategory]     = useState('');
@@ -42,6 +49,11 @@ export default function EquipmentPage() {
     apiGet('/maps').then(setPlants).catch(() => {});
     loadMapMarkers();
   }, []);
+
+  useEffect(() => {
+    const p = page === 0 ? '' : `?page=${page}`;
+    router.replace(`/equipment${p}`, { scroll: false });
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     load(0);
@@ -135,7 +147,7 @@ export default function EquipmentPage() {
         toast.success(`Equipment ${equipmentId} ditambahkan`);
       }
       setPanelOpen(false);
-      load(0);
+      load(page);
       loadMapMarkers();
     } catch (e) { toast.error(e.message); }
   }
@@ -145,7 +157,7 @@ export default function EquipmentPage() {
       await apiDelete(`/equipment/${deleteTarget.equipmentId}`);
       toast.success('Equipment dihapus');
       setDeleteTarget(null);
-      load(0);
+      load(page);
       loadMapMarkers();
     } catch (e) { toast.error(e.message); }
   }
@@ -203,7 +215,7 @@ export default function EquipmentPage() {
           <p className="text-sm text-gray-500">{total} equipment</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => load(0)}><RefreshCw size={13} /></Button>
+          <Button variant="outline" size="sm" onClick={() => load(page)}><RefreshCw size={13} /></Button>
           <Button variant="outline" size="sm" onClick={exportCoordinates} className="gap-1.5">
             <Download size={13} /> Export Koordinat
           </Button>
