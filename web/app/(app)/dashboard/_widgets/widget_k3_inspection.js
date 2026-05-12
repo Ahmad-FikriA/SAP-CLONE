@@ -8,68 +8,13 @@ import {
   ArrowRight, 
   RefreshCw, 
   AlertTriangle, 
-  TrendingUp, 
   CheckCircle2, 
-  Clock, 
   Activity,
   Zap,
   Eye,
   AlertOctagon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { K3DetailDialog } from '@/app/(app)/hse/_components/K3DetailDialog';
-
-const STATUS_LABELS = {
-  menunggu_review_kadiv_pelapor: 'Review Pelapor',
-  menunggu_review_kadiv_pphse: 'Review Kadiv',
-  menunggu_validasi_kadiv_pphse: 'Validasi PPHSE',
-  menunggu_validasi_kadis_hse: 'Validasi HSE',
-  menunggu_tindakan_hse: 'Tindakan HSE',
-  menunggu_verifikasi_investigasi: 'Verifikasi Investigasi',
-  menunggu_validasi_kadiv: 'Validasi Kadiv',
-  menunggu_validasi_hasil_kadis_hse: 'Validasi Hasil',
-  menunggu_validasi_akhir_kadiv_pphse: 'Verifikasi Akhir',
-  selesai: 'Selesai',
-  disetujui: 'Disetujui',
-  ditolak: 'Ditolak',
-  ditolak_kadiv_pphse: 'Ditolak Kadiv',
-  ditolak_kadis_hse: 'Ditolak HSE',
-  investigasi_ditolak_kadis_hse: 'Investigasi Ditolak',
-  investigasi_ditolak_kadiv: 'Investigasi Ditolak',
-  perbaikan_ditolak_pphse: 'Perbaikan Ditolak',
-};
-
-const STATUS_COLORS = {
-  menunggu_review_kadiv_pelapor: 'bg-amber-100 text-amber-700',
-  menunggu_review_kadiv_pphse: 'bg-amber-100 text-amber-700',
-  menunggu_validasi_kadiv_pphse: 'bg-blue-100 text-blue-700',
-  menunggu_validasi_kadis_hse: 'bg-amber-100 text-amber-700',
-  menunggu_tindakan_hse: 'bg-blue-100 text-blue-700',
-  menunggu_verifikasi_investigasi: 'bg-indigo-100 text-indigo-700',
-  menunggu_validasi_kadiv: 'bg-purple-100 text-purple-700',
-  menunggu_validasi_hasil_kadis_hse: 'bg-indigo-100 text-indigo-700',
-  menunggu_validasi_akhir_kadiv_pphse: 'bg-purple-100 text-purple-700',
-  selesai: 'bg-emerald-100 text-emerald-700',
-  disetujui: 'bg-emerald-100 text-emerald-700',
-  ditolak: 'bg-rose-100 text-rose-700',
-  ditolak_kadiv_pphse: 'bg-rose-100 text-rose-700',
-  ditolak_kadis_hse: 'bg-rose-100 text-rose-700',
-  investigasi_ditolak_kadis_hse: 'bg-rose-100 text-rose-700',
-  investigasi_ditolak_kadiv: 'bg-rose-100 text-rose-700',
-  perbaikan_ditolak_pphse: 'bg-rose-100 text-rose-700',
-};
-
-function MetricSmall({ icon: Icon, label, value, color, light }) {
-  return (
-    <div className={cn("p-3 rounded-2xl border flex flex-col justify-center", light || "bg-slate-50 border-slate-100")}>
-      <div className="flex items-center gap-2 mb-1">
-        <Icon size={14} className={color || "text-slate-500"} />
-        <span className={cn("text-[9px] font-bold uppercase tracking-wider", color || "text-slate-600")}>{label}</span>
-      </div>
-      <span className="text-xl font-black text-slate-800 leading-none">{value}</span>
-    </div>
-  );
-}
 
 const METRICS_K3 = [
   { id: 'NMRR', title: 'Near Miss Reporting', value: '12.5%', icon: AlertTriangle, color: 'text-blue-600', light: 'bg-blue-50 border-blue-100' },
@@ -84,8 +29,6 @@ export function WidgetK3Inspection() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -103,14 +46,9 @@ export function WidgetK3Inspection() {
 
   useEffect(() => { load(); }, []);
 
-  const totalReports = reports.length;
   const incomingReports = reports.filter(r => !r.status.includes('ditolak')).length;
   const solvedReports = reports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;
   const solveRate = incomingReports > 0 ? Math.round((solvedReports / incomingReports) * 100) : 0;
-
-  const recentReports = [...reports]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 4);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow">
@@ -138,7 +76,7 @@ export function WidgetK3Inspection() {
       ) : (
         <div className="flex-1 p-5 flex flex-col gap-6">
           
-          {/* Summary Section (Like Corrective) */}
+          {/* Summary Section */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex flex-col items-center justify-center text-center shadow-sm">
               <p className="text-3xl font-black text-blue-700 leading-none mb-1">{incomingReports}</p>
@@ -161,7 +99,7 @@ export function WidgetK3Inspection() {
             </div>
           </div>
 
-          {/* HSE Metrics Grid - Informative Style */}
+          {/* HSE Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {METRICS_K3.map((m) => {
               const Icon = m.icon;
@@ -182,45 +120,6 @@ export function WidgetK3Inspection() {
             })}
           </div>
 
-          {/* Recent Reports List */}
-          <div className="flex-1 flex flex-col pt-2">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-              Laporan Terbaru
-            </p>
-            {recentReports.length > 0 ? (
-              <div className="space-y-2">
-                {recentReports.map((r) => (
-                  <div 
-                    key={r.id} 
-                    onClick={() => {
-                      setSelectedReport(r);
-                      setIsDetailOpen(true);
-                    }}
-                    className="flex items-center gap-3 p-2 rounded-lg border border-slate-50 bg-slate-50/20 group hover:border-rose-200 hover:bg-rose-50/30 transition-all cursor-pointer"
-                  >
-                    <div className={cn(
-                      "w-6 h-6 rounded flex items-center justify-center shrink-0 border text-[10px]",
-                      r.kategori?.toLowerCase().includes('manusia') ? "bg-amber-50 border-amber-100 text-amber-600" : "bg-blue-50 border-blue-100 text-blue-600"
-                    )}>
-                      {r.kategori?.toLowerCase().includes('manusia') ? <Eye size={12} /> : <AlertTriangle size={12} />}
-                    </div>
-                    <p className="flex-1 text-[11px] font-bold text-gray-700 truncate group-hover:text-rose-600 transition-colors">
-                      {r.reportNumber}
-                    </p>
-                    <span className={cn("px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-wider", STATUS_COLORS[r.status] || "bg-gray-100 text-gray-600")}>
-                      {STATUS_LABELS[r.status] || r.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-xl bg-gray-50/50 py-5">
-                 <CheckCircle2 size={24} className="text-gray-300 mb-2" />
-                 <p className="text-xs font-bold text-gray-400">Belum ada temuan K3</p>
-              </div>
-            )}
-          </div>
-
         </div>
       )}
 
@@ -230,12 +129,6 @@ export function WidgetK3Inspection() {
           Buka Detail HSE Command Center <ArrowRight size={14} />
         </Link>
       </div>
-
-      <K3DetailDialog 
-        report={selectedReport} 
-        open={isDetailOpen} 
-        onOpenChange={setIsDetailOpen} 
-      />
     </div>
   );
 }

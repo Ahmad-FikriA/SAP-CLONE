@@ -14,7 +14,7 @@ export function SummaryCards({ requests, spks }) {
             Total Laporan
           </p>
           <p className="text-2xl font-extrabold text-slate-900 truncate">
-            {requests.length}
+            {requests.filter((r) => r.approvalStatus !== "rejected").length}
           </p>
         </div>
       </div>

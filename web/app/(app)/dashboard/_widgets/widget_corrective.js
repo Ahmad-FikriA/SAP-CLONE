@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiGet } from '@/lib/api';
 import Link from 'next/link';
-import { Wrench, ArrowRight, RefreshCw, AlertTriangle, Activity, CheckCircle2, ClipboardSignature } from 'lucide-react';
+import { Wrench, ArrowRight, RefreshCw, Activity, CheckCircle2, ClipboardCheck, Clock } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 
@@ -35,26 +35,30 @@ export function WidgetCorrective() {
 
   useEffect(() => { load(); }, []);
 
-  // Updated KPIs reflecting actual workflow
-  const openRequests = requests.filter(r => r.approvalStatus === "pending" || r.approvalStatus === "rejected").length;
-  const activeSpks = spks.filter(s => s.status !== "selesai" && s.status !== "ditolak");
+  // Current State Mapping based on User Definition
+  const pendingRequestsCount = requests.filter(r => r.approvalStatus === "pending").length;
+  const reviewKadisPpCount = spks.filter(s => s.status === "menunggu_review_kadis_pp").length;
+  const reviewKadisPelaporCount = spks.filter(s => s.status === "menunggu_review_kadis_pelapor").length;
   
-  const inProgressSpks = spks.filter(s => s.status === "eksekusi").length;
-  const waitingReviewKadisPp = spks.filter(s => s.status === "menunggu_review_kadis_pp").length;
-  const waitingReviewKadisPelapor = spks.filter(s => s.status === "menunggu_review_kadis_pelapor").length;
-  const newSpks = spks.filter(s => s.status === "baru_import").length;
-  const completedSpks = spks.filter(s => s.status === "selesai").length;
-  const validSpks = spks.filter(s => s.status !== "ditolak").length;
-  const completionRate = validSpks > 0 ? Math.round((completedSpks / validSpks) * 100) : 0;
+  // Overall Review Count (The combined value the user wants)
+  const totalReviewCount = pendingRequestsCount + reviewKadisPpCount + reviewKadisPelaporCount;
 
-
+  // Other Dashboard KPIs
+  const activeSpksCount = spks.filter(s => s.status !== "selesai" && s.status !== "ditolak").length;
+  const completedSpksCount = spks.filter(s => s.status === "selesai").length;
+  const inProgressSpksCount = spks.filter(s => s.status === "eksekusi").length;
+  const newSpksCount = spks.filter(s => s.status === "baru_import").length;
+  
+  const validSpksCount = spks.filter(s => s.status !== "ditolak").length;
+  const completionRate = validSpksCount > 0 ? Math.round((completedSpksCount / validSpksCount) * 100) : 0;
 
   // Chart Data
   let chartData = [
-    { name: 'Tugas Baru', value: newSpks, color: '#3b82f6' }, // blue-500
-    { name: 'Sedang Eksekusi', value: inProgressSpks, color: '#f97316' }, // orange-500
-    { name: 'Review Kadis PP', value: waitingReviewKadisPp, color: '#a855f7' }, // purple-500
-    { name: 'Review Kadis Pelapor', value: waitingReviewKadisPelapor, color: '#6366f1' }, // indigo-500
+    { name: 'Tugas Baru', value: newSpksCount, color: '#3b82f6' }, // blue-500
+    { name: 'Sedang Eksekusi', value: inProgressSpksCount, color: '#f97316' }, // orange-500
+    { name: 'Review Kadis PP', value: reviewKadisPpCount, color: '#a855f7' }, // purple-500
+    { name: 'Review Kadis Pelapor', value: reviewKadisPelaporCount, color: '#6366f1' }, // indigo-500
+    { name: 'Selesai', value: completedSpksCount, color: '#10b981' }, // emerald-500
   ].filter(d => d.value > 0);
 
   if (chartData.length === 0) {
@@ -85,7 +89,7 @@ export function WidgetCorrective() {
       ) : error ? (
         <div className="flex-1 flex items-center justify-center py-10 text-red-500 text-sm">{error}</div>
       ) : (
-        <div className="flex-1 p-5 flex flex-col gap-5">
+        <div className="flex-1 p-5 flex flex-col gap-6">
           {/* Top Section: Chart & KPIs */}
           <div className="flex flex-col sm:flex-row items-center gap-6">
             
@@ -93,8 +97,8 @@ export function WidgetCorrective() {
             <div className="w-full sm:w-1/3 flex flex-col items-center justify-center">
               <div className="w-full h-48 relative mb-2">
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-1 z-0">
-                   <span className="text-3xl font-extrabold text-gray-800 leading-none">{activeSpks.length}</span>
-                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Aktif</span>
+                   <span className="text-3xl font-extrabold text-gray-800 leading-none">{spks.length}</span>
+                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total SPK</span>
                 </div>
                 <div className="w-full h-full relative z-10">
                   <ResponsiveContainer width="100%" height="100%">
@@ -122,7 +126,7 @@ export function WidgetCorrective() {
                 </div>
               </div>
               
-              {/* Legend to utilize the empty space under the chart */}
+              {/* Legend */}
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-1">
                 {chartData.filter(d => d.name !== 'Tidak ada data').map((entry, index) => (
                   <div key={index} className="flex items-center gap-1">
@@ -134,39 +138,54 @@ export function WidgetCorrective() {
             </div>
 
             {/* KPI Cards & Progress */}
-            <div className="w-full sm:w-2/3 flex flex-col justify-center gap-3">
+            <div className="w-full sm:w-2/3 flex flex-col justify-center gap-4">
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl p-3 bg-blue-50/50 border border-blue-100/50 flex flex-col justify-center">
+                <div className="rounded-xl p-3 bg-indigo-50/50 border border-indigo-100/50 flex flex-col justify-center">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <AlertTriangle size={14} className="text-blue-500" />
-                    <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wide">Menunggu Planner</span>
+                    <Activity size={14} className="text-indigo-500" />
+                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">SPK Aktif</span>
                   </div>
-                  <span className="text-2xl font-extrabold text-gray-800">{openRequests}</span>
+                  <span className="text-2xl font-extrabold text-gray-800">{activeSpksCount}</span>
                 </div>
+
+                <div className="rounded-xl p-3 bg-emerald-50/50 border border-emerald-100/50 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <CheckCircle2 size={14} className="text-emerald-500" />
+                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">SPK Selesai</span>
+                  </div>
+                  <span className="text-2xl font-extrabold text-gray-800">{completedSpksCount}</span>
+                </div>
+
                 <div className="rounded-xl p-3 bg-orange-50/50 border border-orange-100/50 flex flex-col justify-center">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <Activity size={14} className="text-orange-500" />
+                    <Clock size={14} className="text-orange-500" />
                     <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wide">Dalam Eksekusi</span>
                   </div>
-                  <span className="text-2xl font-extrabold text-gray-800">{inProgressSpks}</span>
+                  <span className="text-2xl font-extrabold text-gray-800">{inProgressSpksCount}</span>
                 </div>
-                <div className="rounded-xl p-3 bg-purple-50/50 border border-purple-100/50 flex flex-col justify-center">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <ClipboardSignature size={14} className="text-purple-500" />
-                      <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wide">Review Kadis PP</span>
+
+                <div className="rounded-xl p-3 bg-rose-50/50 border border-rose-100/50 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <ClipboardCheck size={14} className="text-rose-500" />
+                    <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wide">Menunggu Review</span>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <span className="text-2xl font-extrabold text-gray-800">{totalReviewCount}</span>
+                    <div className="flex gap-1.5 mb-0.5">
+                       <div className="flex flex-col items-center">
+                         <span className="text-[8px] font-bold text-gray-400">PLAN</span>
+                         <span className="text-[10px] font-bold text-gray-700">{pendingRequestsCount}</span>
+                       </div>
+                       <div className="flex flex-col items-center border-l border-gray-200 pl-1.5">
+                         <span className="text-[8px] font-bold text-gray-400">PP</span>
+                         <span className="text-[10px] font-bold text-gray-700">{reviewKadisPpCount}</span>
+                       </div>
+                       <div className="flex flex-col items-center border-l border-gray-200 pl-1.5">
+                         <span className="text-[8px] font-bold text-gray-400">PLPR</span>
+                         <span className="text-[10px] font-bold text-gray-700">{reviewKadisPelaporCount}</span>
+                       </div>
                     </div>
                   </div>
-                  <span className="text-2xl font-extrabold text-gray-800 mt-1">{waitingReviewKadisPp}</span>
-                </div>
-                <div className="rounded-xl p-3 bg-indigo-50/50 border border-indigo-100/50 flex flex-col justify-center">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <ClipboardSignature size={14} className="text-indigo-500" />
-                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">Review Pelapor</span>
-                    </div>
-                  </div>
-                  <span className="text-2xl font-extrabold text-gray-800 mt-1">{waitingReviewKadisPelapor}</span>
                 </div>
               </div>
 
@@ -185,8 +204,6 @@ export function WidgetCorrective() {
               </div>
             </div>
           </div>
-
-
         </div>
       )}
 

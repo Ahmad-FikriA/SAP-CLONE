@@ -109,5 +109,3 @@ export function WidgetPreventive() {
     </div>
   );
 }
-
-
