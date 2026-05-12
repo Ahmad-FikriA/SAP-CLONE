@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiBlob } from '@/lib/api';
-import { formatDate } from '@/lib/date-utils';
+import { formatDate, getISOWeek } from '@/lib/date-utils';
 import { CATEGORIES } from '@/lib/constants';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CategoryBadge } from '@/components/shared/StatusBadge';
-import { RefreshCw, Download, MapPin } from 'lucide-react';
+import { RefreshCw, Download, MapPin, X, CheckCircle } from 'lucide-react';
 
 const UPLOADS_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '');
 
@@ -28,16 +28,32 @@ function buildYears() {
 }
 
 function buildWeeks() {
-  return Array.from({ length: 54 }, (_, i) => i + 1);
+  return Array.from({ length: 53 }, (_, i) => i + 1);
 }
 
-function getISOWeek(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const week1 = new Date(d.getFullYear(), 0, 4);
-  return 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+function detectMeasurementUnit(operationText) {
+  if (!operationText) return null;
+  const t = operationText;
+  const l = t.toLowerCase();
+  if (t.includes('°C') || t.includes('ºC')) return '°C';
+  if (t.includes('mm/s')) return 'mm/s';
+  if (t.includes('m3/h')) return 'm3/h';
+  if (/bar/i.test(t)) return 'bar';
+  if (t.includes('NTU')) return 'NTU';
+  if (t.includes('pH')) return 'pH';
+  if (/\bOhm\b/i.test(t)) return 'Ohm';
+  if (/[.\s]\s*%/.test(t)) return '%';
+  if (/[.(]\s*A\s*[).]|\.\.\s*A\b/.test(t)) return 'A';
+  if (/[.(]\s*V\s*[).]|\.\.\s*V\b/.test(t)) return 'V';
+  if (l.includes('temperatur') || l.includes('suhu')) return '°C';
+  if (l.includes('vibrasi') || l.includes('vibration')) return 'mm/s';
+  if (l.includes('tekanan') || l.includes('pressure')) return 'bar';
+  if (l.includes('ampere') || l.includes('arus')) return 'A';
+  if (l.includes('tegangan') || l.includes('voltage')) return 'V';
+  if (l.includes('turbid') || l.includes('kekeruhan')) return 'NTU';
+  return null;
 }
+
 
 function filterSubs(subs, { year, month, week, category }) {
   return subs.filter((s) => {
@@ -64,6 +80,7 @@ export default function SubmissionsPage() {
   const [exporting, setExporting] = useState(false);
   const [exportingIW49, setExportingIW49] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     load();
@@ -212,7 +229,7 @@ export default function SubmissionsPage() {
                 <td className="px-4 py-3 font-medium text-gray-900">{s.spkNumber}</td>
                 <td className="px-4 py-3">{s.spkCategory ? <CategoryBadge category={s.spkCategory} /> : '—'}</td>
                 <td className="px-4 py-3 text-gray-600 text-xs">{s.workStart ? formatDate(s.workStart) : '—'}</td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{formatDate(s.submittedAt)}</td>
+                <td className="px-4 py-3 text-gray-600 text-xs">{s.submittedAt ? formatDate(s.submittedAt) : '—'}</td>
                 <td className="px-4 py-3 text-gray-600">{s.durationActual ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate">{s.evaluasi || '—'}</td>
                 <td className="px-4 py-3 text-gray-600">{(s.photoPaths || []).length}</td>
@@ -227,10 +244,10 @@ export default function SubmissionsPage() {
 
       {/* Detail dialog */}
       <Dialog open={!!detail} onOpenChange={(open) => !open && setDetail(null)}>
-        <DialogContent className="w-[95vw] max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2 flex-wrap">
-              <DialogTitle>Detail — {detail?.spkNumber}</DialogTitle>
+              <DialogTitle className="font-mono">{detail?.spkNumber}</DialogTitle>
               {detail?.spkCategory && <CategoryBadge category={detail.spkCategory} />}
             </div>
             {detail?.spkDescription && (
@@ -239,128 +256,144 @@ export default function SubmissionsPage() {
           </DialogHeader>
 
           {detail && (
-            <div className="space-y-5 mt-2">
-              {/* SPK metadata */}
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <InfoField label="Interval" value={detail.spkInterval || '—'} />
-                <InfoField label="Jadwal" value={detail.spkScheduledDate ? formatDate(detail.spkScheduledDate) : '—'} />
-              </div>
+            <div className="space-y-4 mt-2">
 
               {/* Equipment */}
               {detail.spkEquipmentModels?.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Equipment</p>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="w-full text-xs">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          {['Equipment ID', 'Nama', 'Functional Location', 'Plant'].map((h) => (
-                            <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {detail.spkEquipmentModels.map((e) => (
-                          <tr key={e.equipmentId}>
-                            <td className="px-3 py-2 font-mono text-gray-800">{e.equipmentId}</td>
-                            <td className="px-3 py-2 text-gray-700">{e.equipmentName || '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{e.functionalLocation || '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{e.plantName || '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                <DetailSection title="Equipment">
+                  <div className="divide-y divide-gray-100">
+                    {detail.spkEquipmentModels.map((e) => (
+                      <div key={e.equipmentId} className="py-2.5 flex items-center justify-between text-sm">
+                        <div>
+                          <span className="font-medium text-gray-800">{e.equipmentName || e.equipmentId}</span>
+                          <span className="ml-2 text-xs text-gray-400 font-mono">{e.functionalLocation}</span>
+                        </div>
+                        <span className="text-xs text-gray-400">{e.plantName || '—'}</span>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                </DetailSection>
               )}
 
-              {/* Timing + executor */}
-              <div className="grid grid-cols-2 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <InfoField label="Work Start" value={detail.workStart ? formatDate(detail.workStart) : '—'} />
-                <InfoField label="Work Finish" value={formatDate(detail.submittedAt)} />
-                <InfoField label="Durasi Aktual" value={detail.durationActual != null ? `${detail.durationActual} menit` : '—'} />
-                <InfoField label="Dilaksanakan Oleh" value={userMap[detail.spkSubmittedBy] || detail.spkSubmittedBy || '—'} />
-              </div>
-
-              {/* Evaluasi */}
-              {detail.evaluasi && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Evaluasi</p>
-                  <p className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">{detail.evaluasi}</p>
-                </div>
-              )}
-
-              {/* GPS */}
-              {detail.latitude != null && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Lokasi GPS</p>
-                  <a href={`https://maps.google.com/?q=${detail.latitude},${detail.longitude}`}
-                    target="_blank" rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
-                    <MapPin size={13} />
-                    {parseFloat(detail.latitude).toFixed(6)}, {parseFloat(detail.longitude).toFixed(6)}
-                  </a>
-                </div>
-              )}
-
-              {/* Activity results */}
+              {/* Activity Results */}
               {detail.activityResultsModel?.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                    Hasil Aktivitas ({detail.activityResultsModel.length})
-                  </p>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="w-full text-xs">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          {['Aktivitas', 'Catatan', 'Status', 'Verified'].map((h) => (
-                            <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
+                <DetailSection title={`Hasil Kegiatan (${detail.activityResultsModel.length} aktivitas)`}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          {['No. Aktivitas', 'Uraian Pekerjaan', 'Rencana', 'Komentar Hasil', 'Nilai Ukur', 'Status'].map((h) => (
+                            <th key={h} className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-center">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {detail.activityResultsModel.map((a) => (
-                          <tr key={a.activityNumber}>
-                            <td className="px-3 py-2">
-                              <p className="font-semibold text-gray-800">{a.activityNumber}</p>
-                              {a.operationText && <p className="text-gray-500 mt-0.5 leading-snug">{a.operationText}</p>}
+                          <tr key={a.activityNumber} className="hover:bg-gray-50">
+                            <td className="py-2 pr-4 font-mono text-xs text-gray-500">{a.activityNumber}</td>
+                            <td className="py-2 pr-4 text-gray-700 max-w-[200px]">{a.operationText || '—'}</td>
+                            <td className="py-2 pr-4 text-gray-500 whitespace-nowrap">{a.durationPlan ? `${a.durationPlan} mnt` : '—'}</td>
+                            <td className="py-2 pr-4 text-gray-600 max-w-[180px]">{a.resultComment || <span className="text-gray-300">—</span>}</td>
+                            <td className="py-2 pr-4 font-mono text-sm text-gray-700 whitespace-nowrap">
+                              {a.measurementValue != null ? (() => {
+                                const unit = a.measurementUnit || detectMeasurementUnit(a.operationText);
+                                return `${a.measurementValue}${unit ? ' ' + unit : ''}`;
+                              })() : <span className="text-gray-300">—</span>}
                             </td>
-                            <td className="px-3 py-2 text-gray-600 max-w-[160px]">{a.resultComment || '—'}</td>
-                            <td className="px-3 py-2">
-                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${a.isNormal ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                {a.isNormal ? 'Normal' : 'Abnormal'}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2">
-                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${a.isVerified ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
-                                {a.isVerified ? '✓ Ya' : '—'}
-                              </span>
+                            <td className="py-2 text-center">
+                              {a.isNormal == null
+                                ? <span className="text-gray-300">—</span>
+                                : a.isNormal
+                                  ? <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">Normal</span>
+                                  : <span className="px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-600">Tidak Normal</span>
+                              }
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </div>
+                </DetailSection>
               )}
 
-              {/* Photos */}
-              {detail.photoPaths?.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                    Foto ({detail.photoPaths.length})
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {detail.photoPaths.map((path, i) => (
-                      <a key={i} href={`${UPLOADS_BASE}/${path.replace(/^\//, '')}`} target="_blank" rel="noreferrer"
-                        className="block aspect-square rounded-lg overflow-hidden border border-gray-200 hover:opacity-80 transition-opacity">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`${UPLOADS_BASE}/${path.replace(/^\//, '')}`} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+              {/* Field Notes */}
+              <DetailSection title="Catatan Lapangan">
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <DetailInfo label="Work Start" value={detail.workStart ? formatDate(detail.workStart) : '—'} />
+                  <DetailInfo label="Work Finish" value={detail.submittedAt ? formatDate(detail.submittedAt) : '—'} />
+                  <DetailInfo label="Durasi Aktual" value={detail.durationActual != null ? `${detail.durationActual} menit` : '—'} />
+                  <DetailInfo label="Dilaksanakan Oleh" value={userMap[detail.spkSubmittedBy] || detail.spkSubmittedBy || '—'} />
+                  <DetailInfo label="Interval" value={detail.spkInterval || '—'} />
+                  <DetailInfo label="Jadwal" value={detail.spkScheduledDate ? formatDate(detail.spkScheduledDate) : '—'} />
+                  {detail.latitude != null && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Lokasi GPS</p>
+                      <a href={`https://maps.google.com/?q=${detail.latitude},${detail.longitude}`}
+                        target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
+                        <MapPin size={13} />
+                        {parseFloat(detail.latitude).toFixed(5)}, {parseFloat(detail.longitude).toFixed(5)}
                       </a>
+                    </div>
+                  )}
+                  {detail.evaluasi && (
+                    <div className="col-span-3">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Evaluasi</p>
+                      <p className="text-sm text-gray-700">{detail.evaluasi}</p>
+                    </div>
+                  )}
+                </div>
+              </DetailSection>
+
+              {/* Photos */}
+              <DetailSection title={`Foto Lapangan (${(detail.photoPaths || []).length})`}>
+                {!detail.photoPaths?.length ? (
+                  <p className="text-sm text-gray-400 py-1">Tidak ada foto</p>
+                ) : (
+                  <div className="grid grid-cols-4 gap-3">
+                    {detail.photoPaths.map((path, i) => (
+                      <button key={path} onClick={() => setLightbox(path)}
+                        className="aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-colors">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`${UPLOADS_BASE}/${path.replace(/^\//, '')}`} alt={`Foto ${i + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={e => { e.target.style.display = 'none'; }} />
+                      </button>
                     ))}
                   </div>
+                )}
+              </DetailSection>
+
+              {/* Approval History */}
+              <DetailSection title="Riwayat Persetujuan">
+                <div className="space-y-2 text-sm">
+                  <ApprovalRow
+                    label="Submit"
+                    by={userMap[detail.spkSubmittedBy] || detail.spkSubmittedBy}
+                    at={detail.submittedAt}
+                    done={!!detail.submittedAt}
+                  />
+                  <ApprovalRow
+                    label={detail.spkCategory ? `Kasie ${detail.spkCategory}` : 'Kasie'}
+                    by={userMap[detail.spkKasieApprovedBy] || detail.spkKasieApprovedBy}
+                    at={detail.spkKasieApprovedAt}
+                    done={!!detail.spkKasieApprovedAt}
+                  />
+                  <ApprovalRow
+                    label="Kadis Perawatan"
+                    by={userMap[detail.spkKadisPerawatanApprovedBy] || detail.spkKadisPerawatanApprovedBy}
+                    at={detail.spkKadisPerawatanApprovedAt}
+                    done={!!detail.spkKadisPerawatanApprovedAt}
+                  />
+                  <ApprovalRow
+                    label="Kadis"
+                    by={userMap[detail.spkKadisApprovedBy] || detail.spkKadisApprovedBy}
+                    at={detail.spkKadisApprovedAt}
+                    done={!!detail.spkKadisApprovedAt}
+                  />
                 </div>
-              )}
+              </DetailSection>
+
             </div>
           )}
 
@@ -369,15 +402,58 @@ export default function SubmissionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center"
+          onClick={() => setLightbox(null)}>
+          <button className="absolute top-4 right-4 text-white/70 hover:text-white"
+            onClick={() => setLightbox(null)}>
+            <X size={24} />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`${UPLOADS_BASE}/${lightbox.replace(/^\//, '')}`}
+            alt="Foto lapangan"
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-function InfoField({ label, value }) {
+function DetailSection({ title, children }) {
+  return (
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{title}</h4>
+      {children}
+    </div>
+  );
+}
+
+function DetailInfo({ label, value }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className="text-sm font-medium text-gray-800 mt-0.5">{value}</p>
+      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
+      <p className="text-sm text-gray-700 break-words">{value}</p>
+    </div>
+  );
+}
+
+function ApprovalRow({ label, by, at, done }) {
+  return (
+    <div className="flex items-center gap-3 py-1.5">
+      <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-green-500' : 'bg-gray-200'}`}>
+        {done && <CheckCircle size={10} className="text-white" />}
+      </div>
+      <span className="w-48 text-gray-600 font-medium">{label}</span>
+      {done ? (
+        <span className="text-gray-500">{by || '—'} · {at ? formatDate(at) : '—'}</span>
+      ) : (
+        <span className="text-gray-300">Belum disetujui</span>
+      )}
     </div>
   );
 }

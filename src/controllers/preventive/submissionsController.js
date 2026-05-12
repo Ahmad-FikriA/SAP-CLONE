@@ -16,12 +16,18 @@ const INCLUDE_FULL = [
   {
     model: Spk,
     as: 'spk',
-    attributes: ['category', 'description', 'submittedBy', 'scheduledDate', 'intervalPeriod'],
+    attributes: [
+      'category', 'description', 'submittedBy', 'scheduledDate', 'intervalPeriod',
+      'kasieApprovedBy', 'kasieApprovedAt',
+      'kadisPerawatanApprovedBy', 'kadisPerawatanApprovedAt',
+      'kadisApprovedBy', 'kadisApprovedAt',
+    ],
+    where: { status: 'approved' },
     include: [
       { model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan', 'measurementUnit'] },
       { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId', 'equipmentName', 'functionalLocation', 'plantName'] },
     ],
-    required: false,
+    required: true,
   },
 ];
 
@@ -46,6 +52,12 @@ function fmt(sub) {
       functionalLocation: e.functionalLocation || null,
       plantName: e.plantName || null,
     })),
+    spkKasieApprovedBy: spk.kasieApprovedBy || null,
+    spkKasieApprovedAt: spk.kasieApprovedAt || null,
+    spkKadisPerawatanApprovedBy: spk.kadisPerawatanApprovedBy || null,
+    spkKadisPerawatanApprovedAt: spk.kadisPerawatanApprovedAt || null,
+    spkKadisApprovedBy: spk.kadisApprovedBy || null,
+    spkKadisApprovedAt: spk.kadisApprovedAt || null,
     workStart: j.workStart,
     submittedAt: j.submittedAt,
     durationActual: j.durationActual,
@@ -58,11 +70,11 @@ function fmt(sub) {
       activityNumber: r.activityNumber,
       operationText: actMap[r.activityNumber]?.operationText || null,
       durationPlan: actMap[r.activityNumber]?.durationPlan || null,
+      measurementUnit: actMap[r.activityNumber]?.measurementUnit || null,
       resultComment: r.resultComment,
       isNormal: r.isNormal,
       isVerified: r.isVerified,
       measurementValue: r.measurementValue ?? null,
-      measurementUnit: actMap[r.activityNumber]?.measurementUnit || null,
     })),
   };
 }
@@ -75,7 +87,7 @@ const getAll = async (req, res) => {
   if (spkNumber) {
     where.spkNumber = spkNumber;
   } else if (category) {
-    const matchingSpks = await Spk.findAll({ where: { category }, attributes: ['spkNumber'] });
+    const matchingSpks = await Spk.findAll({ where: { category, status: 'approved' }, attributes: ['spkNumber'] });
     const spkNumbers = matchingSpks.map(s => s.spkNumber);
     if (!spkNumbers.length) return res.json([]);
     where.spkNumber = spkNumbers;
@@ -354,7 +366,7 @@ const exportExcel = async (req, res) => {
       row++;
 
       // ── Row 2: Column headers — SAP-style yellow ──────────────────────────
-      const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF99' } };
+      const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC107' } };
       const headerFont = { bold: true, color: { argb: 'FF000000' }, size: 10 };
       const headers = ['Order / No. Aktivitas', 'Deskripsi / Uraian Pekerjaan', 'Interval', 'Equipment', 'Lokasi', 'Result Comment', 'Durasi Aktual (mnt)', 'Durasi Rencana (mnt)', 'Work Start', 'Work Finish', 'Start Time', 'Finish Time', 'Verifikasi'];
       for (let c = 1; c <= LAST_COL; c++) {
@@ -391,23 +403,28 @@ const exportExcel = async (req, res) => {
         ws.getRow(row).height = 18;
         row++;
 
-        // Activity rows
-        for (const ar of grp.acts) {
-          const spkAct = activityMap.get(ar.activityNumber);
+        // Activity rows — loop over ALL SPK activities (incl. 0010 Opt Text),
+        // attach submission result where available.
+        const resultMap = new Map(grp.acts.map(ar => [ar.activityNumber, ar]));
+        const activityRows = [...activityMap.values()].filter(a =>
+          !a.equipmentId || a.equipmentId === grp.id
+        );
+        for (const spkAct of activityRows) {
+          const ar = resultMap.get(spkAct.activityNumber);
           const rowData = [
-            ar.activityNumber,
-            spkAct?.operationText || '-',
+            spkAct.activityNumber,
+            spkAct.operationText || '-',
             spk.intervalPeriod || '-',
             grp.name,
             grp.funcLocName,
-            ar.resultComment || '',
-            sj.durationActual ?? '-',
-            spkAct?.durationPlan ?? '-',
+            ar?.resultComment || '',
+            ar ? (sj.durationActual ?? '-') : '-',
+            spkAct.durationPlan ?? '-',
             fmtDate(sj.workStart),
             fmtDate(sj.submittedAt),
             fmtTime(sj.workStart),
             fmtTime(sj.submittedAt),
-            ar.isNormal ? '✓' : '✗',
+            ar ? (ar.isNormal ? '✓' : '✗') : '',
           ];
           for (let c = 1; c <= LAST_COL; c++) {
             const cell = ws.getCell(row, c);
@@ -416,7 +433,7 @@ const exportExcel = async (req, res) => {
             cell.border = BORDER_THIN;
             cell.alignment = { vertical: 'middle', wrapText: c === COL.DESC || c === COL.RESULT };
             if (c === COL.VERIFY) {
-              cell.font = { size: 12, bold: true, color: { argb: ar.isNormal ? 'FF16A34A' : 'FFDC2626' } };
+              cell.font = { size: 12, bold: true, color: { argb: ar?.isNormal ? 'FF16A34A' : 'FFDC2626' } };
               cell.alignment = { horizontal: 'center', vertical: 'middle' };
             }
           }
@@ -425,7 +442,7 @@ const exportExcel = async (req, res) => {
         }
 
         // Empty row if no activities
-        if (!grp.acts.length) {
+        if (!activityRows.length) {
           for (let c = 1; c <= LAST_COL; c++) ws.getCell(row, c).border = BORDER_THIN;
           ws.getRow(row).height = 16;
           row++;
@@ -488,15 +505,13 @@ const exportExcel = async (req, res) => {
       ws.getRow(row).height = 18;
       row++;
 
-      // Signature space rows
-      for (let i = 0; i < 1; i++) {
-        borderRange(ws, row, row, 1, 2, BORDER_THIN);
-        borderRange(ws, row, row, 3, 4, BORDER_THIN);
-        borderRange(ws, row, row, 5, 6, BORDER_THIN);
-        borderRange(ws, row, row, 7, LAST_COL, BORDER_THIN);
-        ws.getRow(row).height = 18;
-        row++;
-      }
+      // Signature space row
+      borderRange(ws, row, row, 1, 2, BORDER_THIN);
+      borderRange(ws, row, row, 3, 4, BORDER_THIN);
+      borderRange(ws, row, row, 5, 6, BORDER_THIN);
+      borderRange(ws, row, row, 7, LAST_COL, BORDER_THIN);
+      ws.getRow(row).height = 18;
+      row++;
 
       // Name / ID row
       ws.mergeCells(row, 1, row, 2);
