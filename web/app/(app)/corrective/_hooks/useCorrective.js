@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { apiGet, apiPost, apiDelete, apiUpload } from "@/lib/api";
+import { apiGet, apiPost, apiDelete, apiUpload, apiPatch } from "@/lib/api";
 
 export function useCorrective() {
   const [requests, setRequests] = useState([]);
