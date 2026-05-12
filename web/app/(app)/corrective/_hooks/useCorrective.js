@@ -184,6 +184,16 @@ export function useCorrective() {
     throw new Error(resData.message || "Gagal mengupload file history");
   }
 
+  async function adminUpdateStatusAction(id, payload) {
+    const res = await apiPatch(`/corrective/requests/${id}/admin-status`, payload);
+    if (res.success) {
+      toast.success("Status berhasil diperbarui (Force Update)");
+      await loadAll();
+    } else {
+      throw new Error(res.error || "Gagal memperbarui status");
+    }
+  }
+
   return {
     requests, spks, history, loading, filteredRequests,
     equipment, functionalLocations,
@@ -196,5 +206,6 @@ export function useCorrective() {
     approveKadisPelaporAction, rejectKadisPelaporAction,
     deleteRequestAction, deleteAllRequestsAction,
     deleteSpkAction, deleteAllSpksAction, uploadHistoryExcelAction,
+    adminUpdateStatusAction,
   };
 }

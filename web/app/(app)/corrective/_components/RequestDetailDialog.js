@@ -1,5 +1,4 @@
-"use client";
-
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogTitle,
@@ -10,11 +9,29 @@ import { APPROVAL_COLORS, APPROVAL_LABELS } from "./constants";
 import {
   CorrectiveStatusBadge, Section, Row, InfoCard, fmtDate,
 } from "./ui-primitives";
+import { ShieldAlert } from "lucide-react";
 
 export function RequestDetailDialog({
   selectedRequest, onClose,
   onApprovePlanner, onRejectPlanner,
+  userRole, onAdminUpdateStatus
 }) {
+  const [isAdminEditing, setIsAdminEditing] = useState(false);
+  const [adminStatus, setAdminStatus] = useState("");
+  const [adminApprovalStatus, setAdminApprovalStatus] = useState("");
+
+  const handleAdminSave = async () => {
+    try {
+      await onAdminUpdateStatus(selectedRequest.id, {
+        status: adminStatus || undefined,
+        approvalStatus: adminApprovalStatus || undefined
+      });
+      setIsAdminEditing(false);
+    } catch (e) {
+      // toast is handled in action
+    }
+  };
+
   return (
     <Dialog open={!!selectedRequest} onOpenChange={(o) => !o && onClose()}>
       <DialogContent showCloseButton={false} className="max-w-[95vw] lg:max-w-[75vw] max-h-[90vh] overflow-hidden p-0 rounded-2xl gap-0">
@@ -41,6 +58,76 @@ export function RequestDetailDialog({
 
         {selectedRequest && (
           <div className="p-8 space-y-8">
+            {/* Admin Tool Section */}
+            {userRole === "admin" && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 text-amber-800 font-bold text-sm">
+                    <ShieldAlert size={16} />
+                    ADMIN TOOLS: FORCE UPDATE STATUS
+                  </div>
+                  {!isAdminEditing ? (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-7 border-amber-300 text-amber-800 hover:bg-amber-100"
+                      onClick={() => {
+                        setAdminStatus(selectedRequest.status);
+                        setAdminApprovalStatus(selectedRequest.approvalStatus);
+                        setIsAdminEditing(true);
+                      }}
+                    >
+                      Edit Status
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" className="h-7" onClick={() => setIsAdminEditing(false)}>Batal</Button>
+                      <Button size="sm" className="h-7 bg-amber-600 hover:bg-amber-700" onClick={handleAdminSave}>Simpan Paksa</Button>
+                    </div>
+                  )}
+                </div>
+                
+                {isAdminEditing && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-amber-700">Internal Status</label>
+                      <select 
+                        className="w-full bg-white border border-amber-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-amber-500/20"
+                        value={adminStatus}
+                        onChange={(e) => setAdminStatus(e.target.value)}
+                      >
+                        <option value="submitted">submitted</option>
+                        <option value="approved">approved</option>
+                        <option value="spk_created">spk_created</option>
+                        <option value="closed">closed</option>
+                        <option value="rejected">rejected</option>
+                        <option value="menunggu_review_awal_kadis_pp">menunggu_review_awal_kadis_pp</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-amber-700">Approval Status (UI Display)</label>
+                      <select 
+                        className="w-full bg-white border border-amber-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-amber-500/20"
+                        value={adminApprovalStatus}
+                        onChange={(e) => setAdminApprovalStatus(e.target.value)}
+                      >
+                        <option value="pending">pending</option>
+                        <option value="approved">approved</option>
+                        <option value="rejected">rejected</option>
+                        <option value="menunggu_review_awal_kadis_pp">menunggu_review_awal_kadis_pp</option>
+                        <option value="spk_issued">spk_issued</option>
+                        <option value="eksekusi">eksekusi</option>
+                        <option value="selesai">selesai</option>
+                      </select>
+                    </div>
+                    <p className="md:col-span-2 text-[11px] text-amber-600 italic">
+                      * Perhatian: Mengubah status di sini akan mem-bypass logika sistem normal. Gunakan hanya jika data "nyangkut".
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <InfoCard label="Notification ID" value={selectedRequest.id} mono />
               {selectedRequest.sapOrderNumber && (

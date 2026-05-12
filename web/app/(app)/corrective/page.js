@@ -600,6 +600,8 @@ export default function CorrectivePage() {
         onClose={() => setSelectedRequest(null)}
         onApprovePlanner={triggerApprovePlanner}
         onRejectPlanner={triggerRejectPlanner}
+        userRole={user?.role}
+        onAdminUpdateStatus={adminUpdateStatusAction}
       />
 
       <ApproveSapDialog

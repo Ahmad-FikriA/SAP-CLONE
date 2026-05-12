@@ -508,7 +508,10 @@ const updateSapNumber = async (req, res) => {
 
     const spkExists = await SapSpkCorrective.findByPk(sapOrderNumber);
     if (spkExists) {
-      await notification.update({ approvalStatus: "menunggu_review_awal_kadis_pp" });
+      await notification.update({ 
+        status: "spk_created",
+        approvalStatus: "spk_issued" 
+      });
 
       if (notification.kadisPelaporId) {
         const pelaporUser = await User.findByPk(notification.kadisPelaporId, {
@@ -572,9 +575,11 @@ const approvePlanner = async (req, res) => {
       approvalStatus: "approved",
     });
 
-    const spkExists = await SapSpkCorrective.findByPk(sapOrderNumber);
     if (spkExists) {
-      await notification.update({ approvalStatus: "menunggu_review_awal_kadis_pp" });
+      await notification.update({ 
+        status: "spk_created",
+        approvalStatus: "spk_issued" 
+      });
     }
 
     const fresh = await Notification.findByPk(
@@ -662,6 +667,35 @@ const rejectPlanner = async (req, res) => {
   }
 };
 
+/**
+ * Admin Only: Force update notification status and approval status
+ */
+const adminUpdateStatus = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Only admin can force update status" });
+    }
+
+    const { status, approvalStatus } = req.body;
+    const notification = await Notification.findByPk(req.params.id);
+
+    if (!notification) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+
+    const updates = {};
+    if (status) updates.status = status;
+    if (approvalStatus) updates.approvalStatus = approvalStatus;
+
+    await notification.update(updates);
+
+    const fresh = await Notification.findByPk(notification.notificationId || notification.id);
+    res.json({ success: true, data: fmtRequest(fresh) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getAll,
   getOne,
@@ -675,4 +709,5 @@ module.exports = {
   approvePlanner,
   rejectPlanner,
   updateSapNumber,
+  adminUpdateStatus,
 };
