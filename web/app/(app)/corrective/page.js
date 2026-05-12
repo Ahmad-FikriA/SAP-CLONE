@@ -176,6 +176,25 @@ export default function CorrectivePage() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [selectedSpk, setSelectedSpk] = useState(null);
 
+  // Sync selected dialog states when data changes (e.g., after save)
+  useEffect(() => {
+    if (selectedSpk) {
+      const updated = spks.find(s => s.order_number === selectedSpk.order_number);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedSpk)) {
+        setSelectedSpk(updated);
+      }
+    }
+  }, [spks, selectedSpk]);
+
+  useEffect(() => {
+    if (selectedRequest) {
+      const updated = requests.find(r => r.id === selectedRequest.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedRequest)) {
+        setSelectedRequest(updated);
+      }
+    }
+  }, [requests, selectedRequest]);
+
   // Upload Excel
   const [uploading, setUploading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
