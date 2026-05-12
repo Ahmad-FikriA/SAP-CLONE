@@ -97,94 +97,43 @@ async function createSchedule(req, res) {
     let end = new Date(scheduledEndDate || scheduledDate);
     end.setHours(0, 0, 0, 0);
 
-    const isMultiDay = end > start && !intervalPeriod;
+    const schedule = await InspectionSchedule.create({
+      type: type || "rutin",
+      title,
+      location,
+      scheduledDate,
+      scheduledEndDate,
+      createdBy: req.user.nik,
+      assignedTo,
+      kategoriTeknisi,
+      kategoriK3: kategoriK3 || null,
+      triggerSource: triggerSource || "self",
+      vendorInfo,
+      nomorPoJo,
+      darurat: darurat || false,
+      notes,
+      intervalPeriod,
+    });
 
-    if (isMultiDay) {
-      const datesToSchedule = [];
-      let current = new Date(start);
-      while (current <= end) {
-        datesToSchedule.push(new Date(current));
-        current.setDate(current.getDate() + 1);
-      }
+    res.status(201).json({
+      success: true,
+      message: "Schedule created successfully.",
+      data: schedule,
+    });
 
-      const schedulesToCreate = datesToSchedule.map(date => ({
-        type: type || "rutin",
-        title,
-        location,
-        scheduledDate: date,
-        scheduledEndDate: date,
-        createdBy: req.user.nik,
-        assignedTo,
-        kategoriTeknisi,
-        kategoriK3: kategoriK3 || null,
-        triggerSource: triggerSource || "self",
-        vendorInfo,
-        nomorPoJo,
-        darurat: darurat || false,
-        notes,
-        intervalPeriod,
-      }));
-
-      const schedules = await InspectionSchedule.bulkCreate(schedulesToCreate);
-
-      res.status(201).json({
-        success: true,
-        message: `Created ${schedules.length} schedules.`,
-        data: schedules[0], // Return first one for compatibility
-      });
-
-      // Notification
-      const recipientNik = String(assignedTo || INSPECTION_PLANNER_NIK);
-      notify({
-        module: 'inspection',
-        type: 'schedule_created',
-        title: 'Jadwal Inspeksi Baru (Multi-hari)',
-        body: `Jadwal inspeksi "${title || schedules[0].title}" telah dibuat untuk Anda (${schedules.length} hari).`,
-        data: {
-          deepLink: 'inspection/draft',
-          scheduleId: String(schedules[0].id),
-        },
-        recipientIds: [recipientNik],
-      });
-    } else {
-      const schedule = await InspectionSchedule.create({
-        type: type || "rutin",
-        title,
-        location,
-        scheduledDate,
-        scheduledEndDate,
-        createdBy: req.user.nik,
-        assignedTo,
-        kategoriTeknisi,
-        kategoriK3: kategoriK3 || null,
-        triggerSource: triggerSource || "self",
-        vendorInfo,
-        nomorPoJo,
-        darurat: darurat || false,
-        notes,
-        intervalPeriod,
-      });
-
-      res.status(201).json({
-        success: true,
-        message: "Schedule created successfully.",
-        data: schedule,
-      });
-
-      // Kirim notifikasi ke executor yang di-assign (atau Planner jika belum ditentukan)
-      const recipientNik = String(assignedTo || INSPECTION_PLANNER_NIK);
-      notify({
-        module: 'inspection',
-        type: 'schedule_created',
-        title: 'Jadwal Inspeksi Baru',
-        body: `Jadwal inspeksi "${title || schedule.title}" telah dibuat untuk Anda.`,
-        data: {
-          deepLink: 'inspection/draft',
-          scheduleId: String(schedule.id),
-        },
-        recipientIds: [recipientNik],
-      });
-    }
+    // Kirim notifikasi ke executor yang di-assign (atau Planner jika belum ditentukan)
+    const recipientNik = String(assignedTo || INSPECTION_PLANNER_NIK);
+    notify({
+      module: 'inspection',
+      type: 'schedule_created',
+      title: 'Jadwal Inspeksi Baru',
+      body: `Jadwal inspeksi "${title || schedule.title}" telah dibuat untuk Anda.`,
+      data: {
+        deepLink: 'inspection/draft',
+        scheduleId: String(schedule.id),
+      },
+      recipientIds: [recipientNik],
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
