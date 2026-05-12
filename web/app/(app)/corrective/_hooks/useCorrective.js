@@ -194,18 +194,78 @@ export function useCorrective() {
     }
   }
 
+  async function updateSapSpkAction(orderNumber, payload) {
+    const res = await apiPatch(`/corrective/sap-spk/${orderNumber}`, payload);
+    if (res.status === "success") {
+      toast.success("Data SPK berhasil diperbarui");
+      await loadAll();
+    } else {
+      throw new Error(res.message || "Gagal memperbarui data SPK");
+    }
+  }
+
+  async function exportHistoryAction(ids) {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const res = await fetch(`${baseUrl}/api/corrective/sap-spk/export-history`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ids }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Gagal mengexport file");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `History_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error("Gagal export: " + e.message);
+      throw e;
+    }
+  }
+
   return {
-    requests, spks, history, loading, filteredRequests,
-    equipment, functionalLocations,
-    filterApprovalStatus, setFilterApprovalStatus,
-    filterSpkStatus, setFilterSpkStatus,
+    requests,
+    spks,
+    history,
+    equipment,
+    functionalLocations,
+    loading,
+    filteredRequests,
+    filterApprovalStatus,
+    setFilterApprovalStatus,
+    filterSpkStatus,
+    setFilterSpkStatus,
     loadAll,
-    uploadExcel, confirmBulkInsert, submitManualSpk,
-    approvePlannerAction, rejectPlannerAction, updateSapNumberAction,
-    approveKadisPpAction, rejectKadisPpAction,
-    approveKadisPelaporAction, rejectKadisPelaporAction,
-    deleteRequestAction, deleteAllRequestsAction,
-    deleteSpkAction, deleteAllSpksAction, uploadHistoryExcelAction,
+    uploadExcel,
+    confirmBulkInsert,
+    submitManualSpk,
+    approvePlannerAction,
+    rejectPlannerAction,
+    updateSapNumberAction,
+    approveKadisPpAction,
+    rejectKadisPpAction,
+    approveKadisPelaporAction,
+    rejectKadisPelaporAction,
+    deleteRequestAction,
+    deleteAllRequestsAction,
+    deleteSpkAction,
+    deleteAllSpksAction,
+    uploadHistoryExcelAction,
     adminUpdateStatusAction,
+    updateSapSpkAction,
+    exportHistoryAction,
   };
 }

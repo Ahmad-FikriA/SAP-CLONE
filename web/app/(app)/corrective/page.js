@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -21,7 +21,12 @@ import {
   LayoutDashboard,
   Plus,
   Download,
+  Calendar as CalendarIcon,
 } from "lucide-react";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { canCreate, canDelete, getUser } from "@/lib/auth";
 
@@ -40,6 +45,21 @@ import { usePagination, PaginationControls } from "./_components/Pagination";
 export default function CorrectivePage() {
   const [user, setUser] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [isExportMode, setIsExportMode] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
+  const [selectedExportIds, setSelectedExportIds] = useState([]);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [highlightCheckboxes, setHighlightCheckboxes] = useState(false);
+  const highlightTimeout = useRef(null);
+
+  const triggerHighlightCheckboxes = () => {
+    setHighlightCheckboxes(true);
+    if (highlightTimeout.current) clearTimeout(highlightTimeout.current);
+    highlightTimeout.current = setTimeout(() => {
+      setHighlightCheckboxes(false);
+    }, 10000);
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -86,6 +106,8 @@ export default function CorrectivePage() {
     deleteAllSpksAction,
     uploadHistoryExcelAction,
     adminUpdateStatusAction,
+    updateSapSpkAction,
+    exportHistoryAction,
   } = data;
 
   // Kadis non-PP: only see their own SPKs based on notification.kadisPelaporId
@@ -97,9 +119,25 @@ export default function CorrectivePage() {
   const spks = isKadisNonPp
     ? rawSpks.filter((s) => s.notification?.kadisPelaporId === user.id)
     : rawSpks;
-  const history = isKadisNonPp
-    ? rawHistory.filter((s) => s.notification?.kadisPelaporId === user.id)
-    : rawHistory;
+  const history = useMemo(() => {
+    let result = isKadisNonPp
+      ? rawHistory.filter((s) => s.notification?.kadisPelaporId === user.id)
+      : rawHistory;
+
+    if (exportStartDate) {
+      result = result.filter(h => {
+        const d = h.created_at ? h.created_at.slice(0, 10) : "";
+        return d && d >= exportStartDate;
+      });
+    }
+    if (exportEndDate) {
+      result = result.filter(h => {
+        const d = h.created_at ? h.created_at.slice(0, 10) : "";
+        return d && d <= exportEndDate;
+      });
+    }
+    return result;
+  }, [rawHistory, exportStartDate, exportEndDate, isKadisNonPp, user?.id]);
 
   const [filterWorkCenter, setFilterWorkCenter] = useState("");
 
@@ -117,7 +155,18 @@ export default function CorrectivePage() {
 
   // Reset page when filters/tab change
   useEffect(() => { setSpkPage(1); }, [filterWorkCenter, filterSpkStatus]);
-  useEffect(() => { setReqPage(1); setSpkPage(1); setHistPage(1); }, [tab]);
+  useEffect(() => { 
+    setReqPage(1); 
+    setSpkPage(1); 
+    setHistPage(1); 
+
+    // Reset export mode if navigating away
+    setIsExportMode(false);
+    setSelectedExportIds([]);
+    setExportStartDate("");
+    setExportEndDate("");
+    setHighlightCheckboxes(false);
+  }, [tab]);
 
   const reqPag = usePagination(filteredRequests, reqPage, setReqPage);
   const spkPag = usePagination(filteredSpks, spkPage, setSpkPage);
@@ -126,6 +175,25 @@ export default function CorrectivePage() {
   // Detail dialogs
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [selectedSpk, setSelectedSpk] = useState(null);
+
+  // Sync selected dialog states when data changes (e.g., after save)
+  useEffect(() => {
+    if (selectedSpk) {
+      const updated = spks.find(s => s.order_number === selectedSpk.order_number);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedSpk)) {
+        setSelectedSpk(updated);
+      }
+    }
+  }, [spks, selectedSpk]);
+
+  useEffect(() => {
+    if (selectedRequest) {
+      const updated = requests.find(r => r.id === selectedRequest.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedRequest)) {
+        setSelectedRequest(updated);
+      }
+    }
+  }, [requests, selectedRequest]);
 
   // Upload Excel
   const [uploading, setUploading] = useState(false);
@@ -508,35 +576,124 @@ export default function CorrectivePage() {
           )}
           {tab === "history" && isPlanner && (
             <div className="flex items-center gap-2">
-              <input
-                type="file"
-                ref={fileInputHistoryRef}
-                className="hidden"
-                accept=".xlsx, .xls"
-                onChange={handleHistoryFileUpload}
-              />
-              {user?.role === "admin" && (
-                <Button
-                  variant="outline"
-                  className="shadow-md bg-white hover:bg-slate-50 border-slate-200"
-                  onClick={() => fileInputHistoryRef.current?.click()}
-                  disabled={uploading}
-                >
-                  <Upload size={16} className="mr-2" />
-                  {uploading ? "Mengunggah..." : "Import History TECO"}
-                </Button>
+              {isExportMode ? (
+                <>
+                  <Popover>
+                    <PopoverTrigger
+                      className={cn(
+                        buttonVariants({ variant: "outline" }),
+                        "w-[140px] justify-start text-left font-normal bg-white h-10",
+                        !exportStartDate && "text-slate-500"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {exportStartDate ? format(new Date(exportStartDate), "dd MMM yyyy", { locale: idLocale }) : <span>Tgl Mulai</span>}
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={exportStartDate ? new Date(exportStartDate) : undefined}
+                        onSelect={(date) => setExportStartDate(date ? format(date, "yyyy-MM-dd") : "")}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <span className="text-sm text-slate-500">s/d</span>
+                  <Popover>
+                    <PopoverTrigger
+                      className={cn(
+                        buttonVariants({ variant: "outline" }),
+                        "w-[140px] justify-start text-left font-normal bg-white h-10",
+                        !exportEndDate && "text-slate-500"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {exportEndDate ? format(new Date(exportEndDate), "dd MMM yyyy", { locale: idLocale }) : <span>Tgl Akhir</span>}
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={exportEndDate ? new Date(exportEndDate) : undefined}
+                        onSelect={(date) => setExportEndDate(date ? format(date, "yyyy-MM-dd") : "")}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <Button
+                    variant="outline"
+                    className="shadow-md bg-white border-slate-200"
+                    onClick={() => {
+                      setIsExportMode(false);
+                      setSelectedExportIds([]);
+                      setExportStartDate("");
+                      setExportEndDate("");
+                      setHighlightCheckboxes(false);
+                    }}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "shadow-md border-green-200 text-green-700 transition-all",
+                      selectedExportIds.length === 0 
+                        ? "opacity-50 cursor-not-allowed bg-slate-50" 
+                        : "bg-white hover:bg-green-50"
+                    )}
+                    disabled={exportingExcel}
+                    onClick={async () => {
+                      if (selectedExportIds.length === 0) {
+                        toast.error("Pilih minimal satu data terlebih dahulu!");
+                        triggerHighlightCheckboxes();
+                        return;
+                      }
+                      setExportingExcel(true);
+                      try {
+                        await exportHistoryAction(selectedExportIds);
+                        setIsExportMode(false);
+                        setSelectedExportIds([]);
+                        setExportStartDate("");
+                        setExportEndDate("");
+                        setHighlightCheckboxes(false);
+                      } catch (e) {
+                        // error handled in action
+                      } finally {
+                        setExportingExcel(false);
+                      }
+                    }}
+                  >
+                    <Download size={16} className="mr-2" /> {exportingExcel ? "Mengekspor..." : "Export Excel"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="file"
+                    ref={fileInputHistoryRef}
+                    className="hidden"
+                    accept=".xlsx, .xls"
+                    onChange={handleHistoryFileUpload}
+                  />
+                  {user?.role === "admin" && (
+                    <Button
+                      variant="outline"
+                      className="shadow-md bg-white hover:bg-slate-50 border-slate-200"
+                      onClick={() => fileInputHistoryRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      <Upload size={16} className="mr-2" />
+                      {uploading ? "Mengunggah..." : "Import History TECO"}
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="shadow-md bg-white hover:bg-green-50 border-green-200 text-green-700"
+                    onClick={() => setIsExportMode(true)}
+                  >
+                    <Download size={16} className="mr-2" /> Mode Export Excel
+                  </Button>
+                </>
               )}
-              <Button
-                variant="outline"
-                className="shadow-md bg-white hover:bg-green-50 border-green-200 text-green-700"
-                onClick={() => {
-                  const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
-                  const base = process.env.NEXT_PUBLIC_API_URL + "/api";
-                  window.open(`${base}/corrective/sap-spk/export-history?token=${token}`, "_blank");
-                }}
-              >
-                <Download size={16} className="mr-2" /> Export Excel
-              </Button>
             </div>
           )}
         </div>
@@ -544,7 +701,7 @@ export default function CorrectivePage() {
 
       {/* Main Content */}
       <div
-        key={tab}
+        key={`${tab}-${isExportMode}-${exportStartDate}-${exportEndDate}-${filterSpkStatus}-${filterApprovalStatus}-${filterWorkCenter}`}
         className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500"
       >
         {tab === "requests" && (
@@ -586,9 +743,14 @@ export default function CorrectivePage() {
             <HistoryTable
               loading={loading}
               history={histPag.paginatedItems}
+              fullHistory={history}
               equipment={equipment}
               onSelectSpk={setSelectedSpk}
               onDeleteSpk={handleDeleteSpk}
+              isExportMode={isExportMode}
+              selectedExportIds={selectedExportIds}
+              setSelectedExportIds={setSelectedExportIds}
+              highlightCheckboxes={highlightCheckboxes}
             />
             <PaginationControls page={histPag.safePage} totalPages={histPag.totalPages} totalItems={histPag.totalItems} onPageChange={setHistPage} />
           </>
@@ -621,10 +783,12 @@ export default function CorrectivePage() {
         userId={user?.id}
         userNik={user?.nik}
         userRole={user?.role}
+        userGroup={user?.group}
         onApproveKadisPp={triggerApproveKadisPp}
         onRejectKadisPp={triggerRejectKadisPp}
         onApproveKadisPelapor={triggerApproveKadisPelapor}
         onRejectKadisPelapor={triggerRejectKadisPelapor}
+        onUpdateSpk={updateSapSpkAction}
       />
 
       <ExcelPreviewDialog

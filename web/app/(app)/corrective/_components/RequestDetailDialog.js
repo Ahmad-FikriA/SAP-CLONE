@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog, DialogContent, DialogTitle,
-} from "@/components/ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
 import { canUpdate } from "@/lib/auth";
 import { getMediaUrl } from "@/lib/utils";
 import { APPROVAL_COLORS, APPROVAL_LABELS } from "./constants";
@@ -33,15 +31,55 @@ export function RequestDetailDialog({
   };
 
   return (
-    <Dialog open={!!selectedRequest} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent showCloseButton={false} className="max-w-[95vw] lg:max-w-[75vw] max-h-[90vh] overflow-hidden p-0 rounded-2xl gap-0">
-        <div className="overflow-y-auto max-h-[90vh]">
+    <AnimatePresence>
+      {selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ 
+              opacity: 0, 
+              y: 400, 
+              scaleX: 0.05, 
+              scaleY: 0.2,
+            }}
+            animate={{ 
+              opacity: 1, 
+              y: 0, 
+              scaleX: 1, 
+              scaleY: 1,
+              transition: {
+                type: "spring",
+                damping: 24,
+                stiffness: 300,
+                mass: 0.7
+              }
+            }}
+            exit={{ 
+              opacity: 0, 
+              y: 400, 
+              scaleX: 0.05, 
+              scaleY: 0.2,
+              transition: {
+                ease: [0.32, 0.72, 0, 1],
+                duration: 0.28
+              }
+            }}
+            style={{ transformOrigin: "bottom center" }}
+            className="relative z-50 bg-white max-w-[95vw] lg:max-w-[75vw] w-full max-h-[90vh] overflow-hidden p-0 rounded-2xl flex flex-col gap-0 shadow-2xl origin-bottom"
+          >
+            <div className="overflow-y-auto max-h-[90vh]">
         <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 px-8 py-6 border-b border-slate-100 sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle className="text-xl font-bold text-slate-800">
+              <h2 className="text-xl font-bold text-slate-800">
                 Detail Laporan Notifikasi
-              </DialogTitle>
+              </h2>
               <div className="text-sm font-mono text-slate-400 mt-1">
                 {selectedRequest?.id}
               </div>
@@ -222,7 +260,9 @@ export function RequestDetailDialog({
             )}
         </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        </motion.div>
+      </div>
+      )}
+    </AnimatePresence>
   );
 }

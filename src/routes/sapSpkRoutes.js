@@ -32,6 +32,7 @@ router.get("/reason-codes", verifyToken, sapSpkController.getReasonOfVarianceCod
 
 // ── Export History to Excel (IW49 format) ────────────────────────────────────
 router.get("/export-history", verifyToken, sapSpkController.exportHistory);
+router.post("/export-history", verifyToken, sapSpkController.exportHistory);
 
 // ── Upload Excel endpoint (Returns Preview) ──────────────────────────────────
 router.post(
@@ -61,6 +62,13 @@ router.post(
   "/manual",
   verifyToken,
   sapSpkController.createManualSapSpk
+);
+
+// ── Update SPK (Planner only) ────────────────────────────────────────────────
+router.patch(
+  "/:orderNumber",
+  verifyToken,
+  sapSpkController.updateSapSpk
 );
 
 // ── Step 1: Claim SPK (Photo Before + Lock to NIK) ──────────────────────────
