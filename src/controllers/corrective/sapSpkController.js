@@ -346,8 +346,11 @@ const bulkInsertSapSpk = async (req, res) => {
             attributes: ["nik"],
           });
           if (pelaporUser?.nik) {
-            // Update status to menunggu_review_awal_kadis_pp
-            await notif.update({ approvalStatus: "menunggu_review_awal_kadis_pp" });
+            // Update status to spk_created & approvalStatus to spk_issued
+            await notif.update({ 
+              status: "spk_created",
+              approvalStatus: "spk_issued" 
+            });
 
             await NotificationService.notify({
               module: "corrective",
@@ -643,7 +646,10 @@ const createManualSapSpk = async (req, res) => {
     const Notification = require("../../models/Notification");
     const notif = await Notification.findOne({ where: { sapOrderNumber: spkData.order_number } });
     if (notif && notif.kadisPelaporId) {
-      await notif.update({ approvalStatus: "spk_issued" });
+      await notif.update({ 
+        status: "spk_created",
+        approvalStatus: "spk_issued" 
+      });
       const pelaporUser = await User.findByPk(notif.kadisPelaporId, { attributes: ["nik"] });
       if (pelaporUser?.nik) {
         await NotificationService.notify({

@@ -102,7 +102,16 @@ function isAdminUser(user) {
   return String(user && user.role ? user.role : "").toLowerCase() === "admin";
 }
 
-function getSupervisiAccess(user) {
+function hasWebReadSupervisiPermission(user) {
+  const permissions = user && user.permissions;
+  if (!permissions || typeof permissions !== "object" || Array.isArray(permissions)) {
+    return false;
+  }
+  return Array.isArray(permissions.supervisi) && permissions.supervisi.includes("R");
+}
+
+function getSupervisiAccess(user, options = {}) {
+  const allowWebPermissionRead = Boolean(options && options.allowWebPermissionRead);
   const nik = normalizeNik(user && user.nik);
   const displayName = String(user && user.name ? user.name : "").trim();
 
@@ -128,11 +137,17 @@ function getSupervisiAccess(user) {
     return { kind: "executor", nik, displayName };
   }
 
+  // Khusus web: user yang diberi akses baca supervisi dapat monitoring (read-only).
+  // Tidak dipakai untuk app/mobile agar role operasional tetap ketat.
+  if (allowWebPermissionRead && hasWebReadSupervisiPermission(user)) {
+    return { kind: "monitor", nik, displayName };
+  }
+
   return { kind: "none", nik, displayName };
 }
 
-function hasSupervisiAccess(user) {
-  return getSupervisiAccess(user).kind !== "none";
+function hasSupervisiAccess(user, options = {}) {
+  return getSupervisiAccess(user, options).kind !== "none";
 }
 
 function isSupervisiScheduler(user) {
@@ -183,8 +198,8 @@ async function isAllowedExecutorForGroup(groupName, value) {
   return allowedNames.some((n) => n.toLowerCase() === nameLower);
 }
 
-function canAccessSupervisiJob(user, job) {
-  const access = getSupervisiAccess(user);
+function canAccessSupervisiJob(user, job, options = {}) {
+  const access = getSupervisiAccess(user, options);
 
   if (access.kind === "scheduler" || access.kind === "monitor") {
     return true;

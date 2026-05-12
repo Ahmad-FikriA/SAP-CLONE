@@ -83,6 +83,8 @@ function parseAppRole(roleStr) {
 
 function buildAccessProfile(user) {
   const nik = normalizeNik(user && user.nik);
+  const rawRole = String((user && user.role) || "").toLowerCase().trim();
+  const isAdmin = rawRole === "admin";
   const role = parseAppRole(user && user.role);
   const dinas = String((user && user.dinas) || "");
   const divisi = String((user && user.divisi) || "");
@@ -109,8 +111,8 @@ function buildAccessProfile(user) {
   const isKadivPPHSE = role === "kadiv" && containsText(divisi, "pphse");
 
   const normalizedGroup = normalizeGroup(group);
-  const isSupervisiScheduler = nik === SUPERVISI_SCHEDULER_NIK;
-  const isSupervisiMonitor = nik === SUPERVISI_MONITOR_NIK;
+  const isSupervisiScheduler = isAdmin || nik === SUPERVISI_SCHEDULER_NIK;
+  const isSupervisiMonitor = isAdmin || nik === SUPERVISI_MONITOR_NIK;
   const isSupervisiDenied = SUPERVISI_DENIED_NIKS.has(nik);
   const userName = String((user && user.name) || "").trim().toLowerCase();
   const isSupervisiGroup = !isSupervisiDenied &&
@@ -131,7 +133,7 @@ function buildAccessProfile(user) {
     nik !== INSPECTION_EXECUTOR_NIK_2 &&
     (nik === INSPECTION_PLANNER_NIK ||
       (role === "kasie" && inDinasInspeksiRaw && inGroupInspeksiRaw));
-  const isInspectionMonitor = nik === INSPECTION_MONITOR_NIK || role === "kadiv";
+  const isInspectionMonitor = isAdmin || nik === INSPECTION_MONITOR_NIK || role === "kadiv";
   const isInspectionPerawatan = !hasInspectionRoleOverride && isDinasPerawatan;
   const isDinasInspeksi = !isInspectionExecutor && inDinasInspeksiRaw;
 
@@ -168,7 +170,15 @@ function buildAccessProfile(user) {
   };
 }
 
+function applyWebPermissionsToAccessProfile(accessProfile, permissions) {
+  void permissions;
+  // Web CRUD permissions are display controls only. App/API capability must
+  // stay derived from NIK, role, dinas, divisi, and group.
+  return accessProfile;
+}
+
 module.exports = {
   buildAccessProfile,
   parseAppRole,
+  applyWebPermissionsToAccessProfile,
 };

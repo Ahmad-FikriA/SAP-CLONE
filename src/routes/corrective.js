@@ -72,6 +72,7 @@ router.post('/requests/bulk-delete', verifyToken, reqCtrl.bulkDelete);
 router.post("/requests/:id/approve-planner", verifyToken, requirePlanner, reqCtrl.approvePlanner);
 router.post("/requests/:id/reject-planner", verifyToken, requirePlanner, reqCtrl.rejectPlanner);
 router.post("/requests/:id/update-sap-number", verifyToken, requirePlanner, reqCtrl.updateSapNumber);
+router.patch("/requests/:id/admin-status", verifyToken, reqCtrl.adminUpdateStatus);
 
 // POST /api/corrective/requests/:id/approve
 router.post('/requests/:id/approve', verifyToken, reqCtrl.approveKadisPusat);

@@ -8,6 +8,7 @@ import {
   deleteInspeksiSchedule,
   fetchInspeksiUsersMap,
 } from '@/lib/inspeksi-service';
+import { canDelete } from '@/lib/auth';
 import { InspeksiSpkTable } from '@/components/inspeksi/InspeksiSpkTable';
 import { InspeksiDetailModal } from '@/components/inspeksi/InspeksiDetailModal';
 
@@ -81,6 +82,11 @@ export default function InspeksiPage() {
 
   // ── Hapus jadwal ────────────────────────────────────────────────────────────
   async function handleDelete(schedule) {
+    if (!canDelete('inspeksi')) {
+      toast.error('Anda tidak memiliki akses untuk menghapus jadwal inspeksi.');
+      return;
+    }
+
     try {
       await deleteInspeksiSchedule(schedule.id);
       toast.success(`Jadwal "${schedule.title}" berhasil dihapus.`);
@@ -200,6 +206,7 @@ export default function InspeksiPage() {
             onRefresh={load}
             onViewDetail={openDetail}
             onDelete={handleDelete}
+            canDelete={canDelete('inspeksi')}
           />
         )}
       </div>

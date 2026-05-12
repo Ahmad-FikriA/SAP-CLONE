@@ -47,6 +47,19 @@ const {
 
 const NILAI_PEKERJAAN_MAX_INTEGER_DIGITS = 19;
 
+function isWebClientRequest(req) {
+  const platformHeader = String(req.headers["x-client-platform"] || "")
+    .trim()
+    .toLowerCase();
+  return platformHeader === "web";
+}
+
+function getSupervisiReadAccessOptions(req) {
+  return {
+    allowWebPermissionRead: isWebClientRequest(req),
+  };
+}
+
 function parseNilaiPekerjaan(value) {
   if (value === undefined) return { value: undefined };
   if (value === null || value === "") return { value: null };
@@ -126,7 +139,8 @@ async function listJobs(req, res) {
     // Konversi draft kedaluwarsa (visitDate < hari ini) → tidak_hadir
     await convertStaleDrafts();
 
-    const access = getSupervisiAccess(req.user);
+    const accessOptions = getSupervisiReadAccessOptions(req);
+    const access = getSupervisiAccess(req.user, accessOptions);
     if (access.kind === "none") {
       return res.status(403).json({
         success: false,
@@ -175,7 +189,9 @@ async function listJobs(req, res) {
 // GET /api/inspection/supervisi/jobs/:id
 async function getJob(req, res) {
   try {
-    if (!hasSupervisiAccess(req.user)) {
+    const accessOptions = getSupervisiReadAccessOptions(req);
+
+    if (!hasSupervisiAccess(req.user, accessOptions)) {
       return res.status(403).json({
         success: false,
         message: forbiddenMessage(),
@@ -192,7 +208,7 @@ async function getJob(req, res) {
       ],
     });
     if (!job) return res.status(404).json({ success: false, message: "Job tidak ditemukan." });
-    if (!canAccessSupervisiJob(req.user, job)) {
+    if (!canAccessSupervisiJob(req.user, job, accessOptions)) {
       return res.status(403).json({
         success: false,
         message: forbiddenMessage(),
@@ -595,7 +611,9 @@ async function deleteJob(req, res) {
 // GET /api/inspection/supervisi/jobs/:id/visits
 async function listVisits(req, res) {
   try {
-    if (!hasSupervisiAccess(req.user)) {
+    const accessOptions = getSupervisiReadAccessOptions(req);
+
+    if (!hasSupervisiAccess(req.user, accessOptions)) {
       return res.status(403).json({
         success: false,
         message: forbiddenMessage(),
@@ -610,7 +628,7 @@ async function listVisits(req, res) {
       });
     }
 
-    if (!canAccessSupervisiJob(req.user, job)) {
+    if (!canAccessSupervisiJob(req.user, job, accessOptions)) {
       return res.status(403).json({
         success: false,
         message: forbiddenMessage(),
@@ -855,7 +873,8 @@ async function submitVisit(req, res) {
 // GET /api/inspection/supervisi/pelanggaran
 async function listPelanggaran(req, res) {
   try {
-    const access = getSupervisiAccess(req.user);
+    const accessOptions = getSupervisiReadAccessOptions(req);
+    const access = getSupervisiAccess(req.user, accessOptions);
     if (access.kind === "none") {
       return res.status(403).json({
         success: false,

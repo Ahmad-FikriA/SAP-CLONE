@@ -26,9 +26,9 @@ const login = async (req, res) => {
   const user = await User.findOne({ where: { nik, password } });
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const accessProfile  = buildAccessProfile(user);
   const roleTemplates  = loadRoleTemplates();
   const permissions    = user.permissions ?? roleTemplates[user.role] ?? null; // null = unrestricted
+  const accessProfile  = buildAccessProfile(user);
 
   const token = jwt.sign(
     {
@@ -39,6 +39,7 @@ const login = async (req, res) => {
       dinas: user.dinas || '',
       group: user.group || '',
       divisi: user.divisi || '',
+      permissions,
     },
     JWT_SECRET,
     { expiresIn: '24h' }

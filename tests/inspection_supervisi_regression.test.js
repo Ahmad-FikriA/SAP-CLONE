@@ -29,6 +29,7 @@ describe('Inspection and Supervisi regressions', () => {
       group: null,
       divisi: 'Inpeksi & Supervisi',
       dinas: 'Inpeksi & Supervisi',
+      permissions: { supervisi: ['R'], inspeksi: ['R'] },
     },
     process.env.JWT_SECRET || 'kti-mock-secret-dev',
   );
@@ -41,6 +42,20 @@ describe('Inspection and Supervisi regressions', () => {
       group: 'Inspeksi',
       divisi: null,
       dinas: null,
+      permissions: { supervisi: ['R'] },
+    },
+    process.env.JWT_SECRET || 'kti-mock-secret-dev',
+  );
+  const webMonitorToken = jwt.sign(
+    {
+      userId: '10000359',
+      nik: '10000359',
+      name: 'Bayu Sogara',
+      role: 'teknisi',
+      group: 'Produksi',
+      divisi: 'Operasional',
+      dinas: 'Operasional',
+      permissions: { supervisi: ['R'] },
     },
     process.env.JWT_SECRET || 'kti-mock-secret-dev',
   );
@@ -229,6 +244,35 @@ describe('Inspection and Supervisi regressions', () => {
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
     cleanup.jobIds.push(response.body.data.id);
+  });
+
+  it('allows web reader with supervisi read permission to fetch supervisi jobs', async () => {
+    const createResponse = await request(app)
+      .post('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        namaKerja: `Codex Supervisi Web Read ${Date.now()}`,
+        nomorJo: `JO-CODEX-WEB-${Date.now()}`,
+        nilaiPekerjaan: 1500000,
+        pelaksana: 'Vendor Test',
+        waktuMulai: '2026-04-23',
+        waktuBerakhir: '2026-04-24',
+        namaPengawas: 'Group supervisi Mekanikal Elektrik dan Instrumen',
+        picSupervisi: 'Ibrohim',
+        status: 'active',
+      });
+
+    expect(createResponse.status).toBe(201);
+    cleanup.jobIds.push(createResponse.body.data.id);
+
+    const listResponse = await request(app)
+      .get('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${webMonitorToken}`)
+      .set('X-Client-Platform', 'web');
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.success).toBe(true);
+    expect(Array.isArray(listResponse.body.data)).toBe(true);
   });
 
   it('rejects nilai pekerjaan above the app-supported digit limit', async () => {

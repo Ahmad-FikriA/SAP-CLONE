@@ -34,12 +34,25 @@ async function verifyToken(req, res, next) {
       decoded.name === undefined ||
       decoded.group === undefined ||
       decoded.divisi === undefined ||
-      decoded.dinas === undefined;
+      decoded.dinas === undefined ||
+      decoded.permissions === undefined;
 
     if (needsUserLookup) {
       user = await User.findByPk(decoded.userId);
       if (!user) {
         return res.status(401).json({ error: 'Invalid user' });
+      }
+
+      // Fallback for permissions if user.permissions is null (legacy token)
+      if (user.permissions === null) {
+        const fs = require('fs');
+        const path = require('path');
+        try {
+          const templates = JSON.parse(
+            fs.readFileSync(path.join(__dirname, '..', '..', 'data', 'role_templates.json'), 'utf8')
+          );
+          user.permissions = templates[user.role] ?? null;
+        } catch {}
       }
     }
 
@@ -51,6 +64,7 @@ async function verifyToken(req, res, next) {
       group: decoded.group !== undefined ? decoded.group : user.group,
       divisi: decoded.divisi !== undefined ? decoded.divisi : user.divisi,
       dinas: decoded.dinas !== undefined ? decoded.dinas : user.dinas,
+      permissions: decoded.permissions !== undefined ? decoded.permissions : (user ? user.permissions : null),
     };
     next();
   } catch (err) {
