@@ -624,6 +624,51 @@ const getReasonOfVarianceCodes = (req, res) => {
   res.status(200).json({ status: "success", data: codes });
 };
 
+/**
+ * Update SAP SPK (Planner only)
+ * Allowed fields: description, short_text, num_of_work, dur_plan
+ */
+const updateSapSpk = async (req, res) => {
+  try {
+    const { orderNumber } = req.params;
+    const { role, group } = req.user;
+    const isPlanner = role === "admin" || (group && group.toLowerCase().includes("perencanaan"));
+
+    if (!isPlanner) {
+      return res.status(403).json({ status: "error", message: "Hanya Planner yang dapat mengubah data ini" });
+    }
+
+    const spk = await SapSpkCorrective.findByPk(orderNumber);
+    if (!spk) {
+      return res.status(404).json({ status: "error", message: "SPK tidak ditemukan" });
+    }
+
+    // Hanya boleh edit jika belum di-review Kadis atau Selesai
+    const forbiddenStatuses = ["menunggu_review_kadis_pp", "menunggu_review_kadis_pelapor", "selesai"];
+    if (forbiddenStatuses.includes(spk.status)) {
+      return res.status(400).json({ status: "error", message: "SPK sudah masuk tahap review atau sudah selesai, tidak bisa diubah" });
+    }
+
+    const { description, short_text, num_of_work, dur_plan } = req.body;
+    const updates = {};
+    if (description !== undefined) updates.description = description;
+    if (short_text !== undefined) updates.short_text = short_text;
+    if (num_of_work !== undefined) updates.num_of_work = num_of_work;
+    if (dur_plan !== undefined) updates.dur_plan = dur_plan;
+
+    await spk.update(updates);
+
+    res.status(200).json({
+      status: "success",
+      message: "Data SPK berhasil diperbarui",
+      data: spk,
+    });
+  } catch (error) {
+    console.error("Error updating SAP SPK:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
+};
+
 
 
 // 6. Manual Create SPK (for testing/bypass SAP)
@@ -853,8 +898,15 @@ const rejectKadisPelapor = async (req, res) => {
 // ── Export History to Excel (IW49 Confirmation format) ───────────────────────
 const exportHistory = async (req, res) => {
   try {
+    const { ids } = req.body || {};
+    const whereClause = { status: { [Op.in]: ["selesai", "ditolak"] } };
+    
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      whereClause.order_number = { [Op.in]: ids };
+    }
+
     const spks = await SapSpkCorrective.findAll({
-      where: { status: { [Op.in]: ["selesai", "ditolak"] } },
+      where: whereClause,
       order: [["created_at", "DESC"]],
     });
 
@@ -1134,4 +1186,5 @@ module.exports = {
   deleteAllSapSpk,
   exportHistory,
   uploadHistoryExcel,
+  updateSapSpk,
 };

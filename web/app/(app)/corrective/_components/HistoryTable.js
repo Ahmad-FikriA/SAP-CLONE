@@ -8,12 +8,42 @@ import { CheckCircle2, Trash2 } from "lucide-react";
 import { canDelete } from "@/lib/auth";
 import { SAP_STATUS_COLORS, SAP_STATUS_LABELS } from "./constants";
 import { CorrectiveStatusBadge, EmptyState, fmtDate, SkeletonRows } from "./ui-primitives";
+import { cn } from "@/lib/utils";
 
-export function HistoryTable({ loading, history, equipment = [], onSelectSpk, onDeleteSpk }) {
+export function HistoryTable({ loading, history, fullHistory, equipment = [], onSelectSpk, onDeleteSpk, isExportMode, selectedExportIds, setSelectedExportIds, highlightCheckboxes }) {
+  const datasetToSelect = fullHistory || history;
+  const allSelected = datasetToSelect.length > 0 && selectedExportIds?.length === datasetToSelect.length;
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) setSelectedExportIds(datasetToSelect.map((h) => h.order_number));
+    else setSelectedExportIds([]);
+  };
+
+  const handleSelectRow = (e, orderNumber) => {
+    e.stopPropagation();
+    if (e.target.checked) setSelectedExportIds([...(selectedExportIds || []), orderNumber]);
+    else setSelectedExportIds((selectedExportIds || []).filter((id) => id !== orderNumber));
+  };
+
   return (
     <Table>
       <TableHeader className="bg-slate-50/80">
         <TableRow>
+          {isExportMode && (
+            <TableHead className="w-12 text-center">
+              <div className={cn(
+                "inline-flex p-1 rounded-md transition-all duration-300",
+                highlightCheckboxes && "ring-2 ring-red-500 animate-pulse bg-red-50"
+              )}>
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+              </div>
+            </TableHead>
+          )}
           <TableHead>Order Number</TableHead>
           <TableHead>Equipment</TableHead>
           <TableHead>Status Sistem</TableHead>
@@ -45,6 +75,16 @@ export function HistoryTable({ loading, history, equipment = [], onSelectSpk, on
                 className="cursor-pointer hover:bg-slate-50/80 transition-colors"
                 onClick={() => onSelectSpk(spk)}
               >
+                {isExportMode && (
+                  <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedExportIds?.includes(spk.order_number) || false}
+                      onChange={(e) => handleSelectRow(e, spk.order_number)}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </TableCell>
+                )}
                 <TableCell className="font-mono text-xs font-semibold text-slate-800">
                   {spk.order_number}
                 </TableCell>

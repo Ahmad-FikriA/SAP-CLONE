@@ -46,6 +46,38 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-genie-open: genie-open 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-genie-close: genie-close 0.5s cubic-bezier(0.5, 0, 0, 1) forwards;
+}
+
+@keyframes genie-open {
+  0% {
+    opacity: 0;
+    transform: perspective(800px) rotateX(-45deg) translateY(60vh) scale(0.2);
+  }
+  60% {
+    opacity: 1;
+    transform: perspective(800px) rotateX(-10deg) translateY(5vh) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(800px) rotateX(0deg) translateY(0) scale(1);
+  }
+}
+
+@keyframes genie-close {
+  0% {
+    opacity: 1;
+    transform: perspective(800px) rotateX(0deg) translateY(0) scale(1);
+  }
+  40% {
+    opacity: 1;
+    transform: perspective(800px) rotateX(-10deg) translateY(5vh) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(800px) rotateX(-45deg) translateY(60vh) scale(0.2);
+  }
 }
 
 :root {
