@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiBlob } from '@/lib/api';
-import { formatDate, getISOWeek } from '@/lib/date-utils';
+import { formatDate } from '@/lib/date-utils';
 import { CATEGORIES } from '@/lib/constants';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -55,19 +55,6 @@ function detectMeasurementUnit(operationText) {
 }
 
 
-function filterSubs(subs, { year, month, week, category }) {
-  return subs.filter((s) => {
-    const d = new Date(s.submittedAt);
-    if (year && d.getFullYear() !== parseInt(year)) return false;
-    if (week) {
-      if (getISOWeek(d) !== parseInt(week)) return false;
-    } else if (month) {
-      if (d.getMonth() + 1 !== parseInt(month)) return false;
-    }
-    if (category && s.spkCategory !== category) return false;
-    return true;
-  });
-}
 
 export default function SubmissionsPage() {
   const [subs, setSubs] = useState([]);
@@ -81,19 +68,34 @@ export default function SubmissionsPage() {
   const [exportingIW49, setExportingIW49] = useState(false);
   const [detail, setDetail] = useState(null);
   const [lightbox, setLightbox] = useState(null);
+  const [page, setPage]             = useState(1);
+  const [total, setTotal]           = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
-    load();
     apiGet('/users').then(users => {
       setUserMap(Object.fromEntries(users.map(u => [u.id, u.name || u.nik])));
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    load();
+  }, [year, month, week, category, page]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function load() {
     setLoading(true);
     try {
-      const data = await apiGet('/submissions');
-      setSubs(data);
+      const params = new URLSearchParams();
+      if (year)  params.set('year', year);
+      if (week)  params.set('week', week);
+      else if (month) params.set('month', month);
+      if (category) params.set('category', category);
+      params.set('page', String(page));
+      params.set('limit', '20');
+      const res = await apiGet(`/submissions?${params}`);
+      setSubs(res.data);
+      setTotal(res.total);
+      setTotalPages(res.totalPages);
     } catch (e) {
       toast.error('Gagal memuat data: ' + e.message);
     } finally {
@@ -147,7 +149,6 @@ export default function SubmissionsPage() {
     }
   }
 
-  const displayed = filterSubs([...subs].reverse(), { year, month, week, category });
   const years = buildYears();
   const weeks = buildWeeks();
 
@@ -157,7 +158,10 @@ export default function SubmissionsPage() {
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Submissions Log</h2>
           <p className="text-sm text-gray-500">
-            {displayed.length} dari {subs.length} submissions
+            {total === 0
+              ? 'Tidak ada submissions'
+              : `Menampilkan ${(page - 1) * 20 + 1}–${Math.min(page * 20, total)} dari ${total} submissions`
+            }
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
@@ -169,14 +173,14 @@ export default function SubmissionsPage() {
       <div className="flex flex-wrap items-end gap-3 p-4 bg-gray-50 border border-gray-200 rounded-xl">
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Tahun</label>
-          <select value={year} onChange={(e) => setYear(e.target.value)}
+          <select value={year} onChange={(e) => { setYear(e.target.value); setPage(1); }}
             className="px-2.5 py-1.5 border border-gray-200 rounded-md text-sm bg-white min-w-[80px]">
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Minggu</label>
-          <select value={week} onChange={(e) => { setWeek(e.target.value); if (e.target.value) setMonth(''); }}
+          <select value={week} onChange={(e) => { setWeek(e.target.value); if (e.target.value) setMonth(''); setPage(1); }}
             className="px-2.5 py-1.5 border border-gray-200 rounded-md text-sm bg-white min-w-[110px]">
             <option value="">Semua Minggu</option>
             {weeks.map((w) => <option key={w} value={w}>Minggu {w}</option>)}
@@ -186,7 +190,7 @@ export default function SubmissionsPage() {
           <label className={`text-[11px] font-semibold uppercase tracking-wide ${week ? 'text-gray-300' : 'text-gray-500'}`}>
             Bulan {week ? <span className="normal-case font-normal">(nonaktif saat minggu dipilih)</span> : ''}
           </label>
-          <select value={month} onChange={(e) => { setMonth(e.target.value); if (e.target.value) setWeek(''); }}
+          <select value={month} onChange={(e) => { setMonth(e.target.value); if (e.target.value) setWeek(''); setPage(1); }}
             className={`px-2.5 py-1.5 border rounded-md text-sm bg-white min-w-[120px] transition-colors ${week ? 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50' : 'border-gray-200'}`}
             disabled={!!week}>
             {MONTHS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
@@ -194,7 +198,7 @@ export default function SubmissionsPage() {
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Kategori</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)}
+          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}
             className="px-2.5 py-1.5 border border-gray-200 rounded-md text-sm bg-white min-w-[130px]">
             <option value="">Semua Kategori</option>
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -221,9 +225,9 @@ export default function SubmissionsPage() {
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Memuat...</td></tr>
-            ) : displayed.length === 0 ? (
+            ) : subs.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Belum ada submissions</td></tr>
-            ) : displayed.map((s) => (
+            ) : subs.map((s) => (
               <tr key={s.id} onClick={() => setDetail(s)}
                 className="cursor-pointer hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 font-medium text-gray-900">{s.spkNumber}</td>
@@ -241,6 +245,33 @@ export default function SubmissionsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-4 py-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => p - 1)}
+            disabled={page === 1}
+            className="gap-1.5"
+          >
+            ← Prev
+          </Button>
+          <span className="text-sm text-gray-600 font-medium">
+            Halaman {page} dari {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => p + 1)}
+            disabled={page === totalPages}
+            className="gap-1.5"
+          >
+            Next →
+          </Button>
+        </div>
+      )}
 
       {/* Detail dialog */}
       <Dialog open={!!detail} onOpenChange={(open) => !open && setDetail(null)}>

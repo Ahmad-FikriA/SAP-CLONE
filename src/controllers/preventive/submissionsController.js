@@ -79,22 +79,69 @@ function fmt(sub) {
   };
 }
 
-// GET /api/submissions?category=Mekanik&spkNumber=SPK-001
+// GET /api/submissions?page=1&limit=20&year=2026&month=5&week=20&category=Mekanik
+// GET /api/submissions?spkNumber=SPK-001  → plain array (backward compat)
 const getAll = async (req, res) => {
-  const { category, spkNumber } = req.query;
-  const where = {};
+  const { category, spkNumber, year, month, week, page: pageStr, limit: limitStr } = req.query;
 
+  // Targeted lookup — skip pagination, return plain array for Persetujuan page
   if (spkNumber) {
-    where.spkNumber = spkNumber;
-  } else if (category) {
-    const matchingSpks = await Spk.findAll({ where: { category, status: 'approved' }, attributes: ['spkNumber'] });
-    const spkNumbers = matchingSpks.map(s => s.spkNumber);
-    if (!spkNumbers.length) return res.json([]);
-    where.spkNumber = spkNumbers;
+    const data = await Submission.findAll({
+      where: { spkNumber },
+      include: INCLUDE_FULL,
+      order: [['submittedAt', 'DESC']],
+    });
+    return res.json(data.map(fmt));
   }
 
-  const data = await Submission.findAll({ where, include: INCLUDE_FULL, order: [['submittedAt', 'DESC']] });
-  res.json(data.map(fmt));
+  const page  = Math.max(1, parseInt(pageStr)  || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(limitStr) || 20));
+  const offset = (page - 1) * limit;
+
+  const where = {};
+
+  // Category pre-filter: resolve approved SPK numbers for this category
+  if (category) {
+    const matchingSpks = await Spk.findAll({
+      where: { category, status: 'approved' },
+      attributes: ['spkNumber'],
+    });
+    const spkNumbers = matchingSpks.map(s => s.spkNumber);
+    if (!spkNumbers.length) {
+      return res.json({ data: [], total: 0, page, totalPages: 0, limit });
+    }
+    where.spkNumber = { [Op.in]: spkNumbers };
+  }
+
+  // Date filter on submitted_at
+  const y = parseInt(year);
+  const m = parseInt(month);
+  const w = parseInt(week);
+  if (y && w) {
+    const jan4 = new Date(y, 0, 4);
+    const monday = new Date(jan4);
+    monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (w - 1) * 7);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    where.submittedAt = { [Op.between]: [monday, sunday] };
+  } else if (y && m) {
+    where.submittedAt = { [Op.between]: [new Date(y, m - 1, 1), new Date(y, m, 0, 23, 59, 59, 999)] };
+  } else if (y) {
+    where.submittedAt = { [Op.between]: [new Date(y, 0, 1), new Date(y, 11, 31, 23, 59, 59, 999)] };
+  }
+
+  const { count, rows } = await Submission.findAndCountAll({
+    where,
+    include: INCLUDE_FULL,
+    order: [['submittedAt', 'DESC']],
+    limit,
+    offset,
+    distinct: true,
+  });
+
+  const totalPages = Math.ceil(count / limit);
+  res.json({ data: rows.map(fmt), total: count, page, totalPages, limit });
 };
 
 // GET /api/submissions/:id
@@ -676,8 +723,8 @@ const exportIW49 = async (req, res) => {
       'Work Start', 'Work Finish', 'Start Time', 'Finish Time',
     ];
 
-    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B3A5C' } };
-    const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC107' } };
+    const headerFont = { bold: true, color: { argb: 'FF000000' }, size: 10 };
     const headerRow = ws.getRow(1);
     IW49_HEADERS.forEach((h, i) => {
       const cell = headerRow.getCell(i + 1);
