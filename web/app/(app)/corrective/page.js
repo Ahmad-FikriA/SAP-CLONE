@@ -85,6 +85,7 @@ export default function CorrectivePage() {
     deleteSpkAction,
     deleteAllSpksAction,
     uploadHistoryExcelAction,
+    adminUpdateStatusAction,
   } = data;
 
   // Kadis non-PP: only see their own SPKs based on notification.kadisPelaporId
