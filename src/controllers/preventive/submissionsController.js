@@ -10,6 +10,7 @@ const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping'
 const { GeneralTaskList } = require('../../models/GeneralTaskList');
 const User = require('../../models/User');
 
+// Used for paginated getAll (Submissions Log page) — only approved SPKs
 const INCLUDE_FULL = [
   { model: SubmissionPhoto, as: 'photos', attributes: ['photoPath'] },
   { model: SubmissionActivityResult, as: 'activityResults', attributes: ['activityNumber', 'resultComment', 'isNormal', 'isVerified', 'measurementValue'] },
@@ -28,6 +29,27 @@ const INCLUDE_FULL = [
       { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId', 'equipmentName', 'functionalLocation', 'plantName'] },
     ],
     required: true,
+  },
+];
+
+// Used for spkNumber lookup (Persetujuan SPK page) — any SPK status
+const INCLUDE_BY_SPK = [
+  { model: SubmissionPhoto, as: 'photos', attributes: ['photoPath'] },
+  { model: SubmissionActivityResult, as: 'activityResults', attributes: ['activityNumber', 'resultComment', 'isNormal', 'isVerified', 'measurementValue'] },
+  {
+    model: Spk,
+    as: 'spk',
+    attributes: [
+      'category', 'description', 'submittedBy', 'scheduledDate', 'intervalPeriod',
+      'kasieApprovedBy', 'kasieApprovedAt',
+      'kadisPerawatanApprovedBy', 'kadisPerawatanApprovedAt',
+      'kadisApprovedBy', 'kadisApprovedAt',
+    ],
+    include: [
+      { model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan', 'measurementUnit'] },
+      { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId', 'equipmentName', 'functionalLocation', 'plantName'] },
+    ],
+    required: false,
   },
 ];
 
@@ -88,7 +110,7 @@ const getAll = async (req, res) => {
   if (spkNumber) {
     const data = await Submission.findAll({
       where: { spkNumber },
-      include: INCLUDE_FULL,
+      include: INCLUDE_BY_SPK,
       order: [['submittedAt', 'DESC']],
     });
     return res.json(data.map(fmt));
