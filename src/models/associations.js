@@ -32,6 +32,7 @@ const Notification = require("./Notification");
 const PushNotification = require("./PushNotification");
 const K3Report = require("./K3Report");
 const SapSpkCorrective = require("./SapSpkCorrective");
+const Material = require("./Material");
 
 // ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
 Plant.hasMany(Equipment, { foreignKey: "plantId", as: "equipment" });
@@ -322,4 +323,5 @@ module.exports = {
   K3Report,
   SupervisiAmend,
   SapSpkCorrective,
+  Material,
 };

@@ -24,6 +24,7 @@ const sapSpkRoutes = require("./routes/sapSpkRoutes");
 const inspectionRoutes = require("./routes/inspection");
 const notificationRoutes = require("./routes/notification");
 const k3SafetyRoutes = require("./routes/k3_safety");
+const materialRoutes = require("./routes/material");
 const errorHandler = require("./middleware/errorHandler");
 const { syncDatabase } = require("./config/syncMode");
 const { ensureSupervisiJobSchema } = require("./models/SupervisiJob");
@@ -33,6 +34,7 @@ const {
   ensureSpkActivitySchema,
   ensureSubmissionActivityResultSchema,
   ensureInspectionScheduleRecurringSchema,
+  ensureMaterialSchema,
 } = require("./models/ensureMeasurementSchema");
 const { ensureInspectionEnums } = require("./migrate_inspection_enums");
 const { markMissedVisitsAsPelanggaran } = require("./controllers/inspection/supervisiController");
@@ -291,6 +293,7 @@ app.use("/api/equipment-mappings", mappingRouter);
 app.use("/api/preventive-schedule", scheduleRouter);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/k3-safety", k3SafetyRoutes);
+app.use("/api/materials", materialRoutes);
 
 // ── Settings ─────────────────────────────────────────────────────────────────
 const settingsController = require('./controllers/settings/settingsController');
@@ -331,6 +334,10 @@ sequelize
   })
   .then(() => {
     console.log("Inspection schedule recurring schema ensured.");
+    return ensureMaterialSchema();
+  })
+  .then(() => {
+    console.log("Material schema ensured.");
     return ensureInspectionEnums({ shouldAuthenticate: false });
   })
   .then(() => {

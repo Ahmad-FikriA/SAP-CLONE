@@ -57,9 +57,30 @@ async function ensureInspectionScheduleRecurringSchema() {
     await qi.addColumn(table, 'recurringInstance', { type: DataTypes.INTEGER, allowNull: true });
 }
 
+async function ensureMaterialSchema() {
+  const qi = sequelize.getQueryInterface();
+  const table = 'materials';
+  let desc;
+  try { desc = await qi.describeTable(table); } catch (e) { return; }
+  
+  if (!desc.uom)
+    await qi.addColumn(table, 'uom', { type: DataTypes.STRING(20), allowNull: true, defaultValue: 'PCS' });
+  if (!desc.value_unrestricted)
+    await qi.addColumn(table, 'value_unrestricted', { type: DataTypes.DECIMAL(15, 2), allowNull: true, defaultValue: 0 });
+  if (!desc.plant)
+    await qi.addColumn(table, 'plant', { type: DataTypes.STRING(50), allowNull: true });
+  if (!desc.storage_location)
+    await qi.addColumn(table, 'storage_location', { type: DataTypes.STRING(50), allowNull: true });
+  if (!desc.blocked_quantity)
+    await qi.addColumn(table, 'blocked_quantity', { type: DataTypes.DECIMAL(15, 3), allowNull: true, defaultValue: 0 });
+  if (!desc.value_blocked_stock)
+    await qi.addColumn(table, 'value_blocked_stock', { type: DataTypes.DECIMAL(15, 2), allowNull: true, defaultValue: 0 });
+}
+
 module.exports = {
   ensureGeneralTaskListActivitySchema,
   ensureSpkActivitySchema,
   ensureSubmissionActivityResultSchema,
   ensureInspectionScheduleRecurringSchema,
+  ensureMaterialSchema,
 };

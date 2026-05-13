@@ -7,7 +7,7 @@ import {
   LayoutDashboard, FileText, Wrench, Upload, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
   ChevronLeft, ChevronRight, ClipboardCheck, BarChart2, ClipboardList,
-  MapPin, CalendarRange, ShieldCheck, Settings,
+  MapPin, CalendarRange, ShieldCheck, Settings, Package,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser, canRead } from '@/lib/auth';
@@ -21,6 +21,7 @@ const NAV = [
   { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan SPK',    Icon: ClipboardCheck },
   { divider: true},
   { key: 'corrective',        href: '/corrective',         label: 'Corrective', Icon: Wrench },
+  { key: 'corrective-record', href: '/corrective/track-record', label: 'Track Record Corrective', Icon: BarChart2 },
   { divider: true },
   { key: 'users',             href: '/users',              label: 'Users',              Icon: Users },
   { key: 'track-record',      href: '/users/track-record', label: 'Track Record',       Icon: BarChart2 },
@@ -38,6 +39,8 @@ const NAV = [
   { divider: true},
   { key: 'kalender',          href: '/kalender',           label: 'Kalender Jadwal',    Icon: CalendarRange },
   { key: 'settings',          href: '/settings',           label: 'Pengaturan Akses',   Icon: Settings },
+  { divider: true },
+  { key: 'material',          href: '/material',           label: 'Material Gudang',    Icon: Package },
 
 ];
 
@@ -67,6 +70,17 @@ export default function Sidebar() {
 
   function isActive(href) {
     if (href === '/dashboard') return pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+    
+    // Check if there is another nav item that is a more specific match for the current pathname
+    const hasMoreSpecificMatch = NAV.some(item => 
+      item.href && 
+      item.href.length > href.length && 
+      item.href.startsWith(href) && 
+      (pathname === item.href || pathname.startsWith(item.href + '/'))
+    );
+    
+    if (hasMoreSpecificMatch) return false;
+
     return pathname === href || pathname.startsWith(href + '/');
   }
 

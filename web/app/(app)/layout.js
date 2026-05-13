@@ -24,6 +24,7 @@ const ROUTE_ACCESS = [
   { prefix: '/supervisi', key: 'supervisi' },
   { prefix: '/kalender', key: 'kalender' },
   { prefix: '/settings', key: 'settings' },
+  { prefix: '/material', key: 'material' },
 ];
 
 function accessKeyForPath(pathname) {

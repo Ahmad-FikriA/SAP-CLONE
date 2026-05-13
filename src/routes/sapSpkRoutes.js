@@ -24,6 +24,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// ── Analytics ────────────────────────────────────────────────────────────────
+router.get("/stats", verifyToken, sapSpkController.getCorrectiveStats);
+
 // ── List SPKs ────────────────────────────────────────────────────────────────
 router.get("/", verifyToken, sapSpkController.getSapSpkList);
 
