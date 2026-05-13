@@ -12,6 +12,9 @@ const {
   resolveSupportedStatus,
   invalidateStatusEnumCache,
 } = require("../../services/inspectionStatusSupport");
+const {
+  updateScheduleStatusFromReports,
+} = require("../../services/inspectionScheduleStatus");
 const { notify } = require("../../services/notificationService");
 
 // NIK Approver yang menerima notifikasi laporan baru
@@ -352,9 +355,9 @@ async function createReport(req, res) {
       await InspectionReportPhoto.bulkCreate(photoRecords, { transaction: t });
     }
 
-    // Update schedule status according to report state.
+    // Update schedule status according to report coverage in the schedule range.
     if (isSubmitted) {
-      await schedule.update({ status: "completed" }, { transaction: t });
+      await updateScheduleStatusFromReports(schedule, t);
     } else if (["scheduled", "in_progress"].includes(schedule.status)) {
       await schedule.update({ status: "in_progress" }, { transaction: t });
     }
@@ -488,7 +491,7 @@ async function updateReport(req, res) {
 
     if (report.schedule) {
       if (nextStatus === "submitted") {
-        await report.schedule.update({ status: "completed" }, { transaction: t });
+        await updateScheduleStatusFromReports(report.schedule, t);
       } else if (["scheduled", "in_progress"].includes(report.schedule.status)) {
         await report.schedule.update({ status: "in_progress" }, { transaction: t });
       }
@@ -563,9 +566,7 @@ async function approveReport(req, res) {
       { transaction: t },
     );
 
-    if (report.schedule) {
-      await report.schedule.update({ status: "completed" }, { transaction: t });
-    }
+    await updateScheduleStatusFromReports(report.schedule, t);
 
     // If kerusakan found → auto-create follow-up
     // Branching: manusia → assign ke Dinas HSE, selain itu → assign ke Dinas Perawatan

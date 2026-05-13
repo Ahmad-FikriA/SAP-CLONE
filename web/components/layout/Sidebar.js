@@ -4,10 +4,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, FileText, Wrench, Upload, Radio,
+  LayoutDashboard, FileText, Wrench, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
   ChevronLeft, ChevronRight, ClipboardCheck, BarChart2, ClipboardList,
-  MapPin, CalendarRange, ShieldCheck, Settings, Package,
+  MapPin, CalendarRange, ShieldCheck, Settings, Package, Menu, X,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser, canRead } from '@/lib/auth';
@@ -17,10 +17,10 @@ import { cn } from '@/lib/utils';
 const NAV = [
   { key: 'dashboard',         href: '/dashboard',          label: 'Dashboard',          Icon: LayoutDashboard },
   { divider: true},
-  { key: 'spk',               href: '/spk',                label: 'Preventive',   Icon: FileText },
+  { key: 'spk',               href: '/spk',                label: 'Preventive',         Icon: FileText },
   { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan SPK',    Icon: ClipboardCheck },
   { divider: true},
-  { key: 'corrective',        href: '/corrective',         label: 'Corrective', Icon: Wrench },
+  { key: 'corrective',        href: '/corrective',         label: 'Corrective',         Icon: Wrench },
   { key: 'corrective-record', href: '/corrective/track-record', label: 'Track Record Corrective', Icon: BarChart2 },
   { divider: true },
   { key: 'users',             href: '/users',              label: 'Users',              Icon: Users },
@@ -28,7 +28,7 @@ const NAV = [
   { divider: true},
   { key: 'equipment',         href: '/equipment',          label: 'Equipment',          Icon: Radio },
   { key: 'maps',              href: '/maps',               label: 'Maps',               Icon: Map },
-  { key: 'task-mapping',      href: '/equipment/mappings', label: 'Task List',       Icon: Link2 },
+  { key: 'task-mapping',      href: '/equipment/mappings', label: 'Task List',          Icon: Link2 },
   { key: 'interval-planner',  href: '/interval-planner',   label: 'Interval Planner',   Icon: Calendar },
   { divider: true },
   { key: 'submissions',       href: '/submissions',        label: 'Submissions',        Icon: Activity },
@@ -41,21 +41,26 @@ const NAV = [
   { key: 'settings',          href: '/settings',           label: 'Pengaturan Akses',   Icon: Settings },
   { divider: true },
   { key: 'material',          href: '/material',           label: 'Material Gudang',    Icon: Package },
-
 ];
 
 export default function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
-  const [user, setUser] = useState(null);
-  const [isMounted, setIsMounted] = useState(false);
+  const pathname  = usePathname();
+  const router    = useRouter();
+  const [collapsed,   setCollapsed]   = useState(false);
+  const [mobileOpen,  setMobileOpen]  = useState(false);
+  const [user,        setUser]        = useState(null);
+  const [isMounted,   setIsMounted]   = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
     setCollapsed(localStorage.getItem('sidebar_collapsed') === '1');
     setUser(getUser());
   }, []);
+
+  // Auto-close mobile drawer on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   function toggleCollapsed() {
     const next = !collapsed;
@@ -88,90 +93,170 @@ export default function Sidebar() {
     ? (user.name || user.nik || 'U').split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
     : 'U';
 
-  return (
-    <aside
-      className={cn(
-        'flex flex-col h-screen bg-[#0a2540] text-white transition-all duration-200 shrink-0',
-        collapsed ? 'w-14' : 'w-56'
-      )}
-    >
-      {/* Logo / header */}
-      <div className={cn(
-        "flex border-b border-white/10 py-4",
-        collapsed ? "flex-col items-center gap-4 px-2" : "items-center justify-between px-3"
-      )}>
-        <div className={cn("flex items-center gap-2 min-w-0", collapsed && "justify-center")}>
-          <Image src="/app_icon.jpeg" alt="Logo" width={collapsed ? 28 : 32} height={collapsed ? 28 : 32} className="rounded shrink-0" />
-          {!collapsed && (
-            <span className="text-sm font-semibold tracking-wide truncate">MANTIS PPHSE</span>
-          )}
-        </div>
-        <button
-          onClick={toggleCollapsed}
+  // Shared nav links (used in both desktop & mobile drawers)
+  function renderNavLinks(forceExpanded = false) {
+    return NAV.map((item, i) => {
+      if (item.divider) return <div key={i} className="my-2 border-t border-white/10" />;
+      if (!canRead(item.key)) return null;
+      const { href, Icon } = item;
+      let label = item.label;
+      if (item.key === 'corrective') {
+        const isPlanner = user?.role === 'admin' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
+        if (!isPlanner) label = 'Corrective';
+      }
+      const active  = isActive(href);
+      const showLabel = forceExpanded || !collapsed;
+      return (
+        <Link
+          key={href}
+          href={href}
           className={cn(
-            "p-1 rounded hover:bg-white/10 transition-colors",
-            collapsed ? "mt-1" : "ml-auto"
+            'flex items-center rounded text-sm transition-colors',
+            showLabel ? 'gap-3 px-2 py-2' : 'justify-center p-2.5',
+            active ? 'bg-white/15 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white'
           )}
-          title={collapsed ? 'Expand' : 'Collapse'}
+          title={!showLabel ? label : undefined}
         >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          <Icon size={18} className="shrink-0" />
+          {showLabel && <span className="truncate">{label}</span>}
+        </Link>
+      );
+    });
+  }
+
+  return (
+    <>
+      {/* ════════════════════════════════════════════════════
+          MOBILE: Fixed top bar + slide-in drawer
+          ════════════════════════════════════════════════════ */}
+
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-[#0a2540] flex items-center px-4 gap-3 shadow-lg print:hidden">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          aria-label="Buka menu"
+        >
+          <Menu size={22} />
         </button>
+        <Image src="/app_icon.jpeg" alt="Logo" width={26} height={26} className="rounded shrink-0" />
+        <span className="text-sm font-semibold text-white tracking-wide">MANTIS PPHSE</span>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2 custom-scrollbar">
-        {isMounted && NAV.map((item, i) => {
-          if (item.divider) {
-            return <div key={i} className="my-2 border-t border-white/10" />;
-          }
-          if (!canRead(item.key)) return null;
-          const { href, Icon } = item;
-          let label = item.label;
-          if (item.key === 'corrective') {
-            const isPlanner = user?.role === 'admin' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
-            if (!isPlanner) label = 'Corrective';
-          }
-          const active = isActive(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex items-center rounded text-sm transition-colors',
-                collapsed ? 'justify-center p-2.5' : 'gap-3 px-2 py-2',
-                active
-                  ? 'bg-white/15 text-white font-medium'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
-              )}
-              title={collapsed ? label : undefined}
-            >
-              <Icon size={18} className="shrink-0" />
-              {!collapsed && <span className="truncate">{label}</span>}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Backdrop overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-      {/* User + Logout */}
-      {isMounted && (
-        <div className="border-t border-white/10 p-3 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">
-            {initials}
+      {/* Mobile drawer */}
+      <aside
+        className={cn(
+          'md:hidden fixed top-0 left-0 z-50 h-screen w-64 bg-[#0a2540] text-white flex flex-col',
+          'transition-transform duration-300 ease-in-out print:hidden',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 shrink-0">
+          <div className="flex items-center gap-2">
+            <Image src="/app_icon.jpeg" alt="Logo" width={28} height={28} className="rounded" />
+            <span className="text-sm font-semibold tracking-wide">MANTIS PPHSE</span>
           </div>
-          {!collapsed && (
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Tutup menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Mobile nav */}
+        <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2 custom-scrollbar">
+          {isMounted && renderNavLinks(true)}
+        </nav>
+
+        {/* Mobile user + logout */}
+        {isMounted && (
+          <div className="border-t border-white/10 p-3 flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">
+              {initials}
+            </div>
             <span className="text-xs text-white/70 truncate flex-1">
               {user?.name || user?.nik || ''}
             </span>
-          )}
+            <button
+              onClick={handleLogout}
+              className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        )}
+      </aside>
+
+      {/* ════════════════════════════════════════════════════
+          DESKTOP: Static collapsible sidebar
+          ════════════════════════════════════════════════════ */}
+      <aside
+        className={cn(
+          'hidden md:flex flex-col h-screen bg-[#0a2540] text-white transition-all duration-200 shrink-0 print:hidden',
+          collapsed ? 'w-14' : 'w-56'
+        )}
+      >
+        {/* Logo / header */}
+        <div className={cn(
+          'flex border-b border-white/10 py-4',
+          collapsed ? 'flex-col items-center gap-4 px-2' : 'items-center justify-between px-3'
+        )}>
+          <div className={cn('flex items-center gap-2 min-w-0', collapsed && 'justify-center')}>
+            <Image src="/app_icon.jpeg" alt="Logo" width={collapsed ? 28 : 32} height={collapsed ? 28 : 32} className="rounded shrink-0" />
+            {!collapsed && (
+              <span className="text-sm font-semibold tracking-wide truncate">MANTIS PPHSE</span>
+            )}
+          </div>
           <button
-            onClick={handleLogout}
-            className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
-            title="Logout"
+            onClick={toggleCollapsed}
+            className={cn(
+              'p-1 rounded hover:bg-white/10 transition-colors',
+              collapsed ? 'mt-1' : 'ml-auto'
+            )}
+            title={collapsed ? 'Expand' : 'Collapse'}
           >
-            <LogOut size={16} />
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
         </div>
-      )}
-    </aside>
+
+        {/* Desktop nav */}
+        <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2 custom-scrollbar">
+          {isMounted && renderNavLinks(false)}
+        </nav>
+
+        {/* Desktop user + logout */}
+        {isMounted && (
+          <div className="border-t border-white/10 p-3 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">
+              {initials}
+            </div>
+            {!collapsed && (
+              <span className="text-xs text-white/70 truncate flex-1">
+                {user?.name || user?.nik || ''}
+              </span>
+            )}
+            <button
+              onClick={handleLogout}
+              className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        )}
+      </aside>
+    </>
   );
 }

@@ -2,6 +2,9 @@
 
 const InspectionSchedule = require("../../models/InspectionSchedule");
 const InspectionRequest = require("../../models/InspectionRequest");
+const {
+  updateScheduleStatusFromReports,
+} = require("../../services/inspectionScheduleStatus");
 const { notify } = require("../../services/notificationService");
 
 // NIK Planner sebagai fallback notifikasi jadwal baru jika executor belum ada
@@ -34,6 +37,10 @@ async function listSchedules(req, res) {
       ],
     });
 
+    await Promise.all(
+      schedules.map((schedule) => updateScheduleStatusFromReports(schedule)),
+    );
+
     res.json({
       success: true,
       message: "Schedules retrieved successfully.",
@@ -64,6 +71,8 @@ async function getSchedule(req, res) {
         .status(404)
         .json({ success: false, message: "Schedule not found." });
     }
+
+    await updateScheduleStatusFromReports(schedule);
 
     res.json({ success: true, message: "Schedule retrieved.", data: schedule });
   } catch (err) {

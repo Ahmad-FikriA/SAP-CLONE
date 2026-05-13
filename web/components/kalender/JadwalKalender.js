@@ -218,7 +218,7 @@ export function JadwalKalender({
             <div
               key={index}
               className={`
-                bg-white min-h-[112px] p-2 flex flex-col gap-1 transition-colors
+                bg-white min-h-[72px] sm:min-h-[100px] md:min-h-[112px] p-1 sm:p-2 flex flex-col gap-1 transition-colors
                 ${day ? 'cursor-pointer hover:bg-slate-50' : 'cursor-default bg-slate-50/60'}
                 ${isToday ? 'ring-2 ring-inset ring-blue-500/70' : ''}
               `}
@@ -262,12 +262,17 @@ export function JadwalKalender({
       {popup && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setPopup(null)} />
+          {/* Mobile: bottom sheet / Desktop: anchored popup */}
           <div
-            className="fixed z-40 bg-white border border-slate-200 rounded-lg shadow-2xl w-80 overflow-hidden"
-            style={{
-              top: Math.min(popup.rect.bottom + 8, window.innerHeight - 360),
-              left: Math.min(popup.rect.left, window.innerWidth - 340),
-            }}
+            className="fixed z-40 bg-white border border-slate-200 rounded-lg shadow-2xl overflow-hidden"
+            style={typeof window !== 'undefined' && window.innerWidth < 640
+              ? { bottom: 0, left: 0, right: 0, maxHeight: '70vh', borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }
+              : {
+                  top: Math.min(popup.rect.bottom + 8, window.innerHeight - 360),
+                  left: Math.min(popup.rect.left, window.innerWidth - 340),
+                  width: '320px',
+                }
+            }
           >
             <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50">
               <div>

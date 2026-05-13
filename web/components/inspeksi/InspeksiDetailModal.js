@@ -78,6 +78,17 @@ function ReportCard({ report, index }) {
   const statusLabel  = REPORT_STATUS_LABEL[report.status] || report.status?.toUpperCase();
   const tools        = Array.isArray(report.tools) ? report.tools : [];
   const photos       = Array.isArray(report.photos) ? report.photos : [];
+  const attachments  = Array.isArray(report.attachments)
+    ? report.attachments.map((path) => String(path || '').trim()).filter(Boolean)
+    : [];
+  const toFileUrl = (path) => path.startsWith('http')
+    ? path
+    : `${process.env.NEXT_PUBLIC_API_URL || ''}/${path.replace(/^\/+/, '')}`;
+  const fileName = (path) => {
+    const cleanPath = path.split('?')[0];
+    const segments = cleanPath.split(/[\\/]/).filter(Boolean);
+    return decodeURIComponent(segments[segments.length - 1] || 'Lampiran');
+  };
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
@@ -113,7 +124,7 @@ function ReportCard({ report, index }) {
         <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-3">
 
           {/* Baris meta: inspektor & tanggal submit */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">Inspektor</p>
               <div className="flex items-center gap-1.5">
@@ -247,6 +258,31 @@ function ReportCard({ report, index }) {
             </div>
           </div>
 
+          {attachments.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                Lampiran Dokumen ({attachments.length})
+              </p>
+              <div className="space-y-1.5">
+                {attachments.map((path, i) => {
+                  const src = toFileUrl(path);
+                  return (
+                    <a
+                      key={`${path}-${i}`}
+                      href={src}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:border-blue-300 hover:text-blue-700 transition-colors"
+                    >
+                      <FileText size={13} className="text-gray-400 shrink-0" />
+                      <span className="truncate">{fileName(path)}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Catatan approval (jika ada) */}
           {report.approvalNotes && (
             <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
@@ -322,7 +358,7 @@ export function InspeksiDetailModal({ schedule, open, onClose, usersMap = {} }) 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {/* Inject scrollbar style sekali */}
       <style>{SCROLLBAR_STYLE}</style>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 modal-custom-scroll">
+      <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-0 modal-custom-scroll">
 
         {/* ── Header berwarna ── */}
         <div className="bg-[#0a2540] px-6 pt-6 pb-5 rounded-t-xl">
@@ -364,10 +400,9 @@ export function InspeksiDetailModal({ schedule, open, onClose, usersMap = {} }) 
           {/* ── 2. Info Pelapor & Informasi Utama ── */}
           <div>
             <SectionLabel>Informasi Utama</SectionLabel>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InfoRow icon={User}     label="Dibuat Oleh"      value={resolveNama(schedule.createdBy)} />
               <InfoRow icon={MapPin}   label="Lokasi"           value={schedule.location || '—'} />
-              <InfoRow icon={Tag}      label="Unit Kerja"        value={schedule.unitKerja || '—'} />
               <InfoRow
                 icon={Calendar}
                 label="Tanggal Mulai"

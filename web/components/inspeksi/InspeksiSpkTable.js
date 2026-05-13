@@ -117,14 +117,14 @@ export function InspeksiSpkTable({
   return (
     <div className="space-y-4">
       {/* ── Toolbar ── */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         {/* Search */}
-        <div className="relative flex-1 min-w-[220px] max-w-sm">
+        <div className="relative flex-1 min-w-[180px] max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari judul, nomor, lokasi, eksekutor..."
+            placeholder="Cari judul, nomor, lokasi..."
             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           />
         </div>
@@ -133,7 +133,7 @@ export function InspeksiSpkTable({
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
         >
           <option value="">Semua Status</option>
           <option value="aktif">Aktif</option>
@@ -142,15 +142,15 @@ export function InspeksiSpkTable({
           <option value="cancelled">Dibatalkan</option>
         </select>
 
-        {/* Filter Tipe */}
+        {/* Filter Tipe — hidden on small to save space */}
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          className="hidden sm:block px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
         >
           <option value="">Semua Tipe</option>
           <option value="rutin">Rutin</option>
-          <option value="inspeksi">Inspeksi (dari laporan)</option>
+          <option value="inspeksi">Dari Laporan</option>
         </select>
 
         {hasFilter && (
@@ -178,8 +178,69 @@ export function InspeksiSpkTable({
         Menampilkan <span className="font-semibold text-gray-600">{displayed.length}</span> dari {schedules.length} SPK Inspeksi
       </p>
 
-      {/* ── Tabel ── */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      {/* ── Mobile Card List (< md) ── */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-gray-400">
+            <RefreshCw size={20} className="animate-spin" />
+            <p className="text-sm">Memuat data...</p>
+          </div>
+        ) : displayed.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-gray-400">
+            <Search size={24} className="opacity-40" />
+            <p className="text-sm">Tidak ada data yang cocok</p>
+            {hasFilter && (
+              <button onClick={clearFilters} className="text-xs text-blue-500 hover:underline mt-1">
+                Hapus semua filter
+              </button>
+            )}
+          </div>
+        ) : displayed.map((s) => {
+          const typeLabel = resolveInspeksiTypeLabel(s);
+          const typeKey   = typeLabel.toLowerCase() === 'inspeksi' ? 'inspeksi' : s.type;
+          return (
+            <div
+              key={s.id}
+              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm cursor-pointer active:bg-blue-50/40 transition-colors"
+              onClick={() => onViewDetail(s)}
+            >
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <p className="font-semibold text-gray-800 leading-snug flex-1">{s.title}</p>
+                <StatusBadge status={s.status} />
+              </div>
+              <p className="font-mono text-[11px] text-gray-400 mb-2">{s.nomorPoJo || `#${s.id}`}</p>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold ${TYPE_CHIP[typeKey] || 'bg-gray-100 text-gray-600'}`}>
+                  {typeLabel}
+                </span>
+                {s.location && (
+                  <span className="text-[11px] text-gray-500 truncate max-w-[180px]">{s.location}</span>
+                )}
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-gray-400">
+                  {s.scheduledDate
+                    ? new Date(s.scheduledDate + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : '—'}
+                </span>
+                <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={(e) => { e.stopPropagation(); onViewDetail(s); }}>
+                    <Eye size={11} /> Detail
+                  </Button>
+                  {canDelete && (
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50" onClick={(e) => handleDeleteClick(e, s)}>
+                      <Trash2 size={11} />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Desktop Table (≥ md) ── */}
+      <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -220,48 +281,34 @@ export function InspeksiSpkTable({
             ) : displayed.map((s) => {
               const typeLabel = resolveInspeksiTypeLabel(s);
               const typeKey   = typeLabel.toLowerCase() === 'inspeksi' ? 'inspeksi' : s.type;
-
               return (
                 <tr
                   key={s.id}
                   className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
                   onClick={() => onViewDetail(s)}
                 >
-                  {/* No SPK */}
                   <td className="px-4 py-3 font-mono text-xs font-bold text-gray-500 whitespace-nowrap">
                     {s.nomorPoJo || <span className="text-gray-300">#{s.id}</span>}
                   </td>
-
-                  {/* Judul */}
                   <td className="px-4 py-3 max-w-[220px]">
                     <p className="font-semibold text-gray-800 truncate">{s.title}</p>
                   </td>
-
-                  {/* Tipe */}
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold ${TYPE_CHIP[typeKey] || 'bg-gray-100 text-gray-600'}`}>
                       {typeLabel}
                     </span>
                   </td>
-
-                  {/* Lokasi */}
                   <td className="px-4 py-3 text-sm text-gray-500 max-w-[160px] truncate">
                     {s.location || <span className="text-gray-300">—</span>}
                   </td>
-
-                  {/* Tanggal Mulai */}
                   <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                     {s.scheduledDate
                       ? new Date(s.scheduledDate + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
                       : '—'}
                   </td>
-
-                  {/* Status */}
                   <td className="px-4 py-3">
                     <StatusBadge status={s.status} />
                   </td>
-
-                  {/* Aksi */}
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1.5">
                       <Button

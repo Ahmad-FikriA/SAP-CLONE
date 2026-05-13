@@ -620,9 +620,18 @@ export default function SupervisiPage() {
   const nilaiChange = useMemo(() => {
     if (nilaiChartData.length < 2) return null;
     const last = nilaiChartData[nilaiChartData.length - 1]?.raw || 0;
-    const prev = nilaiChartData[nilaiChartData.length - 2]?.raw || 0;
-    if (!prev) return null;
-    return ((last - prev) / prev) * 100;
+    const first = nilaiChartData[0]?.raw || 0;
+    const diff = last - first;
+
+    // Awal periode bisa 0 (umum pada chart kumulatif harian).
+    // Agar kenaikan tetap terbaca, gunakan fallback 100% / -100% saat basis 0.
+    if (first === 0) {
+      if (diff > 0) return 100;
+      if (diff < 0) return -100;
+      return 0;
+    }
+
+    return (diff / first) * 100;
   }, [nilaiChartData]);
 
 
@@ -791,7 +800,7 @@ export default function SupervisiPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
 
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -954,7 +963,7 @@ export default function SupervisiPage() {
 
       {/* ── Stat Cards ── */}
       {!loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
           {[
             { label: 'JO Terbit',  value: totalJoTerbit,  icon: FileText,     color: 'bg-indigo-50 text-indigo-600', textColor: 'text-indigo-700' },
             { label: 'Total Job',  value: stats.total,    icon: Briefcase,    color: 'bg-slate-50 text-slate-600',   textColor: 'text-slate-800'  },
@@ -1071,32 +1080,32 @@ export default function SupervisiPage() {
       </div>
 
       {/* ── Tabel List Job ── */}
-      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm mt-8">
+      <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm mt-8">
         <div className="space-y-4">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Search */}
-          <div className="relative flex-1 min-w-[220px] max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={tableSearch}
-              onChange={(e) => setTableSearch(e.target.value)}
-              placeholder="Cari nomor JO, pekerjaan, PIC..."
-              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-            />
-          </div>
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={tableSearch}
+                onChange={(e) => setTableSearch(e.target.value)}
+                placeholder="Cari nomor JO, pekerjaan..."
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              />
+            </div>
 
-          {/* Filter Status */}
-          <select
-            value={tableStatusFilter}
-            onChange={(e) => setTableStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-          >
-            <option value="">Semua Status</option>
-            <option value="active">Aktif</option>
-            <option value="completed">Selesai</option>
-            <option value="draft">Draft</option>
-            <option value="cancelled">Dibatalkan</option>
-          </select>
+            {/* Filter Status */}
+            <select
+              value={tableStatusFilter}
+              onChange={(e) => setTableStatusFilter(e.target.value)}
+              className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
+              <option value="">Semua Status</option>
+              <option value="active">Aktif</option>
+              <option value="completed">Selesai</option>
+              <option value="draft">Draft</option>
+              <option value="cancelled">Dibatalkan</option>
+            </select>
 
           {(tableSearch || tableStatusFilter) && (
             <button
@@ -1116,124 +1125,118 @@ export default function SupervisiPage() {
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           </Button>
-        </div>
+          </div>
 
-        <p className="text-xs text-gray-400">
-          Menampilkan <span className="font-semibold text-gray-600">{tableJobs.length}</span> dari {validJobs.length} Pekerjaan Supervisi
-        </p>
+          <p className="text-xs text-gray-400">
+            Menampilkan <span className="font-semibold text-gray-600">{tableJobs.length}</span> dari {validJobs.length} Pekerjaan Supervisi
+          </p>
 
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {['Nomor JO', 'Nama Pekerjaan', 'PIC Supervisi', 'Status', 'Aksi'].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
+
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-3">
+            {loading ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-slate-400">
+                <Loader2 size={24} className="animate-spin" />
+                <p className="text-sm">Memuat data...</p>
+              </div>
+            ) : tableJobs.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-gray-400">
+                <Search size={24} className="opacity-40" />
+                <p className="text-sm">Tidak ada pekerjaan ditemukan</p>
+              </div>
+            ) : tableJobs.map((job) => {
+              const meta = SUPERVISI_STATUS_META[job.status] || SUPERVISI_STATUS_META.draft;
+              return (
+                <div
+                  key={job.id}
+                  className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm cursor-pointer active:bg-blue-50/40 transition-colors"
+                  onClick={() => setSelectedJob(job)}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <p className="font-semibold text-gray-800 leading-snug flex-1">{job.namaKerja || '—'}</p>
+                    <StatusBadge status={job.status} />
+                  </div>
+                  <p className="font-mono text-[11px] text-gray-400 mb-3">{job.nomorJo || '—'}</p>
+                  {job.picSupervisi && (
+                    <p className="text-xs text-gray-500 mb-3 truncate">{job.picSupervisi}</p>
+                  )}
+                  <div className="flex gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}>
+                      <Eye size={11} /> Detail
+                    </Button>
+                    {job.status === 'active' && canUpdateSupervisi && (
+                      <Button variant="outline" size="sm"
+                        className={`h-7 text-xs gap-1 ${ isRadiusExemptionActive(job) ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-teal-700 border-teal-200' }`}
+                        onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}
+                      >
+                        <CalendarOff size={11} /> Radius
+                      </Button>
+                    )}
+                    {job.status === 'active' && canUpdateSupervisi && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-orange-600 border-orange-200"
+                        onClick={(e) => { e.stopPropagation(); handleCancelClick(job); }}
+                      >
+                        <Ban size={11} /> Batalkan
+                      </Button>
+                    )}
+                    {canDeleteSupervisi && (job.status === 'cancelled' || job.status === 'completed') && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-red-600 border-red-200"
+                        onClick={(e) => { e.stopPropagation(); handleHapusClick(job); }}
+                      >
+                        <Trash2 size={11} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-sm text-gray-600">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-slate-400">
-                    <Loader2 size={24} className="animate-spin mx-auto mb-2" />
-                    Memuat data...
-                  </td>
+                  {['Nomor JO', 'Nama Pekerjaan', 'PIC Supervisi', 'Status', 'Aksi'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
-              ) : tableJobs.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-4 py-10 text-center">
-                    <div className="flex flex-col items-center gap-2 text-gray-400">
-                      <Search size={24} className="opacity-40" />
-                      <p className="text-sm">Tidak ada pekerjaan ditemukan</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                tableJobs.map((job) => {
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr><td colSpan="5" className="px-6 py-8 text-center text-slate-400"><Loader2 size={24} className="animate-spin mx-auto mb-2" />Memuat data...</td></tr>
+                ) : tableJobs.length === 0 ? (
+                  <tr><td colSpan="5" className="px-4 py-10 text-center"><div className="flex flex-col items-center gap-2 text-gray-400"><Search size={24} className="opacity-40" /><p className="text-sm">Tidak ada pekerjaan ditemukan</p></div></td></tr>
+                ) : tableJobs.map((job) => {
                   const meta = SUPERVISI_STATUS_META[job.status] || SUPERVISI_STATUS_META.draft;
                   return (
-                    <tr
-                      key={job.id}
-                      className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
-                      onClick={() => setSelectedJob(job)}
-                    >
-                      <td className="px-4 py-3 font-mono text-xs font-bold text-gray-500 whitespace-nowrap">
-                        {job.nomorJo || '-'}
-                      </td>
-                      <td className="px-4 py-3 max-w-[220px]">
-                        <p className="font-semibold text-gray-800 truncate">{job.namaKerja || '-'}</p>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 max-w-[160px] truncate">
-                        {job.picSupervisi || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={job.status} />
-                      </td>
+                    <tr key={job.id} className="hover:bg-blue-50/40 transition-colors cursor-pointer group" onClick={() => setSelectedJob(job)}>
+                      <td className="px-4 py-3 font-mono text-xs font-bold text-gray-500 whitespace-nowrap">{job.nomorJo || '-'}</td>
+                      <td className="px-4 py-3 max-w-[220px]"><p className="font-semibold text-gray-800 truncate">{job.namaKerja || '-'}</p></td>
+                      <td className="px-4 py-3 text-sm text-gray-500 max-w-[160px] truncate">{job.picSupervisi || '-'}</td>
+                      <td className="px-4 py-3"><StatusBadge status={job.status} /></td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
-                          {/* Tombol Detail - selalu tampil */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1.5 opacity-80 hover:opacity-100"
-                            onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}
-                          >
-                            <Eye size={11} /> Detail
-                          </Button>
-
-                          {/* Tombol Batalkan - hanya untuk active */}
+                          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}><Eye size={11} /> Detail</Button>
                           {job.status === 'active' && canUpdateSupervisi && (
                             <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className={`h-7 text-xs gap-1 opacity-80 hover:opacity-100 ${
-                                  isRadiusExemptionActive(job)
-                                    ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
-                                    : 'text-teal-700 border-teal-200 hover:bg-teal-50 hover:border-teal-300'
-                                }`}
-                                onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}
-                              >
-                                <CalendarOff size={11} /> Radius
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 opacity-80 hover:opacity-100"
-                                onClick={(e) => { e.stopPropagation(); handleCancelClick(job); }}
-                              >
-                                <Ban size={11} /> Batalkan
-                              </Button>
+                              <Button variant="outline" size="sm" className={`h-7 text-xs gap-1 opacity-80 hover:opacity-100 ${ isRadiusExemptionActive(job) ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100' : 'text-teal-700 border-teal-200 hover:bg-teal-50 hover:border-teal-300' }`} onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}><CalendarOff size={11} /> Radius</Button>
+                              <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleCancelClick(job); }}><Ban size={11} /> Batalkan</Button>
                             </>
                           )}
-
-                          {/* Tombol Hapus - hanya untuk cancelled/completed */}
                           {canDeleteSupervisi && (job.status === 'cancelled' || job.status === 'completed') && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 opacity-80 hover:opacity-100"
-                              onClick={(e) => { e.stopPropagation(); handleHapusClick(job); }}
-                            >
-                              <Trash2 size={11} /> Hapus
-                            </Button>
+                            <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleHapusClick(job); }}><Trash2 size={11} /> Hapus</Button>
                           )}
                         </div>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          </div>
+          </div>
         </div>
-      </div>
-      </div>
 
       {/* ── Side panel detail ── */}
       <SupervisiJobPanel job={selectedJob} onClose={() => setSelectedJob(null)} />

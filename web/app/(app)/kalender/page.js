@@ -114,7 +114,7 @@ export default function KalenderPage() {
       : `${stats.supervisiAktif} jadwal supervisi aktif`;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 space-y-6">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-lg bg-[#0a2540] flex items-center justify-center shrink-0">
@@ -138,7 +138,7 @@ export default function KalenderPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <MetricCard icon={Activity} label="Total Aktif" value={stats.totalAktif} tone="slate" />
         <MetricCard icon={ClipboardList} label="Inspeksi Aktif" value={stats.inspeksiAktif} tone="blue" />
         <MetricCard icon={MapPin} label="Supervisi Aktif" value={stats.supervisiAktif} tone="emerald" />
