@@ -311,8 +311,8 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved }) {
 
   return (
     <Dialog open={open} onOpenChange={(value) => !isSaving && onOpenChange?.(value)}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-hidden p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200">
+      <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col overflow-hidden p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-[#0a2540]">
             <Briefcase size={18} /> Tambah Jadwal Supervisi
           </DialogTitle>
@@ -321,7 +321,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved }) {
           </p>
         </DialogHeader>
 
-        <div className="max-h-[calc(92vh-150px)] overflow-y-auto px-6 py-5 space-y-7">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-7">
           <section className="space-y-4">
             <SectionTitle icon={<Briefcase size={15} />} title="Informasi Pekerjaan" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -635,7 +635,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved }) {
           </section>
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 m-0 px-6 py-4 border-t border-slate-200 bg-slate-50 shrink-0 sm:justify-end">
           <Button
             type="button"
             variant="outline"
