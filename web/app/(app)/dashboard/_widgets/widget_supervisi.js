@@ -97,12 +97,12 @@ function formatRupiah(value) {
 
 function SummaryBox({ icon: Icon, label, value, className }) {
   return (
-    <div className={`rounded-lg border p-3 ${className}`}>
+    <div className={`rounded-lg border p-2.5 lg:p-3 ${className}`}>
       <div className="flex items-center gap-2 mb-1">
-        <Icon size={14} />
+        <Icon size={13} />
         <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
       </div>
-      <p className="text-2xl font-extrabold leading-none">{value}</p>
+      <p className="text-xl lg:text-2xl font-extrabold leading-none">{value}</p>
     </div>
   );
 }
@@ -162,7 +162,7 @@ export function WidgetSupervisi() {
 
     const latestJobs = [...jobs]
       .sort((a, b) => jobLatestTime(b) - jobLatestTime(a))
-      .slice(0, 5);
+      .slice(0, 4);
 
     return { active, completed, draft, totalNilai, violations, progress, dueSoon, latestJobs };
   }, [jobs]);
@@ -171,7 +171,7 @@ export function WidgetSupervisi() {
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+      <div className="flex items-center justify-between px-4 py-3 lg:px-5 lg:py-4 border-b border-slate-100 bg-slate-50/60">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0">
             <MapPin size={18} className="text-white" />
@@ -196,7 +196,7 @@ export function WidgetSupervisi() {
       ) : error ? (
         <div className="flex-1 flex items-center justify-center py-12 text-rose-500 text-sm">{error}</div>
       ) : (
-        <div className="flex-1 p-5 space-y-5">
+        <div className="flex-1 p-4 lg:p-5 space-y-4 lg:space-y-5">
           <div className="grid grid-cols-2 gap-3">
             <SummaryBox icon={Briefcase} label="JO Aktif" value={data.active.length} className="bg-emerald-50 text-emerald-700 border-emerald-100" />
             <SummaryBox icon={CheckCircle2} label="Selesai" value={data.completed.length} className="bg-blue-50 text-blue-700 border-blue-100" />
@@ -266,7 +266,7 @@ export function WidgetSupervisi() {
         </div>
       )}
 
-      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/70 mt-auto">
+      <div className="px-4 py-2.5 lg:px-5 lg:py-3 border-t border-slate-100 bg-slate-50/70 mt-auto">
         <Link href="/supervisi" className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 transition-colors">
           Buka Monitoring Supervisi <ArrowRight size={14} />
         </Link>

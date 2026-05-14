@@ -68,12 +68,12 @@ function SmallMetric({ icon: Icon, label, value, tone }) {
   };
 
   return (
-    <div className={`rounded-lg border p-3 ${tones[tone] || tones.blue}`}>
+    <div className={`rounded-lg border p-2.5 lg:p-3 ${tones[tone] || tones.blue}`}>
       <div className="flex items-center gap-2 mb-1">
-        <Icon size={14} />
+        <Icon size={13} />
         <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
       </div>
-      <p className="text-2xl font-extrabold leading-none">{value}</p>
+      <p className="text-xl lg:text-2xl font-extrabold leading-none">{value}</p>
     </div>
   );
 }
@@ -142,7 +142,7 @@ export function WidgetInspection() {
 
     const nextSchedules = [...active]
       .sort((a, b) => String(a.scheduledDate || '').localeCompare(String(b.scheduledDate || '')))
-      .slice(0, 4);
+      .slice(0, 3);
 
     return { active, completed, completionRate, overdue, typeCounts, nextSchedules };
   }, [schedules]);
@@ -151,7 +151,7 @@ export function WidgetInspection() {
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+      <div className="flex items-center justify-between px-4 py-3 lg:px-5 lg:py-4 border-b border-slate-100 bg-slate-50/60">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
             <ClipboardList size={18} className="text-white" />
@@ -176,7 +176,7 @@ export function WidgetInspection() {
       ) : error ? (
         <div className="flex-1 flex items-center justify-center py-12 text-rose-500 text-sm">{error}</div>
       ) : (
-        <div className="flex-1 p-5 space-y-5">
+        <div className="flex-1 p-4 lg:p-5 space-y-4 lg:space-y-5">
           <div className="grid grid-cols-2 gap-3">
             <SmallMetric icon={CalendarClock} label="Aktif" value={data.active.length} tone="blue" />
             <SmallMetric icon={CheckCircle2} label="Selesai" value={data.completed.length} tone="emerald" />
@@ -246,7 +246,7 @@ export function WidgetInspection() {
         </div>
       )}
 
-      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/70 mt-auto">
+      <div className="px-4 py-2.5 lg:px-5 lg:py-3 border-t border-slate-100 bg-slate-50/70 mt-auto">
         <Link href="/inspeksi" className="flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors">
           Buka Monitoring Inspeksi <ArrowRight size={14} />
         </Link>

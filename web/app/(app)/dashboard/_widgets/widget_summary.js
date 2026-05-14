@@ -8,14 +8,14 @@ import Link from 'next/link';
 
 function KpiCard({ icon: Icon, label, value, sub, color, loading, error, onRetry, href }) {
   const inner = (
-    <div className={`bg-white border rounded-xl px-5 py-4 flex items-center gap-4 transition-colors ${href ? 'hover:bg-gray-50 cursor-pointer' : ''} ${error ? 'border-red-200' : 'border-gray-200'}`}>
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
-        <Icon size={20} className="text-white" />
+    <div className={`bg-white border rounded-xl px-3 py-3 lg:px-5 lg:py-4 flex items-center gap-3 lg:gap-4 transition-colors ${href ? 'hover:bg-gray-50 cursor-pointer' : ''} ${error ? 'border-red-200' : 'border-gray-200'}`}>
+      <div className={`w-9 h-9 lg:w-11 lg:h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+        <Icon size={18} className="text-white" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs text-gray-500 font-medium">{label}</p>
+        <p className="text-[11px] lg:text-xs text-gray-500 font-medium leading-tight">{label}</p>
         {loading ? (
-          <div className="h-7 w-12 bg-gray-100 animate-pulse rounded mt-1" />
+          <div className="h-6 w-10 bg-gray-100 animate-pulse rounded mt-1" />
         ) : error ? (
           <div className="flex items-center gap-1.5 mt-1">
             <AlertCircle size={14} className="text-red-400" />
@@ -29,9 +29,9 @@ function KpiCard({ icon: Icon, label, value, sub, color, loading, error, onRetry
             </button>
           </div>
         ) : (
-          <p className="text-2xl font-bold text-gray-800 leading-tight">{value ?? '—'}</p>
+          <p className="text-xl lg:text-2xl font-bold text-gray-800 leading-tight">{value ?? '—'}</p>
         )}
-        {!error && sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        {!error && sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -98,7 +98,7 @@ export function WidgetSummary() {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
       {cards.map((c) => (
         <KpiCard
           key={c.key}

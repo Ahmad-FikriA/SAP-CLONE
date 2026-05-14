@@ -76,7 +76,7 @@ export function WidgetCorrective() {
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col h-full shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 lg:px-5 lg:py-4 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
             <Wrench size={16} className="text-white" />
@@ -99,7 +99,7 @@ export function WidgetCorrective() {
       ) : error ? (
         <div className="flex-1 flex items-center justify-center py-16 text-red-500 text-sm">{error}</div>
       ) : (
-        <div className="flex-1 px-5 py-4 space-y-5">
+        <div className="flex-1 px-4 py-3 lg:px-5 lg:py-4 space-y-4 lg:space-y-5">
           <Charts
             statusData={statusData}
             groupData={groupData}
@@ -109,7 +109,7 @@ export function WidgetCorrective() {
       )}
 
       {/* Footer */}
-      <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 mt-auto">
+      <div className="px-4 py-2.5 lg:px-5 lg:py-3 border-t border-gray-100 bg-gray-50 mt-auto">
         <Link href="/corrective" className="flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-800 transition-colors">
           Lihat semua Corrective <ArrowRight size={12} />
         </Link>

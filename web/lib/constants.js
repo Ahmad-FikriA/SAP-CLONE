@@ -63,14 +63,14 @@ export const CATEGORY_MARKER_COLORS = {
 
 export const INTERVALS = ['1wk', '2wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
 
-export const ROLES = ['teknisi', 'planner', 'kasie', 'kadis', 'admin'];
+export const ROLES = ['teknisi', 'petugas', 'kasie', 'kadis', 'kadiv', 'admin'];
 
 export const ROLE_COLORS = {
   teknisi:    '#0070D2',
-  planner:    '#6610f2',
+  petugas:    '#0284C7',
   kasie:      '#0891B2',
   kadis:      '#0D9488',
-
+  kadiv:      '#7C3AED',
   admin:      '#BB0000',
 };
 
@@ -142,7 +142,11 @@ export const ALL_PAGES = [
 export const TEMPLATE_ROLES = ['teknisi', 'petugas', 'kasie', 'kadis', 'kadiv'];
 
 export const TEMPLATE_ROLE_LABELS = {
-  teknisi: 'Teknisi', petugas: 'Petugas', kasie: 'Kasie', kadis: 'Kadis', kadiv: 'Kadiv',
+  teknisi: 'Teknisi',
+  petugas: 'Petugas',
+  kasie:   'Kasie',
+  kadis:   'Kadis',
+  kadiv:   'Kadiv / Planner',
 };
 
 export const GEOJSON_FEATURE_COLORS = {

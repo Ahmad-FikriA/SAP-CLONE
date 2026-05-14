@@ -9,8 +9,8 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { MapPin, Plus, RefreshCw, Upload, BarChart2, Download, QrCode } from 'lucide-react';
-import { canCreate, canUpdate, canDelete } from '@/lib/auth';
+import { MapPin, Plus, RefreshCw, Upload, BarChart2, Download, QrCode, ChevronDown, ChevronUp } from 'lucide-react';
+import { canCreate, canUpdate, canDelete, getUserCategory } from '@/lib/auth';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -32,6 +32,8 @@ function EquipmentPageInner() {
   const [total, setTotal]           = useState(0);
   const [page, setPage]             = useState(() => Math.max(0, parseInt(searchParams.get('page') || '0', 10)));
   const [loading, setLoading]       = useState(true);
+  const [userCategory, setUserCategory] = useState(null);
+  const [mapOpen, setMapOpen] = useState(false);
   const [search, setSearch]         = useState('');
   const [category, setCategory]     = useState('');
   const [plantFilter, setPlantFilter] = useState('');
@@ -46,6 +48,9 @@ function EquipmentPageInner() {
   const filterFnRef = useRef(null);     // applies category/plant filter to markers
 
   useEffect(() => {
+    const cat = getUserCategory();
+    setUserCategory(cat);
+    if (cat) setCategory(cat);
     apiGet('/maps').then(setPlants).catch(() => {});
     loadMapMarkers();
   }, []);
@@ -212,7 +217,7 @@ function EquipmentPageInner() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Equipment</h2>
-          <p className="text-sm text-gray-500">{total} equipment</p>
+          <p className="text-sm text-gray-500">{total} equipment{userCategory ? ` · ${userCategory}` : ''}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => load(page)}><RefreshCw size={13} /></Button>
@@ -232,14 +237,20 @@ function EquipmentPageInner() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-center">
         <input value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Cari ID, nama, atau funcloc..." className="flex-1 max-w-sm px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-        <select value={category} onChange={(e) => setCategory(e.target.value)}
-          className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-          <option value="">Semua Kategori</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        {userCategory ? (
+          <span className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium">
+            {userCategory}
+          </span>
+        ) : (
+          <select value={category} onChange={(e) => setCategory(e.target.value)}
+            className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+            <option value="">Semua Kategori</option>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
         <select value={plantFilter} onChange={(e) => setPlantFilter(e.target.value)}
           className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
           <option value="">Semua Plant</option>
@@ -247,20 +258,34 @@ function EquipmentPageInner() {
         </select>
       </div>
 
-      {/* Map — isolated stacking context so Leaflet z-index doesn't bleed over Dialog */}
-      <div className="relative z-0 bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <MapWithMarkers
-          equipment={equipment}
-          plants={plants}
-          plantId={plantFilter}
-          onMapReady={(updateFn, flyToFn, filterFn) => {
-            mapCallbackRef.current = updateFn;
-            flyToRef.current = flyToFn;
-            filterFnRef.current = filterFn;
-          }}
-          onClickCoord={panelOpen ? onMapCoord : null}
-          className="h-[26rem] w-full"
-        />
+      {/* Map — collapsible, hidden by default */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <button
+          onClick={() => setMapOpen((o) => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <MapPin size={15} className="text-gray-400" />
+            <span>Peta Equipment</span>
+          </div>
+          {mapOpen ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
+        </button>
+        {mapOpen && (
+          <div className="relative z-0 border-t border-gray-100">
+            <MapWithMarkers
+              equipment={equipment}
+              plants={plants}
+              plantId={plantFilter}
+              onMapReady={(updateFn, flyToFn, filterFn) => {
+                mapCallbackRef.current = updateFn;
+                flyToRef.current = flyToFn;
+                filterFnRef.current = filterFn;
+              }}
+              onClickCoord={panelOpen ? onMapCoord : null}
+              className="h-[26rem] w-full"
+            />
+          </div>
+        )}
       </div>
 
       {/* Table */}

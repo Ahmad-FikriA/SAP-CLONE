@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { RoleBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { ROLES, ALL_PAGES, TEMPLATE_ROLES } from '@/lib/constants';
+import { ROLES, ALL_PAGES, ROLE_COLORS } from '@/lib/constants';
 import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -13,8 +13,6 @@ import { UserPlus, Trash2, Download, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const EMPTY_FORM = { id: '', nik: '', name: '', role: '', email: '', dinas: '', divisi: '', group: '', password: 'password123', permissions: null };
-const OPS = ['C', 'R', 'U', 'D'];
-const OP_LABELS = { C: 'Buat', R: 'Lihat', U: 'Edit', D: 'Hapus' };
 
 
 export default function UsersPage() {
@@ -62,26 +60,8 @@ export default function UsersPage() {
 
   function openEdit(u) {
     setEditingId(u.id);
-    // Normalize: old-format array permissions (page-list) → null (use template)
-    const perms = (u.permissions && typeof u.permissions === 'object' && !Array.isArray(u.permissions))
-      ? u.permissions
-      : null;
-    setForm({ ...EMPTY_FORM, ...u, password: '', permissions: perms });
+    setForm({ ...EMPTY_FORM, ...u, password: '' });
     setPanelOpen(true);
-  }
-
-  function togglePermCRUD(pageKey, op) {
-    const current = (form.permissions && typeof form.permissions === 'object' && !Array.isArray(form.permissions)) ? form.permissions : {};
-    const pagePerms = Array.isArray(current[pageKey]) ? current[pageKey] : [];
-    const next = pagePerms.includes(op) ? pagePerms.filter((o) => o !== op) : [...pagePerms, op];
-    setForm({ ...form, permissions: { ...current, [pageKey]: next } });
-  }
-
-  async function applyRoleTemplate(role) {
-    try {
-      const templates = await apiGet('/settings/role-templates');
-      setForm({ ...form, permissions: templates[role] ?? {} });
-    } catch { toast.error('Gagal memuat template'); }
   }
 
   async function saveUser() {
@@ -217,7 +197,7 @@ export default function UsersPage() {
                   onChange={(e) => toggleAll(e.target.checked)}
                   className="rounded border-gray-300" />
               </th>
-              {['NIK', 'Nama', 'Role', 'Dinas', 'Divisi', 'Group', 'Email', 'Password', 'Aksi'].map((h) => (
+              {['NIK', 'Nama', 'Role', 'Dinas / Group', 'Akses Web', 'Email', 'Password', 'Aksi'].map((h) => (
                 <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
@@ -236,11 +216,19 @@ export default function UsersPage() {
                     className="rounded border-gray-300" />
                 </td>
                 <td className="px-3 py-3 font-semibold text-gray-800">{u.nik}</td>
-                <td className="px-3 py-3 text-gray-700">{u.name}</td>
+                <td className="px-3 py-3 text-gray-700">
+                  <div>{u.name}</div>
+                  {u.divisi && <div className="text-xs text-gray-400">{u.divisi}</div>}
+                </td>
                 <td className="px-3 py-3"><RoleBadge role={u.role} /></td>
-                <td className="px-3 py-3 text-gray-500 text-xs">{u.dinas || '-'}</td>
-                <td className="px-3 py-3 text-gray-500 text-xs">{u.divisi || '-'}</td>
-                <td className="px-3 py-3 text-gray-500 text-xs">{u.group || '-'}</td>
+                <td className="px-3 py-3 text-xs text-gray-500">
+                  {u.dinas && <div>{u.dinas}</div>}
+                  {u.group && <span className="inline-block bg-gray-100 text-gray-600 rounded px-1.5 py-0.5 mt-0.5">{u.group}</span>}
+                  {!u.dinas && !u.group && '-'}
+                </td>
+                <td className="px-3 py-3">
+                  <PageAccessBadge permissions={u.permissions} />
+                </td>
                 <td className="px-3 py-3 text-gray-500 text-xs">{u.email || '-'}</td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-1.5">
@@ -292,85 +280,10 @@ export default function UsersPage() {
               <Field label="Password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder="password123" />
             )}
 
-            {/* Per-user CRUD permissions */}
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
-                <span className="text-xs font-semibold text-gray-700">Hak Akses</span>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.permissions === null}
-                    onChange={(e) => setForm({ ...form, permissions: e.target.checked ? null : {} })}
-                    className="w-3.5 h-3.5 rounded border-gray-300" />
-                  <span className="text-xs text-gray-600">Gunakan Template Role</span>
-                </label>
-              </div>
-              {form.permissions === null ? (
-                <p className="px-3 py-2.5 text-xs text-gray-400">
-                  Mengikuti template role <strong>{form.role || '—'}</strong>. Atur di{' '}
-                  <a href="/settings" className="text-blue-600 hover:underline">Pengaturan Akses</a>.
-                </p>
-              ) : (
-                <div className="p-3 space-y-2">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs text-gray-500">Terapkan template:</span>
-                    {TEMPLATE_ROLES.map((r) => (
-                      <button key={r} onClick={() => applyRoleTemplate(r)}
-                        className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded px-2 py-0.5 transition-colors">
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded px-2.5 py-1.5">
-                    <span><span className="font-bold">C</span> = Create (Tambah)</span>
-                    <span><span className="font-bold">R</span> = Read (Lihat)</span>
-                    <span><span className="font-bold">U</span> = Update (Edit)</span>
-                    <span><span className="font-bold">D</span> = Delete (Hapus)</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="text-left py-1.5 pr-3 font-semibold text-gray-500">Halaman</th>
-                          {OPS.map((op) => (
-                            <th key={op} className="px-2 py-1.5 text-center font-semibold text-gray-500">
-                              <span className="text-gray-700">{op}</span>
-                              <span className="block font-normal text-gray-400 normal-case">{OP_LABELS[op]}</span>
-                            </th>
-                          ))}
-                          <th className="px-2 py-1.5" />
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {ALL_PAGES.map((page) => {
-                          const raw = (form.permissions && typeof form.permissions === 'object' && !Array.isArray(form.permissions)) ? form.permissions[page.key] : undefined;
-                          const pagePerms = Array.isArray(raw) ? raw : [];
-                          const hasAll = OPS.every((o) => pagePerms.includes(o));
-                          return (
-                            <tr key={page.key} className="hover:bg-gray-50">
-                              <td className="py-1.5 pr-3 text-gray-700">{page.label}</td>
-                              {OPS.map((op) => (
-                                <td key={op} className="px-2 py-1.5 text-center">
-                                  <input type="checkbox" checked={pagePerms.includes(op)}
-                                    onChange={() => togglePermCRUD(page.key, op)}
-                                    className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 cursor-pointer" />
-                                </td>
-                              ))}
-                              <td className="px-2 py-1.5 text-center">
-                                <button onClick={() => {
-                                  const current = form.permissions || {};
-                                  setForm({ ...form, permissions: { ...current, [page.key]: hasAll ? [] : [...OPS] } });
-                                }} className="text-[10px] text-blue-500 hover:text-blue-700 hover:underline">
-                                  {hasAll ? 'Hapus' : 'Semua'}
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
+            <p className="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
+              Hak akses dikelola di halaman{' '}
+              <a href="/settings" className="text-blue-600 hover:underline font-medium">Pengaturan Akses</a>.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setPanelOpen(false)}>Batal</Button>
@@ -401,5 +314,27 @@ function Field({ label, value, onChange, placeholder, type = 'text' }) {
       <input type={type} value={value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
     </div>
+  );
+}
+
+function PageAccessBadge({ permissions }) {
+  if (permissions === null) {
+    return <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2 py-0.5">Semua</span>;
+  }
+  if (!permissions || typeof permissions !== 'object') {
+    return <span className="text-xs text-gray-400">—</span>;
+  }
+  const count = Object.keys(permissions).length;
+  const total = ALL_PAGES.length;
+  return (
+    <span className={`inline-flex items-center text-xs font-medium rounded-full px-2 py-0.5 border ${
+      count >= total * 0.7
+        ? 'bg-blue-50 text-blue-700 border-blue-200'
+        : count >= 3
+        ? 'bg-gray-100 text-gray-600 border-gray-200'
+        : 'bg-amber-50 text-amber-700 border-amber-200'
+    }`}>
+      {count}/{total} halaman
+    </span>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiGet } from '@/lib/api';
+import { getUserCategory } from '@/lib/auth';
 import Link from 'next/link';
 import { FileText, ArrowRight, RefreshCw } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -31,6 +32,8 @@ export function WidgetPreventive() {
   const [spkList, setSpkList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState(null);
+  const [userCategory, setUserCategory] = useState(null);
+  useEffect(() => { setUserCategory(getUserCategory()); }, []);
 
   async function load() {
     setLoading(true); setError(null);
@@ -65,7 +68,7 @@ export function WidgetPreventive() {
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 lg:px-5 lg:py-4 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
             <FileText size={16} className="text-white" />
@@ -73,7 +76,7 @@ export function WidgetPreventive() {
           <div>
             <p className="text-sm font-semibold text-gray-800">SPK Preventive</p>
             <p className="text-xs text-gray-400">
-              {loading ? '—' : `${total} total SPK`}
+              {loading ? '—' : `${total} total SPK${userCategory ? ` · ${userCategory}` : ''}`}
             </p>
           </div>
         </div>
@@ -88,7 +91,7 @@ export function WidgetPreventive() {
       ) : error ? (
         <div className="flex items-center justify-center py-16 text-red-500 text-sm">{error}</div>
       ) : (
-        <div className="flex-1 px-5 py-4 space-y-5">
+        <div className="flex-1 px-4 py-3 lg:px-5 lg:py-4 space-y-4 lg:space-y-5">
           {/* Charts row */}
           <Charts
             statusData={statusData}
@@ -101,7 +104,7 @@ export function WidgetPreventive() {
       )}
 
       {/* Footer */}
-      <div className="px-5 py-3 border-t border-gray-100 bg-gray-50">
+      <div className="px-4 py-2.5 lg:px-5 lg:py-3 border-t border-gray-100 bg-gray-50">
         <Link href="/spk" className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">
           Lihat semua SPK <ArrowRight size={12} />
         </Link>

@@ -10,8 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { CATEGORIES, STATUS_LABELS, KADIS_AREAS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS } from '@/lib/constants';
 import { formatDate, formatDateShort } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Trash2, Wrench, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin, CheckCircle2, Clock, Circle } from 'lucide-react';
-import { canCreate, canUpdate, canDelete } from '@/lib/auth';
+import { RefreshCw, Trash2, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin, CheckCircle2, Circle } from 'lucide-react';
+import { canCreate, canUpdate, canDelete, getUserCategory } from '@/lib/auth';
 import Link from 'next/link';
 
 const STATUS_OPTIONS = ['pending', 'awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis', 'approved', 'rejected'];
@@ -45,39 +45,6 @@ function detectMeasurementUnit(operationText) {
   if (l.includes('turbid') || l.includes('kekeruhan')) return 'NTU';
   return null;
 }
-const INTERVALS = ['1wk', '2wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
-const curYear = new Date().getFullYear();
-const YEARS = [curYear - 1, curYear, curYear + 1];
-const WEEKS = Array.from({ length: 53 }, (_, i) => i + 1);
-
-function getWeekStart(week, year) {
-  const jan4 = new Date(year, 0, 4);
-  const jan4Day = jan4.getDay() || 7;
-  const mon = new Date(jan4);
-  mon.setDate(jan4.getDate() - (jan4Day - 1) + (week - 1) * 7);
-  const y = mon.getFullYear(), m = String(mon.getMonth() + 1).padStart(2, '0'), d = String(mon.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-function fmtDate(d) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-function getCurrentWeek() {
-  const now = new Date();
-  const jan4 = new Date(now.getFullYear(), 0, 4);
-  const jan4Day = jan4.getDay() || 7;
-  const diff = Math.floor((now - jan4) / 86400000) + (jan4Day - 1);
-  return Math.min(53, Math.max(1, Math.ceil((diff + 1) / 7)));
-}
-function suggestNumber(category, list) {
-  const code = { Mekanik: 'M', Listrik: 'L', Sipil: 'S', Otomasi: 'O' }[category] || 'X';
-  const prefix = `SPK-${code}-`;
-  const max = list.reduce((m, s) => {
-    if (!s.spkNumber.startsWith(prefix)) return m;
-    const match = s.spkNumber.match(/SPK-[A-Z]+-(\d+)$/);
-    return match ? Math.max(m, parseInt(match[1])) : m;
-  }, 0);
-  return `${prefix}${String(max + 1).padStart(3, '0')}`;
-}
 
 export default function SpkPage() {
   return <Suspense><SpkPageInner /></Suspense>;
@@ -87,6 +54,7 @@ function SpkPageInner() {
   const searchParams = useSearchParams();
   const [spkList, setSpkList]       = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [userCategory, setUserCategory] = useState(null); // null = unrestricted
   const [category, setCategory]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selected, setSelected]     = useState([]);
@@ -104,16 +72,10 @@ function SpkPageInner() {
   const [panelOpen, setPanelOpen]   = useState(false);
   const [editingSpk, setEditingSpk] = useState(null); // null = create, obj = edit
   const [form, setForm]             = useState({ spkNumber: '', description: '', category: 'Mekanik', status: 'pending', scheduledDate: '', interval: '' });
-  const [panelYear, setPanelYear]   = useState(curYear);
-  const [panelWeek, setPanelWeek]   = useState(getCurrentWeek());
-  const [activeIntervals, setActiveIntervals] = useState([]);
-  const [selectedInterval, setSelectedInterval] = useState('');
   const [allEquipment, setAllEquipment] = useState([]);
-  const [allMappings, setAllMappings]   = useState([]);
   const [eqSearch, setEqSearch]     = useState('');
   const [selectedEqIds, setSelectedEqIds] = useState([]);
-  const [activities, setActivities] = useState([]); // [{ equipmentId, operationText, durationPlan }]
-  const [loadingIntervals, setLoadingIntervals] = useState(false);
+  const [activities, setActivities] = useState([]);
   const [saving, setSaving]         = useState(false);
   const actIdxRef = useRef(0);
 
@@ -123,6 +85,7 @@ function SpkPageInner() {
   const [detailSubs, setDetailSubs] = useState([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
 
+  useEffect(() => { setUserCategory(getUserCategory()); }, []);
   useEffect(() => { apiGet('/maps').then(setPlants).catch(() => {}); }, []);
   useEffect(() => { load(); }, [category, plantFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -176,48 +139,16 @@ function SpkPageInner() {
   }
 
   // ── Panel open/close ────────────────────────────────────────────────────────
-  async function openCreate() {
-    const [eqRes, mapRes] = await Promise.all([
-      apiGet('/equipment?limit=9999').catch(() => ({ data: [] })),
-      apiGet('/equipment-mappings').catch(() => []),
-    ]);
-    setAllEquipment(eqRes.data || eqRes);
-    setAllMappings(Array.isArray(mapRes) ? mapRes : []);
-    setEditingSpk(null);
-    const week = getCurrentWeek();
-    setPanelYear(curYear); setPanelWeek(week);
-    setForm({ spkNumber: suggestNumber('Mekanik', spkList), description: '', category: 'Mekanik', status: 'pending', scheduledDate: '', interval: '' });
-    setSelectedEqIds([]); setActivities([]); setSelectedInterval(''); setEqSearch('');
-    await fetchIntervals(curYear, week);
-    setPanelOpen(true);
-  }
-
   async function openEdit(spk) {
-    const [eqRes, mapRes] = await Promise.all([
-      apiGet('/equipment?limit=9999').catch(() => ({ data: [] })),
-      apiGet('/equipment-mappings').catch(() => []),
-    ]);
+    const eqRes = await apiGet('/equipment?limit=9999').catch(() => ({ data: [] }));
     setAllEquipment(eqRes.data || eqRes);
-    setAllMappings(Array.isArray(mapRes) ? mapRes : []);
     setEditingSpk(spk);
     setForm({ spkNumber: spk.spkNumber, description: spk.description || '', category: spk.category || 'Mekanik', status: spk.status || 'pending', scheduledDate: spk.scheduledDate || '', interval: spk.interval || '' });
     const eqIds = (spk.equipmentModels || []).map((e) => e.equipmentId);
     setSelectedEqIds(eqIds);
     setActivities((spk.activitiesModel || []).map((a) => ({ _id: actIdxRef.current++, equipmentId: a.equipmentId, operationText: a.operationText || '', durationPlan: a.durationPlan ?? '' })));
-    setSelectedInterval(spk.interval || '');
     setEqSearch('');
     setPanelOpen(true);
-  }
-
-  async function fetchIntervals(year, week) {
-    setLoadingIntervals(true);
-    try {
-      const data = await apiGet(`/preventive-schedule?year=${year}&week=${week}`);
-      const ivs = data.activeIntervals || [];
-      setActiveIntervals(ivs);
-      if (ivs.length) setSelectedInterval(ivs[0]);
-    } catch { setActiveIntervals([]); }
-    finally { setLoadingIntervals(false); }
   }
 
   async function openDetail(spk) {
@@ -235,46 +166,10 @@ function SpkPageInner() {
     } finally { setLoadingSubs(false); }
   }
 
-  function onWeekChange(year, week) {
-    setPanelYear(year); setPanelWeek(week);
-    fetchIntervals(year, week);
-  }
-
-  // When interval changes in create mode, auto-populate activities from mappings
-  function onIntervalSelect(iv) {
-    setSelectedInterval(iv);
-    if (!editingSpk) {
-      const newActs = [];
-      selectedEqIds.forEach((eqId) => {
-        const mapping = allMappings.find((m) => m.equipmentId === eqId && m.interval === iv);
-        if (mapping?.activities?.length) {
-          mapping.activities.forEach((step) => {
-            newActs.push({ _id: actIdxRef.current++, equipmentId: eqId, operationText: step.operationText || '', durationPlan: 30 });
-          });
-        }
-      });
-      setActivities(newActs);
-      if (newActs.length > 0) toast.info(`${newActs.length} aktivitas ditambahkan dari task mapping`);
-    }
-  }
-
-  // When equipment selection changes in create mode, refresh activities
   function onEqToggle(eqId) {
     setSelectedEqIds((prev) => {
       const next = prev.includes(eqId) ? prev.filter((x) => x !== eqId) : [...prev, eqId];
-      // Auto-populate activities for newly added equipment
-      if (!editingSpk && !prev.includes(eqId) && selectedInterval) {
-        const mapping = allMappings.find((m) => m.equipmentId === eqId && m.interval === selectedInterval);
-        if (mapping?.activities?.length) {
-          setActivities((acts) => [
-            ...acts,
-            ...mapping.activities.map((step) => ({ _id: actIdxRef.current++, equipmentId: eqId, operationText: step.operationText || '', durationPlan: 30 })),
-          ]);
-          toast.info(`${mapping.activities.length} aktivitas ditambahkan untuk equipment ini`);
-        }
-      }
       if (prev.includes(eqId)) {
-        // Remove activities for deselected equipment
         setActivities((acts) => acts.filter((a) => a.equipmentId !== eqId));
       }
       return next;
@@ -294,7 +189,6 @@ function SpkPageInner() {
   async function saveSpk() {
     const { spkNumber, description, category: cat, status, scheduledDate } = form;
     if (!spkNumber || !description) { toast.error('SPK Number dan Deskripsi wajib diisi'); return; }
-    if (!editingSpk && !selectedInterval) { toast.error('Pilih interval SPK'); return; }
 
     const equipmentModels = selectedEqIds.map((id) => {
       const eq = allEquipment.find((e) => e.equipmentId === id);
@@ -314,20 +208,15 @@ function SpkPageInner() {
 
     const body = {
       spkNumber, description, category: cat, status,
-      interval: editingSpk ? (editingSpk.interval || selectedInterval) : selectedInterval,
-      scheduledDate: editingSpk ? (scheduledDate || null) : getWeekStart(panelWeek, panelYear),
+      interval: editingSpk.interval,
+      scheduledDate: scheduledDate || null,
       durationActual: null, equipmentModels, activitiesModel,
     };
 
     setSaving(true);
     try {
-      if (editingSpk) {
-        await apiPut(`/spk/${editingSpk.spkNumber}`, body);
-        toast.success(`SPK ${spkNumber} diperbarui`);
-      } else {
-        await apiPost('/spk', body);
-        toast.success(`SPK ${spkNumber} dibuat`);
-      }
+      await apiPut(`/spk/${editingSpk.spkNumber}`, body);
+      toast.success(`SPK ${spkNumber} diperbarui`);
       setPanelOpen(false);
       load();
     } catch (e) { toast.error(e.message); }
@@ -355,14 +244,10 @@ function SpkPageInner() {
   const weekOptions  = [...new Set(spkList.map((s) => s.weekNumber).filter(Boolean))].sort((a, b) => a - b);
   const yearOptions  = [...new Set(spkList.map((s) => s.weekYear).filter(Boolean))].sort((a, b) => b - a);
 
-  // Equipment list for panel (grouped mapped/unmapped in create mode)
   const filteredEq = allEquipment.filter((eq) => {
     const q = eqSearch.toLowerCase();
     return !q || eq.equipmentId?.toLowerCase().includes(q) || eq.equipmentName?.toLowerCase().includes(q);
   });
-  const mappedForInterval = !editingSpk && selectedInterval
-    ? new Set(allMappings.filter((m) => m.interval === selectedInterval).map((m) => m.equipmentId))
-    : null;
 
   return (
     <div className="flex h-full">
@@ -380,11 +265,6 @@ function SpkPageInner() {
                 <Button variant="outline" size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"><Upload size={13} /> Import SAP</Button>
               </Link>
             )}
-            {canCreate('spk') && (
-              <Link href="/spk/generate">
-                <Button variant="outline" size="sm" className="gap-1.5"><Wrench size={13} /> Generate</Button>
-              </Link>
-            )}
           </div>
         </div>
 
@@ -395,11 +275,17 @@ function SpkPageInner() {
             placeholder="Cari SPK, deskripsi, equipment..."
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white min-w-[220px] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           />
-          <select value={category} onChange={(e) => setCategory(e.target.value)}
-            className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-            <option value="">Semua Kategori</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          {userCategory ? (
+            <span className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 font-medium select-none">
+              {userCategory}
+            </span>
+          ) : (
+            <select value={category} onChange={(e) => setCategory(e.target.value)}
+              className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+              <option value="">Semua Kategori</option>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
             className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
             <option value="">Semua Status</option>
@@ -433,9 +319,9 @@ function SpkPageInner() {
             <span>⚠</span>
             <span>Ada Hasil Abnormal</span>
           </button>
-          {(search || statusFilter || weekFilter || yearFilter || category || plantFilter || hasAbnormal) && (
+          {(search || statusFilter || weekFilter || yearFilter || (!userCategory && category) || plantFilter || hasAbnormal) && (
             <button
-              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); setCategory(''); setPlantFilter(''); setHasAbnormal(false); }}
+              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); if (!userCategory) setCategory(''); setPlantFilter(''); setHasAbnormal(false); }}
               className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
             >
               <X size={12} /> Reset Filter
@@ -545,7 +431,7 @@ function SpkPageInner() {
         <div className="fixed top-0 right-0 h-full w-[420px] bg-white border-l border-gray-200 shadow-xl flex flex-col z-40 overflow-hidden">
           {/* Panel header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
-            <h3 className="text-base font-semibold text-gray-800">{editingSpk ? `Edit SPK` : 'Buat SPK'}</h3>
+            <h3 className="text-base font-semibold text-gray-800">Edit SPK</h3>
             <button onClick={() => setPanelOpen(false)} className="p-1 rounded hover:bg-gray-100 text-gray-500"><X size={16} /></button>
           </div>
 
@@ -559,11 +445,17 @@ function SpkPageInner() {
                     onChange={(v) => setForm((f) => ({ ...f, spkNumber: v }))} />
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Kategori *</label>
-                    <select value={form.category}
-                      onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, category: v, spkNumber: editingSpk ? f.spkNumber : suggestNumber(v, spkList) })); }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    {userCategory ? (
+                      <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 font-medium">
+                        {userCategory}
+                      </div>
+                    ) : (
+                      <select value={form.category}
+                        onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
                   </div>
                 </div>
                 <PanelField label="Deskripsi *" value={form.description} onChange={(v) => setForm((f) => ({ ...f, description: v }))} />
@@ -575,61 +467,11 @@ function SpkPageInner() {
                       {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>)}
                     </select>
                   </div>
-                  {editingSpk
-                    ? <PanelField label="Tanggal Mulai" type="date" value={form.scheduledDate} onChange={(v) => setForm((f) => ({ ...f, scheduledDate: v }))} />
-                    : <PanelField label="Interval" value={form.interval} disabled placeholder={editingSpk?.interval || '—'} />
-                  }
+                  <PanelField label="Tanggal Mulai" type="date" value={form.scheduledDate} onChange={(v) => setForm((f) => ({ ...f, scheduledDate: v }))} />
                 </div>
               </div>
             </section>
 
-            {/* ── Week / Interval (create only) ── */}
-            {!editingSpk && (
-              <section>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Periode & Interval</p>
-                <div className="grid grid-cols-2 gap-3 mb-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Tahun</label>
-                    <select value={panelYear} onChange={(e) => onWeekChange(Number(e.target.value), panelWeek)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-                      {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Minggu ke-</label>
-                    <select value={panelWeek} onChange={(e) => onWeekChange(panelYear, Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-                      {WEEKS.map((w) => <option key={w} value={w}>Minggu {w}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 mb-2">Mulai: {fmtDate(getWeekStart(panelWeek, panelYear))}</p>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Interval *</label>
-                  {loadingIntervals ? (
-                    <p className="text-xs text-gray-400">Memuat jadwal...</p>
-                  ) : activeIntervals.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {activeIntervals.map((iv) => (
-                        <button key={iv} onClick={() => onIntervalSelect(iv)}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${selectedInterval === iv ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
-                          {iv}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {INTERVALS.map((iv) => (
-                        <button key={iv} onClick={() => onIntervalSelect(iv)}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${selectedInterval === iv ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
-                          {iv}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
 
             {/* ── Equipment ── */}
             <section>
@@ -639,30 +481,9 @@ function SpkPageInner() {
               <div className="border border-gray-200 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
                 {filteredEq.length === 0 ? (
                   <p className="px-3 py-4 text-xs text-gray-400 text-center">Tidak ada equipment</p>
-                ) : (
-                  <>
-                    {mappedForInterval && (
-                      <>
-                        {filteredEq.filter((eq) => mappedForInterval.has(eq.equipmentId)).length > 0 && (
-                          <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50">Terpetakan — {selectedInterval}</p>
-                        )}
-                        {filteredEq.filter((eq) => mappedForInterval.has(eq.equipmentId)).map((eq) => (
-                          <EqItem key={eq.equipmentId} eq={eq} checked={selectedEqIds.includes(eq.equipmentId)} onToggle={onEqToggle}
-                            badge={allMappings.find((m) => m.equipmentId === eq.equipmentId && m.interval === selectedInterval)?.taskListName} />
-                        ))}
-                        {filteredEq.filter((eq) => !mappedForInterval.has(eq.equipmentId)).length > 0 && (
-                          <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-t border-gray-100">Tanpa mapping</p>
-                        )}
-                        {filteredEq.filter((eq) => !mappedForInterval.has(eq.equipmentId)).map((eq) => (
-                          <EqItem key={eq.equipmentId} eq={eq} checked={selectedEqIds.includes(eq.equipmentId)} onToggle={onEqToggle} />
-                        ))}
-                      </>
-                    )}
-                    {!mappedForInterval && filteredEq.map((eq) => (
-                      <EqItem key={eq.equipmentId} eq={eq} checked={selectedEqIds.includes(eq.equipmentId)} onToggle={onEqToggle} />
-                    ))}
-                  </>
-                )}
+                ) : filteredEq.map((eq) => (
+                  <EqItem key={eq.equipmentId} eq={eq} checked={selectedEqIds.includes(eq.equipmentId)} onToggle={onEqToggle} />
+                ))}
               </div>
             </section>
 
@@ -707,7 +528,7 @@ function SpkPageInner() {
           <div className="shrink-0 px-5 py-4 border-t border-gray-200 flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setPanelOpen(false)}>Batal</Button>
             <Button size="sm" onClick={saveSpk} disabled={saving}>
-              {saving ? 'Menyimpan...' : editingSpk ? 'Simpan' : 'Buat SPK'}
+              {saving ? 'Menyimpan...' : 'Simpan'}
             </Button>
           </div>
         </div>

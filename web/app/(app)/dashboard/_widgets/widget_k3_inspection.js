@@ -53,7 +53,7 @@ export function WidgetK3Inspection() {
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-rose-50/50 to-white">
+      <div className="flex items-center justify-between px-4 py-3 lg:px-5 lg:py-4 border-b border-gray-100 bg-gradient-to-r from-rose-50/50 to-white">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center shadow-sm">
             <ShieldCheck size={18} className="text-white" />
@@ -74,16 +74,16 @@ export function WidgetK3Inspection() {
       ) : error ? (
         <div className="flex-1 flex items-center justify-center py-10 text-red-500 text-sm">{error}</div>
       ) : (
-        <div className="flex-1 p-5 flex flex-col gap-6">
+        <div className="flex-1 p-4 lg:p-5 flex flex-col gap-4 lg:gap-5">
           
           {/* Summary Section */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex flex-col items-center justify-center text-center shadow-sm">
-              <p className="text-3xl font-black text-blue-700 leading-none mb-1">{incomingReports}</p>
+            <div className="bg-blue-50/50 p-3 lg:p-4 rounded-2xl border border-blue-100 flex flex-col items-center justify-center text-center shadow-sm">
+              <p className="text-2xl lg:text-3xl font-black text-blue-700 leading-none mb-1">{incomingReports}</p>
               <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Laporan Masuk</p>
             </div>
-            <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 flex flex-col items-center justify-center text-center shadow-sm">
-              <p className="text-3xl font-black text-emerald-700 leading-none mb-1">{solvedReports}</p>
+            <div className="bg-emerald-50/50 p-3 lg:p-4 rounded-2xl border border-emerald-100 flex flex-col items-center justify-center text-center shadow-sm">
+              <p className="text-2xl lg:text-3xl font-black text-emerald-700 leading-none mb-1">{solvedReports}</p>
               <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Diselesaikan</p>
             </div>
           </div>
@@ -100,20 +100,20 @@ export function WidgetK3Inspection() {
           </div>
 
           {/* HSE Metrics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 lg:gap-3">
             {METRICS_K3.map((m) => {
               const Icon = m.icon;
               return (
-                <div key={m.id} className={cn("p-3 rounded-2xl border flex flex-col transition-all hover:shadow-md", m.light)}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className={cn("p-1.5 rounded-lg bg-white shadow-sm")}>
-                      <Icon size={14} className={m.color} />
+                <div key={m.id} className={cn("p-2 lg:p-3 rounded-xl border flex flex-col transition-all hover:shadow-md", m.light)}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className={cn("p-1 rounded-lg bg-white shadow-sm")}>
+                      <Icon size={12} className={m.color} />
                     </div>
-                    <span className={cn("text-[9px] font-black uppercase tracking-wider opacity-60", m.color)}>{m.id}</span>
+                    <span className={cn("text-[8px] font-black uppercase tracking-wider opacity-60", m.color)}>{m.id}</span>
                   </div>
                   <div>
-                    <p className="text-lg font-black text-slate-800 leading-tight">{m.value}</p>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight leading-tight mt-0.5">{m.title}</p>
+                    <p className="text-base font-black text-slate-800 leading-tight">{m.value}</p>
+                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-tight leading-tight mt-0.5">{m.title}</p>
                   </div>
                 </div>
               );
@@ -124,7 +124,7 @@ export function WidgetK3Inspection() {
       )}
 
       {/* Footer */}
-      <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 mt-auto">
+      <div className="px-4 py-2.5 lg:px-5 lg:py-3 border-t border-gray-100 bg-gray-50/50 mt-auto">
         <Link href="/hse" className="flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 transition-colors">
           Buka Detail HSE Command Center <ArrowRight size={14} />
         </Link>

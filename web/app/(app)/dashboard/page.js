@@ -22,11 +22,11 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
       {/* Page header */}
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-xl font-semibold text-gray-800">Dashboard</h2>
+          <h2 className="text-lg lg:text-xl font-semibold text-gray-800">Dashboard</h2>
           <p className="text-sm text-gray-500 mt-0.5">
             {greeting}{user?.name ? `, ${user.name}` : ''}. Berikut ringkasan sistem hari ini.
           </p>
@@ -37,7 +37,7 @@ export default function DashboardPage() {
       <WidgetSummary />
 
       {/* Module widgets grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <WidgetPreventive />
         <WidgetCorrective />
         <WidgetK3Inspection />
