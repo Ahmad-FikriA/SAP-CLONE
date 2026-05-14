@@ -14,7 +14,7 @@ import { RefreshCw, Trash2, Wrench, Upload, Plus, X, RotateCcw, Pencil, Eye, Map
 import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import Link from 'next/link';
 
-const STATUS_OPTIONS = ['pending', 'awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis', 'approved'];
+const STATUS_OPTIONS = ['pending', 'awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis', 'approved', 'rejected'];
 
 const UPLOADS_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '');
 

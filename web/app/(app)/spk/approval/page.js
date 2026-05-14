@@ -118,6 +118,7 @@ export default function SpkApprovalPage() {
   const [rejectOpen, setRejectOpen]             = useState(false);
   const [rejecting, setRejecting]               = useState(false);
   const [rejectionReason, setRejectionReason]   = useState('');
+  const [viewMode, setViewMode]                 = useState('pending'); // 'pending' | 'rejected'
 
   useEffect(() => { setUser(getUser()); }, []);
 
@@ -127,8 +128,30 @@ export default function SpkApprovalPage() {
     }).catch(() => {});
   }, []);
 
-  const load = useCallback(async (u) => {
+  const load = useCallback(async (u, mode = 'pending') => {
     const role = u?.role;
+
+    // ── Rejected view ──────────────────────────────────────────────────────────
+    if (mode === 'rejected') {
+      setLoading(true);
+      try {
+        let url = '/spk?status=rejected';
+        if (KASIE_ROLES.has(role)) {
+          const cat = GROUP_TO_CATEGORY[String(u?.group || '').trim()];
+          if (cat) url += `&category=${encodeURIComponent(cat)}`;
+        }
+        const data = await apiGet(url);
+        setCategoryFilter('');
+        setSpks(data.sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0)));
+      } catch (e) {
+        toast.error('Gagal memuat daftar SPK: ' + e.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // ── Pending view ───────────────────────────────────────────────────────────
     let statuses = PENDING_STATUSES[role];
     if (!statuses) { setSpks([]); setLoading(false); return; }
 
@@ -175,8 +198,8 @@ export default function SpkApprovalPage() {
   }, []);
 
   useEffect(() => {
-    if (user) load(user);
-  }, [user, load]);
+    if (user) load(user, viewMode);
+  }, [user, viewMode, load]);
 
   async function selectSpk(spk) {
     setSelected(spk);
@@ -207,7 +230,7 @@ export default function SpkApprovalPage() {
       setConfirmOpen(false);
       setSelected(null);
       setDetail(null);
-      await load(user);
+      await load(user, viewMode);
     } catch (e) {
       toast.error('Gagal menyetujui: ' + e.message);
     } finally {
@@ -235,7 +258,7 @@ export default function SpkApprovalPage() {
       setRejectionReason('');
       setSelected(null);
       setDetail(null);
-      await load(user);
+      await load(user, viewMode);
     } catch (e) {
       toast.error('Gagal menolak: ' + e.message);
     } finally {
@@ -269,16 +292,42 @@ export default function SpkApprovalPage() {
           <div>
             <h2 className="text-sm font-semibold text-gray-800">Persetujuan SPK</h2>
             <p className="text-xs text-gray-400">
-              {filteredSpks.length}{filteredSpks.length !== spks.length ? ` / ${spks.length}` : ''} SPK menunggu
+              {filteredSpks.length}{filteredSpks.length !== spks.length ? ` / ${spks.length}` : ''} SPK {viewMode === 'rejected' ? 'ditolak' : 'menunggu'}
             </p>
           </div>
           <button
-            onClick={() => load(user)}
+            onClick={() => load(user, viewMode)}
             disabled={loading}
             className="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition-colors"
             title="Refresh"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+
+        {/* View mode tabs */}
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => { setViewMode('pending'); setSelected(null); setDetail(null); setCategoryFilter(''); }}
+            className={cn(
+              'flex-1 py-2 text-xs font-semibold transition-colors',
+              viewMode === 'pending'
+                ? 'text-blue-600 border-b-2 border-blue-500 bg-blue-50/50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            )}
+          >
+            Menunggu
+          </button>
+          <button
+            onClick={() => { setViewMode('rejected'); setSelected(null); setDetail(null); setCategoryFilter(''); }}
+            className={cn(
+              'flex-1 py-2 text-xs font-semibold transition-colors',
+              viewMode === 'rejected'
+                ? 'text-red-600 border-b-2 border-red-500 bg-red-50/50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            )}
+          >
+            Ditolak
           </button>
         </div>
 
@@ -340,19 +389,24 @@ export default function SpkApprovalPage() {
             <div className="p-6 text-center text-gray-400 text-sm">Memuat...</div>
           ) : spks.length === 0 ? (
             <div className="p-8 text-center">
-              <CheckCircle size={32} className="mx-auto text-green-400 mb-2" />
-              {KASIE_ROLES.has(user?.role) && !GROUP_TO_CATEGORY[String(user?.group || '').trim()] ? (
+              {viewMode === 'rejected'
+                ? <XCircle size={32} className="mx-auto text-gray-300 mb-2" />
+                : <CheckCircle size={32} className="mx-auto text-green-400 mb-2" />
+              }
+              {viewMode === 'pending' && KASIE_ROLES.has(user?.role) && !GROUP_TO_CATEGORY[String(user?.group || '').trim()] ? (
                 <p className="text-sm text-gray-500">
                   Grup Anda belum dikonfigurasi.<br />
                   <span className="text-gray-400">Hubungi admin untuk mengatur grup Anda.</span>
                 </p>
               ) : (
-                <p className="text-sm text-gray-400">Tidak ada SPK yang perlu disetujui</p>
+                <p className="text-sm text-gray-400">
+                  {viewMode === 'rejected' ? 'Tidak ada SPK yang ditolak' : 'Tidak ada SPK yang perlu disetujui'}
+                </p>
               )}
             </div>
           ) : filteredSpks.length === 0 ? (
             <div className="p-8 text-center text-gray-400 text-sm">
-              Tidak ada SPK {categoryFilter} yang menunggu persetujuan
+              Tidak ada SPK {categoryFilter} yang {viewMode === 'rejected' ? 'ditolak' : 'menunggu persetujuan'}
             </div>
           ) : (
             filteredSpks.map(spk => (
@@ -361,10 +415,13 @@ export default function SpkApprovalPage() {
                 onClick={() => selectSpk(spk)}
                 className={cn(
                   'w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-start gap-3',
-                  selected?.spkNumber === spk.spkNumber && 'bg-blue-50 border-l-2 border-blue-500'
+                  selected?.spkNumber === spk.spkNumber && (viewMode === 'rejected' ? 'bg-red-50 border-l-2 border-red-400' : 'bg-blue-50 border-l-2 border-blue-500')
                 )}
               >
-                <Clock size={15} className="mt-0.5 shrink-0 text-amber-500" />
+                {viewMode === 'rejected'
+                  ? <XCircle size={15} className="mt-0.5 shrink-0 text-red-400" />
+                  : <Clock size={15} className="mt-0.5 shrink-0 text-amber-500" />
+                }
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-mono font-semibold text-gray-700 truncate">
