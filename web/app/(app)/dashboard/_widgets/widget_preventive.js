@@ -61,7 +61,7 @@ export function WidgetPreventive() {
     const total     = spkList.filter((s) => s.category === cat).length;
     const completed = spkList.filter((s) => s.category === cat && (s.status === 'completed' || s.status === 'approved')).length;
     const pct       = total > 0 ? Math.round((completed / total) * 100) : 0;
-    return { name: `${cat} (${pct}%)`, total, completed, color: CAT_COLORS[cat] };
+    return { name: `${cat} (${pct}%)`, total, completed, remaining: total - completed, color: CAT_COLORS[cat] };
   }).filter((d) => d.total > 0);
 
 
