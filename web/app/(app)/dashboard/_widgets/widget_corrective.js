@@ -69,6 +69,7 @@ export function WidgetCorrective() {
       name: `${info.name} (${pct}%)`,
       total: totalCount,
       completed: completedCount,
+      remaining: totalCount - completedCount,
       color: info.color
     };
   }).filter(d => d.total > 0);

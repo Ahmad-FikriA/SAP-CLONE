@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 
@@ -33,31 +33,37 @@ export default function CorrectiveCharts({ statusData, groupData, total }) {
           {statusData.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-8">Belum ada data</p>
           ) : (
-            <ResponsiveContainer width="100%" height={190}>
-              <PieChart margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
-                <Pie
-                  data={statusData}
-                  cx="50%" cy="50%"
-                  innerRadius={48} outerRadius={70}
-                  paddingAngle={3}
-                  dataKey="value"
-                  startAngle={90} endAngle={-270}
-                >
-                  {statusData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} stroke="none" />
-                  ))}
-                  <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                    <tspan x="50%" dy="-0.4em" fontSize="20" fontWeight="700" fill="#1f2937">{total}</tspan>
-                    <tspan x="50%" dy="1.4em" fontSize="9" fill="#9ca3af">Total SPK</tspan>
-                  </text>
-                </Pie>
-                <Tooltip content={<ChartTooltip />} />
-                <Legend
-                  iconType="circle" iconSize={7}
-                  formatter={(v) => <span style={{ fontSize: 10, color: '#6b7280' }}>{v}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="100%" height={150}>
+                <PieChart margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
+                  <Pie
+                    data={statusData}
+                    cx="50%" cy="50%"
+                    innerRadius={48} outerRadius={65}
+                    paddingAngle={3}
+                    dataKey="value"
+                    startAngle={90} endAngle={-270}
+                  >
+                    {statusData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} stroke="none" />
+                    ))}
+                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
+                      <tspan x="50%" dy="-0.4em" fontSize="20" fontWeight="700" fill="#1f2937">{total}</tspan>
+                      <tspan x="50%" dy="1.4em" fontSize="9" fill="#9ca3af">Total SPK</tspan>
+                    </text>
+                  </Pie>
+                  <Tooltip content={<ChartTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                {statusData.map((entry, i) => (
+                  <span key={i} className="flex items-center gap-1" style={{ fontSize: 10, color: '#6b7280' }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: entry.color, display: 'inline-block', flexShrink: 0 }} />
+                    {entry.name}
+                  </span>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
@@ -81,7 +87,7 @@ export default function CorrectiveCharts({ statusData, groupData, total }) {
                     <Cell key={i} fill={entry.color} fillOpacity={1} />
                   ))}
                 </Bar>
-                <Bar dataKey="total" name="Total" fill="#94a3b8" stackId="b" radius={[0, 3, 3, 0]} />
+                <Bar dataKey="remaining" name="Sisa" fill="#94a3b8" stackId="a" radius={[0, 3, 3, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
