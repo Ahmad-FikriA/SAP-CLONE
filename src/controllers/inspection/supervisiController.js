@@ -129,6 +129,35 @@ async function convertStaleDrafts(jobId = null) {
   }
 }
 
+/**
+ * Bersihkan data pengecualian radius yang batas waktunya telah terlewati.
+ *
+ * @param {number|null} jobId - Jika diisi, hanya bersihkan untuk job tertentu.
+ */
+async function clearExpiredRadiusExemptions(jobId = null) {
+  const today = getAppDateString();
+  const where = {
+    radiusExemptionEndDate: { [Op.lt]: today },
+  };
+  if (jobId) where.id = parseInt(jobId);
+  try {
+    const [count] = await SupervisiJob.update(
+      { 
+        radiusExemptionStartDate: null,
+        radiusExemptionEndDate: null,
+        radiusExemptionReason: null,
+        radiusExemptionBy: null
+      },
+      { where }
+    );
+    if (count > 0) {
+      console.log(`[Supervisi] clearExpiredRadiusExemptions: ${count} pengecualian radius kedaluwarsa dibersihkan.`);
+    }
+  } catch (err) {
+    console.error("[Supervisi] clearExpiredRadiusExemptions error:", err.message);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // JOBS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -138,6 +167,7 @@ async function listJobs(req, res) {
   try {
     // Konversi draft kedaluwarsa (visitDate < hari ini) → tidak_hadir
     await convertStaleDrafts();
+    await clearExpiredRadiusExemptions();
 
     const accessOptions = getSupervisiReadAccessOptions(req);
     const access = getSupervisiAccess(req.user, accessOptions);
@@ -200,6 +230,7 @@ async function getJob(req, res) {
 
     // Konversi draft kedaluwarsa untuk job ini sebelum fetch
     await convertStaleDrafts(parseInt(req.params.id));
+    await clearExpiredRadiusExemptions(parseInt(req.params.id));
 
     const job = await SupervisiJob.findByPk(req.params.id, {
       include: [
@@ -779,6 +810,7 @@ async function submitVisit(req, res) {
 
     // Konversi draft kedaluwarsa milik job ini sebelum upsert
     await convertStaleDrafts(parseInt(jobId));
+    await clearExpiredRadiusExemptions(parseInt(jobId));
 
     const [visit, created] = await SupervisiVisit.findOrCreate({
       where: queryWhere,
