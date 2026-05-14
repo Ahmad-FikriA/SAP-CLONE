@@ -36,6 +36,16 @@ export async function createSupervisiJob(payload) {
 }
 
 /**
+ * Perbarui (edit) pekerjaan supervisi.
+ * @param {number|string} id
+ * @param {Object} payload
+ */
+export async function updateSupervisiJob(id, payload) {
+  const data = await apiPut(`/inspection/supervisi/jobs/${id}`, payload);
+  return data?.data ?? data;
+}
+
+/**
  * Hapus (permanent delete) satu job supervisi by ID.
  * Hanya untuk Scheduler dan biasanya hanya job draft.
  * @param {number|string} id

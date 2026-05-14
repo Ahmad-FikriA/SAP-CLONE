@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { createSupervisiJob } from '@/lib/supervisi-service';
+import { createSupervisiJob, updateSupervisiJob } from '@/lib/supervisi-service';
 
 const GROUP_SUPERVISI_PERPIPAAN = 'Group supervisi Sipil dan Perpipaan';
 const GROUP_SUPERVISI_MEKATRONIK = 'Group supervisi Mekanikal Elektrik dan Instrumen';
@@ -200,18 +200,44 @@ function SectionTitle({ icon, title }) {
   );
 }
 
-export function SupervisiJobFormDialog({ open, onOpenChange, onSaved }) {
+export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit = null }) {
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
   const [savingMode, setSavingMode] = useState(null);
 
   useEffect(() => {
     if (open) {
-      setForm(emptyForm());
+      if (jobToEdit) {
+        setForm({
+          namaKerja: jobToEdit.namaKerja || '',
+          nomorJo: jobToEdit.nomorJo || '',
+          nilaiPekerjaan: jobToEdit.nilaiPekerjaan ? String(jobToEdit.nilaiPekerjaan) : '',
+          pelaksana: jobToEdit.pelaksana || '',
+          waktuMulai: jobToEdit.waktuMulai ? jobToEdit.waktuMulai.split('T')[0] : '',
+          waktuBerakhir: jobToEdit.waktuBerakhir ? jobToEdit.waktuBerakhir.split('T')[0] : '',
+          namaPengawas: jobToEdit.namaPengawas || '',
+          picSupervisi: jobToEdit.picSupervisi || '',
+          radiusExemptionEnabled: Boolean(jobToEdit.radiusExemptionStartDate || jobToEdit.radiusExemptionEndDate),
+          radiusExemptionStartDate: jobToEdit.radiusExemptionStartDate ? jobToEdit.radiusExemptionStartDate.split('T')[0] : '',
+          radiusExemptionEndDate: jobToEdit.radiusExemptionEndDate ? jobToEdit.radiusExemptionEndDate.split('T')[0] : '',
+          radiusExemptionReason: jobToEdit.radiusExemptionReason || '',
+          locations: (jobToEdit.locations || []).map((loc) => ({
+            id: loc.id,
+            namaArea: loc.namaArea || '',
+            latitude: loc.latitude ? String(loc.latitude) : '',
+            longitude: loc.longitude ? String(loc.longitude) : '',
+            radius: loc.radius ? String(loc.radius) : '100',
+            capturedAt: null,
+            isCapturing: false,
+          })),
+        });
+      } else {
+        setForm(emptyForm());
+      }
       setErrors({});
       setSavingMode(null);
     }
-  }, [open]);
+  }, [open, jobToEdit]);
 
   const picOptions = useMemo(
     () => PIC_OPTIONS_BY_GROUP[form.namaPengawas] || [],
@@ -292,11 +318,17 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved }) {
     const mode = saveAsDraft ? 'draft' : 'active';
     setSavingMode(mode);
     try {
-      const savedJob = await createSupervisiJob(buildPayload(form, saveAsDraft));
+      const payload = buildPayload(form, saveAsDraft);
+      let savedJob;
+      if (jobToEdit) {
+        savedJob = await updateSupervisiJob(jobToEdit.id, payload);
+      } else {
+        savedJob = await createSupervisiJob(payload);
+      }
       toast.success(
         saveAsDraft
           ? 'Draft supervisi berhasil disimpan.'
-          : 'Pekerjaan supervisi berhasil dibuat.',
+          : (jobToEdit ? 'Pekerjaan supervisi berhasil diperbarui.' : 'Pekerjaan supervisi berhasil dibuat.')
       );
       onSaved?.(savedJob);
       onOpenChange?.(false);
@@ -314,7 +346,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved }) {
       <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col overflow-hidden p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-[#0a2540]">
-            <Briefcase size={18} /> Tambah Jadwal Supervisi
+            <Briefcase size={18} /> {jobToEdit ? 'Lanjutkan Draft Supervisi' : 'Tambah Jadwal Supervisi'}
           </DialogTitle>
           <p className="text-sm text-slate-500">
             Form ini mengikuti isian tambah jadwal supervisi di app.

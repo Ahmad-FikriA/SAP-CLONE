@@ -619,11 +619,11 @@ async function deleteJob(req, res) {
       return res.status(404).json({ success: false, message: "Job tidak ditemukan." });
     }
 
-    // Hanya boleh hapus permanen jika sudah dibatalkan atau selesai
-    if (job.status !== "cancelled" && job.status !== "completed") {
+    // Hanya boleh hapus permanen jika sudah dibatalkan, selesai, atau draft
+    if (job.status !== "cancelled" && job.status !== "completed" && job.status !== "draft") {
       return res.status(400).json({
         success: false,
-        message: `Pekerjaan hanya bisa dihapus jika berstatus 'dibatalkan' atau 'selesai'. Status saat ini: ${job.status}.`,
+        message: `Pekerjaan hanya bisa dihapus jika berstatus 'dibatalkan', 'selesai', atau 'draft'. Status saat ini: ${job.status}.`,
       });
     }
 
