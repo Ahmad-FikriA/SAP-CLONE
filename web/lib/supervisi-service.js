@@ -1,4 +1,4 @@
-import { apiGet, apiDelete, apiPut } from '@/lib/api';
+import { apiGet, apiPost, apiDelete, apiPut } from '@/lib/api';
 
 /**
  * Ambil semua job supervisi dari backend.
@@ -22,6 +22,27 @@ export async function fetchSupervisiJobs(params = {}) {
 export async function fetchSupervisiJobById(id) {
   const data = await apiGet(`/inspection/supervisi/jobs/${id}`);
   return data?.data ?? null;
+}
+
+/**
+ * Buat pekerjaan supervisi baru.
+ * Payload mengikuti form app: informasi pekerjaan, jadwal, personel,
+ * multi-lokasi, dan pengecualian radius.
+ * @param {Object} payload
+ */
+export async function createSupervisiJob(payload) {
+  const data = await apiPost('/inspection/supervisi/jobs', payload);
+  return data?.data ?? data;
+}
+
+/**
+ * Perbarui (edit) pekerjaan supervisi.
+ * @param {number|string} id
+ * @param {Object} payload
+ */
+export async function updateSupervisiJob(id, payload) {
+  const data = await apiPut(`/inspection/supervisi/jobs/${id}`, payload);
+  return data?.data ?? data;
 }
 
 /**

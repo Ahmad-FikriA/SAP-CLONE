@@ -9,7 +9,7 @@ import {
 import {
   MapPin, Loader2, AlertCircle, RefreshCw, Search, X, XCircle, CalendarDays,
   Briefcase, CheckCircle2, FileEdit, FileText, Banknote, Trash2, Eye, Ban,
-  CalendarOff, TrendingUp
+  CalendarOff, TrendingUp, Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -23,6 +23,7 @@ import {
 } from '@/lib/supervisi-service';
 import { canUpdate, canDelete } from '@/lib/auth';
 import { SupervisiJobPanel } from '@/components/supervisi/SupervisiJobPanel';
+import { SupervisiJobFormDialog } from '@/components/supervisi/SupervisiJobFormDialog';
 
 // Leaflet hanya berjalan di client
 const LeafletMap = dynamic(() => import('@/components/map/LeafletMap'), { ssr: false });
@@ -230,6 +231,8 @@ export default function SupervisiPage() {
   const [jobToHapus,  setJobToHapus]  = useState(null);
   const [isHapusing,  setIsHapusing]  = useState(false);
   const [jobToRadiusExempt, setJobToRadiusExempt] = useState(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [jobToEdit, setJobToEdit] = useState(null);
   const [isSavingRadiusExemption, setIsSavingRadiusExemption] = useState(false);
   const [pendingPinMove, setPendingPinMove] = useState(null);
   const [isSavingPinMove, setIsSavingPinMove] = useState(false);
@@ -680,6 +683,29 @@ export default function SupervisiPage() {
     });
   };
 
+  const handleCreateJobClick = () => {
+    if (!canUpdateSupervisi) {
+      toast.error('Anda tidak memiliki akses untuk membuat pekerjaan supervisi.');
+      return;
+    }
+    setShowCreateDialog(true);
+  };
+
+  const handleCreatedJob = (savedJob) => {
+    if (savedJob?.id) {
+      setJobs((prev) => {
+        const idx = prev.findIndex(j => j.id === savedJob.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = savedJob;
+          return next;
+        }
+        return [savedJob, ...prev];
+      });
+    }
+    load();
+  };
+
   const applyUpdatedJob = (savedJob) => {
     if (!savedJob?.id) return;
     setJobs((prev) => prev.map((item) => (
@@ -843,6 +869,15 @@ export default function SupervisiPage() {
               ))}
             </select>
           </div>
+
+          <button
+            onClick={handleCreateJobClick}
+            disabled={!canUpdateSupervisi}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0a2540] hover:bg-[#0d3154] text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus size={14} />
+            Tambah Jadwal
+          </button>
 
           <button
             onClick={load}
@@ -1164,12 +1199,21 @@ export default function SupervisiPage() {
                     <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}>
                       <Eye size={11} /> Detail
                     </Button>
+                    {job.status === 'draft' && canUpdateSupervisi && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setJobToEdit(job); setShowCreateDialog(true); }}>
+                        <FileEdit size={11} /> Lanjutkan
+                      </Button>
+                    )}
                     {job.status === 'active' && canUpdateSupervisi && (
                       <Button variant="outline" size="sm"
                         className={`h-7 text-xs gap-1 ${ isRadiusExemptionActive(job) ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-teal-700 border-teal-200' }`}
                         onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}
                       >
-                        <CalendarOff size={11} /> Radius
+                        {isRadiusExemptionActive(job) ? (
+                          <><CalendarOff size={11} /> Radius Off</>
+                        ) : (
+                          <><MapPin size={11} /> Radius On</>
+                        )}
                       </Button>
                     )}
                     {job.status === 'active' && canUpdateSupervisi && (
@@ -1179,7 +1223,7 @@ export default function SupervisiPage() {
                         <Ban size={11} /> Batalkan
                       </Button>
                     )}
-                    {canDeleteSupervisi && (job.status === 'cancelled' || job.status === 'completed') && (
+                    {canDeleteSupervisi && (job.status === 'draft' || job.status === 'cancelled' || job.status === 'completed') && (
                       <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-red-600 border-red-200"
                         onClick={(e) => { e.stopPropagation(); handleHapusClick(job); }}
                       >
@@ -1218,13 +1262,22 @@ export default function SupervisiPage() {
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
                           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}><Eye size={11} /> Detail</Button>
+                          {job.status === 'draft' && canUpdateSupervisi && (
+                            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setJobToEdit(job); setShowCreateDialog(true); }}><FileEdit size={11} /> Lanjutkan</Button>
+                          )}
                           {job.status === 'active' && canUpdateSupervisi && (
                             <>
-                              <Button variant="outline" size="sm" className={`h-7 text-xs gap-1 opacity-80 hover:opacity-100 ${ isRadiusExemptionActive(job) ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100' : 'text-teal-700 border-teal-200 hover:bg-teal-50 hover:border-teal-300' }`} onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}><CalendarOff size={11} /> Radius</Button>
+                              <Button variant="outline" size="sm" className={`h-7 text-xs gap-1 opacity-80 hover:opacity-100 ${ isRadiusExemptionActive(job) ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100' : 'text-teal-700 border-teal-200 hover:bg-teal-50 hover:border-teal-300' }`} onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}>
+                                {isRadiusExemptionActive(job) ? (
+                                  <><CalendarOff size={11} /> Radius Off</>
+                                ) : (
+                                  <><MapPin size={11} /> Radius On</>
+                                )}
+                              </Button>
                               <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleCancelClick(job); }}><Ban size={11} /> Batalkan</Button>
                             </>
                           )}
-                          {canDeleteSupervisi && (job.status === 'cancelled' || job.status === 'completed') && (
+                          {canDeleteSupervisi && (job.status === 'draft' || job.status === 'cancelled' || job.status === 'completed') && (
                             <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); handleHapusClick(job); }}><Trash2 size={11} /> Hapus</Button>
                           )}
                         </div>
@@ -1240,6 +1293,16 @@ export default function SupervisiPage() {
 
       {/* ── Side panel detail ── */}
       <SupervisiJobPanel job={selectedJob} onClose={() => setSelectedJob(null)} />
+
+      <SupervisiJobFormDialog
+        open={showCreateDialog}
+        onOpenChange={(open) => {
+          setShowCreateDialog(open);
+          if (!open) setTimeout(() => setJobToEdit(null), 300); // clear after close animation
+        }}
+        onSaved={handleCreatedJob}
+        jobToEdit={jobToEdit}
+      />
 
       {/* Konfirmasi pemindahan pin lokasi */}
       <Dialog
