@@ -171,9 +171,10 @@ function buildAccessProfile(user) {
 }
 
 function applyWebPermissionsToAccessProfile(accessProfile, permissions) {
-  void permissions;
-  // Web CRUD permissions are display controls only. App/API capability must
-  // stay derived from NIK, role, dinas, divisi, and group.
+  const appPerms = permissions?._app;
+  if (!appPerms) return accessProfile;
+  const ALL_MODULES = ['preventive', 'corrective', 'inspection', 'supervisi', 'k3_safety'];
+  accessProfile.modules = ALL_MODULES.filter(m => appPerms[m] !== false);
   return accessProfile;
 }
 

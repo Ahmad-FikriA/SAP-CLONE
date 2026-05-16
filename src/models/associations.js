@@ -68,6 +68,7 @@ Spk.hasMany(SpkRejectionLog, {
   onDelete: 'CASCADE',
 });
 SpkRejectionLog.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk' });
+SpkRejectionLog.belongsTo(User, { foreignKey: 'rejectedBy', as: 'rejector', constraints: false });
 
 // ── Submission ↔ Spk ─────────────────────────────────────────────────────────
 Submission.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk', constraints: false });

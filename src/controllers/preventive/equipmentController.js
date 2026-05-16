@@ -15,19 +15,42 @@ const SIPIL_FUNCLOC_JSON = path.join(__dirname, '..', '..', '..', 'data', 'sipil
 const SipilFunclocMapping = require('../../models/SipilFunclocMapping');
 const FunctionalLocation = require('../../models/FunctionalLocation');
 
+const GROUP_TO_CATEGORY = {
+  Mekanik:  'Mekanik',
+  Elektrik: 'Listrik',
+  Sipil:    'Sipil',
+  Otomasi:  'Otomasi',
+};
+
 // GET /api/equipment
 // Query: ?category=Mekanik  ?search=pompa  ?limit=50  ?offset=0  ?funcLocId=A-A1-01
 const getAll = async (req, res) => {
   const VALID_CAT = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
   const where = {};
-  if (req.query.category) {
-    if (!VALID_CAT.includes(req.query.category)) {
+
+  // Server-enforced category scope for kasie and kadis (except Kadis Pusat Perawatan)
+  const userRole = req.user?.role;
+  const isPusatPerawatan = userRole === 'kadis' && req.user?.dinas?.toLowerCase().includes('pusat perawatan');
+  let scopedCategory = null;
+  if (userRole === 'kasie' || (userRole === 'kadis' && !isPusatPerawatan)) {
+    scopedCategory = GROUP_TO_CATEGORY[req.user?.group] ?? null;
+  }
+
+  const requestedCat = req.query.category;
+  if (requestedCat) {
+    if (!VALID_CAT.includes(requestedCat)) {
       return res.status(400).json({ error: 'Invalid category' });
     }
-    const cat = req.query.category;
+    // If user is scoped, ignore client's category param and enforce their own
+    const cat = scopedCategory ?? requestedCat;
     where[Op.or] = [
       { category: cat },
       sequelize.literal(`JSON_CONTAINS(extra_categories, '"${cat}"')`),
+    ];
+  } else if (scopedCategory) {
+    where[Op.or] = [
+      { category: scopedCategory },
+      sequelize.literal(`JSON_CONTAINS(extra_categories, '"${scopedCategory}"')`),
     ];
   }
   if (req.query.plantId) where.plantId = req.query.plantId;

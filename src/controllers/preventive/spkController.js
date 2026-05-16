@@ -56,6 +56,7 @@ const INCLUDE_FULL = [
   {
     model: SpkRejectionLog, as: 'rejectionLogs',
     attributes: ['id', 'rejectedBy', 'rejectedAt', 'rejectionReason', 'rejectedLevel', 'resubmittedAt'],
+    include: [{ model: User, as: 'rejector', attributes: ['name'] }],
   },
 ];
 
@@ -113,7 +114,7 @@ function fmt(spk) {
     activitiesModel: j.activitiesModel || [],
     rejectionLogs: (j.rejectionLogs || []).map(log => ({
       id: log.id,
-      rejectedBy: log.rejectedBy,
+      rejectedBy: log.rejector?.name || log.rejectedBy,
       rejectedAt: log.rejectedAt,
       rejectionReason: log.rejectionReason,
       rejectedLevel: log.rejectedLevel,
@@ -123,7 +124,30 @@ function fmt(spk) {
   };
 }
 
+// Merge resolved names into a formatted SPK object (approval chain + rejection logs).
+function applyNames(base, j, nameMap) {
+  return {
+    ...base,
+    submittedByName:              nameMap[j.submittedBy] ?? null,
+    kasieApprovedByName:          nameMap[j.kasieApprovedBy] ?? null,
+    kadisPerawatanApprovedByName: nameMap[j.kadisPerawatanApprovedBy] ?? null,
+    kadisApprovedByName:          nameMap[j.kadisApprovedBy] ?? null,
+    rejectionLogs: (j.rejectionLogs || []).map((rawLog, i) => ({
+      ...base.rejectionLogs[i],
+      rejectedBy: nameMap[rawLog.rejectedBy] ?? base.rejectionLogs[i]?.rejectedBy ?? rawLog.rejectedBy,
+    })),
+  };
+}
+
 const VALID_CATEGORIES = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
+
+// Maps user.group → SPK category (reverse of CATEGORY_GROUP_MAP below)
+const GROUP_TO_CATEGORY = {
+  Mekanik: 'Mekanik',
+  Elektrik: 'Listrik',
+  Sipil:    'Sipil',
+  Otomasi:  'Otomasi',
+};
 
 const ABNORMAL_COUNT_ATTR = [
   sequelize.literal(`(
@@ -163,6 +187,16 @@ const getAll = async (req, res) => {
       [Op.gte]: weekStart.toISOString().slice(0, 10),
       [Op.lte]: weekEnd.toISOString().slice(0, 10),
     };
+  }
+
+  // Category-scoping: kasie always scoped to their discipline; kadis scoped unless Pusat Perawatan
+  {
+    const userRole = req.user?.role;
+    const isPuratPerawatan = userRole === 'kadis' && req.user?.dinas?.toLowerCase().includes('pusat perawatan');
+    if (userRole === 'kasie' || (userRole === 'kadis' && !isPuratPerawatan)) {
+      const scopedCategory = GROUP_TO_CATEGORY[req.user?.group];
+      if (scopedCategory) where.category = scopedCategory; // server enforces regardless of client param
+    }
   }
 
   // When a non-PP Kadis fetches awaiting_kadis SPKs, filter to their plant only
@@ -231,16 +265,53 @@ const getAll = async (req, res) => {
 
   const order = [['scheduled_date', 'DESC'], ['spk_number', 'ASC']];
 
+  // Bulk-resolve all user IDs/NIKs → names for a set of SPK rows.
+  // Covers approval chain fields AND rejection log rejectedBy values.
+  // Some older records store NIK, newer ones store user.id — match both.
+  async function resolveApprovalNames(rows) {
+    const allIds = new Set();
+    for (const spk of rows) {
+      const j = spk.toJSON();
+      [j.submittedBy, j.kasieApprovedBy, j.kadisPerawatanApprovedBy, j.kadisApprovedBy]
+        .filter(Boolean).forEach(id => allIds.add(id));
+      (j.rejectionLogs || []).forEach(log => {
+        if (log.rejectedBy) allIds.add(log.rejectedBy);
+      });
+    }
+    const nameMap = {};
+    if (allIds.size > 0) {
+      const users = await User.findAll({
+        where: {
+          [Op.or]: [
+            { id:  { [Op.in]: [...allIds] } },
+            { nik: { [Op.in]: [...allIds] } },
+          ],
+        },
+        attributes: ['id', 'nik', 'name'],
+      });
+      for (const u of users) {
+        nameMap[u.id]  = u.name;
+        nameMap[u.nik] = u.name;
+      }
+    }
+    return nameMap;
+  }
+
   // Pagination — only active when client explicitly passes ?limit=
   if (req.query.limit !== undefined) {
     const limit  = Math.min(parseInt(req.query.limit,  10) || 50, 200);
     const offset = parseInt(req.query.offset, 10) || 0;
     const { count, rows } = await Spk.findAndCountAll({ where, include, order, limit, offset, attributes: { include: [ABNORMAL_COUNT_ATTR] } });
-    return res.json({ total: count, limit, offset, data: rows.map(fmt) });
+    const nameMap = await resolveApprovalNames(rows);
+    return res.json({
+      total: count, limit, offset,
+      data: rows.map(spk => applyNames(fmt(spk), spk.toJSON(), nameMap)),
+    });
   }
 
   const data = await Spk.findAll({ where, include, order, attributes: { include: [ABNORMAL_COUNT_ATTR] } });
-  res.json(data.map(fmt));
+  const nameMap = await resolveApprovalNames(data);
+  res.json(data.map(spk => applyNames(fmt(spk), spk.toJSON(), nameMap)));
 };
 
 // GET /api/spk/:spkNumber
@@ -266,29 +337,33 @@ const getOne = async (req, res) => {
     photoUrls = photos.map(p => p.photoPath);
   }
 
-  // Resolve approval user IDs → display names
-  const approvalUserIds = [
-    spk.submittedBy,
-    spk.kasieApprovedBy,
-    spk.kadisPerawatanApprovedBy,
-    spk.kadisApprovedBy,
-  ].filter(Boolean);
+  // Resolve all user IDs/NIKs → names (approval chain + rejection logs, id OR nik)
+  const j = spk.toJSON();
+  const allUserIds = new Set([
+    j.submittedBy, j.kasieApprovedBy, j.kadisPerawatanApprovedBy, j.kadisApprovedBy,
+    ...(j.rejectionLogs || []).map(l => l.rejectedBy),
+  ].filter(Boolean));
   const userNameMap = {};
-  if (approvalUserIds.length) {
-    const approvalUsers = await User.findAll({
-      where: { id: { [Op.in]: approvalUserIds } },
-      attributes: ['id', 'name'],
+  if (allUserIds.size > 0) {
+    const users = await User.findAll({
+      where: {
+        [Op.or]: [
+          { id:  { [Op.in]: [...allUserIds] } },
+          { nik: { [Op.in]: [...allUserIds] } },
+        ],
+      },
+      attributes: ['id', 'nik', 'name'],
     });
-    for (const u of approvalUsers) userNameMap[u.id] = u.name;
+    for (const u of users) {
+      userNameMap[u.id]  = u.name;
+      userNameMap[u.nik] = u.name;
+    }
   }
 
+  const base = fmt(spk);
   res.json({
-    ...fmt(spk),
+    ...applyNames(base, j, userNameMap),
     photoUrls,
-    submittedByName:              userNameMap[spk.submittedBy] ?? null,
-    kasieApprovedByName:          userNameMap[spk.kasieApprovedBy] ?? null,
-    kadisPerawatanApprovedByName: userNameMap[spk.kadisPerawatanApprovedBy] ?? null,
-    kadisApprovedByName:          userNameMap[spk.kadisApprovedBy] ?? null,
   });
 };
 

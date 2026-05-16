@@ -4,7 +4,7 @@ const fs   = require('fs');
 const path = require('path');
 const jwt  = require('jsonwebtoken');
 const User = require('../../models/User');
-const { buildAccessProfile } = require('../../services/accessProfile');
+const { buildAccessProfile, applyWebPermissionsToAccessProfile } = require('../../services/accessProfile');
 
 const JWT_SECRET     = process.env.JWT_SECRET || 'kti-mock-secret-dev';
 const TEMPLATES_PATH = path.join(__dirname, '..', '..', '..', 'data', 'role_templates.json');
@@ -28,7 +28,7 @@ const login = async (req, res) => {
 
   const roleTemplates  = loadRoleTemplates();
   const permissions    = user.permissions ?? roleTemplates[user.role] ?? null; // null = unrestricted
-  const accessProfile  = buildAccessProfile(user);
+  const accessProfile  = applyWebPermissionsToAccessProfile(buildAccessProfile(user), permissions);
 
   const token = jwt.sign(
     {
@@ -62,6 +62,34 @@ const login = async (req, res) => {
   });
 };
 
+const me = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const roleTemplates = loadRoleTemplates();
+    const permissions   = user.permissions ?? roleTemplates[user.role] ?? null;
+    const accessProfile = applyWebPermissionsToAccessProfile(buildAccessProfile(user), permissions);
+
+    res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        nik: user.nik,
+        role: user.role,
+        dinas: user.dinas,
+        divisi: user.divisi,
+        email: user.email,
+        group: user.group,
+        accessProfile,
+        permissions,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const registerFcmToken = async (req, res) => {
   try {
     const { fcmToken } = req.body;
@@ -87,4 +115,4 @@ const registerFcmToken = async (req, res) => {
   }
 };
 
-module.exports = { login, registerFcmToken };
+module.exports = { login, me, registerFcmToken };
