@@ -4,7 +4,7 @@ const fs   = require('fs');
 const path = require('path');
 const jwt  = require('jsonwebtoken');
 const User = require('../../models/User');
-const { buildAccessProfile, applyWebPermissionsToAccessProfile } = require('../../services/accessProfile');
+const { buildAccessProfile } = require('../../services/accessProfile');
 
 const JWT_SECRET     = process.env.JWT_SECRET || 'kti-mock-secret-dev';
 const TEMPLATES_PATH = path.join(__dirname, '..', '..', '..', 'data', 'role_templates.json');
@@ -15,6 +15,11 @@ function loadRoleTemplates() {
   } catch {
     return {};
   }
+}
+
+function buildUserAccessProfile(user, permissions) {
+  const userPayload = typeof user.toJSON === 'function' ? user.toJSON() : user;
+  return buildAccessProfile({ ...userPayload, permissions });
 }
 
 const login = async (req, res) => {
@@ -28,7 +33,7 @@ const login = async (req, res) => {
 
   const roleTemplates  = loadRoleTemplates();
   const permissions    = user.permissions ?? roleTemplates[user.role] ?? null; // null = unrestricted
-  const accessProfile  = applyWebPermissionsToAccessProfile(buildAccessProfile(user), permissions);
+  const accessProfile  = buildUserAccessProfile(user, permissions);
 
   const token = jwt.sign(
     {
@@ -69,7 +74,7 @@ const me = async (req, res) => {
 
     const roleTemplates = loadRoleTemplates();
     const permissions   = user.permissions ?? roleTemplates[user.role] ?? null;
-    const accessProfile = applyWebPermissionsToAccessProfile(buildAccessProfile(user), permissions);
+    const accessProfile = buildUserAccessProfile(user, permissions);
 
     res.json({
       user: {

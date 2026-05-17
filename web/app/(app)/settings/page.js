@@ -19,7 +19,7 @@ const APP_MODULES = [
   { key: 'k3_safety',  label: 'K3 / Safety' },
 ];
 
-const DEFAULT_APP_MODULES = { preventive: true, corrective: true, inspection: true, supervisi: false, k3_safety: true };
+const DEFAULT_APP_MODULES = { preventive: true, corrective: true, inspection: true, supervisi: true, k3_safety: true };
 
 function omitAppKey(obj) {
   return Object.fromEntries(Object.entries(obj || {}).filter(([k]) => k !== '_app'));

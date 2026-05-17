@@ -1,35 +1,8 @@
 "use strict";
 
-const SUPERVISI_SCHEDULER_NIK = "10000262";
-const SUPERVISI_MONITOR_NIK = "10000191";
-const INSPECTION_APPROVAL_NIK = "10000262";
-const INSPECTION_PLANNER_NIK = "10000262";
-const INSPECTION_EXECUTOR_NIK_1 = "10000375";
-const INSPECTION_EXECUTOR_NIK_2 = "10000275";
-const INSPECTION_MONITOR_NIK = "10000191";
-
-const SUPERVISI_DENIED_NIKS = new Set([
-  // Kosong — Rangga & Usep kini diizinkan akses supervisi.
-]);
-
-// Nama-nama executor yang di-whitelist untuk supervisi meskipun
-// group DB-nya bukan group supervisi (misal: group "Inspeksi").
-const SUPERVISI_WHITELISTED_NAMES = new Set([
-  "rangga pramana putra",
-  "usep supriatna",
-]);
-
-const INSPECTION_ROLE_OVERRIDE_NIKS = new Set([
-  INSPECTION_APPROVAL_NIK,
-  INSPECTION_PLANNER_NIK,
-  INSPECTION_EXECUTOR_NIK_1,
-  INSPECTION_EXECUTOR_NIK_2,
-  INSPECTION_MONITOR_NIK,
-]);
-
 const APP_ROLE_MODULES = {
-  teknisi: ["preventive", "corrective", "inspection", "k3_safety"],
-  petugas: ["preventive", "corrective", "inspection", "k3_safety"],
+  teknisi: ["preventive", "corrective", "inspection", "supervisi", "k3_safety"],
+  petugas: ["preventive", "corrective", "inspection", "supervisi", "k3_safety"],
   kasie: [
     "preventive",
     "corrective",
@@ -51,18 +24,18 @@ const APP_ROLE_MODULES = {
   ],
 };
 
-function normalizeNik(value) {
-  return String(value || "").trim();
-}
+const CUSTOMIZABLE_APP_MODULES = [
+  "preventive",
+  "corrective",
+  "inspection",
+  "supervisi",
+  "k3_safety",
+];
+
+const EXECUTOR_APP_ROLES = new Set(["kasie", "petugas", "teknisi"]);
 
 function containsText(value, needle) {
   return String(value || "").toLowerCase().includes(needle);
-}
-
-function normalizeGroup(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z]/g, "");
 }
 
 function parseAppRole(roleStr) {
@@ -81,21 +54,41 @@ function parseAppRole(roleStr) {
   return "teknisi";
 }
 
+function getAppModuleOverrides(permissions) {
+  const appPermissions = permissions && permissions._app;
+  if (!appPermissions || typeof appPermissions !== "object" || Array.isArray(appPermissions)) {
+    return null;
+  }
+  return appPermissions;
+}
+
+function resolveAppModules(role, permissions) {
+  const modules = new Set(APP_ROLE_MODULES[role] || APP_ROLE_MODULES.teknisi);
+  const appOverrides = getAppModuleOverrides(permissions);
+  if (!appOverrides) return modules;
+
+  for (const moduleKey of CUSTOMIZABLE_APP_MODULES) {
+    if (appOverrides[moduleKey] === false) {
+      modules.delete(moduleKey);
+    } else if (appOverrides[moduleKey] === true) {
+      modules.add(moduleKey);
+    }
+  }
+
+  return modules;
+}
+
 function buildAccessProfile(user) {
-  const nik = normalizeNik(user && user.nik);
   const rawRole = String((user && user.role) || "").toLowerCase().trim();
   const isAdmin = rawRole === "admin";
   const role = parseAppRole(user && user.role);
+  const permissions = user && user.permissions;
   const dinas = String((user && user.dinas) || "");
   const divisi = String((user && user.divisi) || "");
   const group = String((user && user.group) || "");
 
   const inDinasInspeksiRaw =
     containsText(dinas, "inpeksi") || containsText(dinas, "inspeksi");
-  const inGroupInspeksiRaw =
-    containsText(group, "inpeksi") || containsText(group, "inspeksi");
-
-  const isTeknisiType = role === "teknisi" || role === "petugas";
   const isDinasPerawatan = containsText(dinas, "perawatan");
   const isPlanner = containsText(group, "perencanaan");
   const isKadisPP =
@@ -110,37 +103,23 @@ function buildAccessProfile(user) {
     (containsText(dinas, "hse") || containsText(divisi, "hse") || containsText(group, "hse"));
   const isKadivPPHSE = role === "kadiv" && containsText(divisi, "pphse");
 
-  const normalizedGroup = normalizeGroup(group);
-  const isSupervisiScheduler = isAdmin || nik === SUPERVISI_SCHEDULER_NIK;
-  const isSupervisiMonitor = isAdmin || nik === SUPERVISI_MONITOR_NIK;
-  const isSupervisiDenied = SUPERVISI_DENIED_NIKS.has(nik);
-  const userName = String((user && user.name) || "").trim().toLowerCase();
-  const isSupervisiGroup = !isSupervisiDenied &&
-    (normalizedGroup.includes("supervisi") || SUPERVISI_WHITELISTED_NAMES.has(userName));
-  const isSupervisiExecutor =
-    !isSupervisiScheduler && !isSupervisiMonitor && isSupervisiGroup;
-  const canAccessSupervisi =
-    !isSupervisiDenied && (isSupervisiScheduler || isSupervisiExecutor || isSupervisiMonitor);
+  const modules = resolveAppModules(role, permissions);
+  const canAccessInspection = modules.has("inspection");
+  const canAccessSupervisi = modules.has("supervisi");
 
-  const hasInspectionRoleOverride = INSPECTION_ROLE_OVERRIDE_NIKS.has(nik);
-  const isInspectionApprover =
-    nik === INSPECTION_APPROVAL_NIK || (role === "kadis" && inDinasInspeksiRaw);
-  const isInspectionExecutor =
-    nik === INSPECTION_EXECUTOR_NIK_1 || nik === INSPECTION_EXECUTOR_NIK_2 ||
-    (isTeknisiType && inDinasInspeksiRaw && inGroupInspeksiRaw);
-  const isInspectionPlanner =
-    nik !== INSPECTION_EXECUTOR_NIK_1 &&
-    nik !== INSPECTION_EXECUTOR_NIK_2 &&
-    (nik === INSPECTION_PLANNER_NIK ||
-      (role === "kasie" && inDinasInspeksiRaw && inGroupInspeksiRaw));
-  const isInspectionMonitor = isAdmin || nik === INSPECTION_MONITOR_NIK || role === "kadiv";
-  const isInspectionPerawatan = !hasInspectionRoleOverride && isDinasPerawatan;
+  const isSupervisiScheduler = canAccessSupervisi && (isAdmin || role === "kadis");
+  const isSupervisiMonitor = canAccessSupervisi && (isAdmin || role === "kadiv");
+  const isSupervisiDenied = false;
+  const isSupervisiGroup = canAccessSupervisi && EXECUTOR_APP_ROLES.has(role);
+  const isSupervisiExecutor = canAccessSupervisi && EXECUTOR_APP_ROLES.has(role);
+
+  const hasInspectionRoleOverride = false;
+  const isInspectionApprover = canAccessInspection && role === "kadis";
+  const isInspectionExecutor = canAccessInspection && EXECUTOR_APP_ROLES.has(role);
+  const isInspectionPlanner = canAccessInspection && role === "kadis";
+  const isInspectionMonitor = canAccessInspection && (isAdmin || role === "kadiv");
+  const isInspectionPerawatan = canAccessInspection && !isInspectionExecutor && isDinasPerawatan;
   const isDinasInspeksi = !isInspectionExecutor && inDinasInspeksiRaw;
-
-  const modules = new Set(APP_ROLE_MODULES[role] || APP_ROLE_MODULES.teknisi);
-  if (canAccessSupervisi) {
-    modules.add("supervisi");
-  }
 
   return {
     appRole: role,
@@ -152,6 +131,7 @@ function buildAccessProfile(user) {
       isDinasInspeksi,
       isKadisHSE,
       isKadivPPHSE,
+      canAccessInspection,
       isSupervisiScheduler,
       isSupervisiMonitor,
       isSupervisiDenied,
@@ -171,10 +151,9 @@ function buildAccessProfile(user) {
 }
 
 function applyWebPermissionsToAccessProfile(accessProfile, permissions) {
-  const appPerms = permissions?._app;
-  if (!appPerms) return accessProfile;
-  const ALL_MODULES = ['preventive', 'corrective', 'inspection', 'supervisi', 'k3_safety'];
-  accessProfile.modules = ALL_MODULES.filter(m => appPerms[m] !== false);
+  void permissions;
+  // Web CRUD permissions are display controls only. App/API capability stays
+  // in buildAccessProfile, which reads the dedicated permissions._app slice.
   return accessProfile;
 }
 
@@ -182,4 +161,5 @@ module.exports = {
   buildAccessProfile,
   parseAppRole,
   applyWebPermissionsToAccessProfile,
+  getAppModuleOverrides,
 };

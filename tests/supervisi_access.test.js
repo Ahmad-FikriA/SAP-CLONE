@@ -7,29 +7,52 @@ const {
 } = require('../src/controllers/inspection/supervisiAccess');
 
 describe('Supervisi access rules', () => {
+  const appSupervisiOn = {
+    _app: {
+      preventive: true,
+      corrective: true,
+      inspection: true,
+      supervisi: true,
+      k3_safety: true,
+    },
+  };
+
   it('keeps the scheduler role even when web supervisi read permission exists', () => {
     const user = {
-      nik: '10000262',
-      name: 'Imam Muttaqin',
+      nik: 'codex-kadis',
+      name: 'Kadis Codex',
       role: 'kadis',
-      permissions: { supervisi: ['R'] },
+      permissions: { ...appSupervisiOn, supervisi: ['R'] },
     };
 
     expect(getSupervisiAccess(user).kind).toBe('scheduler');
     expect(isSupervisiScheduler(user)).toBe(true);
   });
 
-  it('keeps an executor role even when web supervisi read permission exists', () => {
+  it('maps kasie, petugas, and teknisi with app supervisi access to executor', () => {
+    for (const role of ['kasie', 'petugas', 'teknisi']) {
+      const user = {
+        nik: `codex-${role}`,
+        name: `Executor ${role}`,
+        role,
+        group: 'Produksi',
+        permissions: { ...appSupervisiOn, supervisi: ['R'] },
+      };
+
+      expect(getSupervisiAccess(user).kind).toBe('executor');
+      expect(isSupervisiExecutor(user)).toBe(true);
+    }
+  });
+
+  it('maps kadiv with app supervisi access to monitor', () => {
     const user = {
-      nik: 'codex-ibrohim',
-      name: 'Ibrohim',
-      role: 'teknisi',
-      group: 'Group supervisi Mekanikal Elektrik dan Instrumen',
-      permissions: { supervisi: ['R'] },
+      nik: 'codex-kadiv',
+      name: 'Kadiv Codex',
+      role: 'kadiv',
+      permissions: appSupervisiOn,
     };
 
-    expect(getSupervisiAccess(user).kind).toBe('executor');
-    expect(isSupervisiExecutor(user)).toBe(true);
+    expect(getSupervisiAccess(user).kind).toBe('monitor');
   });
 
   it('does not grant API supervisi monitor access from web read permission only', () => {
@@ -38,7 +61,7 @@ describe('Supervisi access rules', () => {
       name: 'Viewer Web',
       role: 'teknisi',
       group: 'Produksi',
-      permissions: { supervisi: ['R'] },
+      permissions: { _app: { supervisi: false }, supervisi: ['R'] },
     };
 
     expect(getSupervisiAccess(user).kind).toBe('none');
@@ -50,7 +73,7 @@ describe('Supervisi access rules', () => {
       name: 'Viewer Web',
       role: 'teknisi',
       group: 'Produksi',
-      permissions: { supervisi: ['R'] },
+      permissions: { _app: { supervisi: false }, supervisi: ['R'] },
     };
 
     expect(getSupervisiAccess(user, { allowWebPermissionRead: true }).kind).toBe('monitor');

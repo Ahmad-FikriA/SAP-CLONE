@@ -180,11 +180,9 @@ async function listJobs(req, res) {
 
     const where = {};
     if (req.query.status) where.status = req.query.status;
-    if (access.kind === "scheduler") {
-      where.createdBy = access.nik;
-    } else if (access.kind === "executor") {
+    if (access.kind === "executor") {
       where.picSupervisi = access.displayName;
-    } else {
+    } else if (access.kind === "monitor") {
       if (req.query.createdBy) where.createdBy = req.query.createdBy;
       if (req.query.picSupervisi) where.picSupervisi = req.query.picSupervisi;
     }

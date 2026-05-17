@@ -146,7 +146,7 @@ export const TEMPLATE_ROLE_LABELS = {
   petugas: 'Petugas',
   kasie:   'Kasie',
   kadis:   'Kadis',
-  kadiv:   'Kadiv / Planner',
+  kadiv:   'Kadiv',
 };
 
 export const GEOJSON_FEATURE_COLORS = {

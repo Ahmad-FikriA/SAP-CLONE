@@ -19,6 +19,13 @@ describe('Inspection and Supervisi regressions', () => {
     jobIds: [],
     visitIds: [],
   };
+  const appAccess = {
+    preventive: true,
+    corrective: true,
+    inspection: true,
+    supervisi: true,
+    k3_safety: true,
+  };
 
   const plannerToken = jwt.sign(
     {
@@ -29,7 +36,20 @@ describe('Inspection and Supervisi regressions', () => {
       group: null,
       divisi: 'Inpeksi & Supervisi',
       dinas: 'Inpeksi & Supervisi',
-      permissions: { supervisi: ['R'], inspeksi: ['R'] },
+      permissions: { _app: appAccess, supervisi: ['R'], inspeksi: ['R'] },
+    },
+    process.env.JWT_SECRET || 'kti-mock-secret-dev',
+  );
+  const newPlannerToken = jwt.sign(
+    {
+      userId: 'USR-CODEX-NEW-KADIS',
+      nik: '123',
+      name: 'arhab',
+      role: 'kadis',
+      group: null,
+      divisi: 'PPHSE',
+      dinas: 'Inpeksi & Supervisi',
+      permissions: { _app: appAccess, supervisi: ['R'], inspeksi: ['R'] },
     },
     process.env.JWT_SECRET || 'kti-mock-secret-dev',
   );
@@ -42,7 +62,7 @@ describe('Inspection and Supervisi regressions', () => {
       group: 'Inspeksi',
       divisi: null,
       dinas: null,
-      permissions: { supervisi: ['R'] },
+      permissions: { _app: appAccess, supervisi: ['R'] },
     },
     process.env.JWT_SECRET || 'kti-mock-secret-dev',
   );
@@ -55,7 +75,7 @@ describe('Inspection and Supervisi regressions', () => {
       group: 'Produksi',
       divisi: 'Operasional',
       dinas: 'Operasional',
-      permissions: { supervisi: ['R'] },
+      permissions: { _app: { ...appAccess, supervisi: false }, supervisi: ['R'] },
     },
     process.env.JWT_SECRET || 'kti-mock-secret-dev',
   );
@@ -380,6 +400,42 @@ describe('Inspection and Supervisi regressions', () => {
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
     cleanup.jobIds.push(response.body.data.id);
+  });
+
+  it('allows a newly assigned kadis scheduler to see existing supervisi jobs', async () => {
+    const createResponse = await request(app)
+      .post('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        namaKerja: `Codex Supervisi New Kadis ${Date.now()}`,
+        nomorJo: `JO-CODEX-NEW-KADIS-${Date.now()}`,
+        nilaiPekerjaan: 1500000,
+        pelaksana: 'Vendor Test',
+        waktuMulai: '2026-04-23',
+        waktuBerakhir: '2026-04-24',
+        namaPengawas: 'Group supervisi Sipil dan Perpipaan',
+        picSupervisi: 'Deni Yuniardi',
+        latitude: -6.2,
+        longitude: 106.8,
+        radius: 100,
+        namaArea: 'Lokasi Test',
+        status: 'active',
+      });
+
+    expect(createResponse.status).toBe(201);
+    cleanup.jobIds.push(createResponse.body.data.id);
+
+    const listResponse = await request(app)
+      .get('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${newPlannerToken}`);
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.success).toBe(true);
+    expect(listResponse.body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: createResponse.body.data.id }),
+      ]),
+    );
   });
 
   it('allows web reader with supervisi read permission to fetch supervisi jobs', async () => {

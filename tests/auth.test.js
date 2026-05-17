@@ -27,6 +27,10 @@ describe('🔐 Authentication API Tests', () => {
         role: 'string',
         email: 'string',
       });
+
+      expect(body.user.accessProfile).toBeTruthy();
+      expect(body.user.accessProfile.modules).toContain('supervisi');
+      expect(body.user.accessProfile.flags.canAccessSupervisi).toBe(true);
       
       console.log('  ✓ Login with valid credentials works');
     });

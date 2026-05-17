@@ -6,16 +6,26 @@ const {
 } = require('../src/services/accessProfile');
 
 describe('Access profile permissions', () => {
-  const inspectionPlanner = {
-    nik: '10000262',
-    name: 'Imam Muttaqin',
-    role: 'kadis',
-    dinas: 'Inpeksi & Supervisi',
-    divisi: 'Inpeksi & Supervisi',
-    group: '',
+  const appAccess = {
+    preventive: true,
+    corrective: true,
+    inspection: true,
+    supervisi: true,
+    k3_safety: true,
   };
 
-  it('does not remove app access when web read permissions are missing', () => {
+  const userWithRole = (role, permissions = { _app: appAccess }) => ({
+    nik: `codex-${role}`,
+    name: `Codex ${role}`,
+    role,
+    dinas: 'Operasi Keamanan',
+    divisi: 'Operasi',
+    group: 'Produksi',
+    permissions,
+  });
+
+  it('keeps app access independent from web read permissions', () => {
+    const inspectionPlanner = userWithRole('kadis');
     const profile = applyWebPermissionsToAccessProfile(
       buildAccessProfile(inspectionPlanner),
       { dashboard: ['R'] },
@@ -29,28 +39,38 @@ describe('Access profile permissions', () => {
     expect(profile.flags.canManageSupervisiJobs).toBe(true);
   });
 
-  it('keeps app supervisi access independent from web read permissions', () => {
-    const profile = applyWebPermissionsToAccessProfile(
-      buildAccessProfile(inspectionPlanner),
-      { inspeksi: ['R'] },
-    );
-
+  it('respects the Flutter/App module toggles stored in permissions._app', () => {
+    const profile = buildAccessProfile(userWithRole('kadis', {
+      _app: { ...appAccess, inspection: true, supervisi: false },
+      inspeksi: ['R'],
+      supervisi: ['R'],
+    }));
     expect(profile.modules).toContain('inspection');
-    expect(profile.modules).toContain('supervisi');
+    expect(profile.modules).not.toContain('supervisi');
     expect(profile.flags.isInspectionPlanner).toBe(true);
-    expect(profile.flags.canAccessSupervisi).toBe(true);
-    expect(profile.flags.canManageSupervisiJobs).toBe(true);
+    expect(profile.flags.canAccessSupervisi).toBe(false);
+    expect(profile.flags.canManageSupervisiJobs).toBe(false);
   });
 
-  it('keeps admin aligned with backend supervisi privileges', () => {
-    const profile = buildAccessProfile({
-      nik: 'admin-codex',
-      name: 'Admin Codex',
-      role: 'admin',
-    });
+  it.each([
+    ['kadiv', { monitor: true, planner: false, approver: false, executor: false, scheduler: false }],
+    ['kadis', { monitor: false, planner: true, approver: true, executor: false, scheduler: true }],
+    ['kasie', { monitor: false, planner: false, approver: false, executor: true, scheduler: false }],
+    ['petugas', { monitor: false, planner: false, approver: false, executor: true, scheduler: false }],
+    ['teknisi', { monitor: false, planner: false, approver: false, executor: true, scheduler: false }],
+  ])('maps %s to the Inspeksi and Supervisi operational role', (role, expected) => {
+    const profile = buildAccessProfile(userWithRole(role));
 
-    expect(profile.modules).toContain('supervisi');
+    expect(profile.modules).toEqual(expect.arrayContaining(['inspection', 'supervisi']));
+    expect(profile.flags.isInspectionMonitor).toBe(expected.monitor);
+    expect(profile.flags.isInspectionPlanner).toBe(expected.planner);
+    expect(profile.flags.isInspectionApprover).toBe(expected.approver);
+    expect(profile.flags.isInspectionExecutor).toBe(expected.executor);
+    expect(profile.flags.isSupervisiMonitor).toBe(expected.monitor);
+    expect(profile.flags.isSupervisiScheduler).toBe(expected.scheduler);
+    expect(profile.flags.isSupervisiExecutor).toBe(expected.executor);
     expect(profile.flags.canAccessSupervisi).toBe(true);
-    expect(profile.flags.canManageSupervisiJobs).toBe(true);
+    expect(profile.flags.canManageSupervisiJobs).toBe(expected.scheduler);
+    expect(profile.flags.canSubmitSupervisiVisit).toBe(expected.executor);
   });
 });
