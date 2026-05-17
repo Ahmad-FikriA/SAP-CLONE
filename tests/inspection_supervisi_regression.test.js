@@ -9,6 +9,7 @@ const InspectionSchedule = require('../src/models/InspectionSchedule');
 const { InspectionReport } = require('../src/models/InspectionReport');
 const SupervisiJob = require('../src/models/SupervisiJob');
 const SupervisiVisit = require('../src/models/SupervisiVisit');
+const User = require('../src/models/User');
 const { getAppDateString } = require('../src/controllers/inspection/supervisiHelpers');
 
 describe('Inspection and Supervisi regressions', () => {
@@ -18,6 +19,7 @@ describe('Inspection and Supervisi regressions', () => {
     scheduleIds: [],
     jobIds: [],
     visitIds: [],
+    userIds: [],
   };
   const appAccess = {
     preventive: true,
@@ -104,6 +106,11 @@ describe('Inspection and Supervisi regressions', () => {
     if (cleanup.scheduleIds.length > 0) {
       await InspectionSchedule.destroy({ where: { id: cleanup.scheduleIds } });
       cleanup.scheduleIds = [];
+    }
+
+    if (cleanup.userIds.length > 0) {
+      await User.destroy({ where: { id: cleanup.userIds } });
+      cleanup.userIds = [];
     }
   });
 
@@ -381,6 +388,43 @@ describe('Inspection and Supervisi regressions', () => {
     expect(response.body.data.picSupervisi).toBe('Deni Yuniardi');
 
     cleanup.jobIds.push(response.body.data.id);
+  });
+
+  it('lists new supervisi executor users as selectable personnel', async () => {
+    const suffix = Date.now();
+    const user = await User.create({
+      id: `CSP${String(suffix).slice(-14)}`,
+      nik: `SUP-PIC-${suffix}`,
+      password: 'password123',
+      name: `Codex PIC Supervisi ${suffix}`,
+      role: 'teknisi',
+      dinas: 'Inpeksi & Supervisi',
+      divisi: 'PPHSE',
+      group: 'Group supervisi Mekanikal Elektrik dan Instrumen',
+      permissions: { _app: appAccess, supervisi: ['R'] },
+    });
+    cleanup.userIds.push(user.id);
+
+    const response = await request(app)
+      .get('/api/inspection/supervisi/personnel')
+      .set('Authorization', `Bearer ${plannerToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+
+    const mekatronikGroup = response.body.data.find(
+      (group) => group.group === 'Group supervisi Mekanikal Elektrik dan Instrumen',
+    );
+    expect(mekatronikGroup).toBeTruthy();
+    expect(mekatronikGroup.users).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: user.name,
+          nik: user.nik,
+          source: 'users',
+        }),
+      ]),
+    );
   });
 
   it('creates a supervisi draft with a 19-digit nilai pekerjaan', async () => {

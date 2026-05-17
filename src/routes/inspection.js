@@ -52,6 +52,7 @@ const {
 const {
   uploadVisitMedia,
   uploadJobAmendDocuments,
+  listPersonnel,
   listJobs,
   getJob,
   createJob,
@@ -117,6 +118,7 @@ router.put("/requests/:id/reject", rejectRequest);
 router.put("/requests/:id/cancel", cancelRequest);
 
 // ── Supervisi ───────────────────────────────────────────────────────────────────────────
+router.get("/supervisi/personnel", listPersonnel);
 router.get("/supervisi/jobs", listJobs);
 router.get("/supervisi/jobs/:id", getJob);
 router.post("/supervisi/jobs", createJob);

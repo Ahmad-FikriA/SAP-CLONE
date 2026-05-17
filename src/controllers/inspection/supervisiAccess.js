@@ -9,6 +9,11 @@ const SUPERVISI_GROUP_INSPEKSI = "Group inspeksi";
 const SUPERVISI_GROUP_KEY_PERPIPAAN = "sipil_perpipaan";
 const SUPERVISI_GROUP_KEY_MEKATRONIK = "mekanikal_elektrik_instrumen";
 const SUPERVISI_GROUP_KEY_INSPEKSI = "inspeksi";
+const SUPERVISI_GROUP_LABEL_BY_KEY = {
+  [SUPERVISI_GROUP_KEY_PERPIPAAN]: SUPERVISI_GROUP_PERPIPAAN,
+  [SUPERVISI_GROUP_KEY_MEKATRONIK]: SUPERVISI_GROUP_MEKATRONIK,
+  [SUPERVISI_GROUP_KEY_INSPEKSI]: SUPERVISI_GROUP_INSPEKSI,
+};
 const SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY = {
   [SUPERVISI_GROUP_KEY_PERPIPAAN]: ["Deni Yuniardi", "Yoyon Sutrisno"],
   [SUPERVISI_GROUP_KEY_MEKATRONIK]: ["Ibrohim", "Agus Miftakh"],
@@ -59,19 +64,26 @@ function normalizeSupervisiGroupLabel(value) {
     return trimmed || null;
   }
 
-  if (normalizedKey === SUPERVISI_GROUP_KEY_PERPIPAAN) {
-    return SUPERVISI_GROUP_PERPIPAAN;
-  }
+  return SUPERVISI_GROUP_LABEL_BY_KEY[normalizedKey] ||
+    String(value || "").trim() ||
+    null;
+}
 
-  if (normalizedKey === SUPERVISI_GROUP_KEY_MEKATRONIK) {
-    return SUPERVISI_GROUP_MEKATRONIK;
-  }
+function getKnownSupervisiGroups() {
+  return [
+    SUPERVISI_GROUP_PERPIPAAN,
+    SUPERVISI_GROUP_MEKATRONIK,
+    SUPERVISI_GROUP_INSPEKSI,
+  ];
+}
 
-  if (normalizedKey === SUPERVISI_GROUP_KEY_INSPEKSI) {
-    return SUPERVISI_GROUP_INSPEKSI;
-  }
-
-  return String(value || "").trim() || null;
+function getDefaultSupervisiPersonnelGroups() {
+  return Object.entries(SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY).map(
+    ([key, names]) => ({
+      group: SUPERVISI_GROUP_LABEL_BY_KEY[key],
+      users: names.map((name) => ({ name, source: "default" })),
+    })
+  );
 }
 
 function getAllowedExecutorNamesForGroup(groupName) {
@@ -188,6 +200,8 @@ module.exports = {
   hasSupervisiAccess,
   isSupervisiScheduler,
   isSupervisiExecutor,
+  getKnownSupervisiGroups,
+  getDefaultSupervisiPersonnelGroups,
   normalizeSupervisiGroupLabel,
   getAllowedExecutorNamesForGroup,
   isAllowedExecutorName,
