@@ -583,6 +583,12 @@ const createManualSapSpk = async (req, res) => {
 
 const deleteSapSpk = async (req, res) => {
   try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      return res.status(403).json({ status: 'error', message: 'Access denied. Only Admin and Planner can delete.' });
+    }
+
     await SapSpkCorrective.destroy({ where: { order_number: req.params.order_number } });
     res.json({ status: "success" });
   } catch (error) {
@@ -592,6 +598,12 @@ const deleteSapSpk = async (req, res) => {
 
 const deleteAllSapSpk = async (req, res) => {
   try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      return res.status(403).json({ status: 'error', message: 'Access denied. Only Admin and Planner can delete.' });
+    }
+
     await SapSpkCorrective.destroy({ where: {} });
     res.json({ status: "success" });
   } catch (error) {
