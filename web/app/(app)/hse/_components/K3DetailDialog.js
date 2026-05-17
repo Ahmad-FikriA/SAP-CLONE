@@ -111,10 +111,10 @@ export function K3DetailDialog({ report, open, onOpenChange }) {
           </div>
 
           {/* Lokasi (jika ada) */}
-          {report.lokasi && (
+          {(report.lokasi || report.lokasiTemuan) && (
              <div className="grid grid-cols-1 gap-2">
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lokasi Temuan</h4>
-                <p className="text-sm font-bold text-slate-700">{report.lokasi}</p>
+                <p className="text-sm font-bold text-slate-700">{report.lokasi || report.lokasiTemuan}</p>
              </div>
           )}
 
