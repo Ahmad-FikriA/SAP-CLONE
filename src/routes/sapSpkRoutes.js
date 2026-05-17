@@ -104,5 +104,9 @@ const { requirePlanner } = require("../middleware/correctiveAccess");
 router.delete("/", verifyToken, requirePlanner, sapSpkController.deleteAllSapSpk);
 router.delete("/:order_number", verifyToken, requirePlanner, sapSpkController.deleteSapSpk);
 
+// ── SPK Material Management (Admin + Planner only) ───────────────────────────
+router.post("/:order_number/materials", verifyToken, requirePlanner, sapSpkController.addMaterialToSpk);
+router.delete("/:order_number/materials/:materialRecordId", verifyToken, requirePlanner, sapSpkController.removeMaterialFromSpk);
+
 module.exports = router;
 

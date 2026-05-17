@@ -236,6 +236,41 @@ export function useCorrective() {
     }
   }
 
+  // ── Material Management ────────────────────────────────────────────────────
+
+  async function searchMaterials(query) {
+    if (!query || query.length < 1) return [];
+    try {
+      const res = await apiGet(`/materials?search=${encodeURIComponent(query)}`);
+      return Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+    } catch {
+      return [];
+    }
+  }
+
+  async function addMaterialToSpkAction(orderNumber, materialId, quantityUsed) {
+    const res = await apiPost(`/corrective/sap-spk/${orderNumber}/materials`, {
+      materialId,
+      quantityUsed,
+    });
+    if (res.status === 'success') {
+      toast.success('Material berhasil ditambahkan ke SPK');
+      await loadAll();
+      return res.data;
+    }
+    throw new Error(res.message || 'Gagal menambahkan material');
+  }
+
+  async function removeMaterialFromSpkAction(orderNumber, materialRecordId) {
+    const res = await apiDelete(`/corrective/sap-spk/${orderNumber}/materials/${materialRecordId}`);
+    if (res.status === 'success') {
+      toast.success('Material dihapus dari SPK, stok dikembalikan');
+      await loadAll();
+    } else {
+      throw new Error(res.message || 'Gagal menghapus material');
+    }
+  }
+
   return {
     requests,
     spks,
@@ -267,5 +302,8 @@ export function useCorrective() {
     adminUpdateStatusAction,
     updateSapSpkAction,
     exportHistoryAction,
+    searchMaterials,
+    addMaterialToSpkAction,
+    removeMaterialFromSpkAction,
   };
 }

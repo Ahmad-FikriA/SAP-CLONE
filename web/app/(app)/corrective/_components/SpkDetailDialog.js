@@ -12,6 +12,10 @@ import {
   Save,
   X,
   AlertTriangle,
+  Search,
+  Package,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, getMediaUrl } from "@/lib/utils";
@@ -43,6 +47,9 @@ export function SpkDetailDialog({
   onApproveKadisPelapor,
   onRejectKadisPelapor,
   onUpdateSpk,
+  onSearchMaterials,
+  onAddMaterial,
+  onRemoveMaterial,
   equipment = [],
   functionalLocations = [],
 }) {
@@ -58,6 +65,16 @@ export function SpkDetailDialog({
     dur_plan: 0,
   });
 
+  // Material search state
+  const [matSearch, setMatSearch] = useState("");
+  const [matResults, setMatResults] = useState([]);
+  const [matSearching, setMatSearching] = useState(false);
+  const [matQty, setMatQty] = useState(1);
+  const [matSelected, setMatSelected] = useState(null);
+  const [matAdding, setMatAdding] = useState(false);
+  const matSearchTimeout = useRef(null);
+  const matDropdownRef = useRef(null);
+
   useEffect(() => {
     if (selectedSpk) {
       setEditData({
@@ -68,6 +85,11 @@ export function SpkDetailDialog({
       });
       setIsEditing(false);
       setHighlightButtons(false);
+      // Reset material state
+      setMatSearch("");
+      setMatResults([]);
+      setMatSelected(null);
+      setMatQty(1);
     }
   }, [selectedSpk]);
 
@@ -102,6 +124,70 @@ export function SpkDetailDialog({
       setLoading(false);
     }
   };
+
+  // Material search with debounce
+  const handleMatSearch = (value) => {
+    setMatSearch(value);
+    setMatSelected(null);
+    if (matSearchTimeout.current) clearTimeout(matSearchTimeout.current);
+    if (!value || value.length < 1) {
+      setMatResults([]);
+      return;
+    }
+    setMatSearching(true);
+    matSearchTimeout.current = setTimeout(async () => {
+      try {
+        const results = await onSearchMaterials(value);
+        setMatResults(results.slice(0, 20));
+      } catch {
+        setMatResults([]);
+      } finally {
+        setMatSearching(false);
+      }
+    }, 300);
+  };
+
+  const handleSelectMaterial = (mat) => {
+    if (Number(mat.quantity) <= 0) return;
+    setMatSelected(mat);
+    setMatSearch(`${mat.materialCode} — ${mat.name}`);
+    setMatResults([]);
+    setMatQty(1);
+  };
+
+  const handleAddMaterial = async () => {
+    if (!matSelected || matQty <= 0) return;
+    setMatAdding(true);
+    try {
+      await onAddMaterial(selectedSpk.order_number, matSelected.id, Number(matQty));
+      setMatSelected(null);
+      setMatSearch("");
+      setMatQty(1);
+    } catch (error) {
+      toast.error(error.message || "Gagal menambahkan material");
+    } finally {
+      setMatAdding(false);
+    }
+  };
+
+  const handleRemoveMaterial = async (recordId) => {
+    try {
+      await onRemoveMaterial(selectedSpk.order_number, recordId);
+    } catch (error) {
+      toast.error(error.message || "Gagal menghapus material");
+    }
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (matDropdownRef.current && !matDropdownRef.current.contains(e.target)) {
+        setMatResults([]);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   return (
     <AnimatePresence>
@@ -646,6 +732,171 @@ export function SpkDetailDialog({
                 )}
               </div>
             )}
+
+            {/* Material Section — Always visible */}
+            <div className="bg-blue-50/50 rounded-2xl border border-blue-100/50 p-5">
+              <h4 className="text-sm font-bold text-blue-800 mb-4 flex items-center gap-2">
+                <Package size={16} /> Material yang Direncanakan
+                {selectedSpk?.spkMaterials?.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 font-semibold">
+                    {selectedSpk.spkMaterials.length} item
+                  </span>
+                )}
+              </h4>
+
+              {/* Add material — planner only, when editing */}
+              {isPlanner && isEditing && (
+                <div className="mb-4 space-y-3">
+                  <div className="relative" ref={matDropdownRef}>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          value={matSearch}
+                          onChange={(e) => handleMatSearch(e.target.value)}
+                          placeholder="Cari material (kode/nama)..."
+                          className="pl-9 bg-white h-9"
+                        />
+                      </div>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={matSelected ? Number(matSelected.quantity) : 99999}
+                        value={matQty}
+                        onChange={(e) => setMatQty(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-20 bg-white h-9 text-center"
+                        placeholder="Qty"
+                        disabled={!matSelected}
+                      />
+                      <Button
+                        size="sm"
+                        className="h-9 bg-blue-600 hover:bg-blue-700 text-white px-3"
+                        disabled={!matSelected || matAdding || matQty <= 0}
+                        onClick={handleAddMaterial}
+                      >
+                        {matAdding ? "..." : <><Plus size={14} className="mr-1" /> Tambah</>}
+                      </Button>
+                    </div>
+
+                    {/* Search results dropdown */}
+                    {matResults.length > 0 && (
+                      <div className="absolute z-50 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                        {matResults.map((mat) => {
+                          const isOut = Number(mat.quantity) <= 0;
+                          return (
+                            <button
+                              key={mat.id}
+                              disabled={isOut}
+                              onClick={() => handleSelectMaterial(mat)}
+                              className={cn(
+                                "w-full px-4 py-3 text-left flex items-center justify-between transition-colors border-b border-slate-50 last:border-0",
+                                isOut
+                                  ? "opacity-40 cursor-not-allowed bg-slate-50"
+                                  : "hover:bg-blue-50 cursor-pointer",
+                              )}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs font-semibold text-slate-600">{mat.materialCode}</span>
+                                  {isOut && (
+                                    <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-semibold">Habis</span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-slate-800 truncate mt-0.5">{mat.name}</p>
+                              </div>
+                              <div className="text-right ml-3 shrink-0">
+                                <div className={cn(
+                                  "text-sm font-bold",
+                                  isOut ? "text-red-400" : "text-green-600"
+                                )}>
+                                  {Number(mat.quantity).toLocaleString()}
+                                </div>
+                                <div className="text-[10px] text-slate-400">{mat.uom || "PCS"}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {matSearching && matSearch.length >= 1 && (
+                      <div className="absolute z-50 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl px-4 py-3 text-sm text-slate-400">
+                        Mencari material...
+                      </div>
+                    )}
+                  </div>
+
+                  {matSelected && (
+                    <div className="flex items-center gap-2 bg-blue-100/50 border border-blue-200 rounded-lg px-3 py-2 text-sm">
+                      <Package size={14} className="text-blue-600 shrink-0" />
+                      <span className="text-blue-800 font-medium truncate">
+                        {matSelected.materialCode} — {matSelected.name}
+                      </span>
+                      <span className="text-blue-600 text-xs shrink-0">
+                        (Stok: {Number(matSelected.quantity).toLocaleString()} {matSelected.uom || "PCS"})
+                      </span>
+                      <button onClick={() => { setMatSelected(null); setMatSearch(""); }}
+                        className="ml-auto text-blue-400 hover:text-blue-600">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Material list */}
+              {selectedSpk?.spkMaterials?.length > 0 ? (
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50/80 border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase">Kode</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 uppercase">Nama Material</th>
+                        <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 uppercase">Qty Pakai</th>
+                        <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 uppercase">UoM</th>
+                        <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 uppercase">Sisa Stok</th>
+                        {isPlanner && isEditing && (
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 uppercase w-16"></th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {selectedSpk.spkMaterials.map((sm) => (
+                        <tr key={sm.id} className="hover:bg-slate-50/50">
+                          <td className="px-4 py-2.5 font-mono text-xs text-slate-600">{sm.material?.materialCode || sm.material?.material_code || "-"}</td>
+                          <td className="px-4 py-2.5 text-slate-800">{sm.material?.name || "-"}</td>
+                          <td className="px-4 py-2.5 text-center font-semibold text-blue-700">{Number(sm.quantityUsed || sm.quantity_used)}</td>
+                          <td className="px-4 py-2.5 text-center text-slate-500 text-xs">{sm.material?.uom || "PCS"}</td>
+                          <td className="px-4 py-2.5 text-center">
+                            <span className={cn(
+                              "text-xs font-semibold px-2 py-0.5 rounded-full",
+                              Number(sm.material?.quantity) > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+                            )}>
+                              {Number(sm.material?.quantity ?? 0).toLocaleString()}
+                            </span>
+                          </td>
+                          {isPlanner && isEditing && (
+                            <td className="px-4 py-2.5 text-center">
+                              <button
+                                onClick={() => handleRemoveMaterial(sm.id)}
+                                className="text-red-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
+                                title="Hapus material & kembalikan stok"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-sm text-slate-400">
+                  Belum ada material yang ditambahkan
+                </div>
+              )}
+            </div>
           </div>
         )}
         <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-between items-center shrink-0">

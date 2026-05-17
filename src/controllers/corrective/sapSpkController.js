@@ -1,10 +1,13 @@
 const SapSpkCorrective = require("../../models/SapSpkCorrective");
 const Notification = require("../../models/Notification");
 const { Op } = require("sequelize");
+const sequelize = require("../../config/database");
 const exceljs = require("exceljs");
 const fs = require("fs");
 const path = require("path");
 const User = require("../../models/User");
+const Material = require("../../models/Material");
+const SpkMaterial = require("../../models/SpkMaterial");
 const NotificationService = require("../../services/notificationService");
 
 // 1. Get SAP SPK List
@@ -52,6 +55,11 @@ const getSapSpkList = async (req, res) => {
           model: User,
           as: "executor",
           attributes: ["name", "role", "dinas", "divisi", "group"],
+        },
+        {
+          model: SpkMaterial,
+          as: "spkMaterials",
+          include: [{ model: Material, as: "material", attributes: ["id", "materialCode", "name", "quantity", "uom"] }],
         },
       ],
     });
@@ -637,8 +645,122 @@ const getCorrectiveStats = async (req, res) => {
   }
 };
 
+// ── SPK Material Management ──────────────────────────────────────────────────
+
+const addMaterialToSpk = async (req, res) => {
+  const { order_number } = req.params;
+  const { materialId, quantityUsed } = req.body;
+  const t = await sequelize.transaction();
+
+  try {
+    const { role, group, userId } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      await t.rollback();
+      return res.status(403).json({ status: 'error', message: 'Access denied. Only Admin and Planner can add materials.' });
+    }
+
+    if (!materialId || !quantityUsed || quantityUsed <= 0) {
+      await t.rollback();
+      return res.status(400).json({ status: 'error', message: 'materialId dan quantityUsed wajib diisi (> 0)' });
+    }
+
+    const spk = await SapSpkCorrective.findByPk(order_number, { transaction: t });
+    if (!spk) {
+      await t.rollback();
+      return res.status(404).json({ status: 'error', message: 'SPK tidak ditemukan' });
+    }
+
+    const material = await Material.findByPk(materialId, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!material) {
+      await t.rollback();
+      return res.status(404).json({ status: 'error', message: 'Material tidak ditemukan' });
+    }
+
+    if (Number(material.quantity) < Number(quantityUsed)) {
+      await t.rollback();
+      return res.status(400).json({
+        status: 'error',
+        message: `Stok tidak cukup. Tersedia: ${material.quantity} ${material.uom || 'PCS'}, diminta: ${quantityUsed}`,
+      });
+    }
+
+    // Deduct stock
+    await material.update(
+      { quantity: Number(material.quantity) - Number(quantityUsed) },
+      { transaction: t },
+    );
+
+    // Create junction record
+    const record = await SpkMaterial.create(
+      {
+        orderNumber: order_number,
+        materialId,
+        quantityUsed,
+        addedBy: userId || req.user.id,
+      },
+      { transaction: t },
+    );
+
+    await t.commit();
+
+    // Re-fetch with material data
+    const full = await SpkMaterial.findByPk(record.id, {
+      include: [{ model: Material, as: 'material', attributes: ['id', 'materialCode', 'name', 'quantity', 'uom'] }],
+    });
+
+    res.status(201).json({ status: 'success', data: full });
+  } catch (error) {
+    await t.rollback();
+    console.error('Error adding material to SPK:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
+const removeMaterialFromSpk = async (req, res) => {
+  const { order_number, materialRecordId } = req.params;
+  const t = await sequelize.transaction();
+
+  try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      await t.rollback();
+      return res.status(403).json({ status: 'error', message: 'Access denied. Only Admin and Planner can remove materials.' });
+    }
+
+    const record = await SpkMaterial.findOne({
+      where: { id: materialRecordId, orderNumber: order_number },
+      transaction: t,
+    });
+
+    if (!record) {
+      await t.rollback();
+      return res.status(404).json({ status: 'error', message: 'Record material tidak ditemukan' });
+    }
+
+    // Restore stock
+    const material = await Material.findByPk(record.materialId, { transaction: t, lock: t.LOCK.UPDATE });
+    if (material) {
+      await material.update(
+        { quantity: Number(material.quantity) + Number(record.quantityUsed) },
+        { transaction: t },
+      );
+    }
+
+    await record.destroy({ transaction: t });
+    await t.commit();
+
+    res.json({ status: 'success', message: 'Material dihapus dari SPK dan stok dikembalikan' });
+  } catch (error) {
+    await t.rollback();
+    console.error('Error removing material from SPK:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
 module.exports = {
   getSapSpkList, uploadExcel, bulkInsertSapSpk, createManualSapSpk, claimSapSpk, executeSapSpk, getReasonOfVarianceCodes,
   approveKadisPp, rejectKadisPp, approveKadisPelapor, rejectKadisPelapor, deleteSapSpk, deleteAllSapSpk, getCorrectiveStats,
-  exportHistory, uploadHistoryExcel, updateSapSpk,
+  exportHistory, uploadHistoryExcel, updateSapSpk, addMaterialToSpk, removeMaterialFromSpk,
 };

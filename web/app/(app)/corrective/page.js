@@ -108,6 +108,9 @@ export default function CorrectivePage() {
     adminUpdateStatusAction,
     updateSapSpkAction,
     exportHistoryAction,
+    searchMaterials,
+    addMaterialToSpkAction,
+    removeMaterialFromSpkAction,
   } = data;
 
   // Kadis non-PP: only see their own SPKs based on notification.kadisPelaporId
@@ -789,6 +792,9 @@ export default function CorrectivePage() {
         onApproveKadisPelapor={triggerApproveKadisPelapor}
         onRejectKadisPelapor={triggerRejectKadisPelapor}
         onUpdateSpk={updateSapSpkAction}
+        onSearchMaterials={searchMaterials}
+        onAddMaterial={addMaterialToSpkAction}
+        onRemoveMaterial={removeMaterialFromSpkAction}
       />
 
       <ExcelPreviewDialog
