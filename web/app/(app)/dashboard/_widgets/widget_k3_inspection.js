@@ -16,14 +16,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const METRICS_K3 = [
-  { id: 'NMRR', title: 'Near Miss Reporting', value: '12.5%', icon: AlertTriangle, color: 'text-blue-600', light: 'bg-blue-50 border-blue-100' },
-  { id: 'SOR', title: 'Safety Observation', value: '45.2%', icon: Eye, color: 'text-emerald-600', light: 'bg-emerald-50 border-emerald-100' },
-  { id: 'CACR', title: 'Corrective Action', value: '88.0%', icon: CheckCircle2, color: 'text-violet-600', light: 'bg-violet-50 border-violet-100' },
-  { id: 'TRIR', title: 'Incident Rate', value: '0.42', icon: Activity, color: 'text-amber-600', light: 'bg-amber-50 border-amber-100' },
-  { id: 'LTIFR', title: 'Injury Frequency', value: '0.00', icon: Zap, color: 'text-indigo-600', light: 'bg-indigo-50 border-indigo-100' },
-  { id: 'FATALITY', title: 'Fatality Rate', value: '0', icon: AlertOctagon, color: 'text-rose-600', light: 'bg-rose-50 border-rose-100' },
-];
 
 export function WidgetK3Inspection() {
   const [reports, setReports] = useState([]);
@@ -49,6 +41,33 @@ export function WidgetK3Inspection() {
   const incomingReports = reports.filter(r => !r.status.includes('ditolak')).length;
   const solvedReports = reports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;
   const solveRate = incomingReports > 0 ? Math.round((solvedReports / incomingReports) * 100) : 0;
+
+  const approvedReports = reports.filter(r => r.status === 'selesai' || r.status === 'disetujui');
+  const approvedCount = approvedReports.length;
+
+  const nearMissCount = approvedReports.filter(r => r.kategori === 'Near Miss').length;
+  const nmrr = approvedCount > 0 ? ((nearMissCount / approvedCount) * 100).toFixed(1) + '%' : '0.0%';
+
+  const observationCount = approvedReports.filter(r => r.kategori === 'Kondisi Tidak Aman' || r.kategori === 'Tindakan Tidak Aman').length;
+  const sor = approvedCount > 0 ? ((observationCount / approvedCount) * 100).toFixed(1) + '%' : '0.0%';
+
+  const cacr = solveRate.toFixed(1) + '%';
+
+  const recordableCategories = ['First Aid Case', 'Medical Treatment', 'Lost Time Injury', 'Permanent Disability', 'Fatality'];
+  const trirCount = approvedReports.filter(r => recordableCategories.includes(r.kategori)).length;
+
+  const ltiCount = approvedReports.filter(r => r.kategori === 'Lost Time Injury').length;
+
+  const fatalityCount = approvedReports.filter(r => r.kategori === 'Fatality').length;
+
+  const dynamicMetrics = [
+    { id: 'NMRR', title: 'Near Miss Reporting', value: nmrr, icon: AlertTriangle, color: 'text-blue-600', light: 'bg-blue-50 border-blue-100' },
+    { id: 'SOR', title: 'Safety Observation', value: sor, icon: Eye, color: 'text-emerald-600', light: 'bg-emerald-50 border-emerald-100' },
+    { id: 'CACR', title: 'Corrective Action', value: cacr, icon: CheckCircle2, color: 'text-violet-600', light: 'bg-violet-50 border-violet-100' },
+    { id: 'TRIR', title: 'Incident Rate', value: trirCount.toString(), icon: Activity, color: 'text-amber-600', light: 'bg-amber-50 border-amber-100' },
+    { id: 'LTIFR', title: 'Injury Frequency', value: ltiCount.toString(), icon: Zap, color: 'text-indigo-600', light: 'bg-indigo-50 border-indigo-100' },
+    { id: 'FATALITY', title: 'Fatality Rate', value: fatalityCount.toString(), icon: AlertOctagon, color: 'text-rose-600', light: 'bg-rose-50 border-rose-100' },
+  ];
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow">
@@ -100,8 +119,8 @@ export function WidgetK3Inspection() {
           </div>
 
           {/* HSE Metrics Grid */}
-          <div className="grid grid-cols-3 gap-2 lg:gap-3">
-            {METRICS_K3.map((m) => {
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {dynamicMetrics.map((m) => {
               const Icon = m.icon;
               return (
                 <div key={m.id} className={cn("p-2 lg:p-3 rounded-xl border flex flex-col transition-all hover:shadow-md", m.light)}>

@@ -59,68 +59,6 @@ const TABS = [
   { key: 'history', label: 'Riwayat', icon: CheckCircle2 },
 ];
 
-const METRICS = [
-  { 
-    id: 'nmrr', 
-    title: 'NMRR', 
-    subtitle: 'Near Miss Reporting Rate', 
-    value: '12.5%', 
-    icon: AlertTriangle, 
-    color: 'bg-blue-500', 
-    light: 'bg-blue-50',
-    text: 'text-blue-600'
-  },
-  { 
-    id: 'sor', 
-    title: 'SOR', 
-    subtitle: 'Safety Observation Rate', 
-    value: '45.2%', 
-    icon: Eye, 
-    color: 'bg-emerald-500', 
-    light: 'bg-emerald-50',
-    text: 'text-emerald-600'
-  },
-  { 
-    id: 'cacr', 
-    title: 'CACR', 
-    subtitle: 'Corrective Action Closure', 
-    value: '88.0%', 
-    icon: ClipboardCheck, 
-    color: 'bg-violet-500', 
-    light: 'bg-violet-50',
-    text: 'text-violet-600'
-  },
-  { 
-    id: 'trir', 
-    title: 'TRIR', 
-    subtitle: 'Total Recordable Incident Rate', 
-    value: '0.42', 
-    icon: HeartPulse, 
-    color: 'bg-amber-500', 
-    light: 'bg-amber-50',
-    text: 'text-amber-600'
-  },
-  { 
-    id: 'ltifr', 
-    title: 'LTIFR', 
-    subtitle: 'Loss Time Injury Frequency', 
-    value: '0.00', 
-    icon: Stethoscope, 
-    color: 'bg-indigo-500', 
-    light: 'bg-indigo-50',
-    text: 'text-indigo-600'
-  },
-  { 
-    id: 'fatality', 
-    title: 'Fatality Rate', 
-    subtitle: 'Kematian Akibat Kerja', 
-    value: '0', 
-    icon: AlertOctagon, 
-    color: 'bg-rose-500', 
-    light: 'bg-rose-50',
-    text: 'text-rose-600'
-  },
-];
 
 const STATUS_CONFIG = {
   menunggu_review_kadiv_pelapor: { label: 'Review Pelapor', color: 'bg-amber-100 text-amber-700' },
@@ -307,6 +245,91 @@ export default function HseDashboardPage() {
     loadStaff();
   }, []);
 
+  const incomingReportsCount = reports.filter(r => !r.status.includes('ditolak')).length;
+  const solvedReportsCount = reports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;
+  const solveRate = incomingReportsCount > 0 ? Math.round((solvedReportsCount / incomingReportsCount) * 100) : 0;
+
+  const approvedReports = reports.filter(r => r.status === 'selesai' || r.status === 'disetujui');
+  const approvedCount = approvedReports.length;
+
+  const nearMissCount = approvedReports.filter(r => r.kategori === 'Near Miss').length;
+  const nmrrValue = approvedCount > 0 ? ((nearMissCount / approvedCount) * 100).toFixed(1) + '%' : '0.0%';
+
+  const observationCount = approvedReports.filter(r => r.kategori === 'Kondisi Tidak Aman' || r.kategori === 'Tindakan Tidak Aman').length;
+  const sorValue = approvedCount > 0 ? ((observationCount / approvedCount) * 100).toFixed(1) + '%' : '0.0%';
+
+  const cacrValue = solveRate.toFixed(1) + '%';
+
+  const recordableCategories = ['First Aid Case', 'Medical Treatment', 'Lost Time Injury', 'Permanent Disability', 'Fatality'];
+  const trirValue = approvedReports.filter(r => recordableCategories.includes(r.kategori)).length.toString();
+
+  const ltifrValue = approvedReports.filter(r => r.kategori === 'Lost Time Injury').length.toString();
+
+  const fatalityValue = approvedReports.filter(r => r.kategori === 'Fatality').length.toString();
+
+  const dynamicMetrics = [
+    { 
+      id: 'nmrr', 
+      title: 'NMRR', 
+      subtitle: 'Near Miss Reporting Rate', 
+      value: nmrrValue, 
+      icon: AlertTriangle, 
+      color: 'bg-blue-500', 
+      light: 'bg-blue-50',
+      text: 'text-blue-600'
+    },
+    { 
+      id: 'sor', 
+      title: 'SOR', 
+      subtitle: 'Safety Observation Rate', 
+      value: sorValue, 
+      icon: Eye, 
+      color: 'bg-emerald-500', 
+      light: 'bg-emerald-50',
+      text: 'text-emerald-600'
+    },
+    { 
+      id: 'cacr', 
+      title: 'CACR', 
+      subtitle: 'Corrective Action Closure', 
+      value: cacrValue, 
+      icon: ClipboardCheck, 
+      color: 'bg-violet-500', 
+      light: 'bg-violet-50',
+      text: 'text-violet-600'
+    },
+    { 
+      id: 'trir', 
+      title: 'TRIR', 
+      subtitle: 'Total Recordable Incident Rate', 
+      value: trirValue, 
+      icon: HeartPulse, 
+      color: 'bg-amber-500', 
+      light: 'bg-amber-50',
+      text: 'text-amber-600'
+    },
+    { 
+      id: 'ltifr', 
+      title: 'LTIFR', 
+      subtitle: 'Loss Time Injury Frequency', 
+      value: ltifrValue, 
+      icon: Stethoscope, 
+      color: 'bg-indigo-500', 
+      light: 'bg-indigo-50',
+      text: 'text-indigo-600'
+    },
+    { 
+      id: 'fatality', 
+      title: 'Fatality Rate', 
+      subtitle: 'Kematian Akibat Kerja', 
+      value: fatalityValue, 
+      icon: AlertOctagon, 
+      color: 'bg-rose-500', 
+      light: 'bg-rose-50',
+      text: 'text-rose-600'
+    },
+  ];
+
   const filteredReports = reports.filter(r => {
     const matchesSearch = 
       r.reportNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -429,7 +452,7 @@ export default function HseDashboardPage() {
 
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {METRICS.map((m) => {
+            {dynamicMetrics.map((m) => {
               const Icon = m.icon;
               return (
                 <div key={m.id} className="group bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
