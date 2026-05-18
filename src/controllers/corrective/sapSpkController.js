@@ -625,19 +625,19 @@ const getCorrectiveStats = async (req, res) => {
       include: [{ model: Notification, as: "notification", include: [{ model: User, as: "kadisPelapor", attributes: ["dinas"] }] }]
     });
     
-    const WORK_CENTER_MAP = {
-      "1401": "Pemeliharaan Listrik",
-      "1402": "Pemeliharaan Instrumen",
-      "1403": "Pemeliharaan Mesin"
-    };
-
     const workCenterStats = {};
     const technicianStats = {};
     const departmentStats = {};
     spks.forEach(spk => {
-      const wcCode = spk.work_center;
+      const wcCode = (spk.work_center || "").trim();
       if (wcCode && wcCode !== "-") {
-        const wcName = WORK_CENTER_MAP[wcCode] || wcCode;
+        let wcName = wcCode;
+        const c = wcCode.toUpperCase();
+        if (c.startsWith('S')) wcName = 'Sipil';
+        else if (c.startsWith('O')) wcName = 'Otomasi';
+        else if (c.startsWith('E')) wcName = 'Listrik';
+        else if (c.startsWith('M')) wcName = 'Mekanik';
+        
         workCenterStats[wcName] = (workCenterStats[wcName] || 0) + 1;
       }
       if (spk.execution_nik) {
