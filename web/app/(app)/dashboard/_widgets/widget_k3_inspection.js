@@ -16,6 +16,43 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+function getMetricClassification(id, valueNum) {
+  const key = id.toLowerCase();
+  if (key === 'nmrr') {
+    if (valueNum >= 2) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum >= 1) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    return { label: 'Kurang', color: 'bg-rose-100 text-rose-700' };
+  }
+  if (key === 'sor') {
+    if (valueNum >= 5) return { label: 'Baik Sekali', color: 'bg-indigo-100 text-indigo-700' };
+    if (valueNum >= 4) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum >= 3) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    if (valueNum >= 2) return { label: 'Kurang', color: 'bg-orange-100 text-orange-700' };
+    return { label: 'Buruk', color: 'bg-rose-100 text-rose-700' };
+  }
+  if (key === 'cacr') {
+    if (valueNum >= 90) return { label: 'Baik Sekali', color: 'bg-indigo-100 text-indigo-700' };
+    if (valueNum >= 70) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum >= 50) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    if (valueNum >= 30) return { label: 'Kurang', color: 'bg-orange-100 text-orange-700' };
+    return { label: 'Buruk', color: 'bg-rose-100 text-rose-700' };
+  }
+  if (key === 'trir') {
+    if (valueNum <= 4.0) return { label: 'Baik Sekali', color: 'bg-indigo-100 text-indigo-700' };
+    if (valueNum <= 8.0) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum <= 12.0) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    if (valueNum <= 16.0) return { label: 'Kurang', color: 'bg-orange-100 text-orange-700' };
+    return { label: 'Buruk', color: 'bg-rose-100 text-rose-700' };
+  }
+  if (key === 'ltifr') {
+    if (valueNum <= 1.0) return { label: 'Baik Sekali', color: 'bg-indigo-100 text-indigo-700' };
+    if (valueNum <= 2.0) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum <= 3.0) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    if (valueNum <= 4.0) return { label: 'Kurang', color: 'bg-orange-100 text-orange-700' };
+    return { label: 'Buruk', color: 'bg-rose-100 text-rose-700' };
+  }
+  return null;
+}
 
 export function WidgetK3Inspection() {
   const [reports, setReports] = useState([]);
@@ -46,10 +83,12 @@ export function WidgetK3Inspection() {
   const approvedCount = approvedReports.length;
 
   const nearMissCount = approvedReports.filter(r => r.kategori === 'Near Miss').length;
-  const nmrr = approvedCount > 0 ? ((nearMissCount / approvedCount) * 100).toFixed(1) + '%' : '0.0%';
+  const nmrrNum = approvedCount > 0 ? (nearMissCount / approvedCount) * 100 : 0;
+  const nmrr = nmrrNum.toFixed(1) + '%';
 
   const observationCount = approvedReports.filter(r => r.kategori === 'Kondisi Tidak Aman' || r.kategori === 'Tindakan Tidak Aman').length;
-  const sor = approvedCount > 0 ? ((observationCount / approvedCount) * 100).toFixed(1) + '%' : '0.0%';
+  const sorNum = approvedCount > 0 ? (observationCount / approvedCount) * 100 : 0;
+  const sor = sorNum.toFixed(1) + '%';
 
   const cacr = solveRate.toFixed(1) + '%';
 
@@ -61,12 +100,12 @@ export function WidgetK3Inspection() {
   const fatalityCount = approvedReports.filter(r => r.kategori === 'Fatality').length;
 
   const dynamicMetrics = [
-    { id: 'NMRR', title: 'Near Miss Reporting', value: nmrr, icon: AlertTriangle, color: 'text-blue-600', light: 'bg-blue-50 border-blue-100' },
-    { id: 'SOR', title: 'Safety Observation', value: sor, icon: Eye, color: 'text-emerald-600', light: 'bg-emerald-50 border-emerald-100' },
-    { id: 'CACR', title: 'Corrective Action', value: cacr, icon: CheckCircle2, color: 'text-violet-600', light: 'bg-violet-50 border-violet-100' },
-    { id: 'TRIR', title: 'Incident Rate', value: trirCount.toString(), icon: Activity, color: 'text-amber-600', light: 'bg-amber-50 border-amber-100' },
-    { id: 'LTIFR', title: 'Injury Frequency', value: ltiCount.toString(), icon: Zap, color: 'text-indigo-600', light: 'bg-indigo-50 border-indigo-100' },
-    { id: 'FATALITY', title: 'Fatality Rate', value: fatalityCount.toString(), icon: AlertOctagon, color: 'text-rose-600', light: 'bg-rose-50 border-rose-100' },
+    { id: 'NMRR', title: 'Near Miss Reporting', value: nmrr, classObj: getMetricClassification('NMRR', nmrrNum), icon: AlertTriangle, color: 'text-blue-600', light: 'bg-blue-50 border-blue-100' },
+    { id: 'SOR', title: 'Safety Observation', value: sor, classObj: getMetricClassification('SOR', sorNum), icon: Eye, color: 'text-emerald-600', light: 'bg-emerald-50 border-emerald-100' },
+    { id: 'CACR', title: 'Corrective Action', value: cacr, classObj: getMetricClassification('CACR', solveRate), icon: CheckCircle2, color: 'text-violet-600', light: 'bg-violet-50 border-violet-100' },
+    { id: 'TRIR', title: 'Incident Rate', value: trirCount.toString(), classObj: getMetricClassification('TRIR', trirCount), icon: Activity, color: 'text-amber-600', light: 'bg-amber-50 border-amber-100' },
+    { id: 'LTIFR', title: 'Injury Frequency', value: ltiCount.toString(), classObj: getMetricClassification('LTIFR', ltiCount), icon: Zap, color: 'text-indigo-600', light: 'bg-indigo-50 border-indigo-100' },
+    { id: 'FATALITY', title: 'Fatality Rate', value: fatalityCount.toString(), classObj: getMetricClassification('FATALITY', fatalityCount), icon: AlertOctagon, color: 'text-rose-600', light: 'bg-rose-50 border-rose-100' },
   ];
 
   return (
@@ -128,7 +167,14 @@ export function WidgetK3Inspection() {
                     <div className={cn("p-1 rounded-lg bg-white shadow-sm")}>
                       <Icon size={12} className={m.color} />
                     </div>
-                    <span className={cn("text-[8px] font-black uppercase tracking-wider opacity-60", m.color)}>{m.id}</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={cn("text-[8px] font-black uppercase tracking-wider opacity-60", m.color)}>{m.id}</span>
+                      {m.classObj && (
+                        <span className={cn("text-[7px] px-1.5 py-0.5 rounded font-bold uppercase", m.classObj.color)}>
+                          {m.classObj.label}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <p className="text-base font-black text-slate-800 leading-tight">{m.value}</p>

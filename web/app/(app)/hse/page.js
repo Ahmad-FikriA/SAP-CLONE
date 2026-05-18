@@ -94,6 +94,44 @@ function formatStatus(status) {
   return { label, color: 'bg-slate-100 text-slate-600' };
 }
 
+function getMetricClassification(id, valueNum) {
+  const key = id.toLowerCase();
+  if (key === 'nmrr') {
+    if (valueNum >= 2) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum >= 1) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    return { label: 'Kurang', color: 'bg-rose-100 text-rose-700' };
+  }
+  if (key === 'sor') {
+    if (valueNum >= 5) return { label: 'Baik Sekali', color: 'bg-indigo-100 text-indigo-700' };
+    if (valueNum >= 4) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum >= 3) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    if (valueNum >= 2) return { label: 'Kurang', color: 'bg-orange-100 text-orange-700' };
+    return { label: 'Buruk', color: 'bg-rose-100 text-rose-700' };
+  }
+  if (key === 'cacr') {
+    if (valueNum >= 90) return { label: 'Baik Sekali', color: 'bg-indigo-100 text-indigo-700' };
+    if (valueNum >= 70) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum >= 50) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    if (valueNum >= 30) return { label: 'Kurang', color: 'bg-orange-100 text-orange-700' };
+    return { label: 'Buruk', color: 'bg-rose-100 text-rose-700' };
+  }
+  if (key === 'trir') {
+    if (valueNum <= 4.0) return { label: 'Baik Sekali', color: 'bg-indigo-100 text-indigo-700' };
+    if (valueNum <= 8.0) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum <= 12.0) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    if (valueNum <= 16.0) return { label: 'Kurang', color: 'bg-orange-100 text-orange-700' };
+    return { label: 'Buruk', color: 'bg-rose-100 text-rose-700' };
+  }
+  if (key === 'ltifr') {
+    if (valueNum <= 1.0) return { label: 'Baik Sekali', color: 'bg-indigo-100 text-indigo-700' };
+    if (valueNum <= 2.0) return { label: 'Baik', color: 'bg-emerald-100 text-emerald-700' };
+    if (valueNum <= 3.0) return { label: 'Cukup', color: 'bg-amber-100 text-amber-700' };
+    if (valueNum <= 4.0) return { label: 'Kurang', color: 'bg-orange-100 text-orange-700' };
+    return { label: 'Buruk', color: 'bg-rose-100 text-rose-700' };
+  }
+  return null;
+}
+
 export default function HseDashboardPage() {
   const [tab, setTab] = useState('dashboard');
   const [reports, setReports] = useState([]);
@@ -253,17 +291,21 @@ export default function HseDashboardPage() {
   const approvedCount = approvedReports.length;
 
   const nearMissCount = approvedReports.filter(r => r.kategori === 'Near Miss').length;
-  const nmrrValue = approvedCount > 0 ? ((nearMissCount / approvedCount) * 100).toFixed(1) + '%' : '0.0%';
+  const nmrrNum = approvedCount > 0 ? (nearMissCount / approvedCount) * 100 : 0;
+  const nmrrValue = nmrrNum.toFixed(1) + '%';
 
   const observationCount = approvedReports.filter(r => r.kategori === 'Kondisi Tidak Aman' || r.kategori === 'Tindakan Tidak Aman').length;
-  const sorValue = approvedCount > 0 ? ((observationCount / approvedCount) * 100).toFixed(1) + '%' : '0.0%';
+  const sorNum = approvedCount > 0 ? (observationCount / approvedCount) * 100 : 0;
+  const sorValue = sorNum.toFixed(1) + '%';
 
   const cacrValue = solveRate.toFixed(1) + '%';
 
   const recordableCategories = ['First Aid Case', 'Medical Treatment', 'Lost Time Injury', 'Permanent Disability', 'Fatality'];
-  const trirValue = approvedReports.filter(r => recordableCategories.includes(r.kategori)).length.toString();
+  const trirCount = approvedReports.filter(r => recordableCategories.includes(r.kategori)).length;
+  const trirValue = trirCount.toString();
 
-  const ltifrValue = approvedReports.filter(r => r.kategori === 'Lost Time Injury').length.toString();
+  const ltiCount = approvedReports.filter(r => r.kategori === 'Lost Time Injury').length;
+  const ltifrValue = ltiCount.toString();
 
   const fatalityValue = approvedReports.filter(r => r.kategori === 'Fatality').length.toString();
 
@@ -273,6 +315,7 @@ export default function HseDashboardPage() {
       title: 'NMRR', 
       subtitle: 'Near Miss Reporting Rate', 
       value: nmrrValue, 
+      classObj: getMetricClassification('nmrr', nmrrNum),
       icon: AlertTriangle, 
       color: 'bg-blue-500', 
       light: 'bg-blue-50',
@@ -283,6 +326,7 @@ export default function HseDashboardPage() {
       title: 'SOR', 
       subtitle: 'Safety Observation Rate', 
       value: sorValue, 
+      classObj: getMetricClassification('sor', sorNum),
       icon: Eye, 
       color: 'bg-emerald-500', 
       light: 'bg-emerald-50',
@@ -293,6 +337,7 @@ export default function HseDashboardPage() {
       title: 'CACR', 
       subtitle: 'Corrective Action Closure', 
       value: cacrValue, 
+      classObj: getMetricClassification('cacr', solveRate),
       icon: ClipboardCheck, 
       color: 'bg-violet-500', 
       light: 'bg-violet-50',
@@ -303,6 +348,7 @@ export default function HseDashboardPage() {
       title: 'TRIR', 
       subtitle: 'Total Recordable Incident Rate', 
       value: trirValue, 
+      classObj: getMetricClassification('trir', trirCount),
       icon: HeartPulse, 
       color: 'bg-amber-500', 
       light: 'bg-amber-50',
@@ -313,6 +359,7 @@ export default function HseDashboardPage() {
       title: 'LTIFR', 
       subtitle: 'Loss Time Injury Frequency', 
       value: ltifrValue, 
+      classObj: getMetricClassification('ltifr', ltiCount),
       icon: Stethoscope, 
       color: 'bg-indigo-500', 
       light: 'bg-indigo-50',
@@ -323,6 +370,7 @@ export default function HseDashboardPage() {
       title: 'Fatality Rate', 
       subtitle: 'Kematian Akibat Kerja', 
       value: fatalityValue, 
+      classObj: getMetricClassification('fatality', parseInt(fatalityValue)),
       icon: AlertOctagon, 
       color: 'bg-rose-500', 
       light: 'bg-rose-50',
@@ -460,7 +508,14 @@ export default function HseDashboardPage() {
                     <div className={cn("p-3 rounded-2xl transition-colors", m.light)}>
                       <Icon size={24} className={m.text} />
                     </div>
-                    <p className={cn("text-xs font-bold uppercase tracking-widest", m.text)}>{m.id}</p>
+                    <div className="flex flex-col items-end gap-2">
+                      <p className={cn("text-xs font-bold uppercase tracking-widest", m.text)}>{m.id}</p>
+                      {m.classObj && (
+                        <Badge className={cn("border-none px-2 py-0.5 text-[10px] font-bold uppercase", m.classObj.color)}>
+                          {m.classObj.label}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <p className="text-3xl font-black text-slate-900 mb-1">{m.value}</p>
