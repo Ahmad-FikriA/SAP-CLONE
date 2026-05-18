@@ -624,12 +624,22 @@ const getCorrectiveStats = async (req, res) => {
     const spks = await SapSpkCorrective.findAll({
       include: [{ model: Notification, as: "notification", include: [{ model: User, as: "kadisPelapor", attributes: ["dinas"] }] }]
     });
+    
+    const WORK_CENTER_MAP = {
+      "1401": "Pemeliharaan Listrik",
+      "1402": "Pemeliharaan Instrumen",
+      "1403": "Pemeliharaan Mesin"
+    };
+
     const workCenterStats = {};
     const technicianStats = {};
     const departmentStats = {};
     spks.forEach(spk => {
-      const wc = spk.work_center || "Unknown";
-      workCenterStats[wc] = (workCenterStats[wc] || 0) + 1;
+      const wcCode = spk.work_center;
+      if (wcCode && wcCode !== "-") {
+        const wcName = WORK_CENTER_MAP[wcCode] || wcCode;
+        workCenterStats[wcName] = (workCenterStats[wcName] || 0) + 1;
+      }
       if (spk.execution_nik) {
         const name = spk.execution_name || spk.execution_nik;
         if (!technicianStats[spk.execution_nik]) technicianStats[spk.execution_nik] = { name, count: 0 };

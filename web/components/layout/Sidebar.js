@@ -21,7 +21,7 @@ const NAV = [
   { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan SPK',    Icon: ClipboardCheck },
   { divider: true},
   { key: 'corrective',        href: '/corrective',         label: 'Corrective',         Icon: Wrench },
-  { key: 'corrective-record', href: '/corrective/track-record', label: 'Track Record Corrective', Icon: BarChart2 },
+  { key: 'corrective-record', href: '/corrective/track-record', label: 'Riwayat CM', Icon: BarChart2 },
   { divider: true },
   { key: 'users',             href: '/users',              label: 'Users',              Icon: Users },
   { key: 'track-record',      href: '/users/track-record', label: 'Track Record',       Icon: BarChart2 },
