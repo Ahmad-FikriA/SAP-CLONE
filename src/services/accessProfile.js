@@ -38,6 +38,10 @@ function containsText(value, needle) {
   return String(value || "").toLowerCase().includes(needle);
 }
 
+function hasInspectionText(value) {
+  return containsText(value, "inpeksi") || containsText(value, "inspeksi");
+}
+
 function parseAppRole(roleStr) {
   const role = String(roleStr || "").toLowerCase().trim();
   if (role === "teknisi") return "teknisi";
@@ -87,36 +91,63 @@ function buildAccessProfile(user) {
   const divisi = String((user && user.divisi) || "");
   const group = String((user && user.group) || "");
 
-  const inDinasInspeksiRaw =
-    containsText(dinas, "inpeksi") || containsText(dinas, "inspeksi");
+  const inDinasInspeksiRaw = hasInspectionText(dinas);
+  const inGroupInspeksiRaw = hasInspectionText(group);
+  const inDinasSupervisiRaw =
+    containsText(dinas, "supervisi") || containsText(group, "supervisi");
   const isDinasPerawatan = containsText(dinas, "perawatan");
   const isPlanner = containsText(group, "perencanaan");
   const isKadisPP =
     role === "kadis" &&
     (containsText(dinas, "pusat perawatan") ||
-      containsText(group, "pusat perawatan") ||
-      containsText(divisi, "pusat perawatan"));
+      containsText(group, "pusat perawatan"));
 
   const isDinasHSE = containsText(dinas, "hse") || containsText(group, "hse");
-  const isKadisHSE =
-    role === "kadis" &&
-    (containsText(dinas, "hse") || containsText(divisi, "hse") || containsText(group, "hse"));
-  const isKadivPPHSE = role === "kadiv" && containsText(divisi, "pphse");
+  const isKadisHSE = role === "kadis" && isDinasHSE;
+  const isKadivPPHSE =
+    role === "kadiv" &&
+    (containsText(divisi, "pphse") ||
+      (containsText(divisi, "pusat perawatan") && containsText(divisi, "hse")));
+  const isInspectionAuthorityUnit =
+    inDinasInspeksiRaw || inGroupInspeksiRaw || isDinasHSE;
+  const isSupervisiOperationalUnit =
+    inDinasInspeksiRaw || inGroupInspeksiRaw || inDinasSupervisiRaw;
 
   const modules = resolveAppModules(role, permissions);
   const canAccessInspection = modules.has("inspection");
-  const canAccessSupervisi = modules.has("supervisi");
+  const hasSupervisiModule = modules.has("supervisi");
+  const canAccessSupervisi =
+    hasSupervisiModule &&
+    (isAdmin || isKadivPPHSE || isSupervisiOperationalUnit);
 
-  const isSupervisiScheduler = canAccessSupervisi && (isAdmin || role === "kadis");
-  const isSupervisiMonitor = canAccessSupervisi && (isAdmin || role === "kadiv");
-  const isSupervisiDenied = false;
-  const isSupervisiGroup = canAccessSupervisi && EXECUTOR_APP_ROLES.has(role);
-  const isSupervisiExecutor = canAccessSupervisi && EXECUTOR_APP_ROLES.has(role);
+  if (!canAccessSupervisi) {
+    modules.delete("supervisi");
+  }
+
+  const isSupervisiScheduler =
+    canAccessSupervisi &&
+    (isAdmin || (role === "kadis" && isSupervisiOperationalUnit));
+  const isSupervisiMonitor =
+    canAccessSupervisi && (isAdmin || (role === "kadiv" && isKadivPPHSE));
+  const isSupervisiDenied = hasSupervisiModule && !canAccessSupervisi;
+  const isSupervisiGroup =
+    canAccessSupervisi &&
+    EXECUTOR_APP_ROLES.has(role) &&
+    isSupervisiOperationalUnit;
+  const isSupervisiExecutor =
+    canAccessSupervisi &&
+    EXECUTOR_APP_ROLES.has(role) &&
+    isSupervisiOperationalUnit;
 
   const hasInspectionRoleOverride = false;
-  const isInspectionApprover = canAccessInspection && role === "kadis";
-  const isInspectionExecutor = canAccessInspection && EXECUTOR_APP_ROLES.has(role);
-  const isInspectionPlanner = canAccessInspection && role === "kadis";
+  const canReviewInspection =
+    canAccessInspection && role === "kadis" && isInspectionAuthorityUnit;
+  const isInspectionApprover = canReviewInspection;
+  const isInspectionExecutor =
+    canAccessInspection &&
+    EXECUTOR_APP_ROLES.has(role) &&
+    isInspectionAuthorityUnit;
+  const isInspectionPlanner = canReviewInspection;
   const isInspectionMonitor = canAccessInspection && (isAdmin || role === "kadiv");
   const isInspectionPerawatan = canAccessInspection && !isInspectionExecutor && isDinasPerawatan;
   const isDinasInspeksi = !isInspectionExecutor && inDinasInspeksiRaw;

@@ -22,6 +22,8 @@ describe('Supervisi access rules', () => {
       nik: 'codex-kadis',
       name: 'Kadis Codex',
       role: 'kadis',
+      dinas: 'Inspeksi & Supervisi',
+      divisi: 'Pusat Perawatan & HSE',
       permissions: { ...appSupervisiOn, supervisi: ['R'] },
     };
 
@@ -35,7 +37,9 @@ describe('Supervisi access rules', () => {
         nik: `codex-${role}`,
         name: `Executor ${role}`,
         role,
-        group: 'Produksi',
+        dinas: 'Inspeksi & Supervisi',
+        divisi: 'Pusat Perawatan & HSE',
+        group: 'Supervisi',
         permissions: { ...appSupervisiOn, supervisi: ['R'] },
       };
 
@@ -49,10 +53,25 @@ describe('Supervisi access rules', () => {
       nik: 'codex-kadiv',
       name: 'Kadiv Codex',
       role: 'kadiv',
+      dinas: 'Operasi Keamanan',
+      divisi: 'PPHSE',
       permissions: appSupervisiOn,
     };
 
     expect(getSupervisiAccess(user).kind).toBe('monitor');
+  });
+
+  it('denies supervisi for kadiv outside PPHSE', () => {
+    const user = {
+      nik: 'codex-kadiv-operasi',
+      name: 'Kadiv Operasi',
+      role: 'kadiv',
+      dinas: 'Operasi Keamanan',
+      divisi: 'Operasi',
+      permissions: appSupervisiOn,
+    };
+
+    expect(getSupervisiAccess(user).kind).toBe('none');
   });
 
   it('does not grant API supervisi monitor access from web read permission only', () => {
@@ -65,6 +84,20 @@ describe('Supervisi access rules', () => {
     };
 
     expect(getSupervisiAccess(user).kind).toBe('none');
+  });
+
+  it('denies Kadis Pusat Perawatan in the API even when app supervisi is enabled', () => {
+    const user = {
+      nik: 'codex-kadis-pp',
+      name: 'Kadis PP',
+      role: 'kadis',
+      dinas: 'Pusat Perawatan',
+      divisi: 'PPHSE',
+      permissions: appSupervisiOn,
+    };
+
+    expect(getSupervisiAccess(user).kind).toBe('none');
+    expect(isSupervisiScheduler(user)).toBe(false);
   });
 
   it('grants monitor access for web reads when explicitly flagged as web client', () => {

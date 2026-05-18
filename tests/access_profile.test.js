@@ -18,9 +18,19 @@ describe('Access profile permissions', () => {
     nik: `codex-${role}`,
     name: `Codex ${role}`,
     role,
-    dinas: 'Operasi Keamanan',
-    divisi: 'Operasi',
-    group: 'Produksi',
+    dinas: 'Inspeksi & Supervisi',
+    divisi: 'Pusat Perawatan & HSE',
+    group: 'Supervisi',
+    permissions,
+  });
+
+  const userOutsideInspection = (role, permissions = { _app: appAccess }) => ({
+    nik: `codex-outside-${role}`,
+    name: `Codex Outside ${role}`,
+    role,
+    dinas: 'Pusat Perawatan',
+    divisi: 'PPHSE',
+    group: 'Elektrik',
     permissions,
   });
 
@@ -50,6 +60,44 @@ describe('Access profile permissions', () => {
     expect(profile.flags.isInspectionPlanner).toBe(true);
     expect(profile.flags.canAccessSupervisi).toBe(false);
     expect(profile.flags.canManageSupervisiJobs).toBe(false);
+  });
+
+  it('keeps Kadis Pusat Perawatan as inspection reporter and denies supervisi', () => {
+    const profile = buildAccessProfile(userOutsideInspection('kadis'));
+
+    expect(profile.modules).toContain('inspection');
+    expect(profile.modules).not.toContain('supervisi');
+    expect(profile.flags.canAccessInspection).toBe(true);
+    expect(profile.flags.isInspectionPlanner).toBe(false);
+    expect(profile.flags.isInspectionApprover).toBe(false);
+    expect(profile.flags.isInspectionExecutor).toBe(false);
+    expect(profile.flags.canAccessSupervisi).toBe(false);
+    expect(profile.flags.isSupervisiScheduler).toBe(false);
+    expect(profile.flags.isSupervisiDenied).toBe(true);
+  });
+
+  it('keeps Kadiv PPHSE as supervisi monitor outside the inspection unit', () => {
+    const profile = buildAccessProfile({
+      ...userOutsideInspection('kadiv'),
+      divisi: 'PPHSE',
+    });
+
+    expect(profile.modules).toContain('supervisi');
+    expect(profile.flags.canAccessSupervisi).toBe(true);
+    expect(profile.flags.isSupervisiMonitor).toBe(true);
+    expect(profile.flags.isSupervisiScheduler).toBe(false);
+    expect(profile.flags.isSupervisiExecutor).toBe(false);
+  });
+
+  it('denies supervisi for Kadiv outside PPHSE and inspection unit', () => {
+    const profile = buildAccessProfile({
+      ...userOutsideInspection('kadiv'),
+      divisi: 'Operasi',
+    });
+
+    expect(profile.modules).not.toContain('supervisi');
+    expect(profile.flags.canAccessSupervisi).toBe(false);
+    expect(profile.flags.isSupervisiMonitor).toBe(false);
   });
 
   it.each([
