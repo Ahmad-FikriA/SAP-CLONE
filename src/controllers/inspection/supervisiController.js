@@ -11,7 +11,6 @@ const {
   isSupervisiScheduler,
   isSupervisiExecutor,
   getKnownSupervisiGroups,
-  getDefaultSupervisiPersonnelGroups,
   normalizeSupervisiGroupLabel,
   isAllowedExecutorForGroup,
   canAccessSupervisiJob,
@@ -183,22 +182,6 @@ async function listPersonnel(req, res) {
       if (!grouped.has(group)) grouped.set(group, new Map());
       return grouped.get(group);
     };
-
-    for (const entry of getDefaultSupervisiPersonnelGroups()) {
-      const target = ensureGroup(entry.group);
-      for (const user of entry.users) {
-        const name = String(user.name || "").trim();
-        if (!name) continue;
-        target.set(name.toLowerCase(), {
-          id: null,
-          nik: null,
-          name,
-          role: null,
-          group: entry.group,
-          source: "default",
-        });
-      }
-    }
 
     const users = await User.findAll({
       attributes: [

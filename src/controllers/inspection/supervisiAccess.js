@@ -14,43 +14,39 @@ const SUPERVISI_GROUP_LABEL_BY_KEY = {
   [SUPERVISI_GROUP_KEY_MEKATRONIK]: SUPERVISI_GROUP_MEKATRONIK,
   [SUPERVISI_GROUP_KEY_INSPEKSI]: SUPERVISI_GROUP_INSPEKSI,
 };
-const SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY = {
-  [SUPERVISI_GROUP_KEY_PERPIPAAN]: ["Deni Yuniardi", "Yoyon Sutrisno"],
-  [SUPERVISI_GROUP_KEY_MEKATRONIK]: ["Ibrohim", "Agus Miftakh"],
-  [SUPERVISI_GROUP_KEY_INSPEKSI]: ["Rangga Pramana Putra", "Usep Supriatna"],
-};
 
 function normalizeNik(value) {
   return String(value || "").trim();
 }
 
 function normalizeName(value) {
-  return String(value || "").trim().toLowerCase();
+  return normalizeComparableText(value);
+}
+
+function normalizeComparableText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/&/g, "dan")
+    .replace(/[^a-z0-9]/g, "");
 }
 
 function normalizeGroup(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z]/g, "");
+  return normalizeComparableText(value).replace(/^group/, "");
 }
 
 function getSupervisiGroupKey(value) {
   const normalized = normalizeGroup(value);
   if (!normalized) return null;
 
-  if (normalized.includes("sipil") || normalized.includes("perpipaan")) {
+  if (normalized === normalizeGroup(SUPERVISI_GROUP_PERPIPAAN)) {
     return SUPERVISI_GROUP_KEY_PERPIPAAN;
   }
 
-  if (
-    normalized.includes("mekan") ||
-    normalized.includes("elektrik") ||
-    normalized.includes("instrumen")
-  ) {
+  if (normalized === normalizeGroup(SUPERVISI_GROUP_MEKATRONIK)) {
     return SUPERVISI_GROUP_KEY_MEKATRONIK;
   }
 
-  if (normalized.includes("inspeksi")) {
+  if (normalized === normalizeGroup(SUPERVISI_GROUP_INSPEKSI)) {
     return SUPERVISI_GROUP_KEY_INSPEKSI;
   }
 
@@ -77,18 +73,9 @@ function getKnownSupervisiGroups() {
   ];
 }
 
-function getDefaultSupervisiPersonnelGroups() {
-  return Object.entries(SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY).map(
-    ([key, names]) => ({
-      group: SUPERVISI_GROUP_LABEL_BY_KEY[key],
-      users: names.map((name) => ({ name, source: "default" })),
-    })
-  );
-}
-
 function getAllowedExecutorNamesForGroup(groupName) {
-  const groupKey = getSupervisiGroupKey(groupName);
-  return SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY[groupKey] || [];
+  void groupName;
+  return [];
 }
 
 function hasWebReadSupervisiPermission(user) {
@@ -143,17 +130,23 @@ async function isAllowedExecutorName(value) {
   const name = String(value || "").trim();
   if (!name) return false;
 
-  const user = await User.findOne({ where: { name } });
-  if (user && buildAccessProfile(user).flags.isSupervisiExecutor) {
-    return true;
-  }
-
-  // Fallback: cek di daftar hardcoded executor
-  const nameLower = name.toLowerCase();
-  for (const names of Object.values(SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY)) {
-    if (names.some((n) => n.toLowerCase() === nameLower)) return true;
-  }
-  return false;
+  const users = await User.findAll({
+    attributes: [
+      "id",
+      "nik",
+      "name",
+      "role",
+      "dinas",
+      "divisi",
+      "group",
+      "permissions",
+    ],
+  });
+  return users.some((user) => {
+    const plain = typeof user.toJSON === "function" ? user.toJSON() : user;
+    return normalizeName(plain.name) === normalizeName(name) &&
+      buildAccessProfile(plain).flags.isSupervisiExecutor;
+  });
 }
 
 async function isAllowedExecutorForGroup(groupName, value) {
@@ -161,19 +154,24 @@ async function isAllowedExecutorForGroup(groupName, value) {
   const requestedGroupKey = getSupervisiGroupKey(groupName);
   if (!name || !requestedGroupKey) return false;
 
-  // Cek di database dulu
-  const user = await User.findOne({
-    where: { name },
+  const users = await User.findAll({
+    attributes: [
+      "id",
+      "nik",
+      "name",
+      "role",
+      "dinas",
+      "divisi",
+      "group",
+      "permissions",
+    ],
   });
-  if (user && buildAccessProfile(user).flags.isSupervisiExecutor) {
-    const userGroupKey = getSupervisiGroupKey(user.group);
-    return !userGroupKey || userGroupKey === requestedGroupKey;
-  }
-
-  // Fallback: cek di daftar hardcoded executor per group
-  const allowedNames = SUPERVISI_EXECUTOR_NAMES_BY_GROUP_KEY[requestedGroupKey] || [];
-  const nameLower = name.toLowerCase();
-  return allowedNames.some((n) => n.toLowerCase() === nameLower);
+  return users.some((user) => {
+    const plain = typeof user.toJSON === "function" ? user.toJSON() : user;
+    return normalizeName(plain.name) === normalizeName(name) &&
+      buildAccessProfile(plain).flags.isSupervisiExecutor &&
+      getSupervisiGroupKey(plain.group) === requestedGroupKey;
+  });
 }
 
 function canAccessSupervisiJob(user, job, options = {}) {
@@ -201,7 +199,6 @@ module.exports = {
   isSupervisiScheduler,
   isSupervisiExecutor,
   getKnownSupervisiGroups,
-  getDefaultSupervisiPersonnelGroups,
   normalizeSupervisiGroupLabel,
   getAllowedExecutorNamesForGroup,
   isAllowedExecutorName,

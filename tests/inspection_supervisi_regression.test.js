@@ -82,6 +82,26 @@ describe('Inspection and Supervisi regressions', () => {
     process.env.JWT_SECRET || 'kti-mock-secret-dev',
   );
 
+  async function createSupervisiExecutor({
+    group = 'Supervisi Sipil & Perpipaan',
+    role = 'teknisi',
+  } = {}) {
+    const suffix = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+    const user = await User.create({
+      id: `CSP${suffix.slice(-14)}`,
+      nik: `SUP-PIC-${suffix}`,
+      password: 'password123',
+      name: `Codex PIC Supervisi ${suffix}`,
+      role,
+      dinas: 'Inpeksi & Supervisi',
+      divisi: 'PPHSE',
+      group,
+      permissions: { _app: appAccess, supervisi: ['R'] },
+    });
+    cleanup.userIds.push(user.id);
+    return user;
+  }
+
   afterEach(async () => {
     if (cleanup.visitIds.length > 0) {
       await SupervisiVisit.destroy({ where: { id: cleanup.visitIds } });
@@ -361,6 +381,8 @@ describe('Inspection and Supervisi regressions', () => {
   });
 
   it('creates a supervisi job when PIC matches the executor group in user data', async () => {
+    const pic = await createSupervisiExecutor();
+
     const response = await request(app)
       .post('/api/inspection/supervisi/jobs')
       .set('Authorization', `Bearer ${plannerToken}`)
@@ -372,7 +394,7 @@ describe('Inspection and Supervisi regressions', () => {
         waktuMulai: '2026-04-23',
         waktuBerakhir: '2026-04-24',
         namaPengawas: 'Group supervisi Sipil dan Perpipaan',
-        picSupervisi: 'Deni Yuniardi',
+        picSupervisi: pic.name,
         latitude: -6.2,
         longitude: 106.8,
         radius: 100,
@@ -385,25 +407,18 @@ describe('Inspection and Supervisi regressions', () => {
     expect(response.body.data.namaPengawas).toBe(
       'Group supervisi Sipil dan Perpipaan',
     );
-    expect(response.body.data.picSupervisi).toBe('Deni Yuniardi');
+    expect(response.body.data.picSupervisi).toBe(pic.name);
 
     cleanup.jobIds.push(response.body.data.id);
   });
 
   it('lists new supervisi executor users as selectable personnel', async () => {
-    const suffix = Date.now();
-    const user = await User.create({
-      id: `CSP${String(suffix).slice(-14)}`,
-      nik: `SUP-PIC-${suffix}`,
-      password: 'password123',
-      name: `Codex PIC Supervisi ${suffix}`,
-      role: 'teknisi',
-      dinas: 'Inpeksi & Supervisi',
-      divisi: 'PPHSE',
-      group: 'Group supervisi Mekanikal Elektrik dan Instrumen',
-      permissions: { _app: appAccess, supervisi: ['R'] },
+    const user = await createSupervisiExecutor({
+      group: 'Supervisi Mekanikal, Elektrik & Instrumen',
     });
-    cleanup.userIds.push(user.id);
+    const unrelatedUser = await createSupervisiExecutor({
+      group: 'Tim Sipil Operasional',
+    });
 
     const response = await request(app)
       .get('/api/inspection/supervisi/personnel')
@@ -425,9 +440,18 @@ describe('Inspection and Supervisi regressions', () => {
         }),
       ]),
     );
+    expect(
+      response.body.data.some((group) =>
+        group.users.some((item) => item.name === unrelatedUser.name),
+      ),
+    ).toBe(false);
   });
 
   it('creates a supervisi draft with a 19-digit nilai pekerjaan', async () => {
+    const pic = await createSupervisiExecutor({
+      group: 'Supervisi Mekanikal, Elektrik & Instrumen',
+    });
+
     const response = await request(app)
       .post('/api/inspection/supervisi/jobs')
       .set('Authorization', `Bearer ${plannerToken}`)
@@ -437,7 +461,7 @@ describe('Inspection and Supervisi regressions', () => {
         nilaiPekerjaan: '9999999999999999999',
         pelaksana: 'Vendor Test',
         namaPengawas: 'Group supervisi Mekanikal Elektrik dan Instrumen',
-        picSupervisi: 'Ibrohim',
+        picSupervisi: pic.name,
         status: 'draft',
       });
 
@@ -447,6 +471,8 @@ describe('Inspection and Supervisi regressions', () => {
   });
 
   it('allows a newly assigned kadis scheduler to see existing supervisi jobs', async () => {
+    const pic = await createSupervisiExecutor();
+
     const createResponse = await request(app)
       .post('/api/inspection/supervisi/jobs')
       .set('Authorization', `Bearer ${plannerToken}`)
@@ -458,7 +484,7 @@ describe('Inspection and Supervisi regressions', () => {
         waktuMulai: '2026-04-23',
         waktuBerakhir: '2026-04-24',
         namaPengawas: 'Group supervisi Sipil dan Perpipaan',
-        picSupervisi: 'Deni Yuniardi',
+        picSupervisi: pic.name,
         latitude: -6.2,
         longitude: 106.8,
         radius: 100,
@@ -483,6 +509,10 @@ describe('Inspection and Supervisi regressions', () => {
   });
 
   it('allows web reader with supervisi read permission to fetch supervisi jobs', async () => {
+    const pic = await createSupervisiExecutor({
+      group: 'Supervisi Mekanikal, Elektrik & Instrumen',
+    });
+
     const createResponse = await request(app)
       .post('/api/inspection/supervisi/jobs')
       .set('Authorization', `Bearer ${plannerToken}`)
@@ -494,7 +524,7 @@ describe('Inspection and Supervisi regressions', () => {
         waktuMulai: '2026-04-23',
         waktuBerakhir: '2026-04-24',
         namaPengawas: 'Group supervisi Mekanikal Elektrik dan Instrumen',
-        picSupervisi: 'Ibrohim',
+        picSupervisi: pic.name,
         status: 'active',
       });
 
@@ -512,6 +542,10 @@ describe('Inspection and Supervisi regressions', () => {
   });
 
   it('rejects nilai pekerjaan above the app-supported digit limit', async () => {
+    const pic = await createSupervisiExecutor({
+      group: 'Supervisi Mekanikal, Elektrik & Instrumen',
+    });
+
     const response = await request(app)
       .post('/api/inspection/supervisi/jobs')
       .set('Authorization', `Bearer ${plannerToken}`)
@@ -520,7 +554,7 @@ describe('Inspection and Supervisi regressions', () => {
         nomorJo: `JO-CODEX-TOO-BIG-${Date.now()}`,
         nilaiPekerjaan: '10000000000000000000',
         namaPengawas: 'Group supervisi Mekanikal Elektrik dan Instrumen',
-        picSupervisi: 'Ibrohim',
+        picSupervisi: pic.name,
         status: 'draft',
       });
 
@@ -530,6 +564,8 @@ describe('Inspection and Supervisi regressions', () => {
   });
 
   it('updates supervisi job coordinates from the scheduler endpoint', async () => {
+    const pic = await createSupervisiExecutor();
+
     const createResponse = await request(app)
       .post('/api/inspection/supervisi/jobs')
       .set('Authorization', `Bearer ${plannerToken}`)
@@ -541,7 +577,7 @@ describe('Inspection and Supervisi regressions', () => {
         waktuMulai: '2026-04-23',
         waktuBerakhir: '2026-04-24',
         namaPengawas: 'Group supervisi Sipil dan Perpipaan',
-        picSupervisi: 'Deni Yuniardi',
+        picSupervisi: pic.name,
         latitude: -6.2,
         longitude: 106.8,
         radius: 100,
