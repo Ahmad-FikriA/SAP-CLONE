@@ -12,8 +12,24 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
 
-  // Dummy state for UI purposes
   const fileInputRef = useRef(null);
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    role: '',
+    dinas: '',
+    divisi: '',
+    tanggalLahir: '',
+    alamat: '',
+    noHp: '',
+    fotoProfil: '',
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
 
   // Fetch initial profile data
   useEffect(() => {
