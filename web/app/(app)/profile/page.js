@@ -225,8 +225,9 @@ export default function ProfilePage() {
                       <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <Input 
                         value={profileData.name}
-                        onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                        className="pl-10 h-11 bg-slate-50 rounded-xl"
+                        readOnly
+                        disabled
+                        className="pl-10 h-11 bg-slate-100/50 text-slate-500 rounded-xl cursor-not-allowed border-slate-200 shadow-none"
                       />
                     </div>
                   </div>

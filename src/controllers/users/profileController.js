@@ -24,11 +24,10 @@ const updateMyProfile = async (req, res) => {
     const user = await User.findByPk(req.user.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Only allow updating specific safe fields
-    const { name, tanggalLahir, alamat, noHp, email } = req.body;
+    // Only allow updating specific safe fields (excluding name per request)
+    const { tanggalLahir, alamat, noHp, email } = req.body;
     
     const updateData = {};
-    if (name !== undefined) updateData.name = name;
     if (tanggalLahir !== undefined) updateData.tanggalLahir = tanggalLahir || null;
     if (alamat !== undefined) updateData.alamat = alamat || null;
     if (noHp !== undefined) updateData.noHp = noHp || null;
