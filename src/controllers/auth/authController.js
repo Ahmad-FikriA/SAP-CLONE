@@ -28,8 +28,18 @@ const login = async (req, res) => {
     return res.status(400).json({ error: 'NIK and password required' });
   }
 
-  const user = await User.findOne({ where: { nik, password } });
+  const user = await User.findOne({ where: { nik } });
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+  let isValid = false;
+  if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+    const bcrypt = require('bcrypt');
+    isValid = await bcrypt.compare(password, user.password);
+  } else {
+    isValid = (user.password === password);
+  }
+
+  if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
 
   const roleTemplates  = loadRoleTemplates();
   const permissions    = user.permissions ?? roleTemplates[user.role] ?? null; // null = unrestricted

@@ -1,42 +1,98 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Camera, Save, Lock, User, Shield, Mail, Calendar, MapPin, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { apiGet, apiPut, apiUpload } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
 
   // Dummy state for UI purposes
-  const [profileData, setProfileData] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    role: 'Kadis Pelapor',
-    dinas: 'Dinas Teknik',
-    divisi: 'Divisi Maintenance',
-    tanggalLahir: '',
-    alamat: '',
-    noHp: '',
-  });
+  const fileInputRef = useRef(null);
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
+  // Fetch initial profile data
+  useEffect(() => {
+    apiGet('/users/profile/me')
+      .then((data) => {
+        setProfileData({
+          name: data.name || '',
+          email: data.email || '',
+          role: data.role || '',
+          dinas: data.dinas || '',
+          divisi: data.divisi || '',
+          tanggalLahir: data.tanggalLahir || '',
+          alamat: data.alamat || '',
+          noHp: data.noHp || '',
+          fotoProfil: data.fotoProfil || '',
+        });
+      })
+      .catch((err) => toast.error('Gagal mengambil data profil: ' + err.message));
+  }, []);
 
-  const handleProfileSave = () => {
+  const handleProfileSave = async () => {
     setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
+    try {
+      const res = await apiPut('/users/profile/me', profileData);
+      toast.success(res.message || 'Profil berhasil diperbarui');
+    } catch (err) {
+      toast.error('Gagal memperbarui: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePasswordSave = () => {
+  const handlePasswordSave = async () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      return toast.error('Konfirmasi kata sandi tidak cocok!');
+    }
+    
     setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
+    try {
+      const res = await apiPut('/users/profile/password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      toast.success(res.message || 'Kata sandi berhasil diubah');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      toast.error('Gagal mengubah sandi: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check size immediately (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 2MB');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const t = toast.loading('Mengunggah foto...');
+    try {
+      const res = await apiUpload('/users/profile/photo', formData);
+      setProfileData(prev => ({ ...prev, fotoProfil: res.fotoProfil }));
+      toast.success('Foto profil berhasil diunggah', { id: t });
+    } catch (err) {
+      toast.error('Gagal mengunggah foto: ' + err.message, { id: t });
+    }
+    
+    // Clear input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
@@ -93,12 +149,29 @@ export default function ProfilePage() {
 
               {/* Profile Photo Upload */}
               <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-slate-100">
-                <div className="relative group cursor-pointer">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-100 flex items-center justify-center border-4 border-white shadow-lg overflow-hidden">
-                    {/* Dummy Avatar */}
-                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold">
-                      {profileData.name.charAt(0)}
-                    </div>
+                <input 
+                  type="file" 
+                  accept="image/jpeg, image/png, image/jpg" 
+                  className="hidden" 
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                />
+                <div 
+                  className="relative group cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-100 flex items-center justify-center border-4 border-white shadow-lg overflow-hidden relative">
+                    {profileData.fotoProfil ? (
+                      <img 
+                        src={`${API_URL}/uploads/profiles/${profileData.fotoProfil}`} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold">
+                        {profileData.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                   <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <Camera size={24} className="text-white" />
@@ -110,12 +183,19 @@ export default function ProfilePage() {
                     Disarankan gambar format JPG atau PNG, ukuran maksimal 2MB. Resolusi 1:1.
                   </p>
                   <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
-                    <Button variant="outline" size="sm" className="h-8 text-xs font-semibold rounded-lg">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 text-xs font-semibold rounded-lg"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
                       Ubah Foto
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg">
-                      Hapus
-                    </Button>
+                    {profileData.fotoProfil && (
+                      <Button variant="ghost" size="sm" className="h-8 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg">
+                        Hapus
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

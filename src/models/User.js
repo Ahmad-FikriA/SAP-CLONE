@@ -27,6 +27,25 @@ const User = sequelize.define('User', {
     allowNull: true,
     field: 'allowed_pages',
   },
+  tanggalLahir: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+    field: 'tanggal_lahir',
+  },
+  alamat: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  noHp: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'no_hp',
+  },
+  fotoProfil: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    field: 'foto_profil',
+  },
 }, {
   tableName: 'users',
   underscored: true,
