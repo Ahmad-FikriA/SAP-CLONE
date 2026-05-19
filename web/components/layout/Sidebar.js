@@ -182,8 +182,12 @@ export default function Sidebar() {
         {isMounted && (
           <div className="border-t border-white/10 p-3 flex items-center gap-2 shrink-0">
             <Link href="/profile" className="flex items-center gap-2 flex-1 min-w-0 group" onClick={() => setMobileOpen(false)}>
-              <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
-                {initials}
+              <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center text-xs font-bold shrink-0 transition-colors overflow-hidden">
+                {user?.fotoProfil ? (
+                  <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/uploads/profiles/${user.fotoProfil}`} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
               </div>
               <span className="text-xs text-white/70 group-hover:text-white truncate flex-1 transition-colors">
                 {user?.name || user?.nik || ''}
@@ -240,8 +244,12 @@ export default function Sidebar() {
         {isMounted && (
           <div className="border-t border-white/10 p-3 flex items-center gap-2">
             <Link href="/profile" className={cn("flex items-center gap-2 min-w-0 group transition-colors", collapsed ? "mx-auto" : "flex-1")}>
-              <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
-                {initials}
+              <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center text-xs font-bold shrink-0 transition-colors overflow-hidden">
+                {user?.fotoProfil ? (
+                  <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/uploads/profiles/${user.fotoProfil}`} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
               </div>
               {!collapsed && (
                 <span className="text-xs text-white/70 group-hover:text-white truncate flex-1 transition-colors">
