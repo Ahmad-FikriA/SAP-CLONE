@@ -22,7 +22,7 @@ const getSapSpkList = async (req, res) => {
     const notificationInclude = {
       model: Notification,
       as: "notification",
-      attributes: ["kadisPelaporId", "requiredStart", "requiredEnd"],
+      attributes: ["kadisPelaporId", "requiredStart", "requiredEnd", "photo1", "photo2"],
       include: [
         {
           model: User,

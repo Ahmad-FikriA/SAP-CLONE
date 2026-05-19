@@ -7,7 +7,8 @@ import { APPROVAL_COLORS, APPROVAL_LABELS } from "./constants";
 import {
   CorrectiveStatusBadge, Section, Row, InfoCard, fmtDate,
 } from "./ui-primitives";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, XCircle, Eye } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export function RequestDetailDialog({
   selectedRequest, onClose,
@@ -17,6 +18,7 @@ export function RequestDetailDialog({
   const [isAdminEditing, setIsAdminEditing] = useState(false);
   const [adminStatus, setAdminStatus] = useState("");
   const [adminApprovalStatus, setAdminApprovalStatus] = useState("");
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const handleAdminSave = async () => {
     try {
@@ -31,8 +33,9 @@ export function RequestDetailDialog({
   };
 
   return (
-    <AnimatePresence>
-      {selectedRequest && (
+    <>
+      <AnimatePresence>
+        {selectedRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
@@ -218,13 +221,20 @@ export function RequestDetailDialog({
                   {selectedRequest.images.filter(Boolean).map((p, i) => {
                     const src = getMediaUrl(p);
                     return (
-                      <img
-                        key={i}
-                        src={src}
-                        alt={`Attachment ${i + 1}`}
-                        onClick={() => window.open(src, "_blank")}
-                        className="w-36 h-36 object-cover rounded-xl border border-slate-200 cursor-zoom-in hover:shadow-lg transition-all hover:scale-105"
-                      />
+                      <div 
+                        key={i} 
+                        className="relative group rounded-xl overflow-hidden cursor-pointer border border-slate-200 w-36 h-36 flex-shrink-0" 
+                        onClick={() => setSelectedImage(src)}
+                      >
+                        <img
+                          src={src}
+                          alt={`Attachment ${i + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                          <Eye className="w-8 h-8 text-white drop-shadow-md" />
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -263,6 +273,31 @@ export function RequestDetailDialog({
         </motion.div>
       </div>
       )}
-    </AnimatePresence>
+
+      </AnimatePresence>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-fit w-auto p-0 bg-transparent border-none shadow-none [&>button]:hidden flex justify-center items-center">
+          <div className="relative flex justify-center items-center">
+            {selectedImage && (
+              <img
+                src={selectedImage}
+                alt="Preview"
+                className="max-h-[85vh] w-auto max-w-[95vw] rounded-xl object-contain shadow-2xl"
+              />
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-3 -right-3 bg-black/60 hover:bg-black/80 text-white rounded-full w-8 h-8 flex items-center justify-center p-0 backdrop-blur-sm"
+              onClick={() => setSelectedImage(null)}
+            >
+              <XCircle className="w-6 h-6" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

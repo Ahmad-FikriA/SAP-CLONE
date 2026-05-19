@@ -16,7 +16,10 @@ import {
   Package,
   Plus,
   Trash2,
+  XCircle,
+  Eye,
 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn, getMediaUrl } from "@/lib/utils";
 import {
@@ -57,6 +60,7 @@ export function SpkDetailDialog({
   const [loading, setLoading] = useState(false);
   const [highlightButtons, setHighlightButtons] = useState(false);
   const highlightTimeout = useRef(null);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const [editData, setEditData] = useState({
     description: "",
@@ -190,8 +194,9 @@ export function SpkDetailDialog({
   }, []);
 
   return (
-    <AnimatePresence>
-      {selectedSpk && (
+    <>
+      <AnimatePresence>
+        {selectedSpk && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
@@ -631,6 +636,36 @@ export function SpkDetailDialog({
               />
             </div>
 
+            {/* Foto dari Pelapor */}
+            {selectedSpk.notification && [selectedSpk.notification.photo1, selectedSpk.notification.photo2].filter(Boolean).length > 0 && (
+              <div className="bg-slate-50/50 rounded-2xl border border-slate-100 p-5">
+                <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  Foto Temuan (Dari Pelapor)
+                </h4>
+                <div className="flex flex-wrap gap-4">
+                  {[selectedSpk.notification.photo1, selectedSpk.notification.photo2].filter(Boolean).map((p, i) => {
+                    const src = getMediaUrl(p);
+                    return (
+                      <div 
+                        key={i} 
+                        className="relative group rounded-xl overflow-hidden cursor-pointer border border-slate-200 w-36 h-36 flex-shrink-0" 
+                        onClick={() => setSelectedImage(src)}
+                      >
+                        <img
+                          src={src}
+                          alt={`Foto Pelapor ${i + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                          <Eye className="w-8 h-8 text-white drop-shadow-md" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Execution Results */}
             {(selectedSpk.actual_materials ||
               selectedSpk.actual_tools ||
@@ -693,17 +728,19 @@ export function SpkDetailDialog({
                     <div className="flex flex-wrap gap-4">
                       {selectedSpk.photo_before && (
                         <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 inline-block">
-                          <img
-                            src={getMediaUrl(selectedSpk.photo_before)}
-                            onClick={() =>
-                              window.open(
-                                getMediaUrl(selectedSpk.photo_before),
-                                "_blank",
-                              )
-                            }
-                            className="w-36 h-36 object-cover rounded-lg cursor-zoom-in hover:opacity-90"
-                            alt="Before"
-                          />
+                          <div 
+                            className="relative group rounded-lg overflow-hidden cursor-pointer w-36 h-36" 
+                            onClick={() => setSelectedImage(getMediaUrl(selectedSpk.photo_before))}
+                          >
+                            <img
+                              src={getMediaUrl(selectedSpk.photo_before)}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              alt="Before"
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <Eye className="w-8 h-8 text-white drop-shadow-md" />
+                            </div>
+                          </div>
                           <span className="text-xs font-semibold text-slate-600 block text-center mt-2">
                             Kondisi Awal
                           </span>
@@ -711,17 +748,19 @@ export function SpkDetailDialog({
                       )}
                       {selectedSpk.photo_after && (
                         <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200 inline-block">
-                          <img
-                            src={getMediaUrl(selectedSpk.photo_after)}
-                            onClick={() =>
-                              window.open(
-                                getMediaUrl(selectedSpk.photo_after),
-                                "_blank",
-                              )
-                            }
-                            className="w-36 h-36 object-cover rounded-lg cursor-zoom-in hover:opacity-90"
-                            alt="After"
-                          />
+                          <div 
+                            className="relative group rounded-lg overflow-hidden cursor-pointer w-36 h-36" 
+                            onClick={() => setSelectedImage(getMediaUrl(selectedSpk.photo_after))}
+                          >
+                            <img
+                              src={getMediaUrl(selectedSpk.photo_after)}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              alt="After"
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <Eye className="w-8 h-8 text-white drop-shadow-md" />
+                            </div>
+                          </div>
                           <span className="text-xs font-semibold text-slate-600 block text-center mt-2">
                             Kondisi Akhir
                           </span>
@@ -971,6 +1010,31 @@ export function SpkDetailDialog({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+
+      </AnimatePresence>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-fit w-auto p-0 bg-transparent border-none shadow-none [&>button]:hidden flex justify-center items-center">
+          <div className="relative flex justify-center items-center">
+            {selectedImage && (
+              <img
+                src={selectedImage}
+                alt="Preview"
+                className="max-h-[85vh] w-auto max-w-[95vw] rounded-xl object-contain shadow-2xl"
+              />
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-3 -right-3 bg-black/60 hover:bg-black/80 text-white rounded-full w-8 h-8 flex items-center justify-center p-0 backdrop-blur-sm"
+              onClick={() => setSelectedImage(null)}
+            >
+              <XCircle className="w-6 h-6" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

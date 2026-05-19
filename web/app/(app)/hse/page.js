@@ -206,6 +206,7 @@ export default function HseDashboardPage() {
 
   const [selectedReport, setSelectedReport] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [isValidationOpen, setIsValidationOpen] = useState(false);
   const [validationAction, setValidationAction] = useState(null);
   const [staffList, setStaffList] = useState([]);
@@ -1117,14 +1118,17 @@ export default function HseDashboardPage() {
                     {selectedReport.foto.map((f, i) => (
                       <div
                         key={i}
-                        className="group relative rounded-xl overflow-hidden border border-slate-200 shadow-sm"
+                        className="group relative rounded-xl overflow-hidden border border-slate-200 shadow-sm cursor-pointer"
+                        onClick={() => setSelectedImage(`${process.env.NEXT_PUBLIC_API_URL}/${f}`)}
                       >
                         <img
                           src={`${process.env.NEXT_PUBLIC_API_URL}/${f}`}
                           alt={`Foto Awal ${i + 1}`}
                           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300"></div>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                          <Eye className="w-8 h-8 text-white drop-shadow-md" />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1155,14 +1159,17 @@ export default function HseDashboardPage() {
                         {selectedReport.fotoPerbaikan.map((f, i) => (
                           <div
                             key={i}
-                            className="group relative rounded-xl overflow-hidden border border-emerald-200 shadow-sm"
+                            className="group relative rounded-xl overflow-hidden border border-emerald-200 shadow-sm cursor-pointer"
+                            onClick={() => setSelectedImage(`${process.env.NEXT_PUBLIC_API_URL}/${f}`)}
                           >
                             <img
                               src={`${process.env.NEXT_PUBLIC_API_URL}/${f}`}
                               alt={`Foto Perbaikan ${i + 1}`}
                               className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
                             />
-                            <div className="absolute inset-0 bg-emerald-900/10 group-hover:bg-transparent transition-colors duration-300"></div>
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <Eye className="w-8 h-8 text-white drop-shadow-md" />
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1613,6 +1620,29 @@ export default function HseDashboardPage() {
               {isSubmitting ? "Memproses..." : "Konfirmasi"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-fit w-auto p-0 bg-transparent border-none shadow-none [&>button]:hidden flex justify-center items-center">
+          <div className="relative flex justify-center items-center">
+            {selectedImage && (
+              <img
+                src={selectedImage}
+                alt="Preview"
+                className="max-h-[85vh] w-auto max-w-[95vw] rounded-xl object-contain shadow-2xl"
+              />
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-3 -right-3 bg-black/60 hover:bg-black/80 text-white rounded-full w-8 h-8 flex items-center justify-center p-0 backdrop-blur-sm"
+              onClick={() => setSelectedImage(null)}
+            >
+              <XCircle className="w-6 h-6" />
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
