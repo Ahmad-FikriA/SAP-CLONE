@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Camera, Save, Lock, User, Shield, Mail } from 'lucide-react';
+import { Camera, Save, Lock, User, Shield, Mail, Calendar, MapPin, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function ProfilePage() {
@@ -17,6 +17,9 @@ export default function ProfilePage() {
     role: 'Kadis Pelapor',
     dinas: 'Dinas Teknik',
     divisi: 'Divisi Maintenance',
+    tanggalLahir: '',
+    alamat: '',
+    noHp: '',
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -139,6 +142,51 @@ export default function ProfilePage() {
                         value={profileData.email}
                         onChange={(e) => setProfileData({...profileData, email: e.target.value})}
                         className="pl-10 h-11 bg-slate-50 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                      No HP
+                      <span className="text-[10px] text-slate-400 font-normal lowercase">(Opsional)</span>
+                    </label>
+                    <div className="relative">
+                      <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Input 
+                        value={profileData.noHp}
+                        onChange={(e) => setProfileData({...profileData, noHp: e.target.value})}
+                        className="pl-10 h-11 bg-slate-50 rounded-xl"
+                        placeholder="Contoh: 081234567890"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                      Tanggal Lahir
+                      <span className="text-[10px] text-slate-400 font-normal lowercase">(Opsional)</span>
+                    </label>
+                    <div className="relative">
+                      <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Input 
+                        type="date"
+                        value={profileData.tanggalLahir}
+                        onChange={(e) => setProfileData({...profileData, tanggalLahir: e.target.value})}
+                        className="pl-10 h-11 bg-slate-50 rounded-xl text-slate-700 block w-full"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                      Alamat
+                      <span className="text-[10px] text-slate-400 font-normal lowercase">(Opsional)</span>
+                    </label>
+                    <div className="relative">
+                      <MapPin size={16} className="absolute left-3 top-3 text-slate-400" />
+                      <textarea 
+                        value={profileData.alamat}
+                        onChange={(e) => setProfileData({...profileData, alamat: e.target.value})}
+                        className="w-full pl-10 pr-3 py-2.5 min-h-[80px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent text-sm resize-none"
+                        placeholder="Masukkan alamat lengkap Anda..."
                       />
                     </div>
                   </div>
