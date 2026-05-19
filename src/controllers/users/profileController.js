@@ -62,7 +62,7 @@ const updatePassword = async (req, res) => {
     if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
       isValid = await bcrypt.compare(currentPassword, user.password);
     } else {
-      isValid = (user.password === currentPassword);
+      isValid = (user.password === currentPassword || user.password.toLowerCase() === currentPassword.toLowerCase());
     }
 
     if (!isValid) {

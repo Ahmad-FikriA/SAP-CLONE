@@ -29,14 +29,14 @@ const login = async (req, res) => {
   }
 
   const user = await User.findOne({ where: { nik } });
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!user || !user.password) return res.status(401).json({ error: 'Invalid credentials' });
 
   let isValid = false;
   if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
     const bcrypt = require('bcrypt');
     isValid = await bcrypt.compare(password, user.password);
   } else {
-    isValid = (user.password === password);
+    isValid = (user.password === password || user.password.toLowerCase() === password.toLowerCase());
   }
 
   if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
