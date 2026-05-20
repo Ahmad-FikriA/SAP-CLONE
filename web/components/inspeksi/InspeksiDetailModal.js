@@ -1,13 +1,21 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { apiGet } from '@/lib/api';
+import { canUpdate } from '@/lib/auth';
 import { formatDate } from '@/lib/date-utils';
-import { INSPEKSI_STATUS_META, resolveInspeksiTypeLabel } from '@/lib/inspeksi-service';
+import {
+  approveInspeksiReport,
+  INSPEKSI_STATUS_META,
+  rejectInspeksiReport,
+  resolveInspeksiTypeLabel,
+} from '@/lib/inspeksi-service';
 import {
   FileText, User, MapPin, Calendar, Tag, AlertCircle, CheckCircle,
-  XCircle, Clock, Wrench, ClipboardList, Camera, AlertTriangle, ChevronDown, ChevronUp,
+  XCircle, Clock, Wrench, ClipboardList, Camera, AlertTriangle, ChevronDown, ChevronUp, Loader2,
 } from 'lucide-react';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -69,8 +77,70 @@ function InfoRow({ icon: Icon, label, value }) {
   );
 }
 
+function ApprovalActionDialog({
+  action,
+  report,
+  notes,
+  setNotes,
+  saving,
+  onCancel,
+  onConfirm,
+}) {
+  if (!action || !report) return null;
+
+  const isApprove = action === 'approve';
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/20 px-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl ring-1 ring-black/10">
+        <div className="mb-4">
+          <p className={`text-base font-bold ${isApprove ? 'text-green-700' : 'text-red-700'}`}>
+            {isApprove ? 'Setujui Inspeksi?' : 'Tolak Inspeksi?'}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-slate-800">
+            {report.schedule?.title || report.inspectorName || `Laporan #${report.id}`}
+          </p>
+          <p className="text-xs text-slate-500">
+            Diajukan oleh: {report.inspectorName || report.submittedBy || '-'}
+          </p>
+        </div>
+
+        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          {isApprove ? 'Catatan (opsional)' : 'Alasan penolakan *'}
+        </label>
+        <textarea
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          rows={4}
+          className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+          placeholder={isApprove ? 'Tambahkan catatan persetujuan' : 'Tuliskan alasan penolakan'}
+          disabled={saving}
+        />
+
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+            Batal
+          </Button>
+          <Button
+            type="button"
+            onClick={onConfirm}
+            disabled={saving}
+            className={
+              isApprove
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-red-600 text-white hover:bg-red-700'
+            }
+          >
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {isApprove ? 'Setujui' : 'Tolak'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Tampilkan satu kartu laporan hasil. */
-function ReportCard({ report, index }) {
+function ReportCard({ report, index, canReview, onApproveClick, onRejectClick }) {
   const [expanded, setExpanded] = useState(index === 0);
 
   const config       = STATUS_CONFIG[report.status] || STATUS_CONFIG.submitted;
@@ -292,6 +362,28 @@ function ReportCard({ report, index }) {
               <p className="text-sm text-gray-700 leading-relaxed">{report.approvalNotes}</p>
             </div>
           )}
+
+          {canReview && report.status === 'submitted' && (
+            <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-50"
+                onClick={() => onRejectClick(report)}
+              >
+                <XCircle size={13} />
+                Tolak
+              </Button>
+              <Button
+                type="button"
+                className="bg-green-600 text-white hover:bg-green-700"
+                onClick={() => onApproveClick(report)}
+              >
+                <CheckCircle size={13} />
+                Setujui
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -319,10 +411,15 @@ const SCROLLBAR_STYLE = `
   }
 `;
 
-export function InspeksiDetailModal({ schedule, open, onClose, usersMap = {} }) {
+export function InspeksiDetailModal({ schedule, open, onClose, usersMap = {}, onChanged }) {
   const [reports,        setReports]   = useState([]);
   const [loadingReports, setLR]        = useState(false);
+  const [approvalTarget, setApprovalTarget] = useState(null);
+  const [approvalAction, setApprovalAction] = useState(null);
+  const [approvalNotes,  setApprovalNotes]  = useState('');
+  const [approvalSaving, setApprovalSaving] = useState(false);
   const lastId = useRef(null);
+  const canReviewReports = canUpdate('inspeksi');
 
   // Resolve NIK → nama
   function resolveNama(nik) {
@@ -350,7 +447,57 @@ export function InspeksiDetailModal({ schedule, open, onClose, usersMap = {} }) 
   function handleOpenChange(val) {
     if (!val) {
       lastId.current = null;
+      setApprovalTarget(null);
+      setApprovalAction(null);
+      setApprovalNotes('');
       onClose();
+    }
+  }
+
+  function openApprovalAction(action, report) {
+    setApprovalAction(action);
+    setApprovalTarget(report);
+    setApprovalNotes('');
+  }
+
+  function closeApprovalAction() {
+    if (approvalSaving) return;
+    setApprovalAction(null);
+    setApprovalTarget(null);
+    setApprovalNotes('');
+  }
+
+  async function submitApprovalAction() {
+    if (!approvalTarget || !approvalAction) return;
+    const notes = approvalNotes.trim();
+    if (approvalAction === 'reject' && !notes) {
+      toast.error('Alasan penolakan wajib diisi.');
+      return;
+    }
+
+    setApprovalSaving(true);
+    try {
+      const updated =
+        approvalAction === 'approve'
+          ? await approveInspeksiReport(approvalTarget.id, { notes: notes || null })
+          : await rejectInspeksiReport(approvalTarget.id, { notes });
+
+      if (updated) {
+        setReports((current) => current.map((report) => (
+          report.id === updated.id ? { ...report, ...updated } : report
+        )));
+      }
+      toast.success(approvalAction === 'approve'
+        ? 'Laporan inspeksi berhasil disetujui.'
+        : 'Laporan inspeksi berhasil ditolak.');
+      setApprovalAction(null);
+      setApprovalTarget(null);
+      setApprovalNotes('');
+      onChanged?.();
+    } catch (error) {
+      toast.error('Gagal memproses approval: ' + error.message);
+    } finally {
+      setApprovalSaving(false);
     }
   }
 
@@ -460,13 +607,29 @@ export function InspeksiDetailModal({ schedule, open, onClose, usersMap = {} }) 
             ) : (
               <div className="space-y-3">
                 {reports.map((r, i) => (
-                  <ReportCard key={r.id} report={r} index={i} />
+                  <ReportCard
+                    key={r.id}
+                    report={r}
+                    index={i}
+                    canReview={canReviewReports}
+                    onApproveClick={(report) => openApprovalAction('approve', report)}
+                    onRejectClick={(report) => openApprovalAction('reject', report)}
+                  />
                 ))}
               </div>
             )}
           </div>
 
         </div>
+        <ApprovalActionDialog
+          action={approvalAction}
+          report={approvalTarget}
+          notes={approvalNotes}
+          setNotes={setApprovalNotes}
+          saving={approvalSaving}
+          onCancel={closeApprovalAction}
+          onConfirm={submitApprovalAction}
+        />
       </DialogContent>
     </Dialog>
   );
