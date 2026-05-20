@@ -533,12 +533,26 @@ const submit = async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
+    // Re-read with exclusive row lock — prevents the race condition where two
+    // requests both pass the pre-flight status check above before either commits.
+    // The second request will block here until the first commits, then re-read
+    // the updated status (awaiting_kasie) and abort with 409.
+    const lockedSpk = await Spk.findByPk(req.params.spkNumber, {
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+      include: INCLUDE_FULL,
+    });
+    if (!['pending', 'rejected'].includes(lockedSpk.status)) {
+      await t.rollback();
+      return res.status(409).json({ error: `SPK sudah disubmit (status: ${lockedSpk.status})` });
+    }
+
     // If resubmitting after rejection, stamp the latest open rejection log
-    if (spk.status === 'rejected') {
+    if (lockedSpk.status === 'rejected') {
       await SpkRejectionLog.update(
         { resubmittedAt: new Date() },
         {
-          where: { spkNumber: spk.spkNumber, resubmittedAt: null },
+          where: { spkNumber: lockedSpk.spkNumber, resubmittedAt: null },
           transaction: t,
         }
       );
@@ -546,7 +560,7 @@ const submit = async (req, res) => {
 
     // Create submission record
     const sub = await Submission.create({
-      id: subId, spkNumber: spk.spkNumber, durationActual: durationActual ?? null,
+      id: subId, spkNumber: lockedSpk.spkNumber, durationActual: durationActual ?? null,
       evaluasi: evaluasi || null, latitude: latitude ?? 0, longitude: longitude ?? 0,
       submittedAt: new Date(),
       workStart: workStart ? new Date(workStart) : null,
@@ -568,14 +582,14 @@ const submit = async (req, res) => {
       // Update activity on the SPK row
       await SpkActivity.update(
         { resultComment: r.resultComment ?? null, isVerified: r.isVerified ?? false, durationActual: r.durationActual ?? null, measurementValue: r.measurementValue ?? null },
-        { where: { spkNumber: spk.spkNumber, activityNumber: r.activityNumber }, transaction: t }
+        { where: { spkNumber: lockedSpk.spkNumber, activityNumber: r.activityNumber }, transaction: t }
       );
     }
 
     // Move SPK into approval chain
-    await spk.update({
+    await lockedSpk.update({
       status: 'awaiting_kasie',
-      durationActual: durationActual ?? spk.durationActual,
+      durationActual: durationActual ?? lockedSpk.durationActual,
       evaluasi: evaluasi || null,
       equipmentStatus: ['Running', 'Standby', 'Breakdown'].includes(equipmentStatus) ? equipmentStatus : 'Running',
       submittedBy: req.user?.userId ?? null,
@@ -585,7 +599,7 @@ const submit = async (req, res) => {
     await t.commit();
 
     // Notify Kasie whose discipline matches the SPK category
-    const kasieGroupKeyword = CATEGORY_GROUP_MAP[spk.category];
+    const kasieGroupKeyword = CATEGORY_GROUP_MAP[lockedSpk.category];
     const kasieUsers = await User.findAll({
       where: {
         role: ['supervisor', 'kepala_seksi', 'kasie'],
@@ -598,13 +612,13 @@ const submit = async (req, res) => {
         module: 'preventive',
         type: 'spk_submitted',
         title: 'SPK Menunggu Persetujuan',
-        body: `SPK ${spk.spkNumber} telah disubmit dan menunggu persetujuan Kasie`,
-        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        body: `SPK ${lockedSpk.spkNumber} telah disubmit dan menunggu persetujuan Kasie`,
+        data: { spkNumber: lockedSpk.spkNumber, deepLink: 'preventive/spk-detail' },
         recipientIds: kasieUsers.map((u) => u.id),
       });
     }
 
-    res.json({ message: 'SPK submitted', spkNumber: spk.spkNumber, submissionId: subId });
+    res.json({ message: 'SPK submitted', spkNumber: lockedSpk.spkNumber, submissionId: subId });
   } catch (err) { await t.rollback(); throw err; }
 };
 
