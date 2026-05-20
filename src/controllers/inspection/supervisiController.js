@@ -1,6 +1,7 @@
 "use strict";
 
 const { Op } = require("sequelize");
+const User = require("../../models/User");
 const SupervisiJob = require("../../models/SupervisiJob");
 const SupervisiVisit = require("../../models/SupervisiVisit");
 const SupervisiAmend = require("../../models/SupervisiAmend");
@@ -9,6 +10,7 @@ const {
   hasSupervisiAccess,
   isSupervisiScheduler,
   isSupervisiExecutor,
+  getKnownSupervisiGroups,
   normalizeSupervisiGroupLabel,
   isAllowedExecutorForGroup,
   canAccessSupervisiJob,
@@ -162,6 +164,69 @@ async function clearExpiredRadiusExemptions(jobId = null) {
 // JOBS
 // ─────────────────────────────────────────────────────────────────────────────
 
+// GET /api/inspection/supervisi/personnel
+async function listPersonnel(req, res) {
+  try {
+    if (!hasSupervisiAccess(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: forbiddenMessage(),
+      });
+    }
+
+    const knownGroups = getKnownSupervisiGroups();
+    const knownGroupSet = new Set(knownGroups);
+    const grouped = new Map();
+
+    const ensureGroup = (group) => {
+      if (!grouped.has(group)) grouped.set(group, new Map());
+      return grouped.get(group);
+    };
+
+    const users = await User.findAll({
+      attributes: [
+        "id",
+        "nik",
+        "name",
+        "role",
+        "dinas",
+        "divisi",
+        "group",
+        "permissions",
+      ],
+      order: [["group", "ASC"], ["name", "ASC"]],
+    });
+
+    for (const user of users) {
+      const plain = user.toJSON();
+      if (!isSupervisiExecutor(plain)) continue;
+
+      const name = String(plain.name || "").trim();
+      const group = normalizeSupervisiGroupLabel(plain.group);
+      if (!name || !group || !knownGroupSet.has(group)) continue;
+
+      ensureGroup(group).set(name.toLowerCase(), {
+        id: plain.id,
+        nik: plain.nik,
+        name,
+        role: plain.role,
+        group,
+        source: "users",
+      });
+    }
+
+    const data = knownGroups.map((group) => ({
+      group,
+      users: Array.from((grouped.get(group) || new Map()).values())
+        .sort((a, b) => a.name.localeCompare(b.name, "id")),
+    }));
+
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 // GET /api/inspection/supervisi/jobs
 async function listJobs(req, res) {
   try {
@@ -180,11 +245,9 @@ async function listJobs(req, res) {
 
     const where = {};
     if (req.query.status) where.status = req.query.status;
-    if (access.kind === "scheduler") {
-      where.createdBy = access.nik;
-    } else if (access.kind === "executor") {
+    if (access.kind === "executor") {
       where.picSupervisi = access.displayName;
-    } else {
+    } else if (access.kind === "monitor") {
       if (req.query.createdBy) where.createdBy = req.query.createdBy;
       if (req.query.picSupervisi) where.picSupervisi = req.query.picSupervisi;
     }
@@ -1219,6 +1282,7 @@ async function undoVisit(req, res) {
 module.exports = {
   uploadVisitMedia,
   uploadJobAmendDocuments,
+  listPersonnel,
   listJobs,
   getJob,
   createJob,

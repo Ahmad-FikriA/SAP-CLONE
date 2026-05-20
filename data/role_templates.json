@@ -1,28 +1,29 @@
 {
   "teknisi": {
-    "dashboard":    ["R"],
-    "spk":          ["R"],
+    "_app":        { "preventive": true, "corrective": true, "inspection": true, "supervisi": true, "k3_safety": true },
+    "dashboard":   ["R"],
+    "spk":         ["R"],
     "spk-approval": ["R"],
-    "submissions":  ["C","R"],
-    "hse":          ["R"],
-    "inspeksi":     ["R"],
-    "supervisi":    ["R"],
-    "kalender":     ["R"],
-    "_app": { "preventive": true, "corrective": true, "inspection": true, "k3_safety": true, "supervisi": false }
+    "submissions": ["C","R"],
+    "hse":         ["R"],
+    "inspeksi":    ["R"],
+    "supervisi":   ["R"],
+    "kalender":    ["R"]
   },
   "petugas": {
-    "dashboard":    ["R"],
-    "spk":          ["R"],
+    "_app":        { "preventive": true, "corrective": true, "inspection": true, "supervisi": true, "k3_safety": true },
+    "dashboard":   ["R"],
+    "spk":         ["R"],
     "spk-approval": ["R"],
-    "users":        ["R"],
-    "submissions":  ["C","R"],
-    "hse":          ["R"],
-    "inspeksi":     ["R"],
-    "supervisi":    ["R"],
-    "kalender":     ["R"],
-    "_app": { "preventive": true, "corrective": true, "inspection": true, "k3_safety": true, "supervisi": false }
+    "users":       ["R"],
+    "submissions": ["C","R"],
+    "hse":         ["R"],
+    "inspeksi":    ["R"],
+    "supervisi":   ["R"],
+    "kalender":    ["R"]
   },
   "kasie": {
+    "_app":             { "preventive": true, "corrective": true, "inspection": true, "supervisi": true, "k3_safety": true },
     "dashboard":        ["R"],
     "spk":              ["R","U"],
     "spk-approval":     ["R","U"],
@@ -34,10 +35,10 @@
     "interval-planner": ["C","R","U","D"],
     "inspeksi":         ["R"],
     "supervisi":        ["R"],
-    "kalender":         ["R"],
-    "_app": { "preventive": true, "corrective": true, "inspection": true, "k3_safety": true, "supervisi": true }
+    "kalender":         ["R"]
   },
   "kadis": {
+    "_app":         { "preventive": true, "corrective": true, "inspection": true, "supervisi": true, "k3_safety": true },
     "dashboard":    ["R"],
     "spk":          ["R","U"],
     "spk-approval": ["R","U"],
@@ -48,10 +49,10 @@
     "hse":          ["C","R","U","D"],
     "inspeksi":     ["R"],
     "supervisi":    ["R"],
-    "kalender":     ["R"],
-    "_app": { "preventive": true, "corrective": true, "inspection": true, "k3_safety": true, "supervisi": true }
+    "kalender":     ["R"]
   },
   "kadiv": {
+    "_app":             { "preventive": true, "corrective": true, "inspection": true, "supervisi": true, "k3_safety": true },
     "dashboard":        ["C","R","U","D"],
     "spk":              ["C","R","U","D"],
     "spk-approval":     ["C","R","U","D"],
@@ -67,7 +68,6 @@
     "settings":         ["C","R","U","D"],
     "inspeksi":         ["R"],
     "supervisi":        ["R"],
-    "kalender":         ["R"],
-    "_app": { "preventive": true, "corrective": true, "inspection": true, "k3_safety": true, "supervisi": true }
+    "kalender":         ["R"]
   }
 }

@@ -4,7 +4,7 @@ const fs   = require('fs');
 const path = require('path');
 const jwt  = require('jsonwebtoken');
 const User = require('../../models/User');
-const { buildAccessProfile, applyWebPermissionsToAccessProfile } = require('../../services/accessProfile');
+const { buildAccessProfile } = require('../../services/accessProfile');
 
 const JWT_SECRET     = process.env.JWT_SECRET || 'kti-mock-secret-dev';
 const TEMPLATES_PATH = path.join(__dirname, '..', '..', '..', 'data', 'role_templates.json');
@@ -17,18 +17,33 @@ function loadRoleTemplates() {
   }
 }
 
+function buildUserAccessProfile(user, permissions) {
+  const userPayload = typeof user.toJSON === 'function' ? user.toJSON() : user;
+  return buildAccessProfile({ ...userPayload, permissions });
+}
+
 const login = async (req, res) => {
   const { nik, password } = req.body;
   if (!nik || !password) {
     return res.status(400).json({ error: 'NIK and password required' });
   }
 
-  const user = await User.findOne({ where: { nik, password } });
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+  const user = await User.findOne({ where: { nik } });
+  if (!user || !user.password) return res.status(401).json({ error: 'Invalid credentials' });
+
+  let isValid = false;
+  if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+    const bcrypt = require('bcrypt');
+    isValid = await bcrypt.compare(password, user.password);
+  } else {
+    isValid = (user.password === password || user.password.toLowerCase() === password.toLowerCase());
+  }
+
+  if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
 
   const roleTemplates  = loadRoleTemplates();
   const permissions    = user.permissions ?? roleTemplates[user.role] ?? null; // null = unrestricted
-  const accessProfile  = applyWebPermissionsToAccessProfile(buildAccessProfile(user), permissions);
+  const accessProfile  = buildUserAccessProfile(user, permissions);
 
   const token = jwt.sign(
     {
@@ -56,6 +71,7 @@ const login = async (req, res) => {
       divisi: user.divisi,
       email: user.email,
       group: user.group,
+      fotoProfil: user.fotoProfil,
       accessProfile,
       permissions,
     },
@@ -69,7 +85,7 @@ const me = async (req, res) => {
 
     const roleTemplates = loadRoleTemplates();
     const permissions   = user.permissions ?? roleTemplates[user.role] ?? null;
-    const accessProfile = applyWebPermissionsToAccessProfile(buildAccessProfile(user), permissions);
+    const accessProfile = buildUserAccessProfile(user, permissions);
 
     res.json({
       user: {
@@ -81,6 +97,7 @@ const me = async (req, res) => {
         divisi: user.divisi,
         email: user.email,
         group: user.group,
+        fotoProfil: user.fotoProfil,
         accessProfile,
         permissions,
       },

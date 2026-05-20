@@ -94,30 +94,20 @@ function buildReportRejectionNotification(finalStatus, notes) {
 
 function canViewAllReports(user) {
   const profile = buildAccessProfile(user || {});
-  const appRole = profile?.appRole;
   const flags = profile?.flags || {};
 
-  return (
-    appRole === "kasie" ||
-    appRole === "kadis" ||
-    appRole === "kadiv" ||
-    Boolean(
-      flags.isInspectionPlanner ||
-        flags.isInspectionApprover ||
-        flags.isInspectionMonitor,
-    )
+  return Boolean(
+    flags.isInspectionPlanner ||
+      flags.isInspectionApprover ||
+      flags.isInspectionMonitor,
   );
 }
 
 function canReviewReports(user) {
   const profile = buildAccessProfile(user || {});
-  const appRole = profile?.appRole;
   const flags = profile?.flags || {};
 
-  return (
-    appRole === "kadis" ||
-    Boolean(flags.isInspectionApprover || flags.isInspectionPlanner)
-  );
+  return Boolean(flags.isInspectionApprover || flags.isInspectionPlanner);
 }
 
 function normalizeReportStatus(status, fallback = "draft") {

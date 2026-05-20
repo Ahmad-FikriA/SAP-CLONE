@@ -35,16 +35,12 @@ function buildRequestRejectionNotification(request, notes) {
 
 function canViewAllRequests(user) {
   const profile = buildAccessProfile(user || {});
-  const appRole = profile?.appRole;
   const flags = profile?.flags || {};
 
-  return (
-    appRole === "kasie" ||
-    Boolean(
-      flags.isInspectionPlanner ||
-      flags.isPlanner ||
-      flags.isInspectionApprover,
-    )
+  return Boolean(
+    flags.isInspectionPlanner ||
+      flags.isInspectionApprover ||
+      flags.isInspectionMonitor,
   );
 }
 

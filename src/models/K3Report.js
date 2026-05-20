@@ -26,6 +26,7 @@ const K3Report = sequelize.define('K3Report', {
       'Lost Time Injury', 
       'Permanent Disability', 
       'Fatality', 
+      'Ide perbaikan K3',
       'Lainnya'
     ),
     allowNull: false,
@@ -35,6 +36,11 @@ const K3Report = sequelize.define('K3Report', {
     type: DataTypes.TEXT,
     allowNull: false,
     field: 'deskripsi',
+  },
+  lokasiTemuan: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'lokasi_temuan',
   },
   foto: {
     type: DataTypes.JSON,

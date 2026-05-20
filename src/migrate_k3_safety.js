@@ -42,15 +42,25 @@ async function migrateK3() {
           'menunggu_review_kadiv_pelapor',
           'menunggu_review_kadiv_pphse',
           'menunggu_validasi_kadiv_pphse',
+          'menunggu_validasi_kadis_hse',
           'ditolak_kadiv_pphse',
+          'ditolak_kadis_hse',
           'menunggu_tindakan_hse',
           'menunggu_validasi_akhir_pphse',
+          'menunggu_validasi_hasil_kadis_hse',
+          'menunggu_validasi_akhir_kadiv_pphse',
           'perbaikan_ditolak_pphse',
+          'perbaikan_ditolak_kadis_hse',
+          'perbaikan_ditolak_kadiv_pphse',
           'disetujui',
           'ditolak',
-          'selesai'
+          'selesai',
+          'menunggu_verifikasi_investigasi',
+          'investigasi_ditolak_kadis_hse',
+          'menunggu_validasi_kadiv',
+          'investigasi_ditolak_kadiv'
         ),
-        defaultValue: 'menunggu_validasi_kadiv_pphse',
+        defaultValue: 'menunggu_validasi_kadis_hse',
       });
       console.log(' -> Modified status ENUM on k3_reports.');
     } catch (e) {

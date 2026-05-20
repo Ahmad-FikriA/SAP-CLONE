@@ -8,7 +8,7 @@ const NotificationService = require('../../services/notificationService');
 
 exports.createReport = async (req, res, next) => {
   try {
-    const { kategori, deskripsi } = req.body;
+    const { kategori, deskripsi, lokasiTemuan } = req.body;
     // user ID from verifyToken, mapped differently: userId could be in req.user.userId
     const userId = req.user.userId || req.user.id;
 
@@ -50,6 +50,7 @@ exports.createReport = async (req, res, next) => {
       reportNumber: reportNumber,
       kategori,
       deskripsi,
+      lokasiTemuan,
       foto: fotos, // Sequelize will stringify array to JSON
       dilaporkanOleh: userId,
       status: 'menunggu_validasi_kadis_hse',

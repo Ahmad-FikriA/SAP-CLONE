@@ -21,7 +21,7 @@ const NAV = [
   { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan SPK',    Icon: ClipboardCheck },
   { divider: true},
   { key: 'corrective',        href: '/corrective',         label: 'Corrective',         Icon: Wrench },
-  { key: 'corrective-record', href: '/corrective/track-record', label: 'Track Record Corrective', Icon: BarChart2 },
+  { key: 'corrective-record', href: '/corrective/track-record', label: 'Riwayat CM', Icon: BarChart2 },
   { divider: true },
   { key: 'users',             href: '/users',              label: 'Users',              Icon: Users },
   { key: 'track-record',      href: '/users/track-record', label: 'Track Record',       Icon: BarChart2 },
@@ -179,15 +179,20 @@ export default function Sidebar() {
           {isMounted && renderNavLinks(true)}
         </nav>
 
-        {/* Mobile user + logout */}
         {isMounted && (
           <div className="border-t border-white/10 p-3 flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">
-              {initials}
-            </div>
-            <span className="text-xs text-white/70 truncate flex-1">
-              {user?.name || user?.nik || ''}
-            </span>
+            <Link href="/profile" className="flex items-center gap-2 flex-1 min-w-0 group" onClick={() => setMobileOpen(false)}>
+              <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center text-xs font-bold shrink-0 transition-colors overflow-hidden">
+                {user?.fotoProfil ? (
+                  <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/uploads/profiles/${user.fotoProfil}`} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+              </div>
+              <span className="text-xs text-white/70 group-hover:text-white truncate flex-1 transition-colors">
+                {user?.name || user?.nik || ''}
+              </span>
+            </Link>
             <button
               onClick={handleLogout}
               className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
@@ -236,20 +241,25 @@ export default function Sidebar() {
           {isMounted && renderNavLinks(false)}
         </nav>
 
-        {/* Desktop user + logout */}
         {isMounted && (
           <div className="border-t border-white/10 p-3 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">
-              {initials}
-            </div>
-            {!collapsed && (
-              <span className="text-xs text-white/70 truncate flex-1">
-                {user?.name || user?.nik || ''}
-              </span>
-            )}
+            <Link href="/profile" className={cn("flex items-center gap-2 min-w-0 group transition-colors", collapsed ? "mx-auto" : "flex-1")}>
+              <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center text-xs font-bold shrink-0 transition-colors overflow-hidden">
+                {user?.fotoProfil ? (
+                  <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/uploads/profiles/${user.fotoProfil}`} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+              </div>
+              {!collapsed && (
+                <span className="text-xs text-white/70 group-hover:text-white truncate flex-1 transition-colors">
+                  {user?.name || user?.nik || ''}
+                </span>
+              )}
+            </Link>
             <button
               onClick={handleLogout}
-              className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+              className={cn("p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0", collapsed ? "hidden" : "block")}
               title="Logout"
             >
               <LogOut size={16} />

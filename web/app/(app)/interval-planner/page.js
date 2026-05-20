@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import { canCreate, canUpdate, canDelete } from '@/lib/auth';
@@ -323,8 +323,8 @@ export default function IntervalPlannerPage() {
                 const spkLoadingThis = weekSpkLoading && !spkList && isExpanded;
 
                 return (
-                  <>
-                    <tr key={row.key} className={cn('border-b border-gray-100', isCurrent && 'bg-yellow-50', isExpanded && 'bg-blue-50')}>
+                  <Fragment key={row.key}>
+                    <tr className={cn('border-b border-gray-100', isCurrent && 'bg-yellow-50', isExpanded && 'bg-blue-50')}>
                       <td
                         className={cn(
                           'px-3 py-1.5 font-semibold cursor-pointer select-none',
@@ -394,7 +394,7 @@ export default function IntervalPlannerPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>

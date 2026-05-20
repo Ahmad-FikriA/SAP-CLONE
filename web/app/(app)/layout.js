@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { isAuthenticated, canRead } from '@/lib/auth';
@@ -48,17 +48,28 @@ function AccessDenied() {
   );
 }
 
+function AppLoading() {
+  return (
+    <div className="min-h-full flex items-center justify-center p-8">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#0a2540]" />
+    </div>
+  );
+}
+
 export default function AppLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [isReady, setIsReady] = useState(false);
   const accessKey = accessKeyForPath(pathname);
-  const denied = accessKey && !canRead(accessKey);
+  const denied = isReady && accessKey && !canRead(accessKey);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.replace('/login');
+      return;
     }
-  }, [router]);
+    setIsReady(true);
+  }, [router, pathname]);
 
   return (
     <div className="flex h-full">
@@ -66,7 +77,7 @@ export default function AppLayout({ children }) {
         <Sidebar />
       </div>
       <main className="flex-1 overflow-y-auto bg-gray-50 pt-14 md:pt-0">
-        {denied ? <AccessDenied /> : children}
+        {!isReady ? <AppLoading /> : denied ? <AccessDenied /> : children}
       </main>
     </div>
   );

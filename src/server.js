@@ -34,7 +34,6 @@ const {
   ensureSpkActivitySchema,
   ensureSubmissionActivityResultSchema,
   ensureInspectionScheduleRecurringSchema,
-  ensureMaterialSchema,
 } = require("./models/ensureMeasurementSchema");
 const { ensureInspectionEnums } = require("./migrate_inspection_enums");
 const { markMissedVisitsAsPelanggaran } = require("./controllers/inspection/supervisiController");
@@ -334,10 +333,6 @@ sequelize
   })
   .then(() => {
     console.log("Inspection schedule recurring schema ensured.");
-    return ensureMaterialSchema();
-  })
-  .then(() => {
-    console.log("Material schema ensured.");
     return ensureInspectionEnums({ shouldAuthenticate: false });
   })
   .then(() => {

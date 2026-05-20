@@ -436,6 +436,11 @@ const rejectKadisPusat = async (req, res) => {
 // DELETE /api/corrective/requests/:id
 const remove = async (req, res) => {
   try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      return res.status(403).json({ error: 'Access denied. Only Admin and Planner can delete.' });
+    }
     const notification = await Notification.findByPk(req.params.id);
     if (!notification)
       return res.status(404).json({ error: "Notification not found" });
@@ -456,6 +461,12 @@ const remove = async (req, res) => {
 // POST /api/corrective/requests/bulk-delete
 const bulkDelete = async (req, res) => {
   try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      return res.status(403).json({ error: 'Access denied. Only Admin and Planner can delete.' });
+    }
+
     const { ids } = req.body;
     if (!Array.isArray(ids) || !ids.length) {
       return res.status(400).json({ error: "ids array required" });
@@ -477,6 +488,12 @@ const bulkDelete = async (req, res) => {
 // DELETE /api/corrective/requests
 const deleteAll = async (req, res) => {
   try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      return res.status(403).json({ error: 'Access denied. Only Admin and Planner can delete.' });
+    }
+
     const count = await Notification.destroy({
       where: {
         status: { [Op.ne]: "spk_created" },

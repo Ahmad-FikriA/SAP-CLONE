@@ -14,7 +14,7 @@ import {
   Route,
 } from 'lucide-react';
 import { canRead } from '@/lib/auth';
-import { fetchSupervisiJobs, SUPERVISI_STATUS_META } from '@/lib/supervisi-service';
+import { fetchSupervisiJobs } from '@/lib/supervisi-service';
 
 function getAppDateString(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -60,30 +60,6 @@ function locationCount(job) {
   return job.latitude && job.longitude ? 1 : 0;
 }
 
-function jobProgress(job) {
-  const locCount = Math.max(1, locationCount(job));
-  const expected = daysInclusive(String(job.waktuMulai || '').slice(0, 10), effectiveEndDate(job)) * locCount;
-  const finalVisits = Array.isArray(job.visits) ? job.visits.filter((visit) => !visit.isDraft).length : 0;
-  if (job.status === 'completed') return 100;
-  if (expected <= 0) return 0;
-  return Math.min(100, Math.round((finalVisits / expected) * 100));
-}
-
-function formatDate(value) {
-  if (!value) return '-';
-  return new Date(value).toLocaleDateString('id-ID', {
-    timeZone: 'Asia/Jakarta',
-    day: '2-digit',
-    month: 'short',
-  });
-}
-
-function jobLatestTime(job) {
-  const value = job.updatedAt || job.createdAt || job.waktuMulai || effectiveEndDate(job);
-  const time = Date.parse(value);
-  return Number.isFinite(time) ? time : 0;
-}
-
 function formatRupiah(value) {
   const amount = Number(value || 0);
   if (amount >= 1e9) return `Rp ${(amount / 1e9).toFixed(1)} M`;
@@ -104,15 +80,6 @@ function SummaryBox({ icon: Icon, label, value, className }) {
       </div>
       <p className="text-xl lg:text-2xl font-extrabold leading-none">{value}</p>
     </div>
-  );
-}
-
-function StatusPill({ status }) {
-  const meta = SUPERVISI_STATUS_META[status] || { label: status || '-', color: 'bg-slate-100 text-slate-600' };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${meta.color}`}>
-      {meta.label}
-    </span>
   );
 }
 
@@ -160,11 +127,7 @@ export function WidgetSupervisi() {
       return end && end >= today && end <= nextWeek;
     });
 
-    const latestJobs = [...jobs]
-      .sort((a, b) => jobLatestTime(b) - jobLatestTime(a))
-      .slice(0, 4);
-
-    return { active, completed, draft, totalNilai, violations, progress, dueSoon, latestJobs };
+    return { active, completed, draft, totalNilai, violations, progress, dueSoon };
   }, [jobs]);
 
   if (!canRead('supervisi')) return null;
@@ -232,37 +195,6 @@ export function WidgetSupervisi() {
             </div>
           </div>
 
-          <div className="pt-1">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">5 Job Terbaru</p>
-            {data.latestJobs.length > 0 ? (
-              <div className="space-y-2">
-                {data.latestJobs.map((job) => {
-                  const progress = jobProgress(job);
-                  return (
-                    <div key={job.id} className="p-2 rounded-lg hover:bg-slate-50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 shrink-0 text-center">
-                          <p className="text-[11px] font-extrabold text-slate-800">{formatDate(job.updatedAt || job.createdAt || job.waktuMulai)}</p>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-800 truncate">{job.namaKerja || job.nomorJo || '-'}</p>
-                          <p className="text-[10px] text-slate-500 truncate">{job.picSupervisi || '-'} - {locationCount(job)} lokasi</p>
-                        </div>
-                        <StatusPill status={job.status} />
-                      </div>
-                      <div className="mt-2 ml-13 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${progress}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-slate-200 py-5 text-center text-xs font-semibold text-slate-400">
-                Belum ada job supervisi
-              </div>
-            )}
-          </div>
         </div>
       )}
 

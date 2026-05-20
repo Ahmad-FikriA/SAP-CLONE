@@ -33,6 +33,7 @@ const PushNotification = require("./PushNotification");
 const K3Report = require("./K3Report");
 const SapSpkCorrective = require("./SapSpkCorrective");
 const Material = require("./Material");
+const SpkMaterial = require("./SpkMaterial");
 
 // ── Equipment ↔ Plant ─────────────────────────────────────────────────────────
 Plant.hasMany(Equipment, { foreignKey: "plantId", as: "equipment" });
@@ -140,6 +141,30 @@ SapSpkCorrective.belongsTo(User, {
   foreignKey: "execution_nik",
   targetKey: "nik",
   as: "executor",
+  constraints: false,
+});
+
+// ── SapSpkCorrective ↔ SpkMaterial (Planned Materials) ──────────────────────
+SapSpkCorrective.hasMany(SpkMaterial, {
+  foreignKey: "order_number",
+  sourceKey: "order_number",
+  as: "spkMaterials",
+  onDelete: "CASCADE",
+  constraints: false,
+});
+SpkMaterial.belongsTo(SapSpkCorrective, {
+  foreignKey: "order_number",
+  targetKey: "order_number",
+  as: "sapSpk",
+  constraints: false,
+});
+SpkMaterial.belongsTo(Material, {
+  foreignKey: "material_id",
+  as: "material",
+});
+SpkMaterial.belongsTo(User, {
+  foreignKey: "added_by",
+  as: "addedByUser",
   constraints: false,
 });
 // ── Supervisi Module ─────────────────────────────────────────────────────────
@@ -324,5 +349,6 @@ module.exports = {
   K3Report,
   SupervisiAmend,
   SapSpkCorrective,
+  SpkMaterial,
   Material,
 };

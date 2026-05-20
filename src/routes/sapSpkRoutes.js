@@ -98,9 +98,15 @@ router.post("/:order_number/reject-kadis-pp", verifyToken, sapSpkController.reje
 router.post("/:order_number/approve-kadis-pelapor", verifyToken, sapSpkController.approveKadisPelapor);
 router.post("/:order_number/reject-kadis-pelapor", verifyToken, sapSpkController.rejectKadisPelapor);
 
-// ── Delete Endpoints ─────────────────────────────────────────────────────────
-router.delete("/", verifyToken, sapSpkController.deleteAllSapSpk);
-router.delete("/:order_number", verifyToken, sapSpkController.deleteSapSpk);
+const { requirePlanner } = require("../middleware/correctiveAccess");
+
+// ── Delete Endpoints (Admin + Planner only) ──────────────────────────────────
+router.delete("/", verifyToken, requirePlanner, sapSpkController.deleteAllSapSpk);
+router.delete("/:order_number", verifyToken, requirePlanner, sapSpkController.deleteSapSpk);
+
+// ── SPK Material Management (Admin + Planner only) ───────────────────────────
+router.post("/:order_number/materials", verifyToken, requirePlanner, sapSpkController.addMaterialToSpk);
+router.delete("/:order_number/materials/:materialRecordId", verifyToken, requirePlanner, sapSpkController.removeMaterialFromSpk);
 
 module.exports = router;
 

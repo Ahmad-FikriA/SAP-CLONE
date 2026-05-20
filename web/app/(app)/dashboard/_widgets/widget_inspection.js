@@ -16,9 +16,7 @@ import { apiGet } from '@/lib/api';
 import { canRead } from '@/lib/auth';
 import {
   fetchInspeksiSchedules,
-  INSPEKSI_STATUS_META,
   INSPEKSI_TYPE_LABELS,
-  resolveInspeksiTypeLabel,
 } from '@/lib/inspeksi-service';
 
 const TYPE_COLORS = {
@@ -45,15 +43,6 @@ function getAppDateString(date = new Date()) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-function formatDate(value) {
-  if (!value) return '-';
-  return new Date(value).toLocaleDateString('id-ID', {
-    timeZone: 'Asia/Jakarta',
-    day: '2-digit',
-    month: 'short',
-  });
-}
-
 function typeKey(schedule) {
   if (schedule.userRequest || schedule.triggerSource === 'user_darurat') return 'inspeksi';
   return schedule.type || 'rutin';
@@ -75,22 +64,6 @@ function SmallMetric({ icon: Icon, label, value, tone }) {
       </div>
       <p className="text-xl lg:text-2xl font-extrabold leading-none">{value}</p>
     </div>
-  );
-}
-
-function StatusPill({ status }) {
-  const meta = INSPEKSI_STATUS_META[status] || { label: status || '-', variant: 'scheduled' };
-  const cls = {
-    scheduled: 'bg-amber-50 text-amber-700 border-amber-100',
-    in_progress: 'bg-blue-50 text-blue-700 border-blue-100',
-    completed: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    cancelled: 'bg-rose-50 text-rose-700 border-rose-100',
-  }[meta.variant] || 'bg-slate-50 text-slate-600 border-slate-100';
-
-  return (
-    <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold whitespace-nowrap ${cls}`}>
-      {meta.label}
-    </span>
   );
 }
 
@@ -140,11 +113,7 @@ export function WidgetInspection() {
       value: schedules.filter((s) => typeKey(s) === key).length,
     })).filter((item) => item.value > 0);
 
-    const nextSchedules = [...active]
-      .sort((a, b) => String(a.scheduledDate || '').localeCompare(String(b.scheduledDate || '')))
-      .slice(0, 3);
-
-    return { active, completed, completionRate, overdue, typeCounts, nextSchedules };
+    return { active, completed, completionRate, overdue, typeCounts };
   }, [schedules]);
 
   if (!canRead('inspeksi')) return null;
@@ -220,29 +189,6 @@ export function WidgetInspection() {
             </div>
           </div>
 
-          <div className="pt-1">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Jadwal Aktif Terdekat</p>
-            {data.nextSchedules.length > 0 ? (
-              <div className="space-y-2">
-                {data.nextSchedules.map((schedule) => (
-                  <div key={schedule.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
-                    <div className="w-10 shrink-0 text-center">
-                      <p className="text-[11px] font-extrabold text-slate-800">{formatDate(schedule.scheduledDate)}</p>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-slate-800 truncate">{schedule.title || '-'}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{resolveInspeksiTypeLabel(schedule)} - {schedule.location || '-'}</p>
-                    </div>
-                    <StatusPill status={schedule.status} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-slate-200 py-5 text-center text-xs font-semibold text-slate-400">
-                Tidak ada SPK aktif
-              </div>
-            )}
-          </div>
         </div>
       )}
 
