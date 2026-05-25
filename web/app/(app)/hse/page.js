@@ -655,10 +655,10 @@ export default function HseDashboardPage() {
       : 0;
   const ltifrValue = ltifrNum.toFixed(2);
 
-  // 6. Fatality Rate = Ada atau Tidak Ada
-  const fatalityExists =
-    approvedReports.filter((r) => r.kategori === "Fatality").length > 0;
-  const fatalityValue = fatalityExists ? "Ada" : "Tidak Ada";
+  // 6. Fatality Rate = Manual input dari Admin K3 (jumlahFatality di settings)
+  const fatalityCount = k3Settings?.jumlahFatality || 0;
+  const fatalityExists = fatalityCount > 0;
+  const fatalityValue = fatalityExists ? `${fatalityCount} (Ada)` : "Tidak Ada";
 
   const dynamicMetrics = [
     {

@@ -34,6 +34,12 @@ const K3Settings = sequelize.define('K3Settings', {
     allowNull: false,
     field: 'jam_kerja_tanpa_kecelakaan',
   },
+  jumlahFatality: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    allowNull: false,
+    field: 'jumlah_fatality',
+  },
 }, {
   tableName: 'k3_settings',
   underscored: true,

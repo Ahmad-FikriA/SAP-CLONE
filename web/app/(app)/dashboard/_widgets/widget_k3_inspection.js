@@ -12,7 +12,10 @@ import {
   Activity,
   Zap,
   Eye,
-  AlertOctagon
+  AlertOctagon,
+  HeartPulse,
+  Stethoscope,
+  ClipboardCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +59,7 @@ function getMetricClassification(id, valueNum) {
 
 export function WidgetK3Inspection() {
   const [reports, setReports] = useState([]);
+  const [k3Settings, setK3Settings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -63,9 +67,15 @@ export function WidgetK3Inspection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiGet('/k3-safety');
-      const data = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      const [reportsRes, settingsRes] = await Promise.all([
+        apiGet('/k3-safety'),
+        apiGet('/k3-settings').catch(() => null),
+      ]);
+      const data = Array.isArray(reportsRes?.data) ? reportsRes.data : (Array.isArray(reportsRes) ? reportsRes : []);
       setReports(data);
+      if (settingsRes?.data) {
+        setK3Settings(settingsRes.data);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -75,37 +85,64 @@ export function WidgetK3Inspection() {
 
   useEffect(() => { load(); }, []);
 
+  // ── Konfigurasi Safety Performance (sama persis dengan HSE page) ───────────
+  const TOTAL_KARYAWAN = k3Settings?.totalKaryawan || 280;
+  const JAM_KERJA_PER_BULAN = (k3Settings?.jamKerjaPerHari || 8) * (k3Settings?.hariKerjaPerBulan || 20);
+  const KONSTANTA_OSHA = k3Settings?.konstantaOsha || 200_000;
+  const TOTAL_JAM_KERJA = TOTAL_KARYAWAN * JAM_KERJA_PER_BULAN * 12;
+
+  // ── Data dasar ────────────────────────────────────────────────────────────────
   const incomingReports = reports.filter(r => !r.status.includes('ditolak')).length;
-  const solvedReports = reports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;
-  const solveRate = incomingReports > 0 ? Math.round((solvedReports / incomingReports) * 100) : 0;
-
   const approvedReports = reports.filter(r => r.status === 'selesai' || r.status === 'disetujui');
-  const approvedCount = approvedReports.length;
 
+  // 1. NMRR = (Jumlah kejadian Near Miss / Total Karyawan) × 100
   const nearMissCount = approvedReports.filter(r => r.kategori === 'Near Miss').length;
-  const nmrrNum = approvedCount > 0 ? (nearMissCount / approvedCount) * 100 : 0;
-  const nmrr = nmrrNum.toFixed(1) + '%';
+  const nmrrNum = (nearMissCount / TOTAL_KARYAWAN) * 100;
+  const nmrrValue = nmrrNum.toFixed(1) + '%';
 
-  const observationCount = approvedReports.filter(r => r.kategori === 'Kondisi Tidak Aman' || r.kategori === 'Tindakan Tidak Aman').length;
-  const sorNum = approvedCount > 0 ? (observationCount / approvedCount) * 100 : 0;
-  const sor = sorNum.toFixed(1) + '%';
+  // 2. SOR = (Jumlah total observasi / Total Karyawan) × 100
+  const observationCount = approvedReports.filter(
+    r => r.kategori === 'Kondisi Tidak Aman' || r.kategori === 'Tindakan Tidak Aman'
+  ).length;
+  const sorNum = (observationCount / TOTAL_KARYAWAN) * 100;
+  const sorValue = sorNum.toFixed(1) + '%';
 
-  const cacr = solveRate.toFixed(1) + '%';
+  // 3. CACR = (Jumlah tindakan korektif ditutup / Total temuan NMRR+SOR) × 100%
+  const totalTemuanNmrrSor = nearMissCount + observationCount;
+  const solvedTemuanCount = approvedReports.filter(
+    r => (r.status === 'selesai' || r.status === 'disetujui') &&
+         (r.kategori === 'Near Miss' || r.kategori === 'Kondisi Tidak Aman' || r.kategori === 'Tindakan Tidak Aman')
+  ).length;
+  const cacrNum = totalTemuanNmrrSor > 0 ? (solvedTemuanCount / totalTemuanNmrrSor) * 100 : 0;
+  const cacrValue = cacrNum.toFixed(1) + '%';
 
+  // 4. TRIR = (Jumlah insiden tercatat / Total Jam Kerja) × Konstanta × 1/12
   const recordableCategories = ['First Aid Case', 'Medical Treatment', 'Lost Time Injury', 'Permanent Disability', 'Fatality'];
   const trirCount = approvedReports.filter(r => recordableCategories.includes(r.kategori)).length;
+  const trirNum = TOTAL_JAM_KERJA > 0 ? (trirCount / TOTAL_JAM_KERJA) * KONSTANTA_OSHA * (1 / 12) : 0;
+  const trirValue = trirNum.toFixed(2);
 
+  // 5. LTIFR = (Jumlah LTI tercatat / Total Jam Kerja) × Konstanta × 1/12
   const ltiCount = approvedReports.filter(r => r.kategori === 'Lost Time Injury').length;
+  const ltifrNum = TOTAL_JAM_KERJA > 0 ? (ltiCount / TOTAL_JAM_KERJA) * KONSTANTA_OSHA * (1 / 12) : 0;
+  const ltifrValue = ltifrNum.toFixed(2);
 
-  const fatalityCount = approvedReports.filter(r => r.kategori === 'Fatality').length;
+  // 6. Fatality Rate = Manual input dari Admin K3 (jumlahFatality di settings)
+  const fatalityCount = k3Settings?.jumlahFatality || 0;
+  const fatalityExists = fatalityCount > 0;
+  const fatalityValue = fatalityExists ? `${fatalityCount} (Ada)` : 'Tidak Ada';
+
+  // Closure rate (for progress bar)
+  const solvedReports = approvedReports.length;
+  const solveRate = incomingReports > 0 ? Math.round((solvedReports / incomingReports) * 100) : 0;
 
   const dynamicMetrics = [
-    { id: 'NMRR', title: 'Near Miss Reporting', value: nmrr, classObj: getMetricClassification('NMRR', nmrrNum), icon: AlertTriangle, color: 'text-blue-600', light: 'bg-blue-50 border-blue-100' },
-    { id: 'SOR', title: 'Safety Observation', value: sor, classObj: getMetricClassification('SOR', sorNum), icon: Eye, color: 'text-emerald-600', light: 'bg-emerald-50 border-emerald-100' },
-    { id: 'CACR', title: 'Corrective Action', value: cacr, classObj: getMetricClassification('CACR', solveRate), icon: CheckCircle2, color: 'text-violet-600', light: 'bg-violet-50 border-violet-100' },
-    { id: 'TRIR', title: 'Incident Rate', value: trirCount.toString(), classObj: getMetricClassification('TRIR', trirCount), icon: Activity, color: 'text-amber-600', light: 'bg-amber-50 border-amber-100' },
-    { id: 'LTIFR', title: 'Injury Frequency', value: ltiCount.toString(), classObj: getMetricClassification('LTIFR', ltiCount), icon: Zap, color: 'text-indigo-600', light: 'bg-indigo-50 border-indigo-100' },
-    { id: 'FATALITY', title: 'Fatality Rate', value: fatalityCount.toString(), classObj: getMetricClassification('FATALITY', fatalityCount), icon: AlertOctagon, color: 'text-rose-600', light: 'bg-rose-50 border-rose-100' },
+    { id: 'NMRR', title: 'Near Miss Reporting', value: nmrrValue, classObj: getMetricClassification('NMRR', nmrrNum), icon: AlertTriangle, color: 'text-blue-600', light: 'bg-blue-50 border-blue-100' },
+    { id: 'SOR', title: 'Safety Observation', value: sorValue, classObj: getMetricClassification('SOR', sorNum), icon: Eye, color: 'text-emerald-600', light: 'bg-emerald-50 border-emerald-100' },
+    { id: 'CACR', title: 'Corrective Action', value: cacrValue, classObj: getMetricClassification('CACR', cacrNum), icon: ClipboardCheck, color: 'text-violet-600', light: 'bg-violet-50 border-violet-100' },
+    { id: 'TRIR', title: 'Incident Rate', value: trirValue, classObj: getMetricClassification('TRIR', trirNum), icon: HeartPulse, color: 'text-amber-600', light: 'bg-amber-50 border-amber-100' },
+    { id: 'LTIFR', title: 'Injury Frequency', value: ltifrValue, classObj: getMetricClassification('LTIFR', ltifrNum), icon: Stethoscope, color: 'text-indigo-600', light: 'bg-indigo-50 border-indigo-100' },
+    { id: 'FATALITY', title: 'Fatality Rate', value: fatalityValue, classObj: fatalityExists ? { label: 'Bahaya', color: 'bg-rose-100 text-rose-700' } : { label: 'Aman', color: 'bg-emerald-100 text-emerald-700' }, icon: AlertOctagon, color: 'text-rose-600', light: 'bg-rose-50 border-rose-100' },
   ];
 
   return (
