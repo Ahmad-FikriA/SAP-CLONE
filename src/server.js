@@ -304,11 +304,23 @@ app.put('/api/settings/role-templates', verifyToken, settingsController.updateRo
 // ── Error Handler ────────────────────────────────────────────────────────────
 app.use(errorHandler);
 
-// ── Database Connection Test ─────────────────────────────────────────────────
+// ── Database Connection (with startup retry) ─────────────────────────────────
 const sequelize = require("./config/database");
 
-sequelize
-  .authenticate()
+async function connectWithRetry(retries = 10, delayMs = 3000) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      await sequelize.authenticate();
+      return;
+    } catch (err) {
+      if (i === retries) throw err;
+      console.warn(`[DB] Connection attempt ${i}/${retries} failed (${err.message}). Retrying in ${delayMs / 1000}s…`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
+connectWithRetry()
   .then(() => {
     console.log("Connection to database has been established successfully.");
     return ensureSupervisiJobSchema();
@@ -344,20 +356,21 @@ sequelize
   .then(() => {
     console.log("Database models synced successfully.");
     // ── Supervisi: Cron job — tandai kunjungan yang terlewat sebagai Pelanggaran
-    // Jalankan sekali saat server start (untuk menangkap backlog)
-    markMissedVisitsAsPelanggaran();
-    // Jadwalkan setiap hari pukul 00:01 server time
-    cron.schedule("1 0 * * *", markMissedVisitsAsPelanggaran, {
-      timezone: "Asia/Jakarta",
-    });
+    const runMissedVisits = () =>
+      Promise.resolve(markMissedVisitsAsPelanggaran()).catch((err) =>
+        console.error("[Supervisi Cron] Error:", err.message)
+      );
+    runMissedVisits();
+    cron.schedule("1 0 * * *", runMissedVisits, { timezone: "Asia/Jakarta" });
     console.log("[Supervisi Cron] Scheduled daily missed-visit check at 00:01 Asia/Jakarta.");
 
     // ── Inspeksi: Cron job — kirim pengingat jadwal hari ini dan overdue
-    sendInspectionReminders();
-    // Jadwalkan setiap hari pukul 07:00 server time
-    cron.schedule("0 7 * * *", sendInspectionReminders, {
-      timezone: "Asia/Jakarta",
-    });
+    const runInspectionReminders = () =>
+      Promise.resolve(sendInspectionReminders()).catch((err) =>
+        console.error("[Inspection Cron] Error:", err.message)
+      );
+    runInspectionReminders();
+    cron.schedule("0 7 * * *", runInspectionReminders, { timezone: "Asia/Jakarta" });
     console.log("[Inspection Cron] Scheduled daily reminders at 07:00 Asia/Jakarta.");
   })
   .catch((err) => {
