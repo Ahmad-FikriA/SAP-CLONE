@@ -586,36 +586,41 @@ const submit = async (req, res) => {
       );
     }
 
-    // Move SPK into approval chain
+    // Move SPK into approval chain.
+    // Only stamp submittedAt on first submission — resubmissions preserve the original.
+    const isResubmission = lockedSpk.status === 'rejected';
     await lockedSpk.update({
       status: 'awaiting_kasie',
       durationActual: durationActual ?? lockedSpk.durationActual,
       evaluasi: evaluasi || null,
       equipmentStatus: ['Running', 'Standby', 'Breakdown'].includes(equipmentStatus) ? equipmentStatus : 'Running',
       submittedBy: req.user?.userId ?? null,
-      submittedAt: new Date(),
+      ...(isResubmission ? {} : { submittedAt: new Date() }),
     }, { transaction: t });
 
     await t.commit();
 
-    // Notify Kasie whose discipline matches the SPK category
+    // Notify Kasie whose discipline matches the SPK category.
+    // If category has no group mapping, skip — we can't determine which Kasie to target.
     const kasieGroupKeyword = CATEGORY_GROUP_MAP[lockedSpk.category];
-    const kasieUsers = await User.findAll({
-      where: {
-        role: ['supervisor', 'kepala_seksi', 'kasie'],
-        ...(kasieGroupKeyword ? { group: { [Op.like]: `%${kasieGroupKeyword}%` } } : {}),
-      },
-      attributes: ['id'],
-    });
-    if (kasieUsers.length > 0) {
-      await NotificationService.notify({
-        module: 'preventive',
-        type: 'spk_submitted',
-        title: 'SPK Menunggu Persetujuan',
-        body: `SPK ${lockedSpk.spkNumber} telah disubmit dan menunggu persetujuan Kasie`,
-        data: { spkNumber: lockedSpk.spkNumber, deepLink: 'preventive/spk-detail' },
-        recipientIds: kasieUsers.map((u) => u.id),
+    if (kasieGroupKeyword) {
+      const kasieUsers = await User.findAll({
+        where: {
+          role: ['supervisor', 'kepala_seksi', 'kasie'],
+          group: { [Op.like]: `%${kasieGroupKeyword}%` },
+        },
+        attributes: ['id'],
       });
+      if (kasieUsers.length > 0) {
+        await NotificationService.notify({
+          module: 'preventive',
+          type: 'spk_submitted',
+          title: 'SPK Menunggu Persetujuan',
+          body: `SPK ${lockedSpk.spkNumber} telah disubmit dan menunggu persetujuan Kasie`,
+          data: { spkNumber: lockedSpk.spkNumber, deepLink: 'preventive/spk-detail' },
+          recipientIds: kasieUsers.map((u) => u.id),
+        });
+      }
     }
 
     res.json({ message: 'SPK submitted', spkNumber: lockedSpk.spkNumber, submissionId: subId });
