@@ -578,7 +578,7 @@ const approvePlanner = async (req, res) => {
       return res.status(404).json({ error: "Notification not found" });
 
     if (
-      notification.status !== "submitted" &&
+      notification.status !== "submitted" ||
       notification.approvalStatus !== "pending"
     ) {
       return res
@@ -591,6 +591,8 @@ const approvePlanner = async (req, res) => {
       status: "approved",
       approvalStatus: "approved",
     });
+
+    const spkExists = await SapSpkCorrective.findByPk(sapOrderNumber);
 
     if (spkExists) {
       await notification.update({ 

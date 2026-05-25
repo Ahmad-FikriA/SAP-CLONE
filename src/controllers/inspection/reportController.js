@@ -368,7 +368,7 @@ async function createReport(req, res) {
 
     // Kirim notifikasi ke Approver saat laporan di-submit (bukan draft)
     if (isSubmitted) {
-      notify({
+      await notify({
         module: 'inspection',
         type: 'report_submitted',
         title: 'Laporan Inspeksi Baru',
@@ -494,7 +494,7 @@ async function updateReport(req, res) {
     });
 
     if (nextStatus === "submitted" && report.status !== "submitted") {
-      notify({
+      await notify({
         module: 'inspection',
         type: 'report_submitted',
         title: 'Laporan Inspeksi Baru',

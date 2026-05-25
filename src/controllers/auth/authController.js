@@ -6,6 +6,9 @@ const jwt  = require('jsonwebtoken');
 const User = require('../../models/User');
 const { buildAccessProfile } = require('../../services/accessProfile');
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
 const JWT_SECRET     = process.env.JWT_SECRET || 'kti-mock-secret-dev';
 const TEMPLATES_PATH = path.join(__dirname, '..', '..', '..', 'data', 'role_templates.json');
 
@@ -31,12 +34,17 @@ const login = async (req, res) => {
   const user = await User.findOne({ where: { nik } });
   if (!user || !user.password) return res.status(401).json({ error: 'Invalid credentials' });
 
+  const bcrypt = require('bcrypt');
   let isValid = false;
   if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
-    const bcrypt = require('bcrypt');
     isValid = await bcrypt.compare(password, user.password);
   } else {
     isValid = (user.password === password || user.password.toLowerCase() === password.toLowerCase());
+    if (isValid) {
+      // Migrate plaintext password to bcrypt on first successful login
+      const hashed = await bcrypt.hash(password, 12);
+      await user.update({ password: hashed });
+    }
   }
 
   if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
