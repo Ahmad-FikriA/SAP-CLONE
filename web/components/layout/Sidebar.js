@@ -34,6 +34,7 @@ const NAV = [
   { key: 'submissions',       href: '/submissions',        label: 'Submissions',        Icon: Activity },
   { divider: true },
   { key: 'hse',               href: '/hse',                label: 'HSE Command Center', Icon: ShieldCheck },
+  { key: 'hse',               href: '/hse/admin',          label: 'Admin K3',           Icon: Settings },
   { key: 'inspeksi',          href: '/inspeksi',           label: 'Inspeksi',           Icon: ClipboardList },
   { key: 'supervisi',         href: '/supervisi',          label: 'Supervisi',          Icon: MapPin },
   { divider: true},

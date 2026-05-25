@@ -24,6 +24,7 @@ const sapSpkRoutes = require("./routes/sapSpkRoutes");
 const inspectionRoutes = require("./routes/inspection");
 const notificationRoutes = require("./routes/notification");
 const k3SafetyRoutes = require("./routes/k3_safety");
+const k3SettingsRoutes = require("./routes/k3_settings");
 const materialRoutes = require("./routes/material");
 const errorHandler = require("./middleware/errorHandler");
 const { syncDatabase } = require("./config/syncMode");
@@ -292,6 +293,7 @@ app.use("/api/equipment-mappings", mappingRouter);
 app.use("/api/preventive-schedule", scheduleRouter);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/k3-safety", k3SafetyRoutes);
+app.use("/api/k3-settings", k3SettingsRoutes);
 app.use("/api/materials", materialRoutes);
 
 // ── Settings ─────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { apiGet, apiDelete } from '@/lib/api';
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 
 /**
  * Ambil daftar jadwal inspeksi dari backend.
@@ -17,6 +17,32 @@ export async function fetchInspeksiSchedules(params = {}) {
 }
 
 /**
+ * Ambil nomor SPK inspeksi berikutnya dari backend.
+ */
+export async function fetchNextInspeksiSpkNumber() {
+  const data = await apiGet('/inspection/schedules/next-spk');
+  return data?.data?.nextSpk ?? '';
+}
+
+/**
+ * Buat jadwal inspeksi sekali jalan.
+ * @param {Object} payload
+ */
+export async function createInspeksiSchedule(payload) {
+  const data = await apiPost('/inspection/schedules', payload);
+  return data?.data ?? null;
+}
+
+/**
+ * Buat jadwal inspeksi berulang.
+ * @param {Object} payload - { baseSchedule, recurringType, startDate, endDate }
+ */
+export async function createRecurringInspeksiSchedules(payload) {
+  const data = await apiPost('/inspection/schedules/recurring', payload);
+  return data?.data ?? [];
+}
+
+/**
  * Hapus jadwal inspeksi berdasarkan ID.
  * @param {number} id
  */
@@ -31,6 +57,26 @@ export async function deleteInspeksiSchedule(id) {
 export async function fetchInspeksiReports(scheduleId) {
   const data = await apiGet(`/inspection/reports?scheduleId=${scheduleId}`);
   return data?.data ?? [];
+}
+
+/**
+ * Setujui laporan inspeksi.
+ * @param {number} reportId
+ * @param {Object} payload - { notes?, assignedTechnician?, kategoriTeknisi?, deadline? }
+ */
+export async function approveInspeksiReport(reportId, payload = {}) {
+  const data = await apiPut(`/inspection/reports/${reportId}/approve`, payload);
+  return data?.data ?? null;
+}
+
+/**
+ * Tolak atau kembalikan laporan inspeksi untuk revisi.
+ * @param {number} reportId
+ * @param {Object} payload - { notes }
+ */
+export async function rejectInspeksiReport(reportId, payload = {}) {
+  const data = await apiPut(`/inspection/reports/${reportId}/reject`, payload);
+  return data?.data ?? null;
 }
 
 /**

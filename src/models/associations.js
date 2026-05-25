@@ -31,6 +31,7 @@ const Notification = require("./Notification");
 
 const PushNotification = require("./PushNotification");
 const K3Report = require("./K3Report");
+const K3Settings = require("./K3Settings");
 const SapSpkCorrective = require("./SapSpkCorrective");
 const Material = require("./Material");
 const SpkMaterial = require("./SpkMaterial");

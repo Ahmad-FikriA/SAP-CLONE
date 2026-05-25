@@ -2,15 +2,17 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { ClipboardList, Loader2, CalendarDays, RefreshCw, Activity, CheckCircle2 } from 'lucide-react';
+import { ClipboardList, Loader2, CalendarDays, RefreshCw, Activity, CheckCircle2, Plus } from 'lucide-react';
 import {
   fetchInspeksiSchedules,
   deleteInspeksiSchedule,
   fetchInspeksiUsersMap,
 } from '@/lib/inspeksi-service';
-import { canDelete } from '@/lib/auth';
+import { canCreate, canDelete } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
 import { InspeksiSpkTable } from '@/components/inspeksi/InspeksiSpkTable';
 import { InspeksiDetailModal } from '@/components/inspeksi/InspeksiDetailModal';
+import { InspeksiScheduleFormDialog } from '@/components/inspeksi/InspeksiScheduleFormDialog';
 
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -26,6 +28,7 @@ export default function InspeksiPage() {
   const [loading,        setLoading]        = useState(true);
   const [detailOpen,     setDetailOpen]     = useState(false);
   const [detailSchedule, setDetailSchedule] = useState(null);
+  const [createOpen,     setCreateOpen]     = useState(false);
   const [usersMap,       setUsersMap]       = useState({});
 
   // ── Filter tahun & bulan ────────────────────────────────────────────────────
@@ -129,7 +132,7 @@ export default function InspeksiPage() {
 
         {/* ── Filter Tahun & Bulan ── */}
         {!loading && (
-          <div className="flex items-center gap-2 ml-9 md:ml-0">
+          <div className="flex items-center gap-2 ml-9 md:ml-0 flex-wrap justify-start md:justify-end">
             <CalendarDays size={15} className="text-slate-400 shrink-0" />
             <select
               value={yearFilter}
@@ -151,6 +154,16 @@ export default function InspeksiPage() {
                 <option key={i + 1} value={String(i + 1)}>{name}</option>
               ))}
             </select>
+            {canCreate('inspeksi') && (
+              <Button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="bg-[#0a2540] text-white hover:bg-[#0d3152]"
+              >
+                <Plus size={14} />
+                Buat Jadwal Pekerjaan
+              </Button>
+            )}
             <button
               onClick={load}
               disabled={loading}
@@ -216,7 +229,14 @@ export default function InspeksiPage() {
         schedule={detailSchedule}
         open={detailOpen}
         usersMap={usersMap}
+        onChanged={load}
         onClose={() => { setDetailOpen(false); setDetailSchedule(null); }}
+      />
+
+      <InspeksiScheduleFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSaved={load}
       />
     </div>
   );

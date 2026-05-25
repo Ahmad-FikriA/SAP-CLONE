@@ -212,6 +212,7 @@ export default function HseDashboardPage() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [k3Settings, setK3Settings] = useState(null);
 
   const [selectedReport, setSelectedReport] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -550,7 +551,7 @@ export default function HseDashboardPage() {
       setCreateData({ kategori: "", deskripsi: "", lokasiTemuan: "" });
       setCreatePhoto(null);
       setCreatePhotoPreview(null);
-      loadReports();
+      loadData();
     } catch (e) {
       toast.error(e.message || "Gagal membuat laporan");
     } finally {
@@ -558,39 +559,76 @@ export default function HseDashboardPage() {
     }
   };
 
-  const incomingReportsCount = reports.filter(
-    (r) => !r.status.includes("ditolak"),
-  ).length;
-  const solvedReportsCount = reports.filter(
-    (r) => r.status === "selesai" || r.status === "disetujui",
-  ).length;
-  const solveRate =
-    incomingReportsCount > 0
-      ? Math.round((solvedReportsCount / incomingReportsCount) * 100)
-      : 0;
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [reportsRes, settingsRes] = await Promise.all([
+        apiGet("/k3-safety"),
+        apiGet("/k3-settings").catch(() => null)
+      ]);
+      setReports(reportsRes.data || []);
+      if (settingsRes?.data) {
+        setK3Settings(settingsRes.data);
+      }
+    } catch (e) {
+      toast.error(e.message || "Gagal memuat data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+
+  useEffect(() => {
+    loadData();
+    loadStaff();
+    return () => {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  // ── Konfigurasi Safety Performance Standard KS Group ──────────────────────
+  const TOTAL_KARYAWAN = k3Settings?.totalKaryawan || 280;
+  const JAM_KERJA_PER_BULAN = (k3Settings?.jamKerjaPerHari || 8) * (k3Settings?.hariKerjaPerBulan || 20);
+  const KONSTANTA_OSHA = k3Settings?.konstantaOsha || 200_000;
+  const TOTAL_JAM_KERJA = TOTAL_KARYAWAN * JAM_KERJA_PER_BULAN * 12;
+
+  // ── Data dasar ───────────────────────────────────────────────────────────────
   const approvedReports = reports.filter(
     (r) => r.status === "selesai" || r.status === "disetujui",
   );
-  const approvedCount = approvedReports.length;
 
+  // 1. NMRR = (Jumlah kejadian Near Miss / Total Karyawan) × 100
   const nearMissCount = approvedReports.filter(
     (r) => r.kategori === "Near Miss",
   ).length;
-  const nmrrNum = approvedCount > 0 ? (nearMissCount / approvedCount) * 100 : 0;
+  const nmrrNum = (nearMissCount / TOTAL_KARYAWAN) * 100;
   const nmrrValue = nmrrNum.toFixed(1) + "%";
 
+  // 2. SOR = (Jumlah total observasi / Total Karyawan) × 100
   const observationCount = approvedReports.filter(
     (r) =>
       r.kategori === "Kondisi Tidak Aman" ||
       r.kategori === "Tindakan Tidak Aman",
   ).length;
-  const sorNum =
-    approvedCount > 0 ? (observationCount / approvedCount) * 100 : 0;
+  const sorNum = (observationCount / TOTAL_KARYAWAN) * 100;
   const sorValue = sorNum.toFixed(1) + "%";
 
-  const cacrValue = solveRate.toFixed(1) + "%";
+  // 3. CACR = (Jumlah tindakan korektif ditutup / Total temuan NMRR+SOR) × 100%
+  const totalTemuanNmrrSor = nearMissCount + observationCount;
+  const solvedTemuanCount = approvedReports.filter(
+    (r) =>
+      (r.status === "selesai" || r.status === "disetujui") &&
+      (r.kategori === "Near Miss" ||
+        r.kategori === "Kondisi Tidak Aman" ||
+        r.kategori === "Tindakan Tidak Aman"),
+  ).length;
+  const cacrNum =
+    totalTemuanNmrrSor > 0
+      ? (solvedTemuanCount / totalTemuanNmrrSor) * 100
+      : 0;
+  const cacrValue = cacrNum.toFixed(1) + "%";
 
+  // 4. TRIR = (Jumlah insiden tercatat / Total Jam Kerja) × Konstanta × 1/12
   const recordableCategories = [
     "First Aid Case",
     "Medical Treatment",
@@ -601,16 +639,26 @@ export default function HseDashboardPage() {
   const trirCount = approvedReports.filter((r) =>
     recordableCategories.includes(r.kategori),
   ).length;
-  const trirValue = trirCount.toString();
+  const trirNum =
+    TOTAL_JAM_KERJA > 0
+      ? (trirCount / TOTAL_JAM_KERJA) * KONSTANTA_OSHA * (1 / 12)
+      : 0;
+  const trirValue = trirNum.toFixed(2);
 
+  // 5. LTIFR = (Jumlah LTI tercatat / Total Jam Kerja) × Konstanta × 1/12
   const ltiCount = approvedReports.filter(
     (r) => r.kategori === "Lost Time Injury",
   ).length;
-  const ltifrValue = ltiCount.toString();
+  const ltifrNum =
+    TOTAL_JAM_KERJA > 0
+      ? (ltiCount / TOTAL_JAM_KERJA) * KONSTANTA_OSHA * (1 / 12)
+      : 0;
+  const ltifrValue = ltifrNum.toFixed(2);
 
-  const fatalityValue = approvedReports
-    .filter((r) => r.kategori === "Fatality")
-    .length.toString();
+  // 6. Fatality Rate = Ada atau Tidak Ada
+  const fatalityExists =
+    approvedReports.filter((r) => r.kategori === "Fatality").length > 0;
+  const fatalityValue = fatalityExists ? "Ada" : "Tidak Ada";
 
   const dynamicMetrics = [
     {
@@ -640,7 +688,7 @@ export default function HseDashboardPage() {
       title: "CACR",
       subtitle: "Corrective Action Closure",
       value: cacrValue,
-      classObj: getMetricClassification("cacr", solveRate),
+      classObj: getMetricClassification("cacr", cacrNum),
       icon: ClipboardCheck,
       color: "bg-violet-500",
       light: "bg-violet-50",
@@ -651,7 +699,7 @@ export default function HseDashboardPage() {
       title: "TRIR",
       subtitle: "Total Recordable Incident Rate",
       value: trirValue,
-      classObj: getMetricClassification("trir", trirCount),
+      classObj: getMetricClassification("trir", trirNum),
       icon: HeartPulse,
       color: "bg-amber-500",
       light: "bg-amber-50",
@@ -662,7 +710,7 @@ export default function HseDashboardPage() {
       title: "LTIFR",
       subtitle: "Loss Time Injury Frequency",
       value: ltifrValue,
-      classObj: getMetricClassification("ltifr", ltiCount),
+      classObj: getMetricClassification("ltifr", ltifrNum),
       icon: Stethoscope,
       color: "bg-indigo-500",
       light: "bg-indigo-50",
@@ -673,7 +721,9 @@ export default function HseDashboardPage() {
       title: "Fatality Rate",
       subtitle: "Kematian Akibat Kerja",
       value: fatalityValue,
-      classObj: getMetricClassification("fatality", parseInt(fatalityValue)),
+      classObj: fatalityExists
+        ? { label: "Bahaya", color: "bg-rose-100 text-rose-700" }
+        : { label: "Aman", color: "bg-emerald-100 text-emerald-700" },
       icon: AlertOctagon,
       color: "bg-rose-500",
       light: "bg-rose-50",
