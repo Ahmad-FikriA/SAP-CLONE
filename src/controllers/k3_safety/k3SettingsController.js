@@ -26,10 +26,18 @@ exports.getSettings = async (req, res, next) => {
 /**
  * PUT /api/k3-settings
  * Mengupdate K3 settings (total karyawan, jam kerja, dsb).
- * Hanya untuk admin / kadiv (di-handle oleh middleware route).
+ * Hanya untuk admin / kadiv / HSE staff.
  */
 exports.updateSettings = async (req, res, next) => {
   try {
+    const role = (req.user.role || '').toLowerCase();
+    const divisi = (req.user.divisi || '').toLowerCase();
+    
+    // Auth Check: Cuma Admin, Developer, Kadiv, atau HSE yang boleh edit
+    if (!role.includes('admin') && !role.includes('developer') && !role.includes('kadiv') && !divisi.includes('hse') && !divisi.includes('pphse')) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin/Kadiv/HSE yang dapat mengubah pengaturan K3' });
+    }
+
     const { totalKaryawan, jamKerjaPerHari, hariKerjaPerBulan, jamKerjaTanpaKecelakaan } = req.body;
     
     let settings = await K3Settings.findByPk('main');
