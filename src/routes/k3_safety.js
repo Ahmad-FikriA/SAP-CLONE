@@ -107,6 +107,9 @@ router.delete('/', verifyToken, k3SafetyCtrl.deleteAllReports);
 
 // ── Investigasi Routes ──────────────────────────────────────────────────────────
 
+// PUT /api/k3-safety/:id/revert-step
+router.put('/:id/revert-step', verifyToken, k3SafetyCtrl.revertStep);
+
 // PUT /api/k3-safety/:id/investigasi
 // Multipart: fotoInvestigasi (max 2 images) + dokumenInvestigasi (max 1 doc)
 router.put(

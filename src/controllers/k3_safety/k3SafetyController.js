@@ -503,6 +503,61 @@ exports.validasiAkhir = async (req, res, next) => {
 // ── Investigasi Endpoints ─────────────────────────────────────────────────────
 
 /**
+ * PUT /api/k3-safety/:id/revert-step
+ * Memundurkan status laporan yang sedang dalam proses investigasi
+ * kembali ke tahap 'menunggu_tindakan_hse'. Hanya untuk Admin/Kadiv.
+ */
+exports.revertStep = async (req, res, next) => {
+  try {
+    const reportId = req.params.id;
+    const role = (req.user.role || '').toLowerCase();
+    
+    // Auth Check: Cuma Admin atau Kadiv yang boleh
+    if (!role.includes('admin') && !role.includes('developer') && !role.includes('kadiv')) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin/Kadiv yang dapat memundurkan tahapan' });
+    }
+
+    const report = await K3Report.findByPk(reportId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
+    }
+
+    const validStatuses = [
+      'menunggu_verifikasi_investigasi',
+      'investigasi_ditolak_kadis_hse',
+      'menunggu_validasi_kadiv',
+      'investigasi_ditolak_kadiv'
+    ];
+
+    if (!validStatuses.includes(report.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Hanya laporan dalam tahap investigasi yang dapat dimundurkan. (Status saat ini: ${report.status})` 
+      });
+    }
+
+    // Revert status and clear investigation data
+    report.status = 'menunggu_tindakan_hse';
+    report.jenisTindakan = null;
+    report.investigasiCategory = null;
+    report.investigasiData = null;
+    report.fotoInvestigasi = null;
+    report.dokumenInvestigasi = null;
+    report.isDraftInvestigasi = false;
+    
+    await report.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Status berhasil dimundurkan ke "Menunggu Tindakan HSE"',
+      data: report 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * PUT /api/k3-safety/:id/investigasi
  * HSE Staff submits investigation data (multipart/form-data).
  * Supports draft saving and final submission.

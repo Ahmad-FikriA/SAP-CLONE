@@ -19,6 +19,7 @@ const ROUTE_ACCESS = [
   { prefix: '/maps', key: 'maps' },
   { prefix: '/interval-planner', key: 'interval-planner' },
   { prefix: '/submissions', key: 'submissions' },
+  { prefix: '/hse/admin', key: 'hse' },
   { prefix: '/hse', key: 'hse' },
   { prefix: '/inspeksi', key: 'inspeksi' },
   { prefix: '/supervisi', key: 'supervisi' },
