@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiDelete, apiPut } from '@/lib/api';
+import { apiGet, apiPost, apiDelete, apiPut, apiUpload, apiFetch } from '@/lib/api';
 
 /**
  * Ambil semua job supervisi dari backend.
@@ -9,10 +9,41 @@ export async function fetchSupervisiJobs(params = {}) {
   if (params.status)      query.set('status',      params.status);
   if (params.createdBy)   query.set('createdBy',   params.createdBy);
   if (params.picSupervisi) query.set('picSupervisi', params.picSupervisi);
+  if (params.dateFrom)    query.set('dateFrom',    params.dateFrom);
+  if (params.dateTo)      query.set('dateTo',      params.dateTo);
 
   const qs = query.toString();
   const data = await apiGet(`/inspection/supervisi/jobs${qs ? `?${qs}` : ''}`);
   return data?.data ?? [];
+}
+
+/**
+ * Ambil arsip job supervisi dengan pagination server-side.
+ * @param {Object} params - { page, limit, q, status, dateFrom, dateTo }
+ */
+export async function fetchSupervisiJobArchive(params = {}) {
+  const query = new URLSearchParams();
+  query.set('archive', 'true');
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+  if (params.q) query.set('q', params.q);
+  if (params.status) query.set('status', params.status);
+  if (params.createdBy) query.set('createdBy', params.createdBy);
+  if (params.picSupervisi) query.set('picSupervisi', params.picSupervisi);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+
+  const data = await apiGet(`/inspection/supervisi/jobs?${query.toString()}`);
+  const items = data?.data ?? [];
+  return {
+    items,
+    meta: data?.meta ?? {
+      page: Number(params.page) || 1,
+      limit: Number(params.limit) || items.length || 20,
+      total: items.length,
+      totalPages: 1,
+    },
+  };
 }
 
 /**
@@ -81,6 +112,29 @@ export async function updateSupervisiJobLocation(id, payload) {
 export async function updateSupervisiRadiusExemption(id, payload) {
   const data = await apiPut(`/inspection/supervisi/jobs/${id}`, payload);
   return data?.data ?? data;
+}
+
+export async function fetchSupervisiAmends(jobId) {
+  const data = await apiGet(`/inspection/supervisi/jobs/${jobId}/amends`);
+  return data?.data ?? [];
+}
+
+export async function createSupervisiAmend(jobId, formData) {
+  const data = await apiUpload(`/inspection/supervisi/jobs/${jobId}/amends`, formData);
+  return data?.data ?? data;
+}
+
+export async function updateSupervisiAmend(jobId, amendId, formData) {
+  const data = await apiFetch(`/inspection/supervisi/jobs/${jobId}/amends/${amendId}`, {
+    method: 'PUT',
+    body: formData,
+  });
+  return data?.data ?? data;
+}
+
+export async function deleteSupervisiAmend(jobId, amendId) {
+  const data = await apiDelete(`/inspection/supervisi/jobs/${jobId}/amends/${amendId}`);
+  return data;
 }
 
 

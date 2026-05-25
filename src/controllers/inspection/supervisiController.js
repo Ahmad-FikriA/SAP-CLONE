@@ -48,6 +48,8 @@ const {
 } = require("./supervisiNotifications");
 
 const NILAI_PEKERJAAN_MAX_INTEGER_DIGITS = 19;
+const ABSENCE_VIOLATION_STREAK_THRESHOLD = 3;
+const FINAL_SUPERVISI_STATUSES = ["completed", "cancelled"];
 
 function isWebClientRequest(req) {
   const platformHeader = String(req.headers["x-client-platform"] || "")
@@ -59,6 +61,41 @@ function isWebClientRequest(req) {
 function getSupervisiReadAccessOptions(req) {
   return {
     allowWebPermissionRead: isWebClientRequest(req),
+  };
+}
+
+function isTruthyQuery(value) {
+  return ["1", "true", "yes", "y"].includes(String(value || "").toLowerCase());
+}
+
+function parsePositiveInt(value, fallback, max = 100) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
+}
+
+function parseQueryList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function buildDateRangeWhere(dateFrom, dateTo) {
+  const range = {};
+  if (dateFrom) range[Op.gte] = dateFrom;
+  if (dateTo) range[Op.lte] = dateTo;
+  return Object.keys(range).length > 0 ? range : null;
+}
+
+function buildPagination(query) {
+  if (!query.page && !query.limit) return null;
+  const page = parsePositiveInt(query.page, 1, 100000);
+  const limit = parsePositiveInt(query.limit, 20, 100);
+  return {
+    page,
+    limit,
+    offset: (page - 1) * limit,
   };
 }
 
@@ -103,9 +140,82 @@ function parseNilaiPekerjaan(value) {
 }
 
 /**
- * Konversi draft kunjungan yang kedaluwarsa menjadi tidak_hadir (pelanggaran).
+ * Hitung ulang flag pelanggaran supervisi.
+ *
+ * Aturan bisnis: tidak hadir baru menjadi pelanggaran pada tidak hadir ke-3
+ * secara beruntun untuk job + lokasi yang sama. Tidak hadir pertama dan kedua
+ * tetap tercatat sebagai tidak_hadir biasa.
+ *
+ * @param {number|number[]|null} jobIds - Jika diisi, hanya hitung job tersebut.
+ */
+async function recalculateViolationFlags(jobIds = null) {
+  const where = {};
+  const normalizedJobIds = Array.isArray(jobIds)
+    ? jobIds.map((id) => parseInt(id, 10)).filter(Number.isFinite)
+    : (jobIds ? [parseInt(jobIds, 10)].filter(Number.isFinite) : []);
+
+  if (normalizedJobIds.length === 1) {
+    where.jobId = normalizedJobIds[0];
+  } else if (normalizedJobIds.length > 1) {
+    where.jobId = { [Op.in]: normalizedJobIds };
+  }
+
+  const visits = await SupervisiVisit.findAll({
+    where,
+    order: [
+      ["jobId", "ASC"],
+      ["locationId", "ASC"],
+      ["visitDate", "ASC"],
+      ["id", "ASC"],
+    ],
+  });
+
+  const streaks = new Map();
+  const toViolation = [];
+  const toNonViolation = [];
+
+  for (const visit of visits) {
+    const date = normalizeDateOnly(visit.visitDate);
+    const key = `${visit.jobId}__${visit.locationId || ""}`;
+    let shouldBeViolation = false;
+
+    if (!visit.isDraft && visit.status === "tidak_hadir" && date) {
+      const previous = streaks.get(key);
+      const isConsecutive =
+        previous &&
+        previous.count > 0 &&
+        addDaysDateOnly(previous.date, 1) === date;
+      const count = isConsecutive ? previous.count + 1 : 1;
+      shouldBeViolation = count >= ABSENCE_VIOLATION_STREAK_THRESHOLD;
+      streaks.set(key, { date, count });
+    } else if (!visit.isDraft && visit.status === "hadir" && date) {
+      streaks.set(key, { date, count: 0 });
+    }
+
+    if (Boolean(visit.isPelanggaran) !== shouldBeViolation) {
+      (shouldBeViolation ? toViolation : toNonViolation).push(visit.id);
+    }
+  }
+
+  if (toViolation.length > 0) {
+    await SupervisiVisit.update(
+      { isPelanggaran: true },
+      { where: { id: { [Op.in]: toViolation } } },
+    );
+  }
+  if (toNonViolation.length > 0) {
+    await SupervisiVisit.update(
+      { isPelanggaran: false },
+      { where: { id: { [Op.in]: toNonViolation } } },
+    );
+  }
+}
+
+/**
+ * Konversi draft kunjungan yang kedaluwarsa menjadi tidak_hadir.
  *
  * Draft yang belum di-finalkan hingga pergantian hari dianggap tidak hadir.
+ * Pelanggaran dihitung terpisah berdasarkan streak 3x tidak hadir beruntun.
  * Fungsi ini dipanggil secara lazy (tanpa cron job) di awal listJobs,
  * getJob, dan submitVisit agar konversi selalu terjadi saat app aktif.
  *
@@ -120,11 +230,12 @@ async function convertStaleDrafts(jobId = null) {
   if (jobId) where.jobId = parseInt(jobId);
   try {
     const [count] = await SupervisiVisit.update(
-      { isDraft: false, status: "tidak_hadir", isPelanggaran: true },
+      { isDraft: false, status: "tidak_hadir", isPelanggaran: false },
       { where }
     );
     if (count > 0) {
       console.log(`[Supervisi] convertStaleDrafts: ${count} draft kedaluwarsa dikonversi ke tidak_hadir.`);
+      await recalculateViolationFlags(jobId);
     }
   } catch (err) {
     console.error("[Supervisi] convertStaleDrafts error:", err.message);
@@ -233,6 +344,7 @@ async function listJobs(req, res) {
     // Konversi draft kedaluwarsa (visitDate < hari ini) → tidak_hadir
     await convertStaleDrafts();
     await clearExpiredRadiusExemptions();
+    await recalculateViolationFlags();
 
     const accessOptions = getSupervisiReadAccessOptions(req);
     const access = getSupervisiAccess(req.user, accessOptions);
@@ -244,7 +356,17 @@ async function listJobs(req, res) {
     }
 
     const where = {};
-    if (req.query.status) where.status = req.query.status;
+    const archiveMode =
+      req.query.mode === "archive" || isTruthyQuery(req.query.archive);
+
+    if (req.query.status) {
+      const statuses = parseQueryList(req.query.status);
+      if (statuses.length > 0) {
+        where.status = statuses.length > 1 ? { [Op.in]: statuses } : statuses[0];
+      }
+    } else if (archiveMode) {
+      where.status = { [Op.in]: FINAL_SUPERVISI_STATUSES };
+    }
     if (access.kind === "executor") {
       where.picSupervisi = access.displayName;
     } else if (access.kind === "monitor") {
@@ -252,14 +374,42 @@ async function listJobs(req, res) {
       if (req.query.picSupervisi) where.picSupervisi = req.query.picSupervisi;
     }
 
-    const jobs = await SupervisiJob.findAll({
+    const dateRange = buildDateRangeWhere(req.query.dateFrom, req.query.dateTo);
+    if (dateRange) where.waktuMulai = dateRange;
+
+    const q = String(req.query.q || "").trim();
+    if (q) {
+      const like = `%${q}%`;
+      where[Op.or] = [
+        { namaKerja: { [Op.like]: like } },
+        { nomorJo: { [Op.like]: like } },
+        { pelaksana: { [Op.like]: like } },
+        { namaPengawas: { [Op.like]: like } },
+        { picSupervisi: { [Op.like]: like } },
+        { namaArea: { [Op.like]: like } },
+      ];
+    }
+
+    const pagination = buildPagination(req.query);
+    const queryOptions = {
       where,
       order: [["waktuMulai", "DESC"]],
       include: [
         { model: SupervisiVisit, as: "visits" },
         { model: SupervisiAmend, as: "amends", order: [["amendMulai", "ASC"]] },
       ],
-    });
+    };
+
+    const result = pagination
+      ? await SupervisiJob.findAndCountAll({
+          ...queryOptions,
+          limit: pagination.limit,
+          offset: pagination.offset,
+          distinct: true,
+        })
+      : { rows: await SupervisiJob.findAll(queryOptions), count: null };
+
+    const jobs = result.rows;
 
     // Kumpulkan semua NIK unik (createdBy + semua submittedBy visit)
     const nikSet = new Set();
@@ -273,7 +423,17 @@ async function listJobs(req, res) {
     addCurrentUserNameFallback(nikNameMap, req.user);
     const enrichedJobs = jobs.map((job) => enrichJobWithNames(job, nikNameMap));
 
-    res.json({ success: true, data: enrichedJobs });
+    const response = { success: true, data: enrichedJobs };
+    if (pagination) {
+      response.meta = {
+        page: pagination.page,
+        limit: pagination.limit,
+        total: result.count,
+        totalPages: Math.max(1, Math.ceil(result.count / pagination.limit)),
+      };
+    }
+
+    res.json(response);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -294,6 +454,7 @@ async function getJob(req, res) {
     // Konversi draft kedaluwarsa untuk job ini sebelum fetch
     await convertStaleDrafts(parseInt(req.params.id));
     await clearExpiredRadiusExemptions(parseInt(req.params.id));
+    await recalculateViolationFlags(parseInt(req.params.id));
 
     const job = await SupervisiJob.findByPk(req.params.id, {
       include: [
@@ -729,6 +890,9 @@ async function listVisits(req, res) {
       });
     }
 
+    await convertStaleDrafts(parseInt(req.params.id));
+    await recalculateViolationFlags(parseInt(req.params.id));
+
     const visits = await SupervisiVisit.findAll({
       where: { jobId: req.params.id },
       order: [["visitDate", "ASC"]],
@@ -885,7 +1049,7 @@ async function submitVisit(req, res) {
         documents: documentPaths,
         submittedBy: req.user.nik,
         submittedAt: new Date(),
-        isPelanggaran: !isDraftBool && status === "tidak_hadir",
+        isPelanggaran: false,
         visitLatitude: hasVisitCoordinates ? vLat : null,
         visitLongitude: hasVisitCoordinates ? vLon : null,
         locationId: normalizedLocationId,
@@ -912,7 +1076,7 @@ async function submitVisit(req, res) {
         documents: [...baseDocs, ...documentPaths],
         submittedBy: req.user.nik,
         submittedAt: new Date(),
-        isPelanggaran: !isDraftBool && status === "tidak_hadir",
+        isPelanggaran: false,
         visitLatitude: hasVisitCoordinates ? vLat : visit.visitLatitude,
         visitLongitude: hasVisitCoordinates ? vLon : visit.visitLongitude,
         locationId: normalizedLocationId,
@@ -921,6 +1085,9 @@ async function submitVisit(req, res) {
       });
     }
 
+
+    await recalculateViolationFlags(parseInt(jobId));
+    await visit.reload();
 
     const executorName =
       normalizeNullableString(req.user && req.user.name) ||
@@ -977,6 +1144,10 @@ async function listPelanggaran(req, res) {
       });
     }
 
+    const scopedJobId = req.query.jobId ? parseInt(req.query.jobId, 10) : null;
+    await convertStaleDrafts(scopedJobId);
+    await recalculateViolationFlags(scopedJobId);
+
     const where = { isPelanggaran: true };
     if (req.query.jobId) where.jobId = req.query.jobId;
 
@@ -1003,7 +1174,7 @@ async function listPelanggaran(req, res) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CRON JOB — Auto-flag missed visits as Pelanggaran
+// CRON JOB - Auto-create missed visits, then recalculate Pelanggaran
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -1014,7 +1185,8 @@ async function listPelanggaran(req, res) {
  *   1. Ambil semua SupervisiJob dengan status 'active' yang memiliki jadwal.
  *   2. Untuk setiap tanggal yang sudah lewat (kemarin ke bawah) dalam range
  *      waktuMulai–effectiveEndDate, cek apakah ada SupervisiVisit.
- *   3. Jika belum ada visit → buat record baru dengan isPelanggaran=true.
+ *   3. Jika belum ada visit, buat record tidak_hadir.
+ *   4. Hitung ulang isPelanggaran berdasarkan streak 3x tidak hadir beruntun.
  */
 async function markMissedVisitsAsPelanggaran() {
   const LABEL = "[Supervisi Cron]";
@@ -1046,6 +1218,7 @@ async function markMissedVisitsAsPelanggaran() {
     });
 
     let totalCreated = 0;
+    const affectedJobIds = new Set();
 
     for (const job of activeJobs) {
       if (!job.waktuMulai || !job.waktuBerakhir) continue;
@@ -1092,7 +1265,7 @@ async function markMissedVisitsAsPelanggaran() {
                 jobId: job.id,
                 visitDate: dateStr,
                 status: "tidak_hadir",
-                isPelanggaran: true,
+                isPelanggaran: false,
                 alasanTidakHadir: null,
                 locationId: locId,
                 submittedAt: null,
@@ -1101,12 +1274,13 @@ async function markMissedVisitsAsPelanggaran() {
                 documents: [],
               });
               totalCreated++;
+              affectedJobIds.add(job.id);
               // Tambahkan ke set agar iterasi berikutnya tidak duplikat
               existingVisitKeys.add(key);
             } catch (createErr) {
               // Abaikan duplicate key — bisa terjadi jika ada race condition
               if (createErr.name !== "SequelizeUniqueConstraintError") {
-                console.warn(`${LABEL} Failed to create pelanggaran for job ${job.id} date ${dateStr} loc ${locId}:`, createErr.message);
+                console.warn(`${LABEL} Failed to create missed visit for job ${job.id} date ${dateStr} loc ${locId}:`, createErr.message);
               }
             }
           }
@@ -1117,7 +1291,60 @@ async function markMissedVisitsAsPelanggaran() {
       }
     }
 
-    console.log(`${LABEL} Done. Created ${totalCreated} pelanggaran record(s).`);
+    if (affectedJobIds.size > 0) {
+      await recalculateViolationFlags(Array.from(affectedJobIds));
+    }
+
+    // ── PRO-AUTOMATION: Auto-complete ended jobs that are clean ──
+    const endedJobs = await SupervisiJob.findAll({
+      where: {
+        status: "active",
+      },
+      include: [
+        {
+          model: SupervisiAmend,
+          as: "amends",
+          attributes: ["amendBerakhir"],
+        },
+      ],
+    });
+
+    let completedCount = 0;
+    for (const job of endedJobs) {
+      if (!job.waktuMulai || !job.waktuBerakhir) continue;
+
+      const defaultEndStr = normalizeDateOnly(job.waktuBerakhir);
+      const legacyAmendEndStr = normalizeDateOnly(job.amendBerakhir);
+      const childAmendEndStrs = (job.amends || [])
+        .map((a) => normalizeDateOnly(a && a.amendBerakhir))
+        .filter(Boolean);
+
+      const effectiveEndStr = maxDateOnly([defaultEndStr, legacyAmendEndStr, ...childAmendEndStrs]);
+
+      if (effectiveEndStr && todayStr > effectiveEndStr) {
+        const unresolvedCount = await SupervisiVisit.count({
+          where: {
+            jobId: job.id,
+            isPelanggaran: true,
+            [Op.or]: [
+              { alasanTidakHadir: null },
+              { alasanTidakHadir: "" }
+            ]
+          }
+        });
+
+        if (unresolvedCount === 0) {
+          await job.update({ status: "completed" });
+          completedCount++;
+          console.log(`${LABEL} Job ID ${job.id} (${job.namaKerja}) otomatis diselesaikan (Auto-Completed).`);
+        } else {
+          console.log(`${LABEL} Job ID ${job.id} (${job.namaKerja}) tetap aktif karena memiliki ${unresolvedCount} pelanggaran menggantung.`);
+        }
+      }
+    }
+    console.log(`${LABEL} Auto-completed ${completedCount} ended clean job(s).`);
+
+    console.log(`${LABEL} Done. Created ${totalCreated} tidak_hadir record(s).`);
   } catch (err) {
     console.error(`${LABEL} Error during missed-visit check:`, err.message);
   }
@@ -1189,6 +1416,48 @@ async function submitViolationReason(req, res) {
       submittedAt: new Date(),
     });
 
+    // ── PRO-AUTOMATION: Real-time Auto-complete ended jobs after resolving all violations ──
+    if (visit.job && visit.job.id) {
+      const fullJob = await SupervisiJob.findByPk(visit.job.id, {
+        include: [
+          {
+            model: SupervisiAmend,
+            as: "amends",
+            attributes: ["amendBerakhir"],
+          },
+        ],
+      });
+
+      if (fullJob && fullJob.status === "active" && fullJob.waktuMulai && fullJob.waktuBerakhir) {
+        const todayStr = getAppDateString();
+        const defaultEndStr = normalizeDateOnly(fullJob.waktuBerakhir);
+        const legacyAmendEndStr = normalizeDateOnly(fullJob.amendBerakhir);
+        const childAmendEndStrs = (fullJob.amends || [])
+          .map((a) => normalizeDateOnly(a && a.amendBerakhir))
+          .filter(Boolean);
+
+        const effectiveEndStr = maxDateOnly([defaultEndStr, legacyAmendEndStr, ...childAmendEndStrs]);
+
+        if (effectiveEndStr && todayStr > effectiveEndStr) {
+          const unresolvedCount = await SupervisiVisit.count({
+            where: {
+              jobId: fullJob.id,
+              isPelanggaran: true,
+              [Op.or]: [
+                { alasanTidakHadir: null },
+                { alasanTidakHadir: "" }
+              ]
+            }
+          });
+
+          if (unresolvedCount === 0) {
+            await fullJob.update({ status: "completed" });
+            console.log(`[Supervisi Realtime Close] Job ID ${fullJob.id} otomatis diselesaikan karena semua alasan pelanggaran telah dilengkapi.`);
+          }
+        }
+      }
+    }
+
     res.json({
       success: true,
       message: "Alasan pelanggaran berhasil disimpan.",
@@ -1245,7 +1514,9 @@ async function undoVisit(req, res) {
       });
     }
 
-    await visit.update({ isDraft: true });
+    await visit.update({ isDraft: true, isPelanggaran: false });
+    await recalculateViolationFlags(visit.jobId);
+    await visit.reload({ include: [{ model: SupervisiJob, as: "job" }] });
 
     const executorName =
       normalizeNullableString(req.user && req.user.name) ||
@@ -1292,6 +1563,7 @@ module.exports = {
   submitVisit,
   listPelanggaran,
   markMissedVisitsAsPelanggaran,
+  recalculateViolationFlags,
   submitViolationReason,
   undoVisit,
 };

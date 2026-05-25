@@ -175,7 +175,8 @@ export function SupervisiJobPanel({ job, onClose }) {
   const hariDiisi     = Object.values(visitsByDate).filter(c => c >= locCount).length;
   const finalVisits   = visits.filter(v => !v.isDraft);
   const hadirCount    = finalVisits.filter(v => v.status === 'hadir').length;
-  const tidakHadirCount = finalVisits.filter(v => v.status !== 'hadir').length;
+  const tidakHadirCount = finalVisits.filter(v => v.status !== 'hadir' && !v.isPelanggaran).length;
+  const pelanggaranCount = finalVisits.filter(v => v.isPelanggaran).length;
   const draftCount    = visits.filter(v => v.isDraft).length;
   const progress      = totalHari > 0 ? Math.min(hariDiisi / totalHari, 1) : 0;
   const progressPct   = Math.round(progress * 100);
@@ -388,9 +389,10 @@ export function SupervisiJobPanel({ job, onClose }) {
             </div>
 
             {/* Stat boxes */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <StatBox icon={<CheckCircle2 size={16} />} label="Hadir"       value={hadirCount}                              color="#16a34a" bg="#f0fdf4" />
-              <StatBox icon={<XCircle      size={16} />} label="Tidak Hadir" value={tidakHadirCount}                         color="#dc2626" bg="#fef2f2" />
+              <StatBox icon={<XCircle      size={16} />} label="Tidak Hadir" value={tidakHadirCount}                         color="#d97706" bg="#fffbeb" />
+              <StatBox icon={<AlertTriangle size={16} />} label="Pelanggaran 3x" value={pelanggaranCount}                    color="#dc2626" bg="#fef2f2" />
               <StatBox icon={<Clock        size={16} />} label="Draft"       value={draftCount}                              color="#d97706" bg="#fffbeb" />
               <StatBox icon={<AlertCircle  size={16} />} label="Sisa Target" value={Math.max(0, totalHari - hariDiisi)} color="#1e40af" bg="#eff6ff" />
             </div>
@@ -470,6 +472,7 @@ function DayVisitCard({ date, visits, locCount }) {
   const finalVisits    = visits.filter(v => !v.isDraft);
   const hadirCount     = finalVisits.filter(v => v.status === 'hadir').length;
   const anyTidakHadir  = finalVisits.some(v => v.status !== 'hadir');
+  const anyPelanggaran = finalVisits.some(v => v.isPelanggaran);
   const anyDraft       = visits.some(v => v.isDraft);
   const allDone        = finalVisits.length >= locCount;
 
@@ -477,18 +480,19 @@ function DayVisitCard({ date, visits, locCount }) {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   });
 
-  const headerColor = allDone ? (anyTidakHadir ? '#dc2626' : '#16a34a') : '#d97706';
-  const borderColor = allDone ? (anyTidakHadir ? '#fecaca' : '#bbf7d0') : '#fed7aa';
-  const bgColor     = allDone ? (anyTidakHadir ? '#fff5f5' : '#f0fdf4') : '#fffbeb';
+  const headerColor = anyPelanggaran ? '#dc2626' : allDone ? (anyTidakHadir ? '#d97706' : '#16a34a') : '#d97706';
+  const borderColor = anyPelanggaran ? '#fecaca' : allDone ? (anyTidakHadir ? '#fed7aa' : '#bbf7d0') : '#fed7aa';
+  const bgColor     = anyPelanggaran ? '#fff5f5' : allDone ? (anyTidakHadir ? '#fffbeb' : '#f0fdf4') : '#fffbeb';
 
   let statusLabel = '';
   if (locCount > 1) {
     statusLabel = `${finalVisits.length}/${locCount} lokasi`;
     if (hadirCount > 0) statusLabel += ` · ${hadirCount} hadir`;
+    if (anyPelanggaran) statusLabel += ' · pelanggaran 3x';
     if (anyDraft) statusLabel += ' (ada draft)';
   } else {
     statusLabel = finalVisits.length > 0
-      ? (hadirCount > 0 ? 'Hadir' : 'Tidak Hadir')
+      ? (anyPelanggaran ? 'Pelanggaran 3x' : hadirCount > 0 ? 'Hadir' : 'Tidak Hadir')
       : (anyDraft ? 'Draft' : 'Belum Ada Laporan');
   }
 
@@ -499,7 +503,9 @@ function DayVisitCard({ date, visits, locCount }) {
         onClick={() => setOpen(p => !p)}
       >
         <span style={{ color: headerColor }}>
-          {allDone
+          {anyPelanggaran
+            ? <AlertTriangle size={16} />
+            : allDone
             ? (anyTidakHadir ? <XCircle size={16} /> : <CheckCircle2 size={16} />)
             : <Clock size={16} />}
         </span>
@@ -511,7 +517,7 @@ function DayVisitCard({ date, visits, locCount }) {
           className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
           style={{ color: headerColor, background: `${headerColor}20` }}
         >
-          {allDone ? (anyTidakHadir ? 'Tidak Hadir' : 'Hadir') : (anyDraft ? 'Draft' : 'Pending')}
+          {anyPelanggaran ? 'Pelanggaran' : allDone ? (anyTidakHadir ? 'Tidak Hadir' : 'Hadir') : (anyDraft ? 'Draft' : 'Pending')}
         </span>
         {open
           ? <ChevronUp size={14} className="text-gray-400 shrink-0" />
@@ -538,7 +544,8 @@ function DayVisitCard({ date, visits, locCount }) {
 // ─── Single visit detail row ──────────────────────────────────────────────────
 function VisitDetailRow({ visit, index, isMultiLoc }) {
   const isHadir  = visit.status === 'hadir';
-  const accent   = visit.isDraft ? '#d97706' : isHadir ? '#16a34a' : '#dc2626';
+  const isPelanggaran = Boolean(visit.isPelanggaran);
+  const accent   = visit.isDraft ? '#d97706' : isHadir ? '#16a34a' : isPelanggaran ? '#dc2626' : '#d97706';
   const photos   = Array.isArray(visit.photos)    ? visit.photos    : [];
   const docs     = Array.isArray(visit.documents) ? visit.documents : [];
 
@@ -546,7 +553,7 @@ function VisitDetailRow({ visit, index, isMultiLoc }) {
     <div
       className="rounded-xl p-3 space-y-2 text-xs"
       style={{
-        background: visit.isDraft ? '#fffbeb' : isHadir ? '#f0fdf4' : '#fff5f5',
+        background: visit.isDraft ? '#fffbeb' : isHadir ? '#f0fdf4' : isPelanggaran ? '#fff5f5' : '#fffbeb',
         border: `1px solid ${accent}30`,
       }}
     >
@@ -563,7 +570,7 @@ function VisitDetailRow({ visit, index, isMultiLoc }) {
           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold text-[11px]"
           style={{ color: accent, background: `${accent}18` }}
         >
-          {visit.isDraft ? '● DRAFT' : isHadir ? '✓ Hadir' : '✗ Tidak Hadir'}
+          {visit.isDraft ? 'DRAFT' : isHadir ? 'Hadir' : isPelanggaran ? 'Pelanggaran' : 'Tidak Hadir'}
         </span>
         {visit.submitterName && (
           <span className="text-gray-400 text-[11px]">oleh {visit.submitterName}</span>
@@ -580,7 +587,9 @@ function VisitDetailRow({ visit, index, isMultiLoc }) {
         <p className="text-gray-600 text-[12px] leading-snug">{visit.keterangan}</p>
       )}
       {visit.alasanTidakHadir && (
-        <p className="text-red-600 text-[12px] leading-snug">Alasan: {visit.alasanTidakHadir}</p>
+        <p className={`${isPelanggaran ? 'text-red-600' : 'text-amber-700'} text-[12px] leading-snug`}>
+          {isPelanggaran ? 'Alasan pelanggaran' : 'Alasan tidak hadir'}: {visit.alasanTidakHadir}
+        </p>
       )}
 
       {/* GPS info */}

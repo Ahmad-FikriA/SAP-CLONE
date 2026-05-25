@@ -11,6 +11,7 @@ const SupervisiJob = require('../src/models/SupervisiJob');
 const SupervisiVisit = require('../src/models/SupervisiVisit');
 const User = require('../src/models/User');
 const { getAppDateString } = require('../src/controllers/inspection/supervisiHelpers');
+const { recalculateViolationFlags } = require('../src/controllers/inspection/supervisiController');
 
 describe('Inspection and Supervisi regressions', () => {
   const cleanup = {
@@ -731,5 +732,76 @@ describe('Inspection and Supervisi regressions', () => {
     expect(exemptResponse.body.data.visitLatitude).toBeNull();
     expect(exemptResponse.body.data.visitLongitude).toBeNull();
     cleanup.visitIds.push(exemptResponse.body.data.id);
+  });
+
+  it('flags supervisi pelanggaran only from the third consecutive absence', async () => {
+    const suffix = Date.now();
+    const job = await SupervisiJob.create({
+      namaKerja: `Codex Supervisi Streak ${suffix}`,
+      nomorJo: `JO-CODEX-STREAK-${suffix}`,
+      nilaiPekerjaan: 1500000,
+      pelaksana: 'Vendor Test',
+      waktuMulai: '2026-04-01',
+      waktuBerakhir: '2026-04-08',
+      namaPengawas: 'Group supervisi Sipil dan Perpipaan',
+      picSupervisi: 'Deni Yuniardi',
+      latitude: -6.2,
+      longitude: 106.8,
+      radius: 100,
+      namaArea: 'Lokasi Test',
+      locations: [
+        {
+          id: 'loc-a',
+          namaArea: 'Lokasi Test',
+          latitude: -6.2,
+          longitude: 106.8,
+          radius: 100,
+        },
+      ],
+      status: 'active',
+      createdBy: '10000262',
+    });
+    cleanup.jobIds.push(job.id);
+
+    await SupervisiVisit.bulkCreate(
+      [
+        ['2026-04-01', 'tidak_hadir'],
+        ['2026-04-02', 'tidak_hadir'],
+        ['2026-04-03', 'tidak_hadir'],
+        ['2026-04-04', 'hadir'],
+        ['2026-04-05', 'tidak_hadir'],
+        ['2026-04-06', 'tidak_hadir'],
+        ['2026-04-08', 'tidak_hadir'],
+      ].map(([visitDate, status]) => ({
+        jobId: job.id,
+        visitDate,
+        status,
+        keterangan: status === 'hadir' ? 'Kunjungan hadir.' : null,
+        alasanTidakHadir: status === 'tidak_hadir' ? 'Tidak hadir test.' : null,
+        locationId: 'loc-a',
+        isDraft: false,
+        isPelanggaran: status === 'tidak_hadir',
+        photos: [],
+        documents: [],
+      })),
+    );
+
+    await recalculateViolationFlags(job.id);
+
+    const reloadedVisits = await SupervisiVisit.findAll({
+      where: { jobId: job.id },
+      order: [['visitDate', 'ASC']],
+    });
+    cleanup.visitIds.push(...reloadedVisits.map((visit) => visit.id));
+
+    expect(reloadedVisits.map((visit) => Boolean(visit.isPelanggaran))).toEqual([
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+    ]);
   });
 });

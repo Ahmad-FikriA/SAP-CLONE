@@ -87,6 +87,16 @@ export default function LeafletMap({
         currentMap.doubleClickZoom?.disable();
         currentMap.dragging?.disable();
         currentMap.off();
+
+        // Stop all active CSS transitions to prevent the Leaflet _leaflet_pos error on unmount
+        if (containerRef.current) {
+          const animatedEl = containerRef.current.querySelectorAll('.leaflet-zoom-animated');
+          animatedEl.forEach((el) => {
+            el.style.transition = 'none';
+            el.style.webkitTransition = 'none';
+          });
+        }
+
         currentMap.remove();
         mapRef.current = null;
       }

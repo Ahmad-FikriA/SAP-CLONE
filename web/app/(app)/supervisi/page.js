@@ -9,12 +9,14 @@ import {
 import {
   MapPin, Loader2, AlertCircle, RefreshCw, Search, X, XCircle, CalendarDays,
   Briefcase, CheckCircle2, FileEdit, FileText, Banknote, Trash2, Eye, Ban,
-  CalendarOff, TrendingUp, Plus
+  CalendarOff, TrendingUp, Plus, AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   fetchSupervisiJobs,
+  fetchSupervisiJobArchive,
+  updateSupervisiJob,
   cancelSupervisiJob,
   deleteSupervisiJob,
   updateSupervisiJobLocation,
@@ -45,6 +47,21 @@ const FILTERS = [
 const SELECT_CLS =
   'px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white text-slate-700 ' +
   'focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer';
+
+const ARCHIVE_PAGE_SIZE = 20;
+
+function buildArchiveDateRange(year, month) {
+  if (!year) return {};
+  const normalizedMonth = month ? String(month).padStart(2, '0') : '';
+  if (!normalizedMonth) {
+    return { dateFrom: `${year}-01-01`, dateTo: `${year}-12-31` };
+  }
+  const lastDay = new Date(Number(year), Number(normalizedMonth), 0).getDate();
+  return {
+    dateFrom: `${year}-${normalizedMonth}-01`,
+    dateTo: `${year}-${normalizedMonth}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
 
 // Warna marker per status (hex, untuk divIcon)
 const MARKER_COLORS = {
@@ -217,6 +234,161 @@ function StatusBadge({ status }) {
   );
 }
 
+function ArchivePagination({ meta, loading, onPageChange }) {
+  const page = Number(meta?.page || 1);
+  const totalPages = Number(meta?.totalPages || 1);
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-sm">
+      <p className="text-xs text-slate-500">
+        Total <span className="font-semibold text-slate-700">{meta?.total || 0}</span> arsip
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={loading || page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          Sebelumnya
+        </Button>
+        <span className="min-w-[84px] text-center text-xs font-semibold text-slate-500">
+          {page} / {totalPages}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={loading || page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Berikutnya
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SupervisiArchiveSection({
+  jobs,
+  meta,
+  loading,
+  search,
+  status,
+  onSearchChange,
+  onStatusChange,
+  onPageChange,
+  onViewDetail,
+  formatRupiah,
+}) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="p-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Cari JO, pekerjaan, PIC..."
+            className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          />
+        </div>
+        <select value={status} onChange={(e) => onStatusChange(e.target.value)} className={SELECT_CLS}>
+          <option value="">Semua Status Final</option>
+          <option value="completed">Selesai</option>
+          <option value="cancelled">Dibatalkan</option>
+        </select>
+      </div>
+
+      <div className="md:hidden divide-y divide-slate-100">
+        {loading ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-slate-400">
+            <Loader2 size={24} className="animate-spin" />
+            <p className="text-sm">Memuat arsip supervisi...</p>
+          </div>
+        ) : jobs.length === 0 ? (
+          <div className="py-10 text-center text-sm text-slate-400">Tidak ada arsip supervisi</div>
+        ) : jobs.map((job) => {
+          const visits = Array.isArray(job.visits) ? job.visits : [];
+          const pelanggaran = visits.filter((visit) => visit.isPelanggaran).length;
+          return (
+            <button
+              key={job.id}
+              type="button"
+              onClick={() => onViewDetail(job)}
+              className="w-full text-left p-4 hover:bg-blue-50/40 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-800 truncate">{job.namaKerja || '-'}</p>
+                  <p className="font-mono text-[11px] text-slate-400 mt-1">{job.nomorJo || '-'}</p>
+                </div>
+                <StatusBadge status={job.status} />
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                <span>{String(job.waktuMulai || '').slice(0, 10) || '-'}</span>
+                <span className="text-right">{formatRupiah(parseFloat(job.nilaiPekerjaan) || 0)}</span>
+                <span>{visits.length} kunjungan</span>
+                <span className="text-right">{pelanggaran} pelanggaran</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 min-w-[1100px]">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                {['Nomor JO', 'Pekerjaan', 'PIC', 'Mulai', 'Nilai', 'Visit', 'Pelanggaran', 'Status', 'Aksi'].map((head) => (
+                  <th key={head} className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">{head}</th>
+                ))}
+              </tr>
+            </thead>
+          <tbody className="divide-y divide-slate-100">
+            {loading ? (
+              <tr>
+                <td colSpan="9" className="px-6 py-10 text-center text-slate-400">
+                  <Loader2 size={24} className="animate-spin mx-auto mb-2" />
+                  Memuat arsip supervisi...
+                </td>
+              </tr>
+            ) : jobs.length === 0 ? (
+              <tr>
+                <td colSpan="9" className="px-6 py-10 text-center text-slate-400">Tidak ada arsip supervisi</td>
+              </tr>
+            ) : jobs.map((job) => {
+              const visits = Array.isArray(job.visits) ? job.visits : [];
+              const pelanggaran = visits.filter((visit) => visit.isPelanggaran).length;
+              return (
+                <tr key={job.id} className="hover:bg-blue-50/40 transition-colors">
+                  <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-500 whitespace-nowrap">{job.nomorJo || '-'}</td>
+                  <td className="px-4 py-3 max-w-[240px]"><p className="font-semibold text-slate-800 truncate">{job.namaKerja || '-'}</p></td>
+                  <td className="px-4 py-3 max-w-[180px] truncate">{job.picSupervisi || '-'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{String(job.waktuMulai || '').slice(0, 10) || '-'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{formatRupiah(parseFloat(job.nilaiPekerjaan) || 0)}</td>
+                  <td className="px-4 py-3">{visits.length}</td>
+                  <td className="px-4 py-3">{pelanggaran}</td>
+                  <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={job.status} /></td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => onViewDetail(job)}>
+                      <Eye size={12} /> Detail
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <ArchivePagination meta={meta} loading={loading} onPageChange={onPageChange} />
+    </div>
+  );
+}
+
 export default function SupervisiPage() {
   const [jobs,        setJobs]        = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -230,6 +402,11 @@ export default function SupervisiPage() {
   // State untuk alur HAPUS permanen (cancelled/completed → deleted)
   const [jobToHapus,  setJobToHapus]  = useState(null);
   const [isHapusing,  setIsHapusing]  = useState(false);
+
+  // State untuk alur SELESAI manual
+  const [jobToComplete, setJobToComplete] = useState(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+
   const [jobToRadiusExempt, setJobToRadiusExempt] = useState(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [jobToEdit, setJobToEdit] = useState(null);
@@ -242,12 +419,31 @@ export default function SupervisiPage() {
     reason: '',
   });
 
+  const [mounted, setMounted] = useState(false);
+  const [focusedJobId, setFocusedJobId] = useState(null);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // backward‑compat alias (beberapa tempat masih pakai jobToDelete)
   const jobToDelete    = jobToCancel;
   const setJobToDelete = setJobToCancel;
   const [tableSearch, setTableSearch] = useState('');
   const [tableStatusFilter, setTableStatusFilter] = useState('');
   const [showFullFormat, setShowFullFormat] = useState(false);
+  const [viewMode, setViewMode] = useState('monitoring');
+  const [archiveJobs, setArchiveJobs] = useState([]);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archiveMeta, setArchiveMeta] = useState({
+    page: 1,
+    limit: ARCHIVE_PAGE_SIZE,
+    total: 0,
+    totalPages: 1,
+  });
+  const [archivePage, setArchivePage] = useState(1);
+  const [archiveSearchInput, setArchiveSearchInput] = useState('');
+  const [archiveSearch, setArchiveSearch] = useState('');
+  const [archiveStatus, setArchiveStatus] = useState('');
   const canUpdateSupervisi = canUpdate('supervisi');
   const canDeleteSupervisi = canDelete('supervisi');
 
@@ -269,16 +465,55 @@ export default function SupervisiPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchSupervisiJobs();
+      const range = buildArchiveDateRange(yearFilter, monthFilter);
+      const data = await fetchSupervisiJobs(range);
       setJobs(Array.isArray(data) ? data : []);
     } catch (e) {
       toast.error('Gagal memuat data supervisi: ' + e.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [yearFilter, monthFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (viewMode === 'monitoring') load();
+  }, [viewMode, load]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setArchiveSearch(archiveSearchInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [archiveSearchInput]);
+
+  const loadArchive = useCallback(async () => {
+    setArchiveLoading(true);
+    try {
+      const range = buildArchiveDateRange(yearFilter, monthFilter);
+      const result = await fetchSupervisiJobArchive({
+        page: archivePage,
+        limit: ARCHIVE_PAGE_SIZE,
+        q: archiveSearch.trim(),
+        status: archiveStatus,
+        ...range,
+      });
+      setArchiveJobs(Array.isArray(result.items) ? result.items : []);
+      setArchiveMeta(result.meta);
+    } catch (e) {
+      toast.error('Gagal memuat arsip supervisi: ' + e.message);
+    } finally {
+      setArchiveLoading(false);
+    }
+  }, [archivePage, archiveSearch, archiveStatus, yearFilter, monthFilter]);
+
+  useEffect(() => {
+    setArchivePage(1);
+  }, [archiveSearch, archiveStatus, yearFilter, monthFilter]);
+
+  useEffect(() => {
+    if (viewMode !== 'archive') return;
+    loadArchive();
+  }, [viewMode, loadArchive]);
 
   // ── Derive opsi tahun dari data ─────────────────────────────────────────────
   const yearOptions = useMemo(() => {
@@ -287,7 +522,9 @@ export default function SupervisiPage() {
         .map((j) => (j.waktuMulai || j.createdAt)?.slice(0, 4))
         .filter(Boolean),
     );
-    years.add(String(currentYear));
+    for (let year = currentYear; year >= currentYear - 10; year -= 1) {
+      years.add(String(year));
+    }
     return [...years].sort((a, b) => b - a);
   }, [jobs, currentYear]);
 
@@ -301,19 +538,27 @@ export default function SupervisiPage() {
     });
   }, [jobs, yearFilter, monthFilter]);
 
-  // ── Refresh markers ketika validJobs atau filter berubah ─────────────────────
+  // ── Refresh markers ketika validJobs, filter, atau focusedJobId berubah ──
   useEffect(() => {
     if (!mapRef.current || !LRef.current || !mapReadyRef.current) return;
-    renderMarkers(mapRef.current, LRef.current, validJobs, filter);
-  }, [validJobs, filter, canUpdateSupervisi]); // eslint-disable-line react-hooks/exhaustive-deps
+    renderMarkers(mapRef.current, LRef.current, validJobs, filter, focusedJobId);
+  }, [validJobs, filter, focusedJobId, canUpdateSupervisi]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Callback saat peta siap ─────────────────────────────────────────────────
   const onMapReady = useCallback((map, L) => {
     mapRef.current  = map;
     LRef.current    = L;
     mapReadyRef.current = true;
-    if (validJobs.length > 0) renderMarkers(map, L, validJobs, filter);
-  }, [validJobs, filter, canUpdateSupervisi]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Add map click listener to reset focus when clicking on the map background
+    map.on('click', (e) => {
+      if (e.originalEvent.target.id === map.getContainer().id || e.originalEvent.target.classList.contains('leaflet-container')) {
+        setFocusedJobId(null);
+      }
+    });
+
+    if (validJobs.length > 0) renderMarkers(map, L, validJobs, filter, focusedJobId);
+  }, [validJobs, filter, focusedJobId, canUpdateSupervisi]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onMapUnmount = useCallback(() => {
     mapReadyRef.current = false;
@@ -360,7 +605,7 @@ export default function SupervisiPage() {
     setPendingPinMove(pendingMove);
   }, [canUpdateSupervisi]);
 
-  function renderMarkers(map, L, allJobs, activeFilter) {
+  function renderMarkers(map, L, allJobs, activeFilter, currentFocusedId) {
     // Bersihkan marker lama
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
@@ -369,15 +614,34 @@ export default function SupervisiPage() {
       ? allJobs
       : allJobs.filter((j) => j.status === activeFilter);
 
+    const isAnyFocused = currentFocusedId !== null;
+
     visible.forEach((job) => {
-      const color = markerColor(job.status);
+      const isFocused = currentFocusedId === job.id;
+      
+      // Jika ada job lain yang di-focus, warnai abu-abu
+      const color = isAnyFocused && !isFocused
+        ? '#9CA3AF'
+        : markerColor(job.status);
+        
       const icon  = makePinIcon(L, color);
       const meta  = SUPERVISI_STATUS_META[job.status] || SUPERVISI_STATUS_META.draft;
 
-      const points = getJobLocations(job).map((loc, idx) => ({
+      let locations = getJobLocations(job);
+
+      // JIKA tidak ada job yang di-focus, hanya tampilkan lokasi pertama (index 0) untuk cegah spam!
+      // JIKA ada job yang di-focus:
+      //   - Untuk job yang di-focus: tampilkan SEMUA lokasi!
+      //   - Untuk job lain: hanya tampilkan lokasi pertama (index 0).
+      if (!isFocused && locations.length > 1) {
+        locations = [locations[0]];
+      }
+
+      const points = locations.map((loc, idx) => ({
         lat: loc.latitude,
         lng: loc.longitude,
         area: loc.namaArea,
+        radius: normalizeRadius(loc.radius ?? job.radius),
         locationId: loc.id,
         locationIndex: idx,
       }));
@@ -385,7 +649,12 @@ export default function SupervisiPage() {
       // Render marker untuk tiap titik
       points.forEach((pt) => {
         let previousLatLng = L.latLng(pt.lat, pt.lng);
-        const marker = L.marker([pt.lat, pt.lng], { icon, draggable: canUpdateSupervisi });
+        const marker = L.marker([pt.lat, pt.lng], { 
+          icon, 
+          draggable: canUpdateSupervisi && !isAnyFocused,
+          jobId: job.id
+        });
+        
         const popupContent = `
           <div style="min-width:200px;font-family:system-ui,sans-serif">
             <p style="font-size:10px;font-weight:700;color:#6B7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">
@@ -406,11 +675,19 @@ export default function SupervisiPage() {
           </div>`;
 
         marker.bindPopup(popupContent, { maxWidth: 260 });
+        
+        // Klik pada marker memicu focus
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setFocusedJobId(job.id);
+        });
+
         marker.on('add', () => {
           const el = marker.getElement();
-          if (el) el.style.cursor = canUpdateSupervisi ? 'grab' : 'pointer';
+          if (el) el.style.cursor = canUpdateSupervisi && !isAnyFocused ? 'grab' : 'pointer';
         });
-        if (canUpdateSupervisi) {
+
+        if (canUpdateSupervisi && !isAnyFocused) {
           marker.on('dragstart', () => {
             previousLatLng = marker.getLatLng();
             map.closePopup();
@@ -429,8 +706,24 @@ export default function SupervisiPage() {
             });
           });
         }
+        
         marker.addTo(map);
         markersRef.current.push(marker);
+
+        // JIKA job ini sedang di-focus, render lingkaran radius untuk semua lokasinya!
+        if (isFocused) {
+          const circle = L.circle([pt.lat, pt.lng], {
+            radius: pt.radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.10,
+            weight: 1.5,
+            dashArray: '4 4',
+            jobId: job.id
+          });
+          circle.addTo(map);
+          markersRef.current.push(circle);
+        }
       });
     });
 
@@ -439,8 +732,20 @@ export default function SupervisiPage() {
       if (skipNextFitBoundsRef.current) {
         skipNextFitBoundsRef.current = false;
       } else {
-        const group = L.featureGroup(markersRef.current);
-        map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 14 });
+        // Jika ada job yang di-focus, fit bounds ke lokasi job tersebut saja
+        if (currentFocusedId) {
+          const focusedItems = markersRef.current.filter((m) => m.options?.jobId === currentFocusedId);
+          if (focusedItems.length > 0) {
+            const group = L.featureGroup(focusedItems);
+            map.fitBounds(group.getBounds().pad(0.25), { maxZoom: 15 });
+          }
+        } else {
+          // Jika tidak ada yang di-focus, fit bounds ke semua marker
+          const group = L.featureGroup(markersRef.current.filter(m => m instanceof L.Marker));
+          if (group.getLayers().length > 0) {
+            map.fitBounds(group.getBounds().pad(0.15), { maxZoom: 14 });
+          }
+        }
       }
     }
   }
@@ -511,6 +816,7 @@ export default function SupervisiPage() {
       const job = jobs.find((j) => j.id === id);
       if (job) {
         setSelectedJob(job);
+        setFocusedJobId(job.id);
         mapRef.current?.closePopup();
       }
     };
@@ -536,6 +842,9 @@ export default function SupervisiPage() {
     completed: validJobs.filter((j) => j.status === 'completed').length,
     draft:     validJobs.filter((j) => j.status === 'draft').length,
     cancelled: validJobs.filter((j) => j.status === 'cancelled').length,
+    pelanggaran: validJobs.reduce((count, job) => (
+      count + (Array.isArray(job.visits) ? job.visits.filter((visit) => visit.isPelanggaran).length : 0)
+    ), 0),
   };
   stats.total = stats.active + stats.completed + stats.draft + stats.cancelled;
 
@@ -825,6 +1134,29 @@ export default function SupervisiPage() {
     }
   };
 
+  const confirmCompleteJob = async () => {
+    if (!jobToComplete) return;
+    if (!canUpdateSupervisi) {
+      toast.error('Anda tidak memiliki akses untuk menyelesaikan pekerjaan supervisi.');
+      return;
+    }
+
+    setIsCompleting(true);
+    try {
+      await updateSupervisiJob(jobToComplete.id, { status: 'completed' });
+      toast.success('Pekerjaan supervisi berhasil diselesaikan.');
+      if (selectedJob?.id === jobToComplete.id) {
+        setSelectedJob(prev => prev ? { ...prev, status: 'completed' } : null);
+      }
+      setJobToComplete(null);
+      load();
+    } catch (err) {
+      toast.error(err?.message || 'Gagal menyelesaikan pekerjaan supervisi.');
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
 
@@ -845,6 +1177,26 @@ export default function SupervisiPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+            {[
+              { id: 'monitoring', label: 'Monitoring' },
+              { id: 'archive', label: 'Arsip' },
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setViewMode(item.id)}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                  viewMode === item.id
+                    ? 'bg-white text-blue-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
           {/* Filter Periode */}
           <div className="flex items-center gap-2">
             <CalendarDays size={18} className="text-slate-400" />
@@ -870,25 +1222,30 @@ export default function SupervisiPage() {
             </select>
           </div>
 
-          <button
-            onClick={handleCreateJobClick}
-            disabled={!canUpdateSupervisi}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0a2540] hover:bg-[#0d3154] text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus size={14} />
-            Tambah Jadwal
-          </button>
+          {viewMode === 'monitoring' && (
+            <button
+              onClick={handleCreateJobClick}
+              disabled={!canUpdateSupervisi}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0a2540] hover:bg-[#0d3154] text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus size={14} />
+              Tambah Jadwal
+            </button>
+          )}
 
           <button
-            onClick={load}
-            disabled={loading}
+            onClick={viewMode === 'archive' ? loadArchive : load}
+            disabled={viewMode === 'archive' ? archiveLoading : loading}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors disabled:opacity-50"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={(viewMode === 'archive' ? archiveLoading : loading) ? 'animate-spin' : ''} />
             Refresh
           </button>
         </div>
       </div>
+
+      {viewMode === 'monitoring' ? (
+      <>
 
       {/* ── Total Nilai Card (full-width, crypto-style) ── */}
       {!loading && (
@@ -937,8 +1294,8 @@ export default function SupervisiPage() {
 
             {/* Chart — fixed height + min-height untuk hindari width -1 error */}
             <div style={{ width: '100%', height: '160px', minHeight: '160px' }}>
-              {nilaiChartData.length >= 2 ? (
-                <ResponsiveContainer width="99%" height="100%">
+              {mounted && nilaiChartData.length >= 2 ? (
+                <ResponsiveContainer width="99%" height="100%" minWidth={0}>
                   <AreaChart data={nilaiChartData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
                     <defs>
                       <linearGradient id="nilaiGradient" x1="0" y1="0" x2="0" y2="1">
@@ -998,7 +1355,7 @@ export default function SupervisiPage() {
 
       {/* ── Stat Cards ── */}
       {!loading && (
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 md:gap-3">
           {[
             { label: 'JO Terbit',  value: totalJoTerbit,  icon: FileText,     color: 'bg-indigo-50 text-indigo-600', textColor: 'text-indigo-700' },
             { label: 'Total Job',  value: stats.total,    icon: Briefcase,    color: 'bg-slate-50 text-slate-600',   textColor: 'text-slate-800'  },
@@ -1006,14 +1363,15 @@ export default function SupervisiPage() {
             { label: 'Selesai',    value: stats.completed,icon: CheckCircle2, color: 'bg-green-50 text-green-600',   textColor: 'text-green-700'  },
             { label: 'Draft',      value: stats.draft,    icon: FileEdit,     color: 'bg-blue-50 text-blue-600',     textColor: 'text-blue-700'   },
             { label: 'Dibatalkan', value: stats.cancelled,icon: XCircle,      color: 'bg-red-50 text-red-600',       textColor: 'text-red-700'    },
+            { label: 'Pelanggaran 3x', value: stats.pelanggaran, icon: AlertTriangle, color: 'bg-rose-50 text-rose-600', textColor: 'text-rose-700' },
           ].map(({ label, value, icon: Icon, color, textColor }) => (
-            <div key={label} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-3">
+            <div key={label} className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-3 min-w-0">
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
                 <Icon size={18} />
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-tight">{label}</p>
-                <p className={`text-xl font-extrabold leading-tight ${textColor}`}>{value}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-tight truncate" title={label}>{label}</p>
+                <p className={`text-lg font-extrabold leading-none mt-1 ${textColor}`}>{value}</p>
               </div>
             </div>
           ))}
@@ -1185,7 +1543,7 @@ export default function SupervisiPage() {
                 <div
                   key={job.id}
                   className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm cursor-pointer active:bg-blue-50/40 transition-colors"
-                  onClick={() => setSelectedJob(job)}
+                  onClick={() => { setSelectedJob(job); setFocusedJobId(job.id); }}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <p className="font-semibold text-gray-800 leading-snug flex-1">{job.namaKerja || '—'}</p>
@@ -1205,23 +1563,29 @@ export default function SupervisiPage() {
                       </Button>
                     )}
                     {job.status === 'active' && canUpdateSupervisi && (
-                      <Button variant="outline" size="sm"
-                        className={`h-7 text-xs gap-1 ${ isRadiusExemptionActive(job) ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-teal-700 border-teal-200' }`}
-                        onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}
-                      >
-                        {isRadiusExemptionActive(job) ? (
-                          <><CalendarOff size={11} /> Radius Off</>
-                        ) : (
-                          <><MapPin size={11} /> Radius On</>
-                        )}
-                      </Button>
-                    )}
-                    {job.status === 'active' && canUpdateSupervisi && (
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-orange-600 border-orange-200"
-                        onClick={(e) => { e.stopPropagation(); handleCancelClick(job); }}
-                      >
-                        <Ban size={11} /> Batalkan
-                      </Button>
+                      <>
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); setJobToEdit(job); setShowCreateDialog(true); }}>
+                          <FileEdit size={11} /> Edit
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-green-600 border-green-200 hover:bg-green-50" onClick={(e) => { e.stopPropagation(); setJobToComplete(job); }}>
+                          <CheckCircle2 size={11} /> Selesai
+                        </Button>
+                        <Button variant="outline" size="sm"
+                          className={`h-7 text-xs gap-1 ${ isRadiusExemptionActive(job) ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-teal-700 border-teal-200' }`}
+                          onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}
+                        >
+                          {isRadiusExemptionActive(job) ? (
+                            <><CalendarOff size={11} /> Radius Off</>
+                          ) : (
+                            <><MapPin size={11} /> Radius On</>
+                          )}
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-orange-600 border-orange-200"
+                          onClick={(e) => { e.stopPropagation(); handleCancelClick(job); }}
+                        >
+                          <Ban size={11} /> Batalkan
+                        </Button>
+                      </>
                     )}
                     {canDeleteSupervisi && (job.status === 'draft' || job.status === 'cancelled' || job.status === 'completed') && (
                       <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-red-600 border-red-200"
@@ -1238,11 +1602,12 @@ export default function SupervisiPage() {
 
           {/* Desktop table */}
           <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-            <table className="w-full text-left text-sm text-gray-600">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-600 min-w-[1200px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {['Nomor JO', 'Nama Pekerjaan', 'PIC Supervisi', 'Status', 'Aksi'].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1254,12 +1619,12 @@ export default function SupervisiPage() {
                 ) : tableJobs.map((job) => {
                   const meta = SUPERVISI_STATUS_META[job.status] || SUPERVISI_STATUS_META.draft;
                   return (
-                    <tr key={job.id} className="hover:bg-blue-50/40 transition-colors cursor-pointer group" onClick={() => setSelectedJob(job)}>
+                    <tr key={job.id} className="hover:bg-blue-50/40 transition-colors cursor-pointer group" onClick={() => { setSelectedJob(job); setFocusedJobId(job.id); }}>
                       <td className="px-4 py-3 font-mono text-xs font-bold text-gray-500 whitespace-nowrap">{job.nomorJo || '-'}</td>
                       <td className="px-4 py-3 max-w-[220px]"><p className="font-semibold text-gray-800 truncate">{job.namaKerja || '-'}</p></td>
                       <td className="px-4 py-3 text-sm text-gray-500 max-w-[160px] truncate">{job.picSupervisi || '-'}</td>
-                      <td className="px-4 py-3"><StatusBadge status={job.status} /></td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={job.status} /></td>
+                      <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
                           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}><Eye size={11} /> Detail</Button>
                           {job.status === 'draft' && canUpdateSupervisi && (
@@ -1267,6 +1632,8 @@ export default function SupervisiPage() {
                           )}
                           {job.status === 'active' && canUpdateSupervisi && (
                             <>
+                              <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setJobToEdit(job); setShowCreateDialog(true); }}><FileEdit size={11} /> Edit</Button>
+                              <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300 opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setJobToComplete(job); }}><CheckCircle2 size={11} /> Selesai</Button>
                               <Button variant="outline" size="sm" className={`h-7 text-xs gap-1 opacity-80 hover:opacity-100 ${ isRadiusExemptionActive(job) ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100' : 'text-teal-700 border-teal-200 hover:bg-teal-50 hover:border-teal-300' }`} onClick={(e) => { e.stopPropagation(); handleRadiusExemptionClick(job); }}>
                                 {isRadiusExemptionActive(job) ? (
                                   <><CalendarOff size={11} /> Radius Off</>
@@ -1288,11 +1655,28 @@ export default function SupervisiPage() {
               </tbody>
             </table>
           </div>
+        </div>
           </div>
         </div>
 
       {/* ── Side panel detail ── */}
-      <SupervisiJobPanel job={selectedJob} onClose={() => setSelectedJob(null)} />
+      </>
+      ) : (
+        <SupervisiArchiveSection
+          jobs={archiveJobs}
+          meta={archiveMeta}
+          loading={archiveLoading}
+          search={archiveSearchInput}
+          status={archiveStatus}
+          onSearchChange={setArchiveSearchInput}
+          onStatusChange={setArchiveStatus}
+          onPageChange={setArchivePage}
+          onViewDetail={setSelectedJob}
+          formatRupiah={formatRupiah}
+        />
+      )}
+
+      <SupervisiJobPanel job={selectedJob} onClose={() => { setSelectedJob(null); setFocusedJobId(null); }} />
 
       <SupervisiJobFormDialog
         open={showCreateDialog}
@@ -1496,6 +1880,41 @@ export default function SupervisiPage() {
             >
               {isSavingRadiusExemption ? <Loader2 size={14} className="animate-spin" /> : <CalendarOff size={14} />}
               Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Selesai Confirmation Modal */}
+      <Dialog
+        open={!!jobToComplete}
+        onOpenChange={(open) => { if (!open && !isCompleting) setJobToComplete(null); }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-emerald-700 flex items-center gap-2">
+              <CheckCircle2 size={18} /> Selesaikan Pekerjaan?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mt-2">
+            Apakah Anda yakin ingin menyelesaikan pekerjaan <span className="font-semibold text-slate-700">"{jobToComplete?.namaKerja}"</span> secara manual?
+          </p>
+          <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+            <p className="text-xs text-emerald-700">
+              <span className="font-bold">Info:</span> Status akan berubah menjadi <span className="font-bold text-emerald-800">Selesai</span> dan pekerjaan ini akan diarsipkan secara rapi.
+            </p>
+          </div>
+          <DialogFooter className="mt-6 gap-2">
+            <Button variant="outline" disabled={isCompleting} onClick={() => setJobToComplete(null)}>
+              Batal
+            </Button>
+            <Button
+              disabled={isCompleting || !canUpdateSupervisi}
+              onClick={confirmCompleteJob}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {isCompleting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+              Ya, Selesaikan
             </Button>
           </DialogFooter>
         </DialogContent>

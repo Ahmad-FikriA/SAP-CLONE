@@ -9,7 +9,7 @@ const sequelize = require("../config/database");
  * Satu record per hari per pekerjaan.
  * - status='hadir'        → kunjungan berhasil, ada foto + keterangan
  * - status='tidak_hadir'  → tidak bisa hadir, wajib isi alasan
- *   isPelanggaran otomatis = true jika tidak_hadir
+ *   isPelanggaran = true mulai tidak hadir ke-3 beruntun per job + lokasi
  */
 const SupervisiVisit = sequelize.define(
   "SupervisiVisit",
@@ -70,7 +70,7 @@ const SupervisiVisit = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: "true jika tidak hadir tanpa izin",
+      comment: "true jika tidak hadir ke-3 beruntun atau lebih per job + lokasi",
     },
     visitLatitude: {
       type: DataTypes.DECIMAL(10, 7),
@@ -96,7 +96,7 @@ const SupervisiVisit = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: "true = disimpan sebagai draft (belum final). Draft yang melewati hari akan dikonversi ke tidak_hadir.",
+      comment: "true = disimpan sebagai draft (belum final). Draft lewat hari dikonversi ke tidak_hadir lalu pelanggaran dihitung ulang.",
     },
   },
   {

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Briefcase, CalendarDays, CalendarOff, Crosshair, Loader2, MapPin, Plus,
-  Trash2, User,
+  Trash2, User, FileText, ExternalLink
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { createSupervisiJob, updateSupervisiJob } from '@/lib/supervisi-service';
+import { 
+  createSupervisiJob, 
+  updateSupervisiJob,
+  fetchSupervisiAmends,
+  createSupervisiAmend,
+  deleteSupervisiAmend
+} from '@/lib/supervisi-service';
 
 const GROUP_SUPERVISI_PERPIPAAN = 'Group supervisi Sipil dan Perpipaan';
 const GROUP_SUPERVISI_MEKATRONIK = 'Group supervisi Mekanikal Elektrik dan Instrumen';
@@ -71,7 +77,30 @@ function digitsOnly(value) {
 function formatRupiahInput(value) {
   const digits = digitsOnly(value);
   if (!digits) return '';
-  return new Intl.NumberFormat('id-ID').format(Number(digits));
+  try {
+    return new Intl.NumberFormat('id-ID').format(BigInt(digits));
+  } catch (e) {
+    return new Intl.NumberFormat('id-ID').format(Number(digits));
+  }
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+function buildMediaUrl(path) {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return `${API_URL}${path}`;
+}
+
+function filenameFromPath(path) {
+  return (path || '').split('/').pop() || 'dokumen';
+}
+
+function fmtShort(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('id-ID', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
 }
 
 function toFiniteNumber(value) {
@@ -205,13 +234,106 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
   const [errors, setErrors] = useState({});
   const [savingMode, setSavingMode] = useState(null);
 
+  const isEditingActive = jobToEdit && jobToEdit.status !== 'draft';
+  const [amends, setAmends] = useState([]);
+  const [showAmendForm, setShowAmendForm] = useState(false);
+  const [amendForm, setAmendForm] = useState({
+    nomorAmend: '',
+    amendMulai: '',
+    amendBerakhir: '',
+    files: [],
+  });
+  const [savingAmend, setSavingAmend] = useState(false);
+
+  useEffect(() => {
+    if (open && isEditingActive) {
+      fetchSupervisiAmends(jobToEdit.id)
+        .then(setAmends)
+        .catch((err) => toast.error('Gagal memuat amandemen: ' + err.message));
+    } else {
+      setAmends([]);
+    }
+    setShowAmendForm(false);
+    setAmendForm({ nomorAmend: '', amendMulai: '', amendBerakhir: '', files: [] });
+  }, [open, jobToEdit, isEditingActive]);
+
+  const getPrevEndDate = () => {
+    if (amends.length > 0) {
+      return amends[amends.length - 1].amendBerakhir;
+    }
+    return form.waktuBerakhir;
+  };
+
+  const getNextDayStr = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr + 'T00:00:00');
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().split('T')[0];
+  };
+
+  const handleSaveAmend = async () => {
+    if (!amendForm.nomorAmend.trim() || !amendForm.amendMulai || !amendForm.amendBerakhir) {
+      toast.error('Lengkapi semua field amandemen.');
+      return;
+    }
+    if (amendForm.amendBerakhir <= amendForm.amendMulai) {
+      toast.error('Tanggal akhir amandemen harus setelah tanggal mulai.');
+      return;
+    }
+
+    setSavingAmend(true);
+    try {
+      const formData = new FormData();
+      formData.append('nomorAmend', amendForm.nomorAmend.trim());
+      formData.append('amendMulai', amendForm.amendMulai);
+      formData.append('amendBerakhir', amendForm.amendBerakhir);
+      if (amendForm.files && amendForm.files.length > 0) {
+        for (let i = 0; i < amendForm.files.length; i++) {
+          formData.append('documents', amendForm.files[i]);
+        }
+      }
+
+      const savedAmend = await createSupervisiAmend(jobToEdit.id, formData);
+      toast.success('Amandemen berhasil ditambahkan.');
+      
+      const updatedAmends = await fetchSupervisiAmends(jobToEdit.id);
+      setAmends(updatedAmends);
+      
+      setShowAmendForm(false);
+      setAmendForm({ nomorAmend: '', amendMulai: '', amendBerakhir: '', files: [] });
+      
+      onSaved?.(savedAmend);
+    } catch (err) {
+      toast.error(err.message || 'Gagal menyimpan amandemen.');
+    } finally {
+      setSavingAmend(false);
+    }
+  };
+
+  const handleDeleteAmend = async (amendId) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus amandemen ini?')) return;
+    try {
+      await deleteSupervisiAmend(jobToEdit.id, amendId);
+      toast.success('Amandemen berhasil dihapus.');
+      
+      const updatedAmends = await fetchSupervisiAmends(jobToEdit.id);
+      setAmends(updatedAmends);
+      
+      onSaved?.();
+    } catch (err) {
+      toast.error(err.message || 'Gagal menghapus amandemen.');
+    }
+  };
+
   useEffect(() => {
     if (open) {
       if (jobToEdit) {
+        const decimalIndex = jobToEdit.nilaiPekerjaan ? String(jobToEdit.nilaiPekerjaan).indexOf('.') : -1;
+        const integerPart = decimalIndex !== -1 ? String(jobToEdit.nilaiPekerjaan).slice(0, decimalIndex) : String(jobToEdit.nilaiPekerjaan);
         setForm({
           namaKerja: jobToEdit.namaKerja || '',
           nomorJo: jobToEdit.nomorJo || '',
-          nilaiPekerjaan: jobToEdit.nilaiPekerjaan ? String(jobToEdit.nilaiPekerjaan) : '',
+          nilaiPekerjaan: jobToEdit.nilaiPekerjaan ? formatRupiahInput(integerPart) : '',
           pelaksana: jobToEdit.pelaksana || '',
           waktuMulai: jobToEdit.waktuMulai ? jobToEdit.waktuMulai.split('T')[0] : '',
           waktuBerakhir: jobToEdit.waktuBerakhir ? jobToEdit.waktuBerakhir.split('T')[0] : '',
@@ -346,7 +468,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
       <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col overflow-hidden p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-[#0a2540]">
-            <Briefcase size={18} /> {jobToEdit ? 'Lanjutkan Draft Supervisi' : 'Tambah Jadwal Supervisi'}
+            <Briefcase size={18} /> {jobToEdit ? (jobToEdit.status !== 'draft' ? 'Edit Pekerjaan Supervisi' : 'Lanjutkan Draft Supervisi') : 'Tambah Jadwal Supervisi'}
           </DialogTitle>
           <p className="text-sm text-slate-500">
             Form ini mengikuti isian tambah jadwal supervisi di app.
@@ -372,7 +494,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
                   onChange={(event) => updateField('nomorJo', event.target.value)}
                   placeholder="Contoh: JO-2026-0012"
                   className="sv-input"
-                  disabled={isSaving}
+                  disabled={isSaving || isEditingActive}
                 />
               </FormField>
               <FormField label="Nilai Pekerjaan">
@@ -384,7 +506,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
                     placeholder="Contoh: 1.500.000.000"
                     inputMode="numeric"
                     className="min-w-0 flex-1 bg-transparent py-2.5 pr-3 text-sm text-slate-700 outline-none placeholder:text-slate-400"
-                    disabled={isSaving}
+                    disabled={isSaving || isEditingActive}
                   />
                 </div>
               </FormField>
@@ -394,7 +516,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
                   onChange={(event) => updateField('pelaksana', event.target.value)}
                   placeholder="Contoh: PT. Maju Bersama Konstruksi"
                   className="sv-input"
-                  disabled={isSaving}
+                  disabled={isSaving || isEditingActive}
                 />
               </FormField>
             </div>
@@ -414,7 +536,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
                     }
                   }}
                   className="sv-input"
-                  disabled={isSaving}
+                  disabled={isSaving || isEditingActive}
                 />
               </FormField>
               <FormField label="Waktu Berakhir" required error={errors.waktuBerakhir}>
@@ -424,7 +546,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
                   value={form.waktuBerakhir}
                   onChange={(event) => updateField('waktuBerakhir', event.target.value)}
                   className="sv-input"
-                  disabled={isSaving}
+                  disabled={isSaving || isEditingActive}
                 />
               </FormField>
             </div>
@@ -665,6 +787,163 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
                 : 'PIC hanya bisa dipilih setelah group supervisi ditentukan.'}
             </p>
           </section>
+
+          {isEditingActive && (
+            <section className="space-y-4 border-t border-slate-100 pt-6">
+              <div className="flex items-center justify-between gap-3">
+                <SectionTitle icon={<CalendarDays size={15} />} title="Riwayat Amandemen (Addendum)" />
+                {!showAmendForm && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const nextMulai = getNextDayStr(getPrevEndDate());
+                      setShowAmendForm(true);
+                      setAmendForm({
+                        nomorAmend: '',
+                        amendMulai: nextMulai,
+                        amendBerakhir: getNextDayStr(nextMulai),
+                        files: [],
+                      });
+                    }}
+                    disabled={isSaving}
+                  >
+                    <Plus size={13} /> Tambah Amandemen
+                  </Button>
+                )}
+              </div>
+
+              {/* Form Tambah Amandemen Inline */}
+              {showAmendForm && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
+                  <p className="text-xs font-bold text-[#0a2540] uppercase tracking-wider">
+                    Form Amandemen Pekerjaan
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <FormField label="Nomor Amandemen" required>
+                      <input
+                        value={amendForm.nomorAmend}
+                        onChange={(e) => setAmendForm(prev => ({ ...prev, nomorAmend: e.target.value }))}
+                        placeholder="Contoh: AMD-001"
+                        className="sv-input bg-white"
+                      />
+                    </FormField>
+                    <FormField label="Mulai Amandemen" required>
+                      <input
+                        type="date"
+                        value={amendForm.amendMulai}
+                        min={getNextDayStr(getPrevEndDate())}
+                        onChange={(e) => setAmendForm(prev => ({ ...prev, amendMulai: e.target.value }))}
+                        className="sv-input bg-white"
+                      />
+                    </FormField>
+                    <FormField label="Selesai Amandemen" required>
+                      <input
+                        type="date"
+                        value={amendForm.amendBerakhir}
+                        min={amendForm.amendMulai || getNextDayStr(getPrevEndDate())}
+                        onChange={(e) => setAmendForm(prev => ({ ...prev, amendBerakhir: e.target.value }))}
+                        className="sv-input bg-white"
+                      />
+                    </FormField>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5">
+                      Dokumen Pendukung
+                    </label>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => setAmendForm(prev => ({ ...prev, files: Array.from(e.target.files || []) }))}
+                      className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAmendForm(false)}
+                      disabled={savingAmend}
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
+                      onClick={handleSaveAmend}
+                      disabled={savingAmend}
+                    >
+                      {savingAmend ? <Loader2 size={12} className="animate-spin" /> : null}
+                      Simpan Amandemen
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Daftar Amandemen */}
+              <div className="space-y-2">
+                {amends.length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-6 bg-slate-50 rounded-xl border border-slate-100">
+                    Belum ada amandemen untuk pekerjaan ini.
+                  </p>
+                ) : (
+                  amends.map((amend, index) => (
+                    <div
+                      key={amend.id || index}
+                      className="flex items-start justify-between p-3.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow transition-shadow gap-4"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center justify-center bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            Amend {index + 1}
+                          </span>
+                          <span className="font-semibold text-slate-800 text-xs font-mono">
+                            {amend.nomorAmend}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 font-semibold">
+                          Durasi: {fmtShort(amend.amendMulai)} s/d {fmtShort(amend.amendBerakhir)}
+                        </p>
+                        {Array.isArray(amend.documents) && amend.documents.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {amend.documents.map((doc, di) => (
+                              <a
+                                key={di}
+                                href={buildMediaUrl(doc)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:underline bg-slate-50 border border-slate-200 rounded px-2 py-0.5"
+                              >
+                                <FileText size={10} />
+                                {filenameFromPath(doc)}
+                                <ExternalLink size={9} />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 rounded-lg"
+                        onClick={() => handleDeleteAmend(amend.id)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          )}
         </div>
 
         <DialogFooter className="gap-2 m-0 px-6 py-4 border-t border-slate-200 bg-slate-50 shrink-0 sm:justify-end">
@@ -676,15 +955,17 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
           >
             Batal
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => submit(true)}
-            disabled={isSaving}
-          >
-            {savingMode === 'draft' ? <Loader2 size={14} className="animate-spin" /> : null}
-            Simpan Draft
-          </Button>
+          {(!jobToEdit || jobToEdit.status === 'draft') && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => submit(true)}
+              disabled={isSaving}
+            >
+              {savingMode === 'draft' ? <Loader2 size={14} className="animate-spin" /> : null}
+              Simpan Draft
+            </Button>
+          )}
           <Button
             type="button"
             className="bg-[#0a2540] text-white hover:bg-[#0d3154]"
@@ -692,7 +973,7 @@ export function SupervisiJobFormDialog({ open, onOpenChange, onSaved, jobToEdit 
             disabled={isSaving}
           >
             {savingMode === 'active' ? <Loader2 size={14} className="animate-spin" /> : null}
-            Buat Jadwal
+            {jobToEdit && jobToEdit.status !== 'draft' ? 'Simpan Perubahan' : 'Buat Jadwal'}
           </Button>
         </DialogFooter>
 

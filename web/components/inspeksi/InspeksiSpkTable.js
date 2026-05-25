@@ -241,19 +241,20 @@ export function InspeksiSpkTable({
 
       {/* ── Desktop Table (≥ md) ── */}
       <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {['No SPK', 'Judul / Objek', 'Tipe', 'Lokasi', 'Tanggal Mulai', 'Status', 'Aksi'].map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[1100px]">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                {['No SPK', 'Judul / Objek', 'Tipe', 'Lokasi', 'Tanggal Mulai', 'Status', 'Aksi'].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
@@ -306,10 +307,10 @@ export function InspeksiSpkTable({
                       ? new Date(s.scheduledDate + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
                       : '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <StatusBadge status={s.status} />
                   </td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1.5">
                       <Button
                         variant="outline"
@@ -336,6 +337,7 @@ export function InspeksiSpkTable({
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       <Dialog open={!!deleteCandidate} onOpenChange={(open) => !open && setDeleteCandidate(null)}>

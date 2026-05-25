@@ -10,10 +10,42 @@ export async function fetchInspeksiSchedules(params = {}) {
   if (params.type) query.set('type', params.type);
   if (params.assignedTo) query.set('assignedTo', params.assignedTo);
   if (params.createdBy) query.set('createdBy', params.createdBy);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
 
   const qs = query.toString();
   const data = await apiGet(`/inspection/schedules${qs ? `?${qs}` : ''}`);
   return data?.data ?? [];
+}
+
+/**
+ * Ambil arsip jadwal inspeksi dengan pagination server-side.
+ * @param {Object} params - { page, limit, q, status, type, dateFrom, dateTo }
+ */
+export async function fetchInspeksiScheduleArchive(params = {}) {
+  const query = new URLSearchParams();
+  query.set('archive', 'true');
+  if (params.page) query.set('page', params.page);
+  if (params.limit) query.set('limit', params.limit);
+  if (params.q) query.set('q', params.q);
+  if (params.status) query.set('status', params.status);
+  if (params.type) query.set('type', params.type);
+  if (params.assignedTo) query.set('assignedTo', params.assignedTo);
+  if (params.createdBy) query.set('createdBy', params.createdBy);
+  if (params.dateFrom) query.set('dateFrom', params.dateFrom);
+  if (params.dateTo) query.set('dateTo', params.dateTo);
+
+  const data = await apiGet(`/inspection/schedules?${query.toString()}`);
+  const items = data?.data ?? [];
+  return {
+    items,
+    meta: data?.meta ?? {
+      page: Number(params.page) || 1,
+      limit: Number(params.limit) || items.length || 20,
+      total: items.length,
+      totalPages: 1,
+    },
+  };
 }
 
 /**
