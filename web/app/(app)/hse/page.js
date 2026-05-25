@@ -861,16 +861,11 @@ export default function HseDashboardPage() {
                 </p>
                 <div className="flex gap-5 sm:gap-6">
                   <div>
-                    <p className="text-xl sm:text-2xl font-bold text-white">284</p>
-                    <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                      Hari Tanpa Insiden
+                    <p className="text-xl sm:text-2xl font-bold text-white">
+                      {k3Settings?.jamKerjaTanpaKecelakaan?.toLocaleString() || 0}
                     </p>
-                  </div>
-                  <div className="w-px h-8 sm:h-10 bg-slate-800" />
-                  <div>
-                    <p className="text-xl sm:text-2xl font-bold text-rose-500">98%</p>
                     <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                      Kepatuhan Prosedur
+                      Jam Kerja Tanpa Kecelakaan
                     </p>
                   </div>
                 </div>
