@@ -577,14 +577,6 @@ export default function HseDashboardPage() {
     }
   };
 
-  const loadReports = async () => {
-    try {
-      const res = await apiGet("/k3-safety");
-      setReports(res.data || []);
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   useEffect(() => {
     loadData();
