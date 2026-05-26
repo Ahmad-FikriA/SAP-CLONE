@@ -134,5 +134,194 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, update, bulkDelete, remove, getStats };
+function toTitleCase(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str.toLowerCase().split(' ').map(function(word) {
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }).join(' ');
+}
+
+// POST /api/users/upload-excel
+const uploadExcel = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No Excel file uploaded" });
+    }
+
+    const exceljs = require("exceljs");
+    const fs = require("fs");
+    const workbook = new exceljs.Workbook();
+    await workbook.xlsx.readFile(req.file.path);
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      return res.status(400).json({ error: "Excel file is empty" });
+    }
+
+    let headerRowIndex = 1;
+    for (let r = 1; r <= Math.min(20, worksheet.rowCount); r++) {
+      const row = worksheet.getRow(r);
+      let foundKey = false;
+      row.eachCell((cell) => {
+        const val = cell.value ? cell.value.toString().toLowerCase() : "";
+        if (val.includes("nik") || val.includes("nama") || val.includes("jabatan")) {
+          foundKey = true;
+        }
+      });
+      if (foundKey) {
+        headerRowIndex = r;
+        break;
+      }
+    }
+
+    let headers = [];
+    worksheet.getRow(headerRowIndex).eachCell((cell, colNumber) => {
+      headers[colNumber] = cell.value ? cell.value.toString().trim() : "";
+    });
+
+    const findCol = (namePatterns) => {
+      for (let i = 1; i < headers.length; i++) {
+        if (!headers[i]) continue;
+        const h = headers[i].toLowerCase();
+        for (const pattern of namePatterns) {
+          if (h.includes(pattern)) return i;
+        }
+      }
+      return null;
+    };
+
+    const colMap = {
+      nik: findCol(["nik"]),
+      name: findCol(["nama", "name"]),
+      role: findCol(["jabatan", "role"]),
+      group: findCol(["seksi", "group"]),
+      dinas: findCol(["dinas"]),
+      divisi: findCol(["divisi", "division", "department"])
+    };
+
+    if (!colMap.nik || !colMap.name) {
+      return res.status(400).json({ error: "Cannot find 'NIK' or 'Nama' columns in the Excel file" });
+    }
+
+    const rowsToUpsert = [];
+    const seenExcelNiks = new Set();
+    const excelDuplicateRows = [];
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber <= headerRowIndex) return;
+
+      const getVal = (key) => {
+        const colIdx = colMap[key];
+        if (!colIdx) return null;
+        let val = row.getCell(colIdx).value;
+        if (val === null || val === undefined) return null;
+        if (typeof val === "object" && val.text) val = val.text;
+        if (val instanceof Date) {
+          return val.toISOString().split("T")[0];
+        }
+        return val.toString().trim();
+      };
+
+      let nik = getVal("nik");
+      if (!nik) return;
+
+      nik = nik.split('.')[0]; // Clean NIK
+
+      let name = getVal("name");
+      if (name) name = toTitleCase(name);
+
+      let role = getVal("role") || "teknisi";
+      role = role.toLowerCase().trim();
+
+      const permissions = {
+        _app: { preventive: false, corrective: false, inspection: false, supervisi: false, k3_safety: true },
+        hse: ["C", "R"]
+      };
+
+      const userRow = {
+        id: `USR-${nik}`,
+        nik,
+        name,
+        role,
+        group: getVal("group") || "",
+        dinas: getVal("dinas") || "",
+        divisi: getVal("divisi") || "",
+        password: "password123",
+        permissions: permissions,
+      };
+
+      if (seenExcelNiks.has(nik)) {
+        excelDuplicateRows.push(userRow);
+      } else {
+        seenExcelNiks.add(nik);
+        rowsToUpsert.push(userRow);
+      }
+    });
+
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    const incomingNiks = rowsToUpsert.map((r) => r.nik);
+    const existingUsers = await User.findAll({
+      attributes: ["nik"],
+      where: { nik: incomingNiks },
+    });
+
+    const existingSet = new Set(existingUsers.map((u) => u.nik));
+
+    const newRows = [];
+    const skippedRows = [...excelDuplicateRows];
+
+    for (const row of rowsToUpsert) {
+      if (existingSet.has(row.nik)) {
+        skippedRows.push(row);
+      } else {
+        newRows.push(row);
+      }
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: `Berhasil memproses file Excel. ${newRows.length} data baru, ${skippedRows.length} data dilewati.`,
+      data: {
+        previewData: newRows,
+        skippedData: skippedRows,
+      },
+    });
+  } catch (error) {
+    console.error("Error uploading Excel:", error);
+    if (req.file && require("fs").existsSync(req.file.path)) {
+      require("fs").unlinkSync(req.file.path);
+    }
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /api/users/bulk-insert
+const bulkInsert = async (req, res) => {
+  try {
+    const { users } = req.body;
+    if (!users || !Array.isArray(users)) {
+      return res.status(400).json({ error: "Invalid payload, expected array of users" });
+    }
+
+    await User.bulkCreate(users, {
+      updateOnDuplicate: [
+        "name", "role", "group", "dinas", "divisi", "permissions"
+      ],
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: `Successfully saved ${users.length} user records`,
+      data: users.length,
+    });
+  } catch (error) {
+    console.error("Error bulk inserting users:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+module.exports = { getAll, create, update, bulkDelete, remove, getStats, uploadExcel, bulkInsert };
 
