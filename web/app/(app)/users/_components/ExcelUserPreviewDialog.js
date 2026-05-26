@@ -137,7 +137,7 @@ export function ExcelUserPreviewDialog({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {previewData.map((row, i) => (
+                      {previewData?.map((row, i) => (
                         <TableRow key={i} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100/80">
                           <TableCell className="font-mono text-sm font-bold text-slate-800 px-5 py-3.5">
                             {row.nik}
@@ -204,7 +204,7 @@ export function ExcelUserPreviewDialog({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {skippedData.map((row, i) => (
+                        {skippedData?.map((row, i) => (
                           <TableRow key={i} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100/80 bg-slate-50/20">
                             <TableCell className="font-mono text-sm font-bold text-amber-700 px-5 py-3.5">
                               {row.nik}
