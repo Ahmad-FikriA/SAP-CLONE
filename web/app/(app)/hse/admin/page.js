@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { apiGet, apiPut } from "@/lib/api";
+import { getUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -2278,6 +2280,8 @@ function RevertStepTab() {
 export default function AdminK3Page() {
   const [activeTab, setActiveTab] = useState("settings");
   const [settings, setSettings] = useState(null);
+  const router = useRouter();
+  const [isAllowed, setIsAllowed] = useState(null);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -2290,8 +2294,48 @@ export default function AdminK3Page() {
   }, []);
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    const user = getUser();
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+
+    const role = String(user.role || "").toLowerCase();
+    const divisi = String(user.divisi || "").toLowerCase();
+    const dinas = String(user.dinas || "").toLowerCase();
+
+    let allowed = false;
+    if (role === "admin") allowed = true;
+    else if (role === "kadiv" && divisi.includes("pphse")) allowed = true;
+    else if (role === "kadis" && dinas.includes("hse") && !dinas.includes("pphse")) allowed = true;
+
+    if (!allowed) {
+      setIsAllowed(false);
+    } else {
+      setIsAllowed(true);
+      fetchSettings();
+    }
+  }, [fetchSettings, router]);
+
+  if (isAllowed === null) {
+    return <div className="p-8 text-center text-slate-500">Memeriksa otorisasi...</div>;
+  }
+
+  if (isAllowed === false) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-8">
+        <div className="max-w-md rounded-xl border border-rose-200 bg-white px-6 py-5 shadow-sm text-center">
+          <p className="text-lg font-bold text-rose-700 mb-2">Akses Ditolak</p>
+          <p className="text-sm text-slate-500 mb-4">
+            Halaman ini hanya dapat diakses oleh Admin, Kepala Divisi PPHSE, dan Kepala Dinas HSE.
+          </p>
+          <Button onClick={() => router.push("/dashboard")} variant="outline">
+            Kembali ke Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto space-y-6">
