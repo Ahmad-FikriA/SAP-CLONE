@@ -15,6 +15,9 @@ import { canCreate, canUpdate, canDelete, getUserCategory } from '@/lib/auth';
 import Link from 'next/link';
 
 const STATUS_OPTIONS = ['pending', 'awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis', 'approved', 'rejected'];
+const PAGE_SIZE = 50;
+const YEAR_OPTIONS = Array.from({ length: new Date().getFullYear() - 2024 + 2 }, (_, i) => 2024 + i);
+const WEEK_OPTIONS = Array.from({ length: 52 }, (_, i) => i + 1);
 
 const UPLOADS_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '');
 
@@ -67,11 +70,13 @@ function SpkPageInner() {
   const [plants, setPlants] = useState([]);
   const [hasAbnormal, setHasAbnormal] = useState(false);
   const [lightbox, setLightbox] = useState(null); // photo path string for detail view
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Side panel
   const [panelOpen, setPanelOpen]   = useState(false);
   const [editingSpk, setEditingSpk] = useState(null); // null = create, obj = edit
-  const [form, setForm]             = useState({ spkNumber: '', description: '', category: 'Mekanik', status: 'pending', scheduledDate: '', interval: '' });
+  const [form, setForm]             = useState({ spkNumber: '', description: '', category: 'Mekanik', status: 'pending', scheduledDate: '', interval: '', evaluasi: '', equipmentStatus: 'Running' });
   const [allEquipment, setAllEquipment] = useState([]);
   const [eqSearch, setEqSearch]     = useState('');
   const [selectedEqIds, setSelectedEqIds] = useState([]);
@@ -87,17 +92,57 @@ function SpkPageInner() {
 
   useEffect(() => { setUserCategory(getUserCategory()); }, []);
   useEffect(() => { apiGet('/maps').then(setPlants).catch(() => {}); }, []);
-  useEffect(() => { load(); }, [category, plantFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [category, plantFilter, statusFilter, weekFilter, yearFilter, hasAbnormal, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (category) params.set('category', category);
-      if (plantFilter) params.set('plantId', plantFilter);
-      const qs = params.toString();
-      const data = await apiGet('/spk' + (qs ? `?${qs}` : ''));
-      setSpkList(Array.isArray(data) ? data : []);
+      if (category)     params.set('category',    category);
+      if (plantFilter)  params.set('plantId',     plantFilter);
+      if (statusFilter) params.set('status',      statusFilter);
+      if (hasAbnormal)  params.set('hasAbnormal', 'true');
+
+      // Convert year/week to from–to date range (backend only supports combined week+year)
+      const yr = yearFilter ? parseInt(yearFilter, 10) : null;
+      const wk = weekFilter ? parseInt(weekFilter, 10) : null;
+      if (yr && wk) {
+        const jan4    = new Date(Date.UTC(yr, 0, 4));
+        const jan4Day = jan4.getUTCDay() || 7;
+        const mon1    = new Date(jan4);
+        mon1.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+        const wkStart = new Date(mon1);
+        wkStart.setUTCDate(mon1.getUTCDate() + (wk - 1) * 7);
+        const wkEnd   = new Date(wkStart);
+        wkEnd.setUTCDate(wkStart.getUTCDate() + 6);
+        params.set('from', wkStart.toISOString().slice(0, 10));
+        params.set('to',   wkEnd.toISOString().slice(0, 10));
+      } else if (yr) {
+        params.set('from', `${yr}-01-01`);
+        params.set('to',   `${yr}-12-31`);
+      } else if (wk) {
+        const curYr   = new Date().getFullYear();
+        const jan4    = new Date(Date.UTC(curYr, 0, 4));
+        const jan4Day = jan4.getUTCDay() || 7;
+        const mon1    = new Date(jan4);
+        mon1.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+        const wkStart = new Date(mon1);
+        wkStart.setUTCDate(mon1.getUTCDate() + (wk - 1) * 7);
+        const wkEnd   = new Date(wkStart);
+        wkEnd.setUTCDate(wkStart.getUTCDate() + 6);
+        params.set('from', wkStart.toISOString().slice(0, 10));
+        params.set('to',   wkEnd.toISOString().slice(0, 10));
+      }
+      params.set('limit',  String(PAGE_SIZE));
+      params.set('offset', String((page - 1) * PAGE_SIZE));
+      const res = await apiGet('/spk?' + params.toString());
+      if (res && !Array.isArray(res) && res.data) {
+        setSpkList(res.data);
+        setTotalCount(res.total ?? res.data.length);
+      } else {
+        setSpkList(Array.isArray(res) ? res : []);
+        setTotalCount(Array.isArray(res) ? res.length : 0);
+      }
       setSelected([]);
     } catch (e) { toast.error('Gagal memuat: ' + e.message); }
     finally { setLoading(false); }
@@ -143,10 +188,21 @@ function SpkPageInner() {
     const eqRes = await apiGet('/equipment?limit=9999').catch(() => ({ data: [] }));
     setAllEquipment(eqRes.data || eqRes);
     setEditingSpk(spk);
-    setForm({ spkNumber: spk.spkNumber, description: spk.description || '', category: spk.category || 'Mekanik', status: spk.status || 'pending', scheduledDate: spk.scheduledDate || '', interval: spk.interval || '' });
+    setForm({ spkNumber: spk.spkNumber, description: spk.description || '', category: spk.category || 'Mekanik', status: spk.status || 'pending', scheduledDate: spk.scheduledDate || '', interval: spk.interval || '', evaluasi: spk.evaluasi || '', equipmentStatus: spk.equipmentStatus || 'Running' });
     const eqIds = (spk.equipmentModels || []).map((e) => e.equipmentId);
     setSelectedEqIds(eqIds);
-    setActivities((spk.activitiesModel || []).map((a) => ({ _id: actIdxRef.current++, equipmentId: a.equipmentId, operationText: a.operationText || '', durationPlan: a.durationPlan ?? '' })));
+    setActivities((spk.activitiesModel || []).map((a) => ({
+      _id: actIdxRef.current++,
+      activityNumber: a.activityNumber,
+      equipmentId:    a.equipmentId    ?? null,
+      controlKey:     a.controlKey     ?? null,
+      operationText:  a.operationText  || '',
+      durationPlan:   a.durationPlan   ?? '',
+      durationActual: a.durationActual ?? '',
+      resultComment:  a.resultComment  || '',
+      isVerified:     a.isVerified     ?? false,
+      measurementValue: a.measurementValue ?? '',
+    })));
     setEqSearch('');
     setPanelOpen(true);
   }
@@ -176,8 +232,17 @@ function SpkPageInner() {
     });
   }
 
-  function addActivity(eqId) {
-    setActivities((prev) => [...prev, { _id: actIdxRef.current++, equipmentId: eqId, operationText: '', durationPlan: '' }]);
+  function addActivity(eqId = null) {
+    setActivities((prev) => [...prev, {
+      _id: actIdxRef.current++,
+      activityNumber: null,
+      equipmentId: eqId ?? (selectedEqIds[0] ?? null),
+      controlKey: null,
+      operationText: '',
+      durationPlan: '', durationActual: '',
+      resultComment: '', isVerified: false,
+      measurementValue: '',
+    }]);
   }
   function removeActivity(id) {
     setActivities((prev) => prev.filter((a) => a._id !== id));
@@ -187,7 +252,7 @@ function SpkPageInner() {
   }
 
   async function saveSpk() {
-    const { spkNumber, description, category: cat, status, scheduledDate } = form;
+    const { spkNumber, description, category: cat, status, scheduledDate, evaluasi, equipmentStatus } = form;
     if (!spkNumber || !description) { toast.error('SPK Number dan Deskripsi wajib diisi'); return; }
 
     const equipmentModels = selectedEqIds.map((id) => {
@@ -195,21 +260,29 @@ function SpkPageInner() {
       return { equipmentId: id, equipmentName: eq?.equipmentName || id, functionalLocation: eq?.functionalLocationId || null };
     });
 
-    let actCounter = 1;
+    let fallbackCounter = 1;
     const activitiesModel = activities
       .filter((a) => a.operationText?.trim())
       .map((a) => ({
-        activityNumber: `ACT-${String(actCounter++).padStart(3, '0')}`,
-        equipmentId: a.equipmentId,
-        operationText: a.operationText.trim(),
-        durationPlan: parseFloat(a.durationPlan) || 0,
-        resultComment: null, durationActual: null, isVerified: false,
+        activityNumber:   a.activityNumber || `ACT-${String(fallbackCounter++).padStart(3, '0')}`,
+        equipmentId:      a.equipmentId    ?? null,
+        controlKey:       a.controlKey     ?? null,
+        operationText:    a.operationText.trim(),
+        durationPlan:     a.durationPlan   !== '' ? parseFloat(a.durationPlan)   || null : null,
+        durationActual:   a.durationActual !== '' ? parseFloat(a.durationActual) || null : null,
+        resultComment:    a.resultComment?.trim()  || null,
+        isVerified:       a.isVerified     ?? false,
+        measurementType:  null,
+        measurementUnit:  detectMeasurementUnit(a.operationText) || null,
+        measurementValue: a.measurementValue !== '' ? parseFloat(a.measurementValue) : null,
       }));
 
     const body = {
       spkNumber, description, category: cat, status,
       interval: editingSpk.interval,
       scheduledDate: scheduledDate || null,
+      evaluasi: evaluasi?.trim() || null,
+      equipmentStatus: equipmentStatus || 'Running',
       durationActual: null, equipmentModels, activitiesModel,
     };
 
@@ -223,26 +296,16 @@ function SpkPageInner() {
     finally { setSaving(false); }
   }
 
-  const displayed = spkList.filter((s) => {
-    if (statusFilter && s.status !== statusFilter) return false;
-    if (weekFilter && String(s.weekNumber) !== weekFilter) return false;
-    if (yearFilter && String(s.weekYear) !== yearFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      const matchSpk  = s.spkNumber?.toLowerCase().includes(q);
-      const matchDesc = s.description?.toLowerCase().includes(q);
-      const matchEq   = (s.equipmentModels || []).some(
-        (e) => e.equipmentId?.toLowerCase().includes(q) || e.equipmentName?.toLowerCase().includes(q)
-      );
-      if (!matchSpk && !matchDesc && !matchEq) return false;
-    }
-    if (hasAbnormal && !s.abnormalCount) return false;
-    return true;
-  });
-
-  // Collect unique week numbers and years from current list for filter dropdowns
-  const weekOptions  = [...new Set(spkList.map((s) => s.weekNumber).filter(Boolean))].sort((a, b) => a - b);
-  const yearOptions  = [...new Set(spkList.map((s) => s.weekYear).filter(Boolean))].sort((a, b) => b - a);
+  const displayed = search
+    ? spkList.filter((s) => {
+        const q = search.toLowerCase();
+        return s.spkNumber?.toLowerCase().includes(q)
+          || s.description?.toLowerCase().includes(q)
+          || (s.equipmentModels || []).some(
+            (e) => e.equipmentId?.toLowerCase().includes(q) || e.equipmentName?.toLowerCase().includes(q)
+          );
+      })
+    : spkList;
 
   const filteredEq = allEquipment.filter((eq) => {
     const q = eqSearch.toLowerCase();
@@ -256,13 +319,18 @@ function SpkPageInner() {
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">SPK / Preventive</h2>
-            <p className="text-sm text-gray-500">{displayed.length} SPK</p>
+            <p className="text-sm text-gray-500">{totalCount} SPK</p>
           </div>
           <div className="flex gap-2 flex-wrap ">
             <Button variant="outline" size="sm" onClick={load}><RefreshCw size={13} /></Button>
             {canCreate('spk') && (
-              <Link href="/spk/import">   
+              <Link href="/spk/import">
                 <Button variant="outline" size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"><Upload size={13} /> Import SAP</Button>
+              </Link>
+            )}
+            {canCreate('spk') && (
+              <Link href="/spk/import-historis">
+                <Button variant="outline" size="sm" className="gap-1.5"><Upload size={13} /> Import Historis</Button>
               </Link>
             )}
           </div>
@@ -280,36 +348,36 @@ function SpkPageInner() {
               {userCategory}
             </span>
           ) : (
-            <select value={category} onChange={(e) => setCategory(e.target.value)}
+            <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}
               className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
               <option value="">Semua Kategori</option>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           )}
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
             <option value="">Semua Status</option>
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>)}
           </select>
-          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}
+          <select value={yearFilter} onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
             className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
             <option value="">Semua Tahun</option>
-            {yearOptions.map((y) => <option key={y} value={String(y)}>{y}</option>)}
+            {YEAR_OPTIONS.map((y) => <option key={y} value={String(y)}>{y}</option>)}
           </select>
-          <select value={weekFilter} onChange={(e) => setWeekFilter(e.target.value)}
+          <select value={weekFilter} onChange={(e) => { setWeekFilter(e.target.value); setPage(1); }}
             className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
             <option value="">Semua Minggu</option>
-            {weekOptions.map((w) => <option key={w} value={String(w)}>Minggu {w}</option>)}
+            {WEEK_OPTIONS.map((w) => <option key={w} value={String(w)}>Minggu {w}</option>)}
           </select>
           {plants.length > 0 && (
-            <select value={plantFilter} onChange={(e) => setPlantFilter(e.target.value)}
+            <select value={plantFilter} onChange={(e) => { setPlantFilter(e.target.value); setPage(1); }}
               className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
               <option value="">Semua Plant</option>
               {plants.map((p) => <option key={p.plantId} value={p.plantId}>{p.plantName}</option>)}
             </select>
           )}
           <button
-            onClick={() => setHasAbnormal(v => !v)}
+            onClick={() => { setHasAbnormal(v => !v); setPage(1); }}
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
               hasAbnormal
                 ? 'bg-red-50 text-red-700 border-red-300'
@@ -321,7 +389,7 @@ function SpkPageInner() {
           </button>
           {(search || statusFilter || weekFilter || yearFilter || (!userCategory && category) || plantFilter || hasAbnormal) && (
             <button
-              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); if (!userCategory) setCategory(''); setPlantFilter(''); setHasAbnormal(false); }}
+              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); if (!userCategory) setCategory(''); setPlantFilter(''); setHasAbnormal(false); setPage(1); }}
               className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
             >
               <X size={12} /> Reset Filter
@@ -423,6 +491,7 @@ function SpkPageInner() {
               ))}
             </tbody>
           </table>
+          <Pagination page={page} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </div>
       </div>
 
@@ -469,6 +538,24 @@ function SpkPageInner() {
                   </div>
                   <PanelField label="Tanggal Mulai" type="date" value={form.scheduledDate} onChange={(v) => setForm((f) => ({ ...f, scheduledDate: v }))} />
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Status Peralatan</label>
+                    <select value={form.equipmentStatus} onChange={(e) => setForm((f) => ({ ...f, equipmentStatus: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                      <option value="Running">Running</option>
+                      <option value="Standby">Standby</option>
+                      <option value="Breakdown">Breakdown</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Evaluasi</label>
+                  <textarea value={form.evaluasi} onChange={(e) => setForm((f) => ({ ...f, evaluasi: e.target.value }))}
+                    placeholder="Catatan evaluasi..."
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none" />
+                </div>
               </div>
             </section>
 
@@ -487,41 +574,29 @@ function SpkPageInner() {
               </div>
             </section>
 
-            {/* ── Activities per equipment ── */}
-            {selectedEqIds.length > 0 && (
-              <section>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Aktivitas</p>
-                {selectedEqIds.map((eqId) => {
-                  const eq = allEquipment.find((e) => e.equipmentId === eqId);
-                  const eqActs = activities.filter((a) => a.equipmentId === eqId);
-                  return (
-                    <div key={eqId} className="mb-4">
-                      <p className="text-xs font-semibold text-gray-700 mb-2">
-                        {eq?.equipmentName || eqId} <span className="font-normal text-gray-400">({eqId})</span>
-                      </p>
-                      <div className="space-y-2">
-                        {eqActs.map((act) => (
-                          <div key={act._id} className="flex gap-2 items-center">
-                            <input value={act.operationText} onChange={(e) => updateActivity(act._id, 'operationText', e.target.value)}
-                              placeholder="Teks operasi / deskripsi aktivitas"
-                              className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-                            <input type="number" value={act.durationPlan} onChange={(e) => updateActivity(act._id, 'durationPlan', e.target.value)}
-                              placeholder="Menit" className="w-20 px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-                            <button onClick={() => removeActivity(act._id)} className="p-1 text-gray-400 hover:text-red-500">
-                              <X size={13} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <button onClick={() => addActivity(eqId)}
-                        className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
-                        <Plus size={12} /> Tambah Aktivitas
-                      </button>
-                    </div>
-                  );
-                })}
-              </section>
-            )}
+            {/* ── Activities (flat list) ── */}
+            <section>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Aktivitas {activities.length > 0 && <span className="font-normal normal-case text-gray-400">({activities.length})</span>}
+              </p>
+              {activities.length === 0 && (
+                <p className="text-xs text-gray-400 py-2">Belum ada aktivitas.</p>
+              )}
+              <div className="space-y-2">
+                {activities.map((act) => (
+                  <ActivityEditRow
+                    key={act._id}
+                    act={act}
+                    onChange={(field, value) => updateActivity(act._id, field, value)}
+                    onRemove={() => removeActivity(act._id)}
+                  />
+                ))}
+              </div>
+              <button onClick={() => addActivity()}
+                className="mt-3 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+                <Plus size={12} /> Tambah Aktivitas
+              </button>
+            </section>
           </div>
 
           {/* Panel footer */}
@@ -655,7 +730,10 @@ function SpkPageInner() {
                                 <td className="px-3 py-2 text-gray-500">{a.durationActual ?? '—'}</td>
                                 <td className="px-3 py-2 text-gray-500 max-w-[160px] truncate">{a.resultComment || '—'}</td>
                                 <td className="px-3 py-2 font-mono font-semibold text-gray-800">
-                                  {res?.measurementValue != null ? `${res.measurementValue}${unit ? ` ${unit}` : ''}` : '—'}
+                                  {(() => {
+                                    const val = res?.measurementValue ?? a.measurementValue;
+                                    return val != null ? `${val}${unit ? ` ${unit}` : ''}` : '—';
+                                  })()}
                                 </td>
                                 <td className="px-3 py-2">
                                   <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${a.isVerified ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
@@ -909,6 +987,110 @@ function PanelField({ label, value, onChange, disabled, placeholder, type = 'tex
       <input type={type} value={value} onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         disabled={disabled} placeholder={placeholder}
         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:bg-gray-50 disabled:text-gray-400" />
+    </div>
+  );
+}
+
+function Pagination({ page, totalCount, pageSize, onPageChange }) {
+  const totalPages = Math.ceil(totalCount / pageSize);
+  if (totalPages <= 1) return null;
+  const from = (page - 1) * pageSize + 1;
+  const to   = Math.min(page * pageSize, totalCount);
+
+  const pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push('…');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+  }
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+      <p className="text-sm text-gray-500">{from}–{to} dari {totalCount} SPK</p>
+      <div className="flex items-center gap-1">
+        <button onClick={() => onPageChange(page - 1)} disabled={page === 1}
+          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          ‹
+        </button>
+        {pages.map((p, i) =>
+          p === '…' ? (
+            <span key={`e${i}`} className="px-2 text-gray-400">…</span>
+          ) : (
+            <button key={p} onClick={() => onPageChange(p)}
+              className={`w-8 h-8 text-sm rounded-lg border transition-colors ${p === page ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50'}`}>
+              {p}
+            </button>
+          )
+        )}
+        <button onClick={() => onPageChange(page + 1)} disabled={page === totalPages}
+          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          ›
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ActivityEditRow({ act, onChange, onRemove }) {
+  return (
+    <div className="border border-gray-200 bg-gray-50 rounded-lg p-3 space-y-2">
+      {/* Operation text + activity number badge */}
+      <div className="flex items-center gap-2">
+        {act.activityNumber && (
+          <span className="text-[10px] font-mono text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded shrink-0">
+            {act.activityNumber}
+          </span>
+        )}
+        <input
+          value={act.operationText}
+          onChange={(e) => onChange('operationText', e.target.value)}
+          placeholder="Teks operasi / deskripsi aktivitas"
+          className="flex-1 px-2.5 py-1.5 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+        />
+        <button onClick={onRemove} className="p-1 text-gray-400 hover:text-red-500 shrink-0"><X size={13} /></button>
+      </div>
+
+      {/* Durations */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="text-[10px] text-gray-400 font-medium mb-0.5">Plan (mnt)</p>
+          <input type="number" value={act.durationPlan} onChange={(e) => onChange('durationPlan', e.target.value)}
+            className="w-full px-2 py-1 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+        </div>
+        <div>
+          <p className="text-[10px] text-gray-400 font-medium mb-0.5">Aktual (mnt)</p>
+          <input type="number" value={act.durationActual} onChange={(e) => onChange('durationActual', e.target.value)}
+            className="w-full px-2 py-1 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+        </div>
+      </div>
+
+      {/* Result comment */}
+      <div>
+        <p className="text-[10px] text-gray-400 font-medium mb-0.5">Hasil / Catatan</p>
+        <input value={act.resultComment} onChange={(e) => onChange('resultComment', e.target.value)}
+          placeholder="Catatan hasil pemeriksaan..."
+          className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+      </div>
+
+      {/* Measurement value — always shown; unit auto-detected from operation text */}
+      <div>
+        <p className="text-[10px] text-gray-400 font-medium mb-0.5">Nilai Ukur</p>
+        <div className="flex items-center gap-2">
+          <input type="number" step="any" value={act.measurementValue}
+            onChange={(e) => onChange('measurementValue', e.target.value)}
+            placeholder="0.00"
+            className="flex-1 px-2 py-1 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+          {detectMeasurementUnit(act.operationText) && (
+            <span className="text-xs font-mono text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded shrink-0">
+              {detectMeasurementUnit(act.operationText)}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

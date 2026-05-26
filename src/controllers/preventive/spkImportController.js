@@ -210,11 +210,20 @@ const confirm = async (req, res) => {
       o => !o.isSipil && o.autoMapped && o.suggestedTaskList && o.equipmentId
         && o.intervalResolution === 'unknown'
     );
-    for (const order of autoMappable) {
-      await EquipmentIntervalMapping.findOrCreate({
-        where: { equipmentId: order.equipmentId, taskListId: order.suggestedTaskList },
-        defaults: { interval: null },
+    if (autoMappable.length > 0) {
+      const candidateIds = [...new Set(autoMappable.map(o => o.equipmentId))];
+      const existing = await Equipment.findAll({
+        where: { equipmentId: { [Op.in]: candidateIds } },
+        attributes: ['equipmentId'],
+        raw: true,
       });
+      const knownIds = new Set(existing.map(e => e.equipmentId));
+      for (const order of autoMappable.filter(o => knownIds.has(o.equipmentId))) {
+        await EquipmentIntervalMapping.findOrCreate({
+          where: { equipmentId: order.equipmentId, taskListId: order.suggestedTaskList },
+          defaults: { interval: null },
+        });
+      }
     }
     if (autoMappable.length > 0) {
       console.log(`[spk-import] Auto-saved ${autoMappable.length} new equipment→task list mappings (interval pending)`);

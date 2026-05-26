@@ -90,6 +90,7 @@ function fmt(spk) {
     weekYear: weekYear ?? null,
     dueDate: j.scheduledDate ? new Date(j.scheduledDate).toISOString() : null,
     orderNumber: j.orderNumber ?? null,
+    source: j.source ?? 'mantis',
     evaluasi: j.evaluasi ?? null,
     equipmentStatus: j.equipmentStatus ?? 'Running',
     submittedBy: j.submittedBy ?? null,
@@ -167,6 +168,7 @@ const getAll = async (req, res) => {
   }
   const where = req.query.category ? { category: req.query.category } : {};
   if (req.query.status) where.status = req.query.status;
+  if (req.query.source) where.source = req.query.source;
   if (req.query.submittedBy) where.submittedBy = req.query.submittedBy;
   if (req.query.from) where.scheduledDate = { ...where.scheduledDate, [Op.gte]: req.query.from };
   if (req.query.to)   where.scheduledDate = { ...where.scheduledDate, [Op.lte]: req.query.to };
@@ -301,7 +303,7 @@ const getAll = async (req, res) => {
   if (req.query.limit !== undefined) {
     const limit  = Math.min(parseInt(req.query.limit,  10) || 50, 200);
     const offset = parseInt(req.query.offset, 10) || 0;
-    const { count, rows } = await Spk.findAndCountAll({ where, include, order, limit, offset, attributes: { include: [ABNORMAL_COUNT_ATTR] } });
+    const { count, rows } = await Spk.findAndCountAll({ where, include, order, limit, offset, distinct: true, col: 'spk_number', attributes: { include: [ABNORMAL_COUNT_ATTR] } });
     const nameMap = await resolveApprovalNames(rows);
     return res.json({
       total: count, limit, offset,
@@ -413,7 +415,43 @@ const update = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber);
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
   const { interval, equipmentModels, activitiesModel, ...rest } = req.body;
-  await spk.update({ ...rest, intervalPeriod: interval ?? spk.intervalPeriod, spkNumber: spk.spkNumber });
+
+  const t = await sequelize.transaction();
+  try {
+    await spk.update(
+      { ...rest, intervalPeriod: interval ?? spk.intervalPeriod, spkNumber: spk.spkNumber },
+      { transaction: t }
+    );
+
+    if (Array.isArray(activitiesModel)) {
+      await SpkActivity.destroy({ where: { spkNumber: spk.spkNumber }, transaction: t });
+      if (activitiesModel.length > 0) {
+        await SpkActivity.bulkCreate(
+          activitiesModel.map(a => ({
+            spkNumber:        spk.spkNumber,
+            activityNumber:   a.activityNumber,
+            equipmentId:      a.equipmentId      ?? null,
+            controlKey:       a.controlKey       ?? null,
+            operationText:    a.operationText,
+            resultComment:    a.resultComment    ?? null,
+            durationPlan:     a.durationPlan     != null ? parseFloat(a.durationPlan)     || null : null,
+            durationActual:   a.durationActual   != null ? parseFloat(a.durationActual)   || null : null,
+            isVerified:       a.isVerified       ?? false,
+            measurementType:  a.measurementType  ?? null,
+            measurementUnit:  a.measurementUnit  ?? null,
+            measurementValue: a.measurementValue != null ? parseFloat(a.measurementValue) : null,
+          })),
+          { transaction: t }
+        );
+      }
+    }
+
+    await t.commit();
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
+
   const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
   res.json(fmt(fresh));
 };

@@ -16,6 +16,7 @@ const taskListController = require('../controllers/preventive/generalTaskListCon
 const equipmentMappingController = require('../controllers/preventive/equipmentMappingController');
 const preventiveScheduleController = require('../controllers/preventive/preventiveScheduleController');
 const spkImportController = require('../controllers/preventive/spkImportController');
+const historicalImportController = require('../controllers/preventive/historicalImportController');
 
 // ── SPK ─────────────────────────────────────────────────────────────────────
 const spkRouter = express.Router();
@@ -25,6 +26,8 @@ spkRouter.post('/generate-from-task-list', verifyToken, spkController.generateFr
 spkRouter.post('/batch-generate', verifyToken, spkController.batchGenerate);
 spkRouter.post('/import-excel/preview', verifyToken, excelUpload.single('file'), spkImportController.preview);
 spkRouter.post('/import-excel/confirm', verifyToken, spkImportController.confirm);
+spkRouter.post('/import-historical/preview', verifyToken, excelUpload.single('file'), historicalImportController.preview);
+spkRouter.post('/import-historical/confirm', verifyToken, historicalImportController.confirm);
 spkRouter.get('/:spkNumber', verifyToken, spkController.getOne);
 spkRouter.post('/', verifyToken, spkController.create);
 spkRouter.put('/:spkNumber', verifyToken, spkController.update);
