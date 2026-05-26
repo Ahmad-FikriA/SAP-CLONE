@@ -655,10 +655,10 @@ export default function HseDashboardPage() {
       : 0;
   const ltifrValue = ltifrNum.toFixed(2);
 
-  // 6. Fatality Rate = Ada atau Tidak Ada
-  const fatalityExists =
-    approvedReports.filter((r) => r.kategori === "Fatality").length > 0;
-  const fatalityValue = fatalityExists ? "Ada" : "Tidak Ada";
+  // 6. Fatality Rate = Manual input dari Admin K3 (jumlahFatality di settings)
+  const fatalityCount = k3Settings?.jumlahFatality || 0;
+  const fatalityExists = fatalityCount > 0;
+  const fatalityValue = fatalityExists ? `${fatalityCount} (Ada)` : "Tidak Ada";
 
   const dynamicMetrics = [
     {
@@ -861,16 +861,11 @@ export default function HseDashboardPage() {
                 </p>
                 <div className="flex gap-5 sm:gap-6">
                   <div>
-                    <p className="text-xl sm:text-2xl font-bold text-white">284</p>
-                    <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                      Hari Tanpa Insiden
+                    <p className="text-xl sm:text-2xl font-bold text-white">
+                      {k3Settings?.jamKerjaTanpaKecelakaan?.toLocaleString() || 0}
                     </p>
-                  </div>
-                  <div className="w-px h-8 sm:h-10 bg-slate-800" />
-                  <div>
-                    <p className="text-xl sm:text-2xl font-bold text-rose-500">98%</p>
                     <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                      Kepatuhan Prosedur
+                      Jam Kerja Tanpa Kecelakaan
                     </p>
                   </div>
                 </div>

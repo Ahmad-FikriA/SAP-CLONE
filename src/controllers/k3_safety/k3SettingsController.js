@@ -38,7 +38,7 @@ exports.updateSettings = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin/Kadiv/HSE yang dapat mengubah pengaturan K3' });
     }
 
-    const { totalKaryawan, jamKerjaPerHari, hariKerjaPerBulan, jamKerjaTanpaKecelakaan } = req.body;
+    const { totalKaryawan, jamKerjaPerHari, hariKerjaPerBulan, jamKerjaTanpaKecelakaan, jumlahFatality } = req.body;
     
     let settings = await K3Settings.findByPk('main');
     if (!settings) {
@@ -50,6 +50,7 @@ exports.updateSettings = async (req, res, next) => {
     if (jamKerjaPerHari !== undefined) settings.jamKerjaPerHari = jamKerjaPerHari;
     if (hariKerjaPerBulan !== undefined) settings.hariKerjaPerBulan = hariKerjaPerBulan;
     if (jamKerjaTanpaKecelakaan !== undefined) settings.jamKerjaTanpaKecelakaan = jamKerjaTanpaKecelakaan;
+    if (jumlahFatality !== undefined) settings.jumlahFatality = jumlahFatality;
 
     await settings.save();
 
