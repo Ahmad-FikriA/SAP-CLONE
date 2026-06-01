@@ -121,8 +121,9 @@ export const STATUS_VARIANTS = {
 export const ALL_PAGES = [
   { key: 'dashboard',        label: 'Dashboard' },
   { key: 'spk',              label: 'SPK / Preventive' },
-  { key: 'spk-approval',     label: 'Persetujuan SPK' },
+  { key: 'spk-approval',     label: 'Persetujuan Preventive' },
   { key: 'corrective',       label: 'Corrective Planner' },
+  { key: 'corrective-approval', label: 'Persetujuan Corrective' },
   { key: 'hse',              label: 'HSE Command Center' },
   { key: 'spk-import',       label: 'Import SAP' },
   { key: 'equipment',        label: 'Equipment' },

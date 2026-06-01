@@ -495,8 +495,23 @@ const rejectKadisPp = async (req, res) => {
   const { rejection_note } = req.body;
   try {
     const spk = await SapSpkCorrective.findByPk(order_number);
+    if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
+
     await spk.update({ status: "eksekusi", rejected_by: req.user.name || req.user.nik, rejected_at: new Date(), rejection_note });
     await Notification.update({ approvalStatus: "eksekusi" }, { where: { sapOrderNumber: order_number } });
+
+    // Push notification to target technician executor privately
+    if (spk.execution_nik) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "corrective_spk_rejected",
+        recipientIds: [spk.execution_nik],
+        title: "Pekerjaan CM Ditolak (Kadis PP)",
+        body: `Pekerjaan SPK ${order_number} ditolak oleh Kadis PP. Catatan: "${rejection_note}". Silakan kerjakan kembali.`,
+        data: { spkId: order_number },
+      });
+    }
+
     res.json({ status: "success", message: "Ditolak Kadis PP" });
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });
@@ -520,8 +535,23 @@ const rejectKadisPelapor = async (req, res) => {
   const { rejection_note } = req.body;
   try {
     const spk = await SapSpkCorrective.findByPk(order_number);
+    if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
+
     await spk.update({ status: "eksekusi", rejected_by: req.user.name || req.user.nik, rejected_at: new Date(), rejection_note });
     await Notification.update({ approvalStatus: "eksekusi" }, { where: { sapOrderNumber: order_number } });
+
+    // Push notification to target technician executor privately
+    if (spk.execution_nik) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "corrective_spk_rejected",
+        recipientIds: [spk.execution_nik],
+        title: "Pekerjaan CM Ditolak (Pelapor)",
+        body: `Pekerjaan SPK ${order_number} ditolak oleh Pelapor. Catatan: "${rejection_note}". Silakan kerjakan kembali.`,
+        data: { spkId: order_number },
+      });
+    }
+
     res.json({ status: "success", message: "Ditolak Pelapor" });
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });

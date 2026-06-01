@@ -967,3 +967,137 @@ exports.deleteAllReports = async (req, res, next) => {
   }
 };
 
+// -- Track Record / Stats ----------------------------------------------------------
+
+/**
+ * GET /api/k3-safety/stats
+ * Menghasilkan statistik agregat K3 untuk fitur Track Record / Leaderboard.
+ * - reporters: ranking user berdasarkan jumlah laporan yang dibuat
+ * - hseOfficers: ranking petugas HSE berdasarkan jumlah penugasan (breakdown investigasi/perbaikan)
+ * - categories: distribusi laporan per kategori
+ */
+exports.getStats = async (req, res, next) => {
+  try {
+    const reports = await K3Report.findAll({
+      attributes: ['id', 'kategori', 'status', 'jenisTindakan', 'dilaporkanOleh', 'ditugaskanKepada'],
+      include: [
+        {
+          model: User,
+          as: 'pelapor',
+          attributes: ['id', 'name', 'role', 'dinas', 'divisi'],
+        },
+        {
+          model: User,
+          as: 'petugasHse',
+          attributes: ['id', 'name', 'role', 'dinas', 'divisi'],
+        },
+      ],
+    });
+
+    const totalReports = reports.length;
+    const totalSelesai = reports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;
+    const totalInvestigasi = reports.filter(r => r.jenisTindakan === 'investigasi').length;
+    const totalPerbaikanLangsung = reports.filter(r => r.jenisTindakan === 'perbaikan_langsung').length;
+
+    // ── Reporters: siapa yang paling sering membuat laporan ────────────────
+    const reporterMap = {};
+    for (const r of reports) {
+      const uid = r.dilaporkanOleh;
+      if (!uid) continue;
+      if (!reporterMap[uid]) {
+        const p = r.pelapor;
+        reporterMap[uid] = {
+          id: uid,
+          name: p?.name || uid,
+          dinas: p?.dinas || '-',
+          divisi: p?.divisi || '-',
+          count: 0,
+          selesai: 0,
+        };
+      }
+      reporterMap[uid].count++;
+      if (r.status === 'selesai' || r.status === 'disetujui') {
+        reporterMap[uid].selesai++;
+      }
+    }
+    const reporters = Object.values(reporterMap).sort((a, b) => b.count - a.count);
+
+    // ── HSE Officers: siapa di Dinas HSE yang paling sering ditugaskan ────
+    // Pertama, kumpulkan semua user HSE dari penugasan di K3Report
+    const hseOfficerMap = {};
+    for (const r of reports) {
+      const uid = r.ditugaskanKepada;
+      if (!uid) continue;
+      if (!hseOfficerMap[uid]) {
+        const p = r.petugasHse;
+        hseOfficerMap[uid] = {
+          id: uid,
+          name: p?.name || uid,
+          dinas: p?.dinas || '-',
+          divisi: p?.divisi || '-',
+          count: 0,
+          investigasi: 0,
+          perbaikan: 0,
+          selesai: 0,
+        };
+      }
+      hseOfficerMap[uid].count++;
+      if (r.jenisTindakan === 'investigasi') {
+        hseOfficerMap[uid].investigasi++;
+      } else if (r.jenisTindakan === 'perbaikan_langsung') {
+        hseOfficerMap[uid].perbaikan++;
+      }
+      if (r.status === 'selesai' || r.status === 'disetujui') {
+        hseOfficerMap[uid].selesai++;
+      }
+    }
+
+    // Juga ambil user HSE yang belum pernah ditugaskan agar tetap muncul di leaderboard
+    const allHseUsers = await User.findAll({
+      where: { dinas: { [Op.like]: '%hse%' } },
+      attributes: ['id', 'name', 'role', 'dinas', 'divisi'],
+    });
+
+    for (const u of allHseUsers) {
+      if (!hseOfficerMap[u.id]) {
+        hseOfficerMap[u.id] = {
+          id: u.id,
+          name: u.name,
+          dinas: u.dinas || '-',
+          divisi: u.divisi || '-',
+          count: 0,
+          investigasi: 0,
+          perbaikan: 0,
+          selesai: 0,
+        };
+      }
+    }
+    const hseOfficers = Object.values(hseOfficerMap).sort((a, b) => b.count - a.count);
+
+    // ── Categories: distribusi laporan per kategori ────────────────────────
+    const categoryMap = {};
+    for (const r of reports) {
+      const cat = r.kategori || 'Lainnya';
+      categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+    }
+    const categories = Object.entries(categoryMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalReports,
+        totalSelesai,
+        totalInvestigasi,
+        totalPerbaikanLangsung,
+        reporters,
+        hseOfficers,
+        categories,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -233,8 +233,9 @@ export default function HseDashboardPage() {
     deskripsi: "",
     lokasiTemuan: "",
   });
-  const [createPhoto, setCreatePhoto] = useState(null);
-  const [createPhotoPreview, setCreatePhotoPreview] = useState(null);
+  const [createPhotos, setCreatePhotos] = useState([]);       // Array of { file, preview }
+  const MAX_PHOTOS = 3;
+  const MAX_SIZE_KB = 500;
 
   // Camera States
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -412,12 +413,84 @@ export default function HseDashboardPage() {
     };
   }, []);
 
+  // --- Image compression utility ---
+  const compressImage = (file, maxSizeKB = 500) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+
+        // Scale down if very large
+        const MAX_DIM = 1920;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Try decreasing quality until under maxSizeKB
+        const tryCompress = (quality) => {
+          canvas.toBlob(
+            (blob) => {
+              if (blob.size > maxSizeKB * 1024 && quality > 0.1) {
+                tryCompress(quality - 0.1);
+              } else {
+                const compressed = new File([blob], file.name, { type: "image/jpeg" });
+                resolve(compressed);
+              }
+            },
+            "image/jpeg",
+            quality,
+          );
+        };
+
+        // If already small enough, resolve immediately
+        if (file.size <= maxSizeKB * 1024) {
+          canvas.toBlob(
+            (blob) => resolve(new File([blob], file.name, { type: "image/jpeg" })),
+            "image/jpeg",
+            0.92,
+          );
+        } else {
+          tryCompress(0.8);
+        }
+      };
+      img.src = url;
+    });
+  };
+
   // --- Create Report Handlers ---
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setCreatePhoto(file);
-      setCreatePhotoPreview(URL.createObjectURL(file));
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remaining = MAX_PHOTOS - createPhotos.length;
+    if (remaining <= 0) {
+      toast.error(`Maksimal ${MAX_PHOTOS} foto`);
+      return;
+    }
+
+    const toProcess = files.slice(0, remaining);
+    if (files.length > remaining) {
+      toast.info(`Hanya ${remaining} foto lagi yang bisa ditambahkan`);
+    }
+
+    for (const file of toProcess) {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} bukan file gambar`);
+        continue;
+      }
+      const compressed = await compressImage(file, MAX_SIZE_KB);
+      const preview = URL.createObjectURL(compressed);
+      setCreatePhotos((prev) => [...prev, { file: compressed, preview }]);
     }
   };
 
@@ -461,8 +534,14 @@ export default function HseDashboardPage() {
     setIsCameraOpen(false);
   };
 
-  const takePhoto = () => {
+  const takePhoto = async () => {
     if (!videoRef.current) return;
+    if (createPhotos.length >= MAX_PHOTOS) {
+      toast.error(`Maksimal ${MAX_PHOTOS} foto`);
+      closeCamera();
+      return;
+    }
+
     const canvas = document.createElement("canvas");
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
@@ -521,19 +600,33 @@ export default function HseDashboardPage() {
       ctx.fillText(line, x + padding, y + padding + index * lineHeight);
     });
 
-    canvas.toBlob((blob) => {
-      const file = new File([blob], "camera_capture.jpg", {
-        type: "image/jpeg",
-      });
-      setCreatePhoto(file);
-      setCreatePhotoPreview(URL.createObjectURL(file));
-      closeCamera();
-    }, "image/jpeg");
+    // Convert canvas to blob, then compress
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.92)
+    );
+    const rawFile = new File([blob], `camera_${Date.now()}.jpg`, { type: "image/jpeg" });
+    const compressed = await compressImage(rawFile, MAX_SIZE_KB);
+    const preview = URL.createObjectURL(compressed);
+    setCreatePhotos((prev) => [...prev, { file: compressed, preview }]);
+    closeCamera();
+  };
+
+  const removePhoto = (index) => {
+    setCreatePhotos((prev) => {
+      const copy = [...prev];
+      URL.revokeObjectURL(copy[index].preview);
+      copy.splice(index, 1);
+      return copy;
+    });
   };
 
   const submitCreate = async () => {
     if (!createData.kategori || !createData.deskripsi) {
       toast.error("Kategori dan Deskripsi wajib diisi");
+      return;
+    }
+    if (createPhotos.length === 0) {
+      toast.error("Minimal 1 foto bukti wajib dilampirkan");
       return;
     }
     setIsSubmitting(true);
@@ -543,14 +636,13 @@ export default function HseDashboardPage() {
       fd.append("deskripsi", createData.deskripsi);
       if (createData.lokasiTemuan)
         fd.append("lokasiTemuan", createData.lokasiTemuan);
-      if (createPhoto) fd.append("foto", createPhoto);
+      createPhotos.forEach((p) => fd.append("foto", p.file));
 
       await apiUpload("/k3-safety", fd);
       toast.success("Laporan K3 berhasil dikirim");
       setIsCreateOpen(false);
       setCreateData({ kategori: "", deskripsi: "", lokasiTemuan: "" });
-      setCreatePhoto(null);
-      setCreatePhotoPreview(null);
+      setCreatePhotos([]);
       loadData();
     } catch (e) {
       toast.error(e.message || "Gagal membuat laporan");
@@ -1494,45 +1586,61 @@ export default function HseDashboardPage() {
                   <label className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-slate-500">
                       <Camera size={14} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Foto Bukti</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">
+                        Foto Bukti ({createPhotos.length}/{MAX_PHOTOS})
+                      </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs text-rose-600 px-2 rounded-lg hover:bg-rose-50"
-                      onClick={openCamera}
-                    >
-                      <Camera size={12} className="mr-1" /> Buka Kamera
-                    </Button>
-                  </label>
-                  {createPhotoPreview ? (
-                    <div className="relative border border-slate-200 rounded-2xl overflow-hidden h-44 group shadow-sm">
-                      <img
-                        src={createPhotoPreview}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        alt="Preview"
-                      />
-                      <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-300" />
-                      <button
-                        className="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-full hover:bg-rose-600 transition-colors backdrop-blur-sm"
-                        onClick={() => {
-                          setCreatePhoto(null);
-                          setCreatePhotoPreview(null);
-                        }}
+                    {createPhotos.length < MAX_PHOTOS && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-rose-600 px-2 rounded-lg hover:bg-rose-50"
+                        onClick={openCamera}
                       >
-                        <XCircle size={16} />
-                      </button>
+                        <Camera size={12} className="mr-1" /> Buka Kamera
+                      </Button>
+                    )}
+                  </label>
+
+                  {/* Photo grid preview */}
+                  {createPhotos.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {createPhotos.map((p, i) => (
+                        <div key={i} className="relative border border-slate-200 rounded-xl overflow-hidden aspect-square group shadow-sm">
+                          <img
+                            src={p.preview}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            alt={`Foto ${i + 1}`}
+                          />
+                          <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-300" />
+                          <button
+                            className="absolute top-1.5 right-1.5 bg-black/50 text-white p-1 rounded-full hover:bg-rose-600 transition-colors backdrop-blur-sm"
+                            onClick={() => removePhoto(i)}
+                          >
+                            <XCircle size={14} />
+                          </button>
+                          <span className="absolute bottom-1.5 left-1.5 bg-black/50 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                            {(p.file.size / 1024).toFixed(0)}KB
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ) : (
+                  )}
+
+                  {/* Add more photos area */}
+                  {createPhotos.length < MAX_PHOTOS && (
                     <div
-                      className="border-2 border-dashed border-slate-200 rounded-2xl h-28 flex items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group"
+                      className="border-2 border-dashed border-slate-200 rounded-2xl h-24 flex items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group"
                       onClick={openCamera}
                     >
-                      <div className="text-slate-400 group-hover:text-rose-500 flex flex-col items-center gap-2 transition-colors">
-                        <Camera size={24} />
-                        <span className="text-xs font-medium">
-                          Wajib ambil foto langsung dari kamera
+                      <div className="text-slate-400 group-hover:text-rose-500 flex flex-col items-center gap-1.5 transition-colors">
+                        <Camera size={22} />
+                        <span className="text-[11px] font-medium">
+                          {createPhotos.length === 0
+                            ? "Wajib ambil foto dari kamera (min. 1)"
+                            : `Tambah foto (maks. ${MAX_PHOTOS - createPhotos.length} lagi)`}
                         </span>
+                        <span className="text-[9px] text-slate-400">Maks. 500KB per foto (otomatis dikompres)</span>
                       </div>
                     </div>
                   )}
@@ -1542,7 +1650,7 @@ export default function HseDashboardPage() {
                 <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-start gap-2.5">
                   <AlertTriangle size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Pastikan kategori, deskripsi, dan foto sudah terisi dengan benar sebelum mengirim laporan.
+                    Pastikan kategori, deskripsi, dan minimal 1 foto (maks. 3) sudah terisi sebelum mengirim laporan. Foto akan otomatis dikompres ke maks. 500KB.
                   </p>
                 </div>
               </div>
