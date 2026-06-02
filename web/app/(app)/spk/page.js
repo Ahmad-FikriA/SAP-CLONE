@@ -19,6 +19,19 @@ const PAGE_SIZE = 50;
 const YEAR_OPTIONS = Array.from({ length: new Date().getFullYear() - 2024 + 2 }, (_, i) => 2024 + i);
 const WEEK_OPTIONS = Array.from({ length: 52 }, (_, i) => i + 1);
 
+/** ISO week → { from, to } date strings */
+function isoWeekRange(year, week) {
+  const jan4    = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const mon1    = new Date(jan4);
+  mon1.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+  const wkStart = new Date(mon1);
+  wkStart.setUTCDate(mon1.getUTCDate() + (week - 1) * 7);
+  const wkEnd   = new Date(wkStart);
+  wkEnd.setUTCDate(wkStart.getUTCDate() + 6);
+  return { from: wkStart.toISOString().slice(0, 10), to: wkEnd.toISOString().slice(0, 10) };
+}
+
 const UPLOADS_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '');
 
 function kadisStatusLabel(kadisArea) {
@@ -72,6 +85,7 @@ function SpkPageInner() {
   const [lightbox, setLightbox] = useState(null); // photo path string for detail view
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
 
   // Side panel
   const [panelOpen, setPanelOpen]   = useState(false);
@@ -94,45 +108,32 @@ function SpkPageInner() {
   useEffect(() => { apiGet('/maps').then(setPlants).catch(() => {}); }, []);
   useEffect(() => { load(); }, [category, plantFilter, statusFilter, weekFilter, yearFilter, hasAbnormal, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  function buildCurrentFilters() {
+    const yr = yearFilter ? parseInt(yearFilter, 10) : null;
+    const wk = weekFilter ? parseInt(weekFilter, 10) : null;
+    const f = {};
+    if (category)    f.category    = category;
+    if (plantFilter) f.plantId     = plantFilter;
+    if (statusFilter)f.status      = statusFilter;
+    if (hasAbnormal) f.hasAbnormal = true;
+    if (yr && wk) { Object.assign(f, isoWeekRange(yr, wk)); }
+    else if (yr) { f.from = `${yr}-01-01`; f.to = `${yr}-12-31`; }
+    else if (wk) { Object.assign(f, isoWeekRange(new Date().getFullYear(), wk)); }
+    return f;
+  }
+
   async function load() {
     setLoading(true);
+    setSelectAllMatching(false);
     try {
+      const filters = buildCurrentFilters();
       const params = new URLSearchParams();
-      if (category)     params.set('category',    category);
-      if (plantFilter)  params.set('plantId',     plantFilter);
-      if (statusFilter) params.set('status',      statusFilter);
-      if (hasAbnormal)  params.set('hasAbnormal', 'true');
-
-      // Convert year/week to from–to date range (backend only supports combined week+year)
-      const yr = yearFilter ? parseInt(yearFilter, 10) : null;
-      const wk = weekFilter ? parseInt(weekFilter, 10) : null;
-      if (yr && wk) {
-        const jan4    = new Date(Date.UTC(yr, 0, 4));
-        const jan4Day = jan4.getUTCDay() || 7;
-        const mon1    = new Date(jan4);
-        mon1.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
-        const wkStart = new Date(mon1);
-        wkStart.setUTCDate(mon1.getUTCDate() + (wk - 1) * 7);
-        const wkEnd   = new Date(wkStart);
-        wkEnd.setUTCDate(wkStart.getUTCDate() + 6);
-        params.set('from', wkStart.toISOString().slice(0, 10));
-        params.set('to',   wkEnd.toISOString().slice(0, 10));
-      } else if (yr) {
-        params.set('from', `${yr}-01-01`);
-        params.set('to',   `${yr}-12-31`);
-      } else if (wk) {
-        const curYr   = new Date().getFullYear();
-        const jan4    = new Date(Date.UTC(curYr, 0, 4));
-        const jan4Day = jan4.getUTCDay() || 7;
-        const mon1    = new Date(jan4);
-        mon1.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
-        const wkStart = new Date(mon1);
-        wkStart.setUTCDate(mon1.getUTCDate() + (wk - 1) * 7);
-        const wkEnd   = new Date(wkStart);
-        wkEnd.setUTCDate(wkStart.getUTCDate() + 6);
-        params.set('from', wkStart.toISOString().slice(0, 10));
-        params.set('to',   wkEnd.toISOString().slice(0, 10));
-      }
+      if (filters.category)    params.set('category',    filters.category);
+      if (filters.plantId)     params.set('plantId',     filters.plantId);
+      if (filters.status)      params.set('status',      filters.status);
+      if (filters.hasAbnormal) params.set('hasAbnormal', 'true');
+      if (filters.from)        params.set('from',        filters.from);
+      if (filters.to)          params.set('to',          filters.to);
       params.set('limit',  String(PAGE_SIZE));
       params.set('offset', String((page - 1) * PAGE_SIZE));
       const res = await apiGet('/spk?' + params.toString());
@@ -159,9 +160,16 @@ function SpkPageInner() {
 
   async function handleBulkDelete() {
     try {
-      await apiPost('/spk/bulk-delete', { ids: selected });
-      toast.success(`${selected.length} SPK dihapus`);
+      if (selectAllMatching) {
+        const filters = buildCurrentFilters();
+        await apiPost('/spk/bulk-delete', { matchFilters: true, filters });
+        toast.success(`Semua ${totalCount} SPK sesuai filter dihapus`);
+      } else {
+        await apiPost('/spk/bulk-delete', { ids: selected });
+        toast.success(`${selected.length} SPK dihapus`);
+      }
       setBulkDeleteOpen(false);
+      setSelectAllMatching(false);
       load();
     } catch (e) { toast.error(e.message); }
   }
@@ -181,6 +189,7 @@ function SpkPageInner() {
   }
   function toggleAll(checked) {
     setSelected(checked ? displayed.map((s) => s.spkNumber) : []);
+    if (!checked) setSelectAllMatching(false);
   }
 
   // ── Panel open/close ────────────────────────────────────────────────────────
@@ -395,15 +404,45 @@ function SpkPageInner() {
               <X size={12} /> Reset Filter
             </button>
           )}
-          {selected.length > 0 && canDelete('spk') && (
+          {(selected.length > 0 || selectAllMatching) && canDelete('spk') && (
             <div className="flex items-center gap-2 ml-auto bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
-              <span className="text-sm text-red-700 font-medium">{selected.length} dipilih</span>
+              <span className="text-sm text-red-700 font-medium">
+                {selectAllMatching ? `${totalCount} dipilih (semua)` : `${selected.length} dipilih`}
+              </span>
               <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)} className="gap-1 h-7 text-xs">
                 <Trash2 size={12} /> Hapus
               </Button>
             </div>
           )}
         </div>
+
+        {/* Select-all banner */}
+        {selected.length > 0 && !selectAllMatching && selected.length === displayed.length && totalCount > displayed.length && (
+          <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+            <span className="text-sm text-blue-700">
+              {selected.length} SPK di halaman ini dipilih.
+            </span>
+            <button
+              onClick={() => setSelectAllMatching(true)}
+              className="text-sm font-semibold text-blue-600 hover:text-blue-800 underline"
+            >
+              Pilih semua {totalCount} SPK sesuai filter
+            </button>
+          </div>
+        )}
+        {selectAllMatching && (
+          <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+            <span className="text-sm text-blue-700 font-medium">
+              Semua {totalCount} SPK sesuai filter dipilih.
+            </span>
+            <button
+              onClick={() => setSelectAllMatching(false)}
+              className="text-sm text-blue-500 hover:text-blue-700 underline"
+            >
+              Batalkan
+            </button>
+          </div>
+        )}
 
         {/* Table */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -944,7 +983,8 @@ function SpkPageInner() {
         title={`Hapus SPK ${deleteTarget?.spkNumber}?`} description="Aksi ini tidak dapat diurungkan."
         onConfirm={handleDelete} confirmLabel="Hapus" destructive />
       <ConfirmDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}
-        title={`Hapus ${selected.length} SPK?`} description="Aksi ini tidak dapat diurungkan."
+        title={selectAllMatching ? `Hapus semua ${totalCount} SPK sesuai filter?` : `Hapus ${selected.length} SPK?`}
+        description="Aksi ini tidak dapat diurungkan."
         onConfirm={handleBulkDelete} confirmLabel="Hapus Semua" destructive />
 
       {/* Photo lightbox */}

@@ -64,7 +64,6 @@ export default function SubmissionsPage() {
   const [month, setMonth] = useState('');
   const [category, setCategory] = useState('');
   const [week, setWeek] = useState('');
-  const [exporting, setExporting] = useState(false);
   const [exportingIW49, setExportingIW49] = useState(false);
   const [detail, setDetail] = useState(null);
   const [lightbox, setLightbox] = useState(null);
@@ -103,29 +102,6 @@ export default function SubmissionsPage() {
     }
   }
 
-  async function exportExcel() {
-    setExporting(true);
-    try {
-      const params = new URLSearchParams();
-      if (year) params.set('year', year);
-      if (week) params.set('week', week);
-      else if (month) params.set('month', month);
-      if (category) params.set('category', category);
-      const blob = await apiBlob(`/submissions/export?${params}`);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `submissions-${year || 'all'}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Berhasil diunduh');
-    } catch (e) {
-      toast.error('Export gagal: ' + e.message);
-    } finally {
-      setExporting(false);
-    }
-  }
-
   async function exportIW49() {
     setExportingIW49(true);
     try {
@@ -138,7 +114,12 @@ export default function SubmissionsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `IW49_Confirmation-${year || 'all'}.xlsx`;
+      const weekSuffix = week
+        ? `_${year}-W${String(week).padStart(2, '0')}`
+        : month
+        ? `_${year}-${String(month).padStart(2, '0')}`
+        : year ? `_${year}` : '';
+      a.download = `IW49_Confirmation${category ? '_' + category : ''}${weekSuffix}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success('IW49 berhasil diunduh');
@@ -204,9 +185,6 @@ export default function SubmissionsPage() {
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <Button size="sm" onClick={exportExcel} disabled={exporting} className="gap-1.5">
-          <Download size={14} /> {exporting ? 'Mengekspor...' : 'Export LK'}
-        </Button>
         <Button size="sm" variant="outline" onClick={exportIW49} disabled={exportingIW49} className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50">
           <Download size={14} /> {exportingIW49 ? 'Mengekspor...' : 'Export IW49 (SAP)'}
         </Button>

@@ -457,8 +457,47 @@ const update = async (req, res) => {
 };
 
 // POST /api/spk/bulk-delete
+// Accepts either:
+//   { ids: ['SPK-001', ...] }                        — explicit list
+//   { matchFilters: true, filters: { category, status, from, to, plantId, hasAbnormal } }  — filter-based
 const bulkDelete = async (req, res) => {
-  const { ids } = req.body;
+  const { ids, matchFilters, filters } = req.body;
+
+  if (matchFilters && filters && typeof filters === 'object') {
+    const where = {};
+    if (filters.category) where.category = filters.category;
+    if (filters.status)   where.status   = filters.status;
+    if (filters.source)   where.source   = filters.source;
+    if (filters.from)     where.scheduledDate = { ...where.scheduledDate, [Op.gte]: filters.from };
+    if (filters.to)       where.scheduledDate = { ...where.scheduledDate, [Op.lte]: filters.to };
+    if (filters.plantId) {
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(sequelize.literal(
+        `Spk.spk_number IN (SELECT DISTINCT se.spk_number FROM spk_equipment se INNER JOIN equipment e ON se.equipment_id = e.equipment_id WHERE e.plant_id = ${sequelize.escape(filters.plantId)})`
+      ));
+    }
+    if (filters.hasAbnormal) {
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(sequelize.literal(
+        `EXISTS (SELECT 1 FROM submission_activity_results sar INNER JOIN submissions s ON s.id = sar.submission_id WHERE s.spk_number = Spk.spk_number AND sar.is_normal = false)`
+      ));
+    }
+
+    const matching = await Spk.findAll({ where, attributes: ['spkNumber'], raw: true });
+    const spkNumbers = matching.map(s => s.spkNumber);
+    if (!spkNumbers.length) return res.json({ message: 'Tidak ada SPK yang cocok', count: 0 });
+
+    const t = await sequelize.transaction();
+    try {
+      const count = await destroySpksByNumbers(spkNumbers, t);
+      await t.commit();
+      return res.json({ message: `Deleted ${count} SPK(s)`, count });
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  }
+
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
 
   const t = await sequelize.transaction();
