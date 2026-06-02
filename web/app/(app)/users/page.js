@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
+import { apiGet, apiPost, apiPut, apiDelete, apiUpload } from '@/lib/api';
 import { RoleBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { ROLES, ALL_PAGES, ROLE_COLORS } from '@/lib/constants';
 import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { UserPlus, Trash2, Download, RefreshCw } from 'lucide-react';
+import { UserPlus, Trash2, Download, RefreshCw, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { ExcelUserPreviewDialog } from './_components/ExcelUserPreviewDialog';
 
 const EMPTY_FORM = { id: '', nik: '', name: '', role: '', email: '', dinas: '', divisi: '', group: '', password: 'password123', permissions: null };
 
@@ -27,6 +28,13 @@ export default function UsersPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
+
+  // Import Excel States
+  const [uploading, setUploading] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [skippedData, setSkippedData] = useState(null);
+  const [savingExcel, setSavingExcel] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Client-side filtered list — instant, no extra API calls
   const q = search.trim().toLowerCase();
@@ -111,6 +119,40 @@ export default function UsersPage() {
     } catch (e) { toast.error(e.message); }
   }
 
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("excelFile", file);
+      const res = await apiUpload("/users/upload-excel", formData);
+      setPreviewData(res.data.previewData);
+      setSkippedData(res.data.skippedData);
+    } catch (err) {
+      toast.error(err.message || "Terjadi kesalahan saat upload");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleConfirmUpload() {
+    if (!previewData || previewData.length === 0) return;
+    setSavingExcel(true);
+    try {
+      const res = await apiPost("/users/bulk-insert", { users: previewData });
+      toast.success(res.message || "Bulk import berhasil");
+      setPreviewData(null);
+      setSkippedData(null);
+      load();
+    } catch (error) {
+      toast.error(error.message || "Terjadi kesalahan saat menyimpan data");
+    } finally {
+      setSavingExcel(false);
+    }
+  }
+
   function exportExcel() {
     if (!users.length) { toast.error('Tidak ada data'); return; }
     const data = users.map((u, i) => ({ No: i + 1, NIK: u.nik, Nama: u.name, Jabatan: u.role, Dinas: u.dinas || '-', Divisi: u.divisi || '-', Group: u.group || '-', Email: u.email || '-' }));
@@ -141,8 +183,27 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".xlsx, .xls"
+            onChange={handleFileUpload}
+          />
           <Button variant="outline" size="sm" onClick={load}><RefreshCw size={13} /></Button>
           <Button variant="outline" size="sm" onClick={exportExcel} className="gap-1.5"><Download size={13} /> Export</Button>
+          {canCreate('users') && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="gap-1.5"
+            >
+              <Upload size={13} />
+              {uploading ? 'Uploading...' : 'Import'}
+            </Button>
+          )}
           {canCreate('users') && <Button size="sm" onClick={openCreate} className="gap-1.5"><UserPlus size={14} /> Tambah User</Button>}
         </div>
       </div>
@@ -303,6 +364,17 @@ export default function UsersPage() {
       <ConfirmDialog open={!!resetTarget} onOpenChange={(o) => !o && setResetTarget(null)}
         title={`Reset password ${resetTarget?.nik}?`} description='Password akan direset ke "password123".'
         onConfirm={handleResetPassword} confirmLabel="Reset" />
+
+      <ExcelUserPreviewDialog
+        previewData={previewData}
+        skippedData={skippedData}
+        savingExcel={savingExcel}
+        onClose={() => {
+          setPreviewData(null);
+          setSkippedData(null);
+        }}
+        onConfirm={handleConfirmUpload}
+      />
     </div>
   );
 }

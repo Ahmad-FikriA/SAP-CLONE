@@ -13,6 +13,7 @@ const ROUTE_ACCESS = [
   { prefix: '/users/track-record', key: 'track-record' },
   { prefix: '/dashboard', key: 'dashboard' },
   { prefix: '/spk', key: 'spk' },
+  { prefix: '/corrective/approval', key: 'corrective-approval' },
   { prefix: '/corrective', key: 'corrective' },
   { prefix: '/users', key: 'users' },
   { prefix: '/equipment', key: 'equipment' },

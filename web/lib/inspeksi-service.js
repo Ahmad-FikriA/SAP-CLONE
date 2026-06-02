@@ -112,6 +112,15 @@ export async function rejectInspeksiReport(reportId, payload = {}) {
 }
 
 /**
+ * Kirim/submit laporan hasil inspeksi dari website ke backend.
+ * @param {Object} payload - Laporan data inspeksi
+ */
+export async function submitInspeksiReport(payload) {
+  const data = await apiPost('/inspection/reports', payload);
+  return data?.data ?? null;
+}
+
+/**
  * Ambil follow-up untuk satu schedule tertentu.
  * @param {number} scheduleId
  */

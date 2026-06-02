@@ -18,10 +18,11 @@ const NAV = [
   { key: 'dashboard',         href: '/dashboard',          label: 'Dashboard',          Icon: LayoutDashboard },
   { divider: true},
   { key: 'spk',               href: '/spk',                label: 'Preventive',         Icon: FileText },
-  { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan SPK',    Icon: ClipboardCheck },
+  { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan Preventive', Icon: ClipboardCheck },
   { divider: true},
   { key: 'corrective',        href: '/corrective',         label: 'Corrective',         Icon: Wrench },
   { key: 'corrective-record', href: '/corrective/track-record', label: 'Riwayat CM', Icon: BarChart2 },
+  { key: 'corrective-approval', href: '/corrective/approval', label: 'Persetujuan Corrective', Icon: ClipboardCheck },
   { divider: true },
   { key: 'users',             href: '/users',              label: 'Users',              Icon: Users },
   { key: 'track-record',      href: '/users/track-record', label: 'Track Record',       Icon: BarChart2 },
@@ -35,6 +36,7 @@ const NAV = [
   { divider: true },
   { key: 'hse',               href: '/hse',                label: 'HSE Command Center', Icon: ShieldCheck },
   { key: 'hse',               href: '/hse/admin',          label: 'Admin K3',           Icon: Settings },
+  { key: 'hse',               href: '/hse/track-record',   label: 'Riwayat K3',         Icon: BarChart2 },
   { key: 'inspeksi',          href: '/inspeksi',           label: 'Inspeksi',           Icon: ClipboardList },
   { key: 'supervisi',         href: '/supervisi',          label: 'Supervisi',          Icon: MapPin },
   { divider: true},
@@ -99,6 +101,7 @@ export default function Sidebar() {
     return NAV.map((item, i) => {
       if (item.divider) return <div key={i} className="my-2 border-t border-white/10" />;
       if (!canRead(item.key)) return null;
+      if (item.key === 'inspeksi' && user?.dinas?.toLowerCase().includes('hse') && !user?.dinas?.toLowerCase().includes('pphse')) return null;
       const { href, Icon } = item;
       let label = item.label;
       if (item.key === 'corrective') {

@@ -63,6 +63,19 @@ router.get('/stats', verifyToken, usersController.getStats);
 // POST /api/users/bulk-delete
 router.post('/bulk-delete', verifyToken, usersController.bulkDelete);
 
+// Multer config for Excel uploads
+const uploadExcelDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadExcelDir)) {
+  fs.mkdirSync(uploadExcelDir, { recursive: true });
+}
+const uploadExcelFile = multer({ dest: uploadExcelDir });
+
+// POST /api/users/upload-excel
+router.post('/upload-excel', verifyToken, uploadExcelFile.single('excelFile'), usersController.uploadExcel);
+
+// POST /api/users/bulk-insert
+router.post('/bulk-insert', verifyToken, usersController.bulkInsert);
+
 // POST /api/users
 router.post('/', verifyToken, usersController.create);
 

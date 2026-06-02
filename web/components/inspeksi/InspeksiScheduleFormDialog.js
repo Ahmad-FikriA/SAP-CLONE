@@ -105,7 +105,7 @@ function DateField({ label, value, min, max, onChange }) {
   );
 }
 
-export function InspeksiScheduleFormDialog({ open, onOpenChange, onSaved }) {
+export function InspeksiScheduleFormDialog({ open, onOpenChange, onSaved, defaultType = 'rutin' }) {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [loadingSpk, setLoadingSpk] = useState(false);
@@ -180,7 +180,7 @@ export function InspeksiScheduleFormDialog({ open, onOpenChange, onSaved }) {
 
     const user = getUser();
     const baseSchedule = {
-      type: 'rutin',
+      type: defaultType,
       title: form.title.trim(),
       location: form.location.trim() || null,
       scheduledDate: form.scheduledDate,
