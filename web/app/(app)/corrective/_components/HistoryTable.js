@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
-import { CheckCircle2, Trash2 } from "lucide-react";
+import { CheckCircle2, Trash2, Pencil } from "lucide-react";
 import { canDelete } from "@/lib/auth";
 import { SAP_STATUS_COLORS, SAP_STATUS_LABELS } from "./constants";
 import { CorrectiveStatusBadge, EmptyState, fmtDate, SkeletonRows } from "./ui-primitives";
 import { cn } from "@/lib/utils";
 
-export function HistoryTable({ loading, history, fullHistory, equipment = [], onSelectSpk, onDeleteSpk, isExportMode, selectedExportIds, setSelectedExportIds, highlightCheckboxes }) {
+export function HistoryTable({ loading, history, fullHistory, equipment = [], onSelectSpk, onDeleteSpk, isExportMode, selectedExportIds, setSelectedExportIds, highlightCheckboxes, isPlanner, onEditSpk }) {
   const datasetToSelect = fullHistory || history;
   const allSelected = datasetToSelect.length > 0 && selectedExportIds?.length === datasetToSelect.length;
 
@@ -116,6 +116,17 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex justify-end items-center gap-1">
+                  {isPlanner && !spk.sys_status?.toUpperCase().includes("TECO") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shadow-sm"
+                      onClick={() => onEditSpk(spk)}
+                    >
+                      <Pencil size={14} className="mr-1.5" />
+                      Edit
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"

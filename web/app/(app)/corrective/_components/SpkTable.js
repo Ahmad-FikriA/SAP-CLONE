@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Trash2, Pencil } from "lucide-react";
 import { canUpdate, canDelete } from "@/lib/auth";
 import { SAP_STATUS_COLORS, SAP_STATUS_LABELS } from "./constants";
 import { CorrectiveStatusBadge, EmptyState, fmtDate, SkeletonRows } from "./ui-primitives";
@@ -15,6 +15,7 @@ export function SpkTable({
   isKadisPp, userId, userNik, userRole,
   onSelectSpk, onApproveKadisPp, onRejectKadisPp,
   onApproveKadisPelapor, onRejectKadisPelapor, onDeleteSpk,
+  isPlanner, onEditSpk,
 }) {
   return (
     <Table>
@@ -154,14 +155,27 @@ export function SpkTable({
                         Review Pelapor
                       </Button>
                     ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 shadow-sm"
-                        onClick={() => onSelectSpk(spk)}
-                      >
-                        Detail
-                      </Button>
+                      <>
+                        {isPlanner && !spk.sys_status?.toUpperCase().includes("TECO") && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 shadow-sm"
+                            onClick={() => onEditSpk(spk)}
+                          >
+                            <Pencil size={14} className="mr-1.5" />
+                            Edit
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 shadow-sm"
+                          onClick={() => onSelectSpk(spk)}
+                        >
+                          Detail
+                        </Button>
+                      </>
                     )}
                     {canDelete('corrective') && (
                       <Button

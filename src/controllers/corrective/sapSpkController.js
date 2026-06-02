@@ -465,12 +465,34 @@ const updateSapSpk = async (req, res) => {
     const spk = await SapSpkCorrective.findByPk(orderNumber);
     if (!spk) return res.status(404).json({ status: "error", message: "SPK tidak ditemukan" });
 
-    const { description, short_text, num_of_work, dur_plan } = req.body;
+    const {
+      description, short_text, num_of_work, dur_plan,
+      normal_dur, normal_dur_un, unit_for_work, activity, maint_activ_type,
+      work_start, work_finish, start_time, finish_time,
+      conf_text, confirm_number, reason_of_var, dur_act, actual_work,
+      job_result_description
+    } = req.body;
+
     const updates = {};
     if (description !== undefined) updates.description = description;
     if (short_text !== undefined) updates.short_text = short_text;
-    if (num_of_work !== undefined) updates.num_of_work = num_of_work;
-    if (dur_plan !== undefined) updates.dur_plan = dur_plan;
+    if (num_of_work !== undefined) updates.num_of_work = num_of_work !== null ? parseInt(num_of_work) : null;
+    if (dur_plan !== undefined) updates.dur_plan = dur_plan !== null ? parseFloat(dur_plan) : null;
+    if (normal_dur !== undefined) updates.normal_dur = normal_dur !== null ? parseFloat(normal_dur) : null;
+    if (normal_dur_un !== undefined) updates.normal_dur_un = normal_dur_un;
+    if (unit_for_work !== undefined) updates.unit_for_work = unit_for_work;
+    if (activity !== undefined) updates.activity = activity;
+    if (maint_activ_type !== undefined) updates.maint_activ_type = maint_activ_type;
+    if (work_start !== undefined) updates.work_start = work_start || null;
+    if (work_finish !== undefined) updates.work_finish = work_finish || null;
+    if (start_time !== undefined) updates.start_time = start_time || null;
+    if (finish_time !== undefined) updates.finish_time = finish_time || null;
+    if (conf_text !== undefined) updates.conf_text = conf_text;
+    if (confirm_number !== undefined) updates.confirm_number = confirm_number;
+    if (reason_of_var !== undefined) updates.reason_of_var = reason_of_var;
+    if (dur_act !== undefined) updates.dur_act = dur_act !== null ? parseFloat(dur_act) : null;
+    if (actual_work !== undefined) updates.actual_work = actual_work !== null ? parseFloat(actual_work) : null;
+    if (job_result_description !== undefined) updates.job_result_description = job_result_description;
 
     await spk.update(updates);
     res.status(200).json({ status: "success", message: "Data SPK diperbarui", data: spk });
