@@ -101,6 +101,7 @@ export default function Sidebar() {
     return NAV.map((item, i) => {
       if (item.divider) return <div key={i} className="my-2 border-t border-white/10" />;
       if (!canRead(item.key)) return null;
+      if (item.key === 'inspeksi' && user?.dinas?.toLowerCase().includes('hse') && !user?.dinas?.toLowerCase().includes('pphse')) return null;
       const { href, Icon } = item;
       let label = item.label;
       if (item.key === 'corrective') {

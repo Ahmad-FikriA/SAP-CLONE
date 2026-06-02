@@ -135,6 +135,7 @@ export const ALL_PAGES = [
   { key: 'task-mapping',     label: 'Task Mapping' },
   { key: 'interval-planner', label: 'Interval Planner' },
   { key: 'submissions',      label: 'Submissions' },
+  { key: 'inspeksi-k3',      label: 'Inspeksi K3' },
   { key: 'inspeksi',         label: 'Inspeksi' },
   { key: 'supervisi',        label: 'Supervisi' },
   { key: 'kalender',         label: 'Kalender Jadwal' },

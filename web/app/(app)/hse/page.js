@@ -1,9 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { apiGet, apiPut, apiDelete, apiUpload } from "@/lib/api";
 import { getUser, canDelete } from "@/lib/auth";
 import { toast } from "sonner";
+import { HseInspeksiSpkTable } from "@/components/hse-inspeksi/HseInspeksiSpkTable";
+import { HseInspeksiDetailModal } from "@/components/hse-inspeksi/HseInspeksiDetailModal";
+import { HseInspeksiExecutionModal } from "@/components/hse-inspeksi/HseInspeksiExecutionModal";
+import { InspeksiScheduleFormDialog } from "@/components/inspeksi/InspeksiScheduleFormDialog";
+import {
+  fetchInspeksiSchedules,
+  deleteInspeksiSchedule,
+  fetchInspeksiUsersMap,
+} from "@/lib/inspeksi-service";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +51,8 @@ import {
   MoreVertical,
   ExternalLink,
   ClipboardCheck,
+  ClipboardList,
+  Loader2,
   AlertOctagon,
   HeartPulse,
   Flame,
@@ -207,8 +218,26 @@ function getMetricClassification(id, valueNum) {
   return null;
 }
 
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
 export default function HseDashboardPage() {
   const [tab, setTab] = useState("dashboard");
+  
+  // ── States for Inspeksi K3 ──
+  const [k3Schedules,      setK3Schedules]      = useState([]);
+  const [k3Loading,        setK3Loading]        = useState(false);
+  const [k3DetailOpen,     setK3DetailOpen]     = useState(false);
+  const [k3DetailSchedule, setK3DetailSchedule] = useState(null);
+  const [k3ExecutionOpen,  setK3ExecutionOpen]  = useState(false);
+  const [k3ExecSchedule,   setExecSchedule]     = useState(null);
+  const [k3CreateOpen,     setK3CreateOpen]     = useState(false);
+  const [k3UsersMap,       setK3UsersMap]       = useState({});
+  const [k3PicFilter,      setK3PicFilter]      = useState('all');
+  const [k3SearchQuery,    setK3SearchQuery]    = useState('');
+  const [k3StatusFilter,   setK3StatusFilter]   = useState('semua');
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -243,16 +272,16 @@ export default function HseDashboardPage() {
   const [stream, setStream] = useState(null);
   const [facingMode, setFacingMode] = useState("environment");
 
-  const currentUser = getUser();
-  const role = (currentUser?.role || "").toLowerCase();
-  const divisi = (currentUser?.divisi || "").toLowerCase();
+  const currentUser = useMemo(() => getUser(), []);
+  const role = useMemo(() => (currentUser?.role || "").toLowerCase(), [currentUser]);
+  const divisi = useMemo(() => (currentUser?.divisi || "").toLowerCase(), [currentUser]);
 
-  const isKadisHse =
+  const isKadisHse = useMemo(() =>
     (role.includes("kadis") || role.includes("kepala dinas")) &&
-    (divisi.includes("pphse") || divisi.includes("hse"));
-  const isKadivPphse =
+    (divisi.includes("pphse") || divisi.includes("hse")), [role, divisi]);
+  const isKadivPphse = useMemo(() =>
     (role.includes("kadiv") || role.includes("kepala divisi")) &&
-    (divisi.includes("pphse") || divisi.includes("hse"));
+    (divisi.includes("pphse") || divisi.includes("hse")), [role, divisi]);
 
   const openDetail = (report) => {
     setSelectedReport(report);
@@ -404,6 +433,116 @@ export default function HseDashboardPage() {
       console.error(e);
     }
   }
+
+  // ── dynamicTabs ──
+  const userDinasVal = useMemo(() => currentUser?.dinas?.toLowerCase() || '', [currentUser]);
+  const isHseMemberVal = useMemo(() => (userDinasVal === 'hse' || userDinasVal.includes('hse')) && !userDinasVal.includes('pphse'), [userDinasVal]);
+  const isKadivVal = useMemo(() => currentUser?.role === 'kadiv', [currentUser]);
+  const isAdminVal = useMemo(() => currentUser?.role === 'admin', [currentUser]);
+  const showInspeksiTab = useMemo(() => isAdminVal || isKadivVal || isHseMemberVal, [isAdminVal, isKadivVal, isHseMemberVal]);
+
+  const dynamicTabs = useMemo(() => {
+    return [
+      { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { key: "active", label: "Laporan Aktif", icon: Activity },
+      { key: "history", label: "Riwayat", icon: CheckCircle2 },
+      ...(showInspeksiTab ? [{ key: "inspeksi-k3", label: "Inspeksi K3", icon: ClipboardList }] : []),
+    ];
+  }, [showInspeksiTab]);
+
+  // ── Inspeksi K3 helper functions ──
+  const loadK3Schedules = useCallback(async () => {
+    setK3Loading(true);
+    try {
+      const params = {
+        type: 'k3',
+      };
+      if (isHseMemberVal && !isKadivVal && !isAdminVal) {
+        params.assignedTo = currentUser?.nik;
+      } else if (k3PicFilter && k3PicFilter !== 'all') {
+        params.assignedTo = k3PicFilter;
+      }
+
+      const [data, uMap] = await Promise.all([
+        fetchInspeksiSchedules(params),
+        fetchInspeksiUsersMap(),
+      ]);
+      setK3Schedules(Array.isArray(data) ? data : []);
+      setK3UsersMap(uMap);
+    } catch (e) {
+      toast.error('Gagal memuat jadwal inspeksi K3: ' + e.message);
+    } finally {
+      setK3Loading(false);
+    }
+  }, [k3PicFilter, currentUser?.nik, isHseMemberVal, isKadivVal, isAdminVal]);
+
+  // ── Memoized K3 calculations ──
+  const k3Stats = useMemo(() => {
+    return {
+      total: k3Schedules.length,
+      scheduled: k3Schedules.filter(s => s.status === 'scheduled').length,
+      inProgress: k3Schedules.filter(s => s.status === 'in_progress').length,
+      completed: k3Schedules.filter(s => s.status === 'completed').length,
+    };
+  }, [k3Schedules]);
+
+  const filteredK3Schedules = useMemo(() => {
+    return k3Schedules.filter(s => {
+      if (k3StatusFilter !== 'semua' && s.status !== k3StatusFilter) return false;
+      if (k3SearchQuery) {
+        const q = k3SearchQuery.toLowerCase();
+        const picName = k3UsersMap[String(s.assignedTo)] || s.assignedTo || '';
+        return (
+          s.title?.toLowerCase().includes(q) ||
+          s.nomorPoJo?.toLowerCase().includes(q) ||
+          s.location?.toLowerCase().includes(q) ||
+          picName.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [k3Schedules, k3StatusFilter, k3SearchQuery, k3UsersMap]);
+
+  const openK3Detail = (schedule) => {
+    setK3DetailSchedule(schedule);
+    setK3DetailOpen(true);
+  };
+
+  const openK3Execution = (schedule) => {
+    setExecSchedule(schedule);
+    setK3ExecutionOpen(true);
+  };
+
+  const handleK3Delete = async (schedule) => {
+    if (!isAdminVal) {
+      toast.error("Hanya administrator yang dapat menghapus jadwal inspeksi.");
+      return;
+    }
+
+    try {
+      await deleteInspeksiSchedule(schedule.id);
+      toast.success(`Jadwal "${schedule.title}" berhasil dihapus.`);
+      setK3Schedules((prev) => prev.filter((s) => s.id !== schedule.id));
+    } catch (e) {
+      toast.error(`Gagal menghapus jadwal (ID: ${schedule?.id}): ` + e.message);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === "inspeksi-k3") {
+      loadK3Schedules();
+    }
+  }, [tab, loadK3Schedules]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab");
+      if (urlTab) {
+        setTab(urlTab);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     loadReports();
@@ -910,7 +1049,7 @@ export default function HseDashboardPage() {
 
       {/* Tabs Switcher */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-xl sm:rounded-2xl w-full sm:w-fit overflow-x-auto">
-        {TABS.map((t) => {
+        {dynamicTabs.map((t) => {
           const Icon = t.icon;
           const isActive = tab === t.key;
           return (
@@ -1210,6 +1349,255 @@ export default function HseDashboardPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {tab === "inspeksi-k3" && showInspeksiTab && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          
+          {/* 1. Summary Statistics Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { label: "Total SPK K3", value: k3Stats.total, icon: ClipboardList, color: "border-slate-100 text-slate-700 bg-gradient-to-br from-slate-50 to-slate-100/50" },
+              { label: "Terjadwal", value: k3Stats.scheduled, icon: Clock, color: "border-amber-100 text-amber-700 bg-gradient-to-br from-amber-50 to-amber-100/30" },
+              { label: "Sedang Berjalan", value: k3Stats.inProgress, icon: Activity, color: "border-blue-100 text-blue-700 bg-gradient-to-br from-blue-50 to-blue-100/30" },
+              { label: "Selesai", value: k3Stats.completed, icon: CheckCircle2, color: "border-emerald-100 text-emerald-700 bg-gradient-to-br from-emerald-50 to-emerald-100/30" }
+            ].map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div key={stat.label} className={cn("p-4 sm:p-5 rounded-2xl border bg-white shadow-sm flex items-center gap-4 transition-all duration-300 hover:shadow-md", stat.color)}>
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-white shadow-sm shrink-0">
+                    <Icon size={20} className="stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] sm:text-xs font-black uppercase tracking-wider opacity-85">{stat.label}</p>
+                    <p className="text-xl sm:text-2xl font-black mt-0.5">{stat.value}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 2. Custom Filter Controls & Search */}
+          <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between bg-white p-5 rounded-2xl border border-slate-100 shadow-md shadow-slate-100/40">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Input
+                placeholder="Cari objek, nomor SPK, lokasi, PIC..."
+                value={k3SearchQuery}
+                onChange={(e) => setK3SearchQuery(e.target.value)}
+                className="pl-11 h-11 rounded-xl border-slate-200 bg-slate-50/50 text-sm focus-visible:ring-rose-500/20 focus-visible:border-rose-500"
+              />
+            </div>
+
+            {/* Custom Segmented Buttons for Status */}
+            <div className="flex flex-wrap gap-1 items-center bg-slate-50 border border-slate-100 p-1.5 rounded-xl w-full xl:w-auto">
+              {[
+                { key: 'semua', label: 'Semua Status' },
+                { key: 'scheduled', label: 'Terjadwal' },
+                { key: 'in_progress', label: 'Berjalan' },
+                { key: 'completed', label: 'Selesai' },
+              ].map(btn => (
+                <button
+                  key={btn.key}
+                  type="button"
+                  onClick={() => setK3StatusFilter(btn.key)}
+                  className={cn(
+                    "px-4 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex-1 xl:flex-initial text-center",
+                    k3StatusFilter === btn.key 
+                      ? "bg-rose-600 text-white shadow-md shadow-rose-100" 
+                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50"
+                  )}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Penanggung Jawab & Action widgets */}
+            <div className="flex items-center gap-2.5 flex-wrap justify-end">
+              {(isAdminVal || isKadivVal) && (
+                <div className="w-52">
+                  <Select value={k3PicFilter} onValueChange={setK3PicFilter}>
+                    <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50/50 text-xs font-bold text-slate-700">
+                      <SelectValue placeholder="Pilih Penanggung Jawab" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl shadow-xl border-slate-200 max-h-60 overflow-y-auto">
+                      <SelectItem value="all" className="text-xs font-semibold">Semua Penanggung Jawab</SelectItem>
+                      {staffList.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.nik || staff.id} className="text-xs font-semibold">
+                          {staff.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {(isAdminVal || isKadivVal) && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setK3CreateOpen(true)}
+                  className="bg-[#0a2540] hover:bg-[#0d3152] text-white h-11 rounded-xl px-5 text-xs font-extrabold shadow-md shadow-slate-100"
+                >
+                  <Plus size={14} className="mr-1.5 stroke-[3]" /> Buat SPK K3
+                </Button>
+              )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadK3Schedules}
+                disabled={k3Loading}
+                className="h-11 w-11 rounded-xl border-slate-200 bg-white hover:bg-slate-50"
+              >
+                <RefreshCw size={14} className={cn(k3Loading && "animate-spin")} />
+              </Button>
+            </div>
+          </div>
+
+          {/* 3. Schedules Cards Grid */}
+          {k3Loading ? (
+            <div className="py-24 flex flex-col items-center justify-center gap-4 text-slate-400">
+              <Loader2 size={36} className="animate-spin text-rose-600" />
+              <p className="text-sm font-bold text-slate-500">Memuat data jadwal inspeksi K3...</p>
+            </div>
+          ) : filteredK3Schedules.length === 0 ? (
+            <div className="bg-white py-24 rounded-3xl border border-dashed border-slate-200 flex flex-col items-center justify-center text-center px-6 shadow-sm">
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-5 border border-slate-100">
+                <ClipboardList size={28} className="text-slate-400" />
+              </div>
+              <h3 className="text-lg font-black text-slate-800 mb-1.5">Jadwal Tidak Ditemukan</h3>
+              <p className="text-slate-500 max-w-sm text-xs leading-relaxed font-medium">
+                Belum ada data jadwal inspeksi K3 yang ditemukan untuk filter ini atau ditugaskan kepada Anda.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredK3Schedules.map((s) => {
+                const isExecutor = (isHseMemberVal && !isKadivVal) || isAdminVal;
+                const picName = k3UsersMap[String(s.assignedTo)] || s.assignedTo || '—';
+                
+                // Color configuration based on status for premium aesthetics
+                const statusMeta = s.status === 'completed' 
+                  ? { label: 'Selesai', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', strip: 'bg-emerald-500' }
+                  : s.status === 'in_progress'
+                  ? { label: 'Berjalan', color: 'bg-blue-50 text-blue-700 border-blue-100', strip: 'bg-blue-500' }
+                  : s.status === 'cancelled'
+                  ? { label: 'Batal', color: 'bg-slate-100 text-slate-500 border-slate-200', strip: 'bg-slate-400' }
+                  : { label: 'Terjadwal', color: 'bg-amber-50 text-amber-700 border-amber-100', strip: 'bg-amber-500' };
+
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => openK3Detail(s)}
+                    className="group relative bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-rose-100/80 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+                  >
+                    {/* Status Color Strip on Top */}
+                    <div className={cn("absolute top-0 left-0 right-0 h-1.5 rounded-t-2xl transition-all duration-300 group-hover:h-2", statusMeta.strip)} />
+
+                    <div className="space-y-4">
+                      {/* Header */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <span className="font-mono text-xs font-extrabold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                          {s.nomorPoJo || `#${s.id}`}
+                        </span>
+                        <span className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border", statusMeta.color)}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                          {statusMeta.label}
+                        </span>
+                      </div>
+
+                      {/* Body */}
+                      <div className="space-y-2">
+                        <h4 className="font-extrabold text-slate-800 text-lg leading-snug group-hover:text-rose-600 transition-colors line-clamp-2">
+                          {s.title}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+                          <MapPin size={13} className="shrink-0 text-rose-500/80" />
+                          <span className="truncate">{s.location || '—'}</span>
+                        </div>
+                      </div>
+
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 text-xs">
+                        <div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tanggal Mulai</p>
+                          <div className="flex items-center gap-2 mt-1.5 font-bold text-slate-700">
+                            <Calendar size={13} className="text-slate-400 shrink-0" />
+                            <span>{s.scheduledDate ? String(s.scheduledDate).slice(0, 10) : '—'}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Penanggung Jawab</p>
+                          <div className="flex items-center gap-2 mt-1.5 font-bold text-slate-700">
+                            <User size={13} className="text-slate-400 shrink-0" />
+                            <span className="truncate">{picName}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-3" onClick={e => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 text-xs font-extrabold text-slate-600 hover:bg-slate-50 hover:text-slate-900 gap-1.5 px-3 rounded-xl border border-slate-100"
+                        onClick={() => openK3Detail(s)}
+                      >
+                        <Eye size={13} className="stroke-[2.5]" /> Detail
+                      </Button>
+
+                      {isExecutor && ['scheduled', 'in_progress'].includes(s.status) ? (
+                        <Button
+                          size="sm"
+                          className="h-9 text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white gap-1.5 px-4 shadow-md shadow-rose-100 rounded-xl"
+                          onClick={() => openK3Execution(s)}
+                        >
+                          <ClipboardList size={13} className="stroke-[2.5]" /> Laksanakan
+                        </Button>
+                      ) : s.status === 'completed' ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100/50">
+                          <CheckCircle2 size={13} className="stroke-[2.5]" /> Laporan Terisi
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          
+          {/* ── isolated K3 Inspeksi Popups ── */}
+          <HseInspeksiDetailModal
+            schedule={k3DetailSchedule}
+            open={k3DetailOpen}
+            usersMap={k3UsersMap}
+            onChanged={() => {
+              loadK3Schedules();
+            }}
+            onExecute={openK3Execution}
+            onClose={() => { setK3DetailOpen(false); setK3DetailSchedule(null); }}
+          />
+
+          <HseInspeksiExecutionModal
+            schedule={k3ExecSchedule}
+            open={k3ExecutionOpen}
+            onClose={() => { setK3ExecutionOpen(false); setExecSchedule(null); }}
+            onSaved={() => {
+              loadK3Schedules();
+            }}
+          />
+
+          <InspeksiScheduleFormDialog
+            open={k3CreateOpen}
+            onOpenChange={setK3CreateOpen}
+            onSaved={loadK3Schedules}
+            defaultType="k3"
+          />
         </div>
       )}
 
