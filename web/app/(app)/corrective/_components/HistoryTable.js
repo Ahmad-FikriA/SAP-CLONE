@@ -25,6 +25,8 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
     else setSelectedExportIds((selectedExportIds || []).filter((id) => id !== orderNumber));
   };
 
+  const totalCols = isExportMode ? 7 : 6;
+
   return (
     <Table>
       <TableHeader className="bg-slate-50/80">
@@ -46,6 +48,7 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
           )}
           <TableHead>Order Number</TableHead>
           <TableHead>Equipment</TableHead>
+          <TableHead>Work Start</TableHead>
           <TableHead>Status Sistem</TableHead>
           <TableHead>Status SAP</TableHead>
           <TableHead className="text-right">Aksi</TableHead>
@@ -53,10 +56,10 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
       </TableHeader>
       <TableBody>
         {loading ? (
-          <SkeletonRows cols={5} rows={5} />
+          <SkeletonRows cols={totalCols} rows={5} />
         ) : history.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={5} className="h-48 text-center">
+            <TableCell colSpan={totalCols} className="h-48 text-center">
               <EmptyState icon={CheckCircle2} text="Belum ada riwayat SPK" />
             </TableCell>
           </TableRow>
@@ -90,6 +93,9 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
                 </TableCell>
                 <TableCell className="text-slate-600 truncate max-w-[200px]" title={equipmentDisplayName}>
                   {equipmentDisplayName || "—"}
+                </TableCell>
+                <TableCell className="text-slate-600 font-medium text-xs">
+                  {spk.work_start ? fmtDate(spk.work_start) : "—"}
                 </TableCell>
               <TableCell>
                 <CorrectiveStatusBadge
