@@ -148,7 +148,7 @@ function parseNilaiPekerjaan(value) {
  *
  * @param {number|number[]|null} jobIds - Jika diisi, hanya hitung job tersebut.
  */
-async function recalculateViolationFlags(jobIds = null) {
+async function recalculateViolationFlags(jobIds = null, { transaction = null } = {}) {
   const where = {};
   const normalizedJobIds = Array.isArray(jobIds)
     ? jobIds.map((id) => parseInt(id, 10)).filter(Number.isFinite)
@@ -168,6 +168,7 @@ async function recalculateViolationFlags(jobIds = null) {
       ["visitDate", "ASC"],
       ["id", "ASC"],
     ],
+    transaction,
   });
 
   const streaks = new Map();
@@ -200,13 +201,13 @@ async function recalculateViolationFlags(jobIds = null) {
   if (toViolation.length > 0) {
     await SupervisiVisit.update(
       { isPelanggaran: true },
-      { where: { id: { [Op.in]: toViolation } } },
+      { where: { id: { [Op.in]: toViolation } }, transaction },
     );
   }
   if (toNonViolation.length > 0) {
     await SupervisiVisit.update(
       { isPelanggaran: false },
-      { where: { id: { [Op.in]: toNonViolation } } },
+      { where: { id: { [Op.in]: toNonViolation } }, transaction },
     );
   }
 }
@@ -229,14 +230,16 @@ async function convertStaleDrafts(jobId = null) {
   };
   if (jobId) where.jobId = parseInt(jobId);
   try {
-    const [count] = await SupervisiVisit.update(
-      { isDraft: false, status: "tidak_hadir", isPelanggaran: false },
-      { where }
-    );
-    if (count > 0) {
-      console.log(`[Supervisi] convertStaleDrafts: ${count} draft kedaluwarsa dikonversi ke tidak_hadir.`);
-      await recalculateViolationFlags(jobId);
-    }
+    await SupervisiVisit.sequelize.transaction(async (t) => {
+      const [count] = await SupervisiVisit.update(
+        { isDraft: false, status: "tidak_hadir", isPelanggaran: false },
+        { where, transaction: t }
+      );
+      if (count > 0) {
+        console.log(`[Supervisi] convertStaleDrafts: ${count} draft kedaluwarsa dikonversi ke tidak_hadir.`);
+        await recalculateViolationFlags(jobId, { transaction: t });
+      }
+    });
   } catch (err) {
     console.error("[Supervisi] convertStaleDrafts error:", err.message);
   }
@@ -1039,55 +1042,59 @@ async function submitVisit(req, res) {
     await convertStaleDrafts(parseInt(jobId));
     await clearExpiredRadiusExemptions(parseInt(jobId));
 
-    const [visit, created] = await SupervisiVisit.findOrCreate({
-      where: queryWhere,
-      defaults: {
-        status,
-        keterangan: status === "hadir" ? (keterangan || null) : null,
-        alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
-        photos: photoPaths,
-        documents: documentPaths,
-        submittedBy: req.user.nik,
-        submittedAt: new Date(),
-        isPelanggaran: false,
-        visitLatitude: hasVisitCoordinates ? vLat : null,
-        visitLongitude: hasVisitCoordinates ? vLon : null,
-        locationId: normalizedLocationId,
-        jarakDariPusat: jarakDariPusat,
-        isDraft: isDraftBool,
-      },
-    });
-
-    if (!created) {
-      // Tentukan basis foto/dokumen:
-      // - Frontend kirim existingPhotos → pakai itu (user sudah filter mana yang mau disimpan)
-      // - Frontend tidak kirim → pakai semua foto lama dari server (backward compat)
-      const basePhotos = sentExistingPhotos ? existingPhotoUrls : (visit.photos || []);
-      const baseDocs   = sentExistingDocs   ? existingDocUrls   : (visit.documents || []);
-
-      // Update existing visit (draft → final, atau re-submit hari yang sama)
-      await visit.update({
-        status,
-        keterangan: status === "hadir" ? (keterangan || null) : null,
-        alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
-        // Gabungkan: foto yang tersisa dari draft + foto baru yang diupload
-        photos: [...basePhotos, ...photoPaths],
-        // Dokumen: gabungkan yang tersisa + baru
-        documents: [...baseDocs, ...documentPaths],
-        submittedBy: req.user.nik,
-        submittedAt: new Date(),
-        isPelanggaran: false,
-        visitLatitude: hasVisitCoordinates ? vLat : visit.visitLatitude,
-        visitLongitude: hasVisitCoordinates ? vLon : visit.visitLongitude,
-        locationId: normalizedLocationId,
-        jarakDariPusat: jarakDariPusat !== null ? jarakDariPusat : visit.jarakDariPusat,
-        isDraft: isDraftBool,
+    let visit;
+    let created;
+    await SupervisiVisit.sequelize.transaction(async (t) => {
+      [visit, created] = await SupervisiVisit.findOrCreate({
+        where: queryWhere,
+        defaults: {
+          status,
+          keterangan: status === "hadir" ? (keterangan || null) : null,
+          alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
+          photos: photoPaths,
+          documents: documentPaths,
+          submittedBy: req.user.nik,
+          submittedAt: new Date(),
+          isPelanggaran: false,
+          visitLatitude: hasVisitCoordinates ? vLat : null,
+          visitLongitude: hasVisitCoordinates ? vLon : null,
+          locationId: normalizedLocationId,
+          jarakDariPusat: jarakDariPusat,
+          isDraft: isDraftBool,
+        },
+        transaction: t,
       });
-    }
 
+      if (!created) {
+        // Tentukan basis foto/dokumen:
+        // - Frontend kirim existingPhotos → pakai itu (user sudah filter mana yang mau disimpan)
+        // - Frontend tidak kirim → pakai semua foto lama dari server (backward compat)
+        const basePhotos = sentExistingPhotos ? existingPhotoUrls : (visit.photos || []);
+        const baseDocs   = sentExistingDocs   ? existingDocUrls   : (visit.documents || []);
 
-    await recalculateViolationFlags(parseInt(jobId));
-    await visit.reload();
+        // Update existing visit (draft → final, atau re-submit hari yang sama)
+        await visit.update({
+          status,
+          keterangan: status === "hadir" ? (keterangan || null) : null,
+          alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
+          // Gabungkan: foto yang tersisa dari draft + foto baru yang diupload
+          photos: [...basePhotos, ...photoPaths],
+          // Dokumen: gabungkan yang tersisa + baru
+          documents: [...baseDocs, ...documentPaths],
+          submittedBy: req.user.nik,
+          submittedAt: new Date(),
+          isPelanggaran: false,
+          visitLatitude: hasVisitCoordinates ? vLat : visit.visitLatitude,
+          visitLongitude: hasVisitCoordinates ? vLon : visit.visitLongitude,
+          locationId: normalizedLocationId,
+          jarakDariPusat: jarakDariPusat !== null ? jarakDariPusat : visit.jarakDariPusat,
+          isDraft: isDraftBool,
+        }, { transaction: t });
+      }
+
+      await recalculateViolationFlags(parseInt(jobId), { transaction: t });
+      await visit.reload({ transaction: t });
+    });
 
     const executorName =
       normalizeNullableString(req.user && req.user.name) ||
@@ -1514,9 +1521,11 @@ async function undoVisit(req, res) {
       });
     }
 
-    await visit.update({ isDraft: true, isPelanggaran: false });
-    await recalculateViolationFlags(visit.jobId);
-    await visit.reload({ include: [{ model: SupervisiJob, as: "job" }] });
+    await SupervisiVisit.sequelize.transaction(async (t) => {
+      await visit.update({ isDraft: true, isPelanggaran: false }, { transaction: t });
+      await recalculateViolationFlags(visit.jobId, { transaction: t });
+      await visit.reload({ include: [{ model: SupervisiJob, as: "job" }], transaction: t });
+    });
 
     const executorName =
       normalizeNullableString(req.user && req.user.name) ||
