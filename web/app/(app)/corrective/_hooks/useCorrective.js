@@ -178,6 +178,27 @@ export function useCorrective() {
     const resData = await apiUpload("/corrective/sap-spk/upload-history", formData);
     if (resData.status === "success") {
       toast.success(resData.message);
+
+      // Show warning for skipped rows (active status in system)
+      if (resData.data?.skipped > 0) {
+        const details = resData.data.skippedDetail || [];
+        const STATUS_LABELS = {
+          baru_import: "Tugas Baru",
+          eksekusi: "Eksekusi",
+          menunggu_review_kadis_pp: "Review Kadis PP",
+          menunggu_review_kadis_pelapor: "Review Kadis Pelapor",
+          ditolak: "Ditolak",
+        };
+        const list = details
+          .slice(0, 5)
+          .map((d) => `• ${d.order_number} (${STATUS_LABELS[d.current_status] || d.current_status})`)
+          .join("\n");
+        const extra = details.length > 5 ? `\n...dan ${details.length - 5} lainnya` : "";
+        toast.warning(`${resData.data.skipped} SPK dilewati karena masih aktif:\n${list}${extra}`, {
+          duration: 10000,
+        });
+      }
+
       await loadAll();
       return resData.data;
     }
