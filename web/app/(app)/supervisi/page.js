@@ -1363,7 +1363,7 @@ export default function SupervisiPage() {
             { label: 'Selesai',    value: stats.completed,icon: CheckCircle2, color: 'bg-green-50 text-green-600',   textColor: 'text-green-700'  },
             { label: 'Draft',      value: stats.draft,    icon: FileEdit,     color: 'bg-blue-50 text-blue-600',     textColor: 'text-blue-700'   },
             { label: 'Dibatalkan', value: stats.cancelled,icon: XCircle,      color: 'bg-red-50 text-red-600',       textColor: 'text-red-700'    },
-            { label: 'Pelanggaran 3x', value: stats.pelanggaran, icon: AlertTriangle, color: 'bg-rose-50 text-rose-600', textColor: 'text-rose-700' },
+            { label: 'Pelanggaran', value: stats.pelanggaran, icon: AlertTriangle, color: 'bg-rose-50 text-rose-600', textColor: 'text-rose-700' },
           ].map(({ label, value, icon: Icon, color, textColor }) => (
             <div key={label} className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center gap-3 min-w-0">
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${color}`}>

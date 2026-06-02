@@ -164,7 +164,7 @@ export function WidgetSupervisi() {
             <SummaryBox icon={Briefcase} label="JO Aktif" value={data.active.length} className="bg-emerald-50 text-emerald-700 border-emerald-100" />
             <SummaryBox icon={CheckCircle2} label="Selesai" value={data.completed.length} className="bg-blue-50 text-blue-700 border-blue-100" />
             <SummaryBox icon={FileEdit} label="Draft" value={data.draft.length} className="bg-slate-50 text-slate-700 border-slate-100" />
-            <SummaryBox icon={AlertTriangle} label="Pelanggaran 3x" value={data.violations} className="bg-rose-50 text-rose-700 border-rose-100" />
+            <SummaryBox icon={AlertTriangle} label="Pelanggaran" value={data.violations} className="bg-rose-50 text-rose-700 border-rose-100" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
