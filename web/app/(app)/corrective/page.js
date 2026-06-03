@@ -25,7 +25,11 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { canCreate, canDelete, getUser } from "@/lib/auth";
@@ -74,7 +78,8 @@ export default function CorrectivePage() {
   const isKadisPp =
     isMounted &&
     (user?.role === "admin" ||
-      (user?.role === "kadis" && user?.dinas?.toLowerCase().includes("pusat perawatan")));
+      (user?.role === "kadis" &&
+        user?.dinas?.toLowerCase().includes("pusat perawatan")));
 
   const data = useCorrective();
   const {
@@ -117,7 +122,7 @@ export default function CorrectivePage() {
   const isKadisNonPp =
     isMounted &&
     user?.role === "kadis" &&
-    !(user?.dinas?.toLowerCase().includes("pusat perawatan"));
+    !user?.dinas?.toLowerCase().includes("pusat perawatan");
 
   const spks = isKadisNonPp
     ? rawSpks.filter((s) => s.notification?.kadisPelaporId === user.id)
@@ -128,25 +133,38 @@ export default function CorrectivePage() {
       : rawHistory;
 
     if (exportStartDate) {
-      result = result.filter(h => {
-        const d = h.created_at ? h.created_at.slice(0, 10) : "";
+      result = result.filter((h) => {
+        const d = h.work_start ? h.work_start.slice(0, 10) : "";
         return d && d >= exportStartDate;
       });
     }
     if (exportEndDate) {
-      result = result.filter(h => {
-        const d = h.created_at ? h.created_at.slice(0, 10) : "";
+      result = result.filter((h) => {
+        const d = h.work_start ? h.work_start.slice(0, 10) : "";
         return d && d <= exportEndDate;
       });
     }
-    return result;
+
+    // Sort: newest first (created_at DESC, then order_number DESC)
+    return [...result].sort((a, b) => {
+      const dateA = a.created_at || "";
+      const dateB = b.created_at || "";
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA);
+      }
+      return b.order_number.localeCompare(a.order_number);
+    });
   }, [rawHistory, exportStartDate, exportEndDate, isKadisNonPp, user?.id]);
 
   const [filterWorkCenter, setFilterWorkCenter] = useState("");
 
   // Apply work center filter on SPKs
   const filteredSpks = filterWorkCenter
-    ? spks.filter((s) => (s.work_center || "").toLowerCase().startsWith(filterWorkCenter.toLowerCase()))
+    ? spks.filter((s) =>
+        (s.work_center || "")
+          .toLowerCase()
+          .startsWith(filterWorkCenter.toLowerCase()),
+      )
     : spks;
 
   const [tab, setTab] = useState("requests");
@@ -157,11 +175,13 @@ export default function CorrectivePage() {
   const [histPage, setHistPage] = useState(1);
 
   // Reset page when filters/tab change
-  useEffect(() => { setSpkPage(1); }, [filterWorkCenter, filterSpkStatus]);
-  useEffect(() => { 
-    setReqPage(1); 
-    setSpkPage(1); 
-    setHistPage(1); 
+  useEffect(() => {
+    setSpkPage(1);
+  }, [filterWorkCenter, filterSpkStatus]);
+  useEffect(() => {
+    setReqPage(1);
+    setSpkPage(1);
+    setHistPage(1);
 
     // Reset export mode if navigating away
     setIsExportMode(false);
@@ -178,11 +198,14 @@ export default function CorrectivePage() {
   // Detail dialogs
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [selectedSpk, setSelectedSpk] = useState(null);
+  const [openSpkInEditMode, setOpenSpkInEditMode] = useState(false);
 
   // Sync selected dialog states when data changes (e.g., after save)
   useEffect(() => {
     if (selectedSpk) {
-      const updated = spks.find(s => s.order_number === selectedSpk.order_number);
+      const updated = spks.find(
+        (s) => s.order_number === selectedSpk.order_number,
+      );
       if (updated && JSON.stringify(updated) !== JSON.stringify(selectedSpk)) {
         setSelectedSpk(updated);
       }
@@ -191,8 +214,11 @@ export default function CorrectivePage() {
 
   useEffect(() => {
     if (selectedRequest) {
-      const updated = requests.find(r => r.id === selectedRequest.id);
-      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedRequest)) {
+      const updated = requests.find((r) => r.id === selectedRequest.id);
+      if (
+        updated &&
+        JSON.stringify(updated) !== JSON.stringify(selectedRequest)
+      ) {
         setSelectedRequest(updated);
       }
     }
@@ -570,7 +596,9 @@ export default function CorrectivePage() {
                 <option value="">Semua Status SPK</option>
                 <option value="baru_import">Tugas Baru</option>
                 <option value="eksekusi">Eksekusi</option>
-                <option value="menunggu_review_kadis_pp">Review Kadis PP</option>
+                <option value="menunggu_review_kadis_pp">
+                  Review Kadis PP
+                </option>
                 <option value="menunggu_review_kadis_pelapor">
                   Review Pelapor
                 </option>
@@ -586,17 +614,31 @@ export default function CorrectivePage() {
                       className={cn(
                         buttonVariants({ variant: "outline" }),
                         "w-[140px] justify-start text-left font-normal bg-white h-10",
-                        !exportStartDate && "text-slate-500"
+                        !exportStartDate && "text-slate-500",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {exportStartDate ? format(new Date(exportStartDate), "dd MMM yyyy", { locale: idLocale }) : <span>Tgl Mulai</span>}
+                      {exportStartDate ? (
+                        format(new Date(exportStartDate), "dd MMM yyyy", {
+                          locale: idLocale,
+                        })
+                      ) : (
+                        <span>Tgl Mulai</span>
+                      )}
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={exportStartDate ? new Date(exportStartDate) : undefined}
-                        onSelect={(date) => setExportStartDate(date ? format(date, "yyyy-MM-dd") : "")}
+                        selected={
+                          exportStartDate
+                            ? new Date(exportStartDate)
+                            : undefined
+                        }
+                        onSelect={(date) =>
+                          setExportStartDate(
+                            date ? format(date, "yyyy-MM-dd") : "",
+                          )
+                        }
                         initialFocus
                       />
                     </PopoverContent>
@@ -607,17 +649,29 @@ export default function CorrectivePage() {
                       className={cn(
                         buttonVariants({ variant: "outline" }),
                         "w-[140px] justify-start text-left font-normal bg-white h-10",
-                        !exportEndDate && "text-slate-500"
+                        !exportEndDate && "text-slate-500",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {exportEndDate ? format(new Date(exportEndDate), "dd MMM yyyy", { locale: idLocale }) : <span>Tgl Akhir</span>}
+                      {exportEndDate ? (
+                        format(new Date(exportEndDate), "dd MMM yyyy", {
+                          locale: idLocale,
+                        })
+                      ) : (
+                        <span>Tgl Akhir</span>
+                      )}
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={exportEndDate ? new Date(exportEndDate) : undefined}
-                        onSelect={(date) => setExportEndDate(date ? format(date, "yyyy-MM-dd") : "")}
+                        selected={
+                          exportEndDate ? new Date(exportEndDate) : undefined
+                        }
+                        onSelect={(date) =>
+                          setExportEndDate(
+                            date ? format(date, "yyyy-MM-dd") : "",
+                          )
+                        }
                         initialFocus
                       />
                     </PopoverContent>
@@ -639,9 +693,9 @@ export default function CorrectivePage() {
                     variant="outline"
                     className={cn(
                       "shadow-md border-green-200 text-green-700 transition-all",
-                      selectedExportIds.length === 0 
-                        ? "opacity-50 cursor-not-allowed bg-slate-50" 
-                        : "bg-white hover:bg-green-50"
+                      selectedExportIds.length === 0
+                        ? "opacity-50 cursor-not-allowed bg-slate-50"
+                        : "bg-white hover:bg-green-50",
                     )}
                     disabled={exportingExcel}
                     onClick={async () => {
@@ -665,7 +719,8 @@ export default function CorrectivePage() {
                       }
                     }}
                   >
-                    <Download size={16} className="mr-2" /> {exportingExcel ? "Mengekspor..." : "Export Excel"}
+                    <Download size={16} className="mr-2" />{" "}
+                    {exportingExcel ? "Mengekspor..." : "Export Excel"}
                   </Button>
                 </>
               ) : (
@@ -685,7 +740,7 @@ export default function CorrectivePage() {
                       disabled={uploading}
                     >
                       <Upload size={16} className="mr-2" />
-                      {uploading ? "Mengunggah..." : "Import History TECO"}
+                      {uploading ? "Mengunggah..." : "Import History"}
                     </Button>
                   )}
                   <Button
@@ -717,7 +772,12 @@ export default function CorrectivePage() {
               onEditSapNumber={triggerEditSapNumber}
               onDeleteRequest={handleDeleteRequest}
             />
-            <PaginationControls page={reqPag.safePage} totalPages={reqPag.totalPages} totalItems={reqPag.totalItems} onPageChange={setReqPage} />
+            <PaginationControls
+              page={reqPag.safePage}
+              totalPages={reqPag.totalPages}
+              totalItems={reqPag.totalItems}
+              onPageChange={setReqPage}
+            />
           </>
         )}
         {tab === "spk" && (
@@ -731,14 +791,27 @@ export default function CorrectivePage() {
               userId={user?.id}
               userNik={user?.nik}
               userRole={user?.role}
-              onSelectSpk={setSelectedSpk}
+              onSelectSpk={(spk) => {
+                setOpenSpkInEditMode(false);
+                setSelectedSpk(spk);
+              }}
               onApproveKadisPp={triggerApproveKadisPp}
               onRejectKadisPp={triggerRejectKadisPp}
               onApproveKadisPelapor={triggerApproveKadisPelapor}
               onRejectKadisPelapor={triggerRejectKadisPelapor}
               onDeleteSpk={handleDeleteSpk}
+              isPlanner={isPlanner}
+              onEditSpk={(spk) => {
+                setOpenSpkInEditMode(true);
+                setSelectedSpk(spk);
+              }}
             />
-            <PaginationControls page={spkPag.safePage} totalPages={spkPag.totalPages} totalItems={spkPag.totalItems} onPageChange={setSpkPage} />
+            <PaginationControls
+              page={spkPag.safePage}
+              totalPages={spkPag.totalPages}
+              totalItems={spkPag.totalItems}
+              onPageChange={setSpkPage}
+            />
           </>
         )}
         {tab === "history" && (
@@ -748,14 +821,27 @@ export default function CorrectivePage() {
               history={histPag.paginatedItems}
               fullHistory={history}
               equipment={equipment}
-              onSelectSpk={setSelectedSpk}
+              onSelectSpk={(spk) => {
+                setOpenSpkInEditMode(false);
+                setSelectedSpk(spk);
+              }}
               onDeleteSpk={handleDeleteSpk}
               isExportMode={isExportMode}
               selectedExportIds={selectedExportIds}
               setSelectedExportIds={setSelectedExportIds}
               highlightCheckboxes={highlightCheckboxes}
+              isPlanner={isPlanner}
+              onEditSpk={(spk) => {
+                setOpenSpkInEditMode(true);
+                setSelectedSpk(spk);
+              }}
             />
-            <PaginationControls page={histPag.safePage} totalPages={histPag.totalPages} totalItems={histPag.totalItems} onPageChange={setHistPage} />
+            <PaginationControls
+              page={histPag.safePage}
+              totalPages={histPag.totalPages}
+              totalItems={histPag.totalItems}
+              onPageChange={setHistPage}
+            />
           </>
         )}
       </div>
@@ -795,6 +881,7 @@ export default function CorrectivePage() {
         onSearchMaterials={searchMaterials}
         onAddMaterial={addMaterialToSpkAction}
         onRemoveMaterial={removeMaterialFromSpkAction}
+        initialEditMode={openSpkInEditMode}
       />
 
       <ExcelPreviewDialog

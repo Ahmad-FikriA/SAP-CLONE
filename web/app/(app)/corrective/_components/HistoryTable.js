@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
-import { CheckCircle2, Trash2 } from "lucide-react";
+import { CheckCircle2, Trash2, Pencil } from "lucide-react";
 import { canDelete } from "@/lib/auth";
 import { SAP_STATUS_COLORS, SAP_STATUS_LABELS } from "./constants";
 import { CorrectiveStatusBadge, EmptyState, fmtDate, SkeletonRows } from "./ui-primitives";
 import { cn } from "@/lib/utils";
 
-export function HistoryTable({ loading, history, fullHistory, equipment = [], onSelectSpk, onDeleteSpk, isExportMode, selectedExportIds, setSelectedExportIds, highlightCheckboxes }) {
+export function HistoryTable({ loading, history, fullHistory, equipment = [], onSelectSpk, onDeleteSpk, isExportMode, selectedExportIds, setSelectedExportIds, highlightCheckboxes, isPlanner, onEditSpk }) {
   const datasetToSelect = fullHistory || history;
   const allSelected = datasetToSelect.length > 0 && selectedExportIds?.length === datasetToSelect.length;
 
@@ -24,6 +24,8 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
     if (e.target.checked) setSelectedExportIds([...(selectedExportIds || []), orderNumber]);
     else setSelectedExportIds((selectedExportIds || []).filter((id) => id !== orderNumber));
   };
+
+  const totalCols = isExportMode ? 7 : 6;
 
   return (
     <Table>
@@ -46,6 +48,7 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
           )}
           <TableHead>Order Number</TableHead>
           <TableHead>Equipment</TableHead>
+          <TableHead>Work Start</TableHead>
           <TableHead>Status Sistem</TableHead>
           <TableHead>Status SAP</TableHead>
           <TableHead className="text-right">Aksi</TableHead>
@@ -53,10 +56,10 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
       </TableHeader>
       <TableBody>
         {loading ? (
-          <SkeletonRows cols={5} rows={5} />
+          <SkeletonRows cols={totalCols} rows={5} />
         ) : history.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={5} className="h-48 text-center">
+            <TableCell colSpan={totalCols} className="h-48 text-center">
               <EmptyState icon={CheckCircle2} text="Belum ada riwayat SPK" />
             </TableCell>
           </TableRow>
@@ -91,6 +94,9 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
                 <TableCell className="text-slate-600 truncate max-w-[200px]" title={equipmentDisplayName}>
                   {equipmentDisplayName || "—"}
                 </TableCell>
+                <TableCell className="text-slate-600 font-medium text-xs">
+                  {spk.work_start ? fmtDate(spk.work_start) : "—"}
+                </TableCell>
               <TableCell>
                 <CorrectiveStatusBadge
                   value={spk.status}
@@ -110,6 +116,17 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex justify-end items-center gap-1">
+                  {isPlanner && !spk.sys_status?.toUpperCase().includes("TECO") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shadow-sm"
+                      onClick={() => onEditSpk(spk)}
+                    >
+                      <Pencil size={14} className="mr-1.5" />
+                      Edit
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"

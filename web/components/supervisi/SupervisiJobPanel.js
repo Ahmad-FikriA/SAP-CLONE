@@ -392,7 +392,7 @@ export function SupervisiJobPanel({ job, onClose }) {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <StatBox icon={<CheckCircle2 size={16} />} label="Hadir"       value={hadirCount}                              color="#16a34a" bg="#f0fdf4" />
               <StatBox icon={<XCircle      size={16} />} label="Tidak Hadir" value={tidakHadirCount}                         color="#d97706" bg="#fffbeb" />
-              <StatBox icon={<AlertTriangle size={16} />} label="Pelanggaran 3x" value={pelanggaranCount}                    color="#dc2626" bg="#fef2f2" />
+              <StatBox icon={<AlertTriangle size={16} />} label="Pelanggaran" value={pelanggaranCount}                    color="#dc2626" bg="#fef2f2" />
               <StatBox icon={<Clock        size={16} />} label="Draft"       value={draftCount}                              color="#d97706" bg="#fffbeb" />
               <StatBox icon={<AlertCircle  size={16} />} label="Sisa Target" value={Math.max(0, totalHari - hariDiisi)} color="#1e40af" bg="#eff6ff" />
             </div>
@@ -488,11 +488,11 @@ function DayVisitCard({ date, visits, locCount }) {
   if (locCount > 1) {
     statusLabel = `${finalVisits.length}/${locCount} lokasi`;
     if (hadirCount > 0) statusLabel += ` · ${hadirCount} hadir`;
-    if (anyPelanggaran) statusLabel += ' · pelanggaran 3x';
+    if (anyPelanggaran) statusLabel += ' · pelanggaran';
     if (anyDraft) statusLabel += ' (ada draft)';
   } else {
     statusLabel = finalVisits.length > 0
-      ? (anyPelanggaran ? 'Pelanggaran 3x' : hadirCount > 0 ? 'Hadir' : 'Tidak Hadir')
+      ? (anyPelanggaran ? 'Pelanggaran' : hadirCount > 0 ? 'Hadir' : 'Tidak Hadir')
       : (anyDraft ? 'Draft' : 'Belum Ada Laporan');
   }
 

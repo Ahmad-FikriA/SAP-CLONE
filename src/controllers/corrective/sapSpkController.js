@@ -73,6 +73,122 @@ const getSapSpkList = async (req, res) => {
   }
 };
 
+// Helper to parse SAP SPK Excel worksheet
+const parseSapSpkExcel = (worksheet) => {
+  let headerRowIndex = 1;
+  let headers = [];
+  worksheet.getRow(headerRowIndex).eachCell((cell, colNumber) => {
+    headers[colNumber] = cell.value ? cell.value.toString().trim() : "";
+  });
+
+  const findCol = (namePatterns) => {
+    for (let i = 1; i < headers.length; i++) {
+      if (!headers[i]) continue;
+      const h = headers[i].toLowerCase();
+      for (const pattern of namePatterns) {
+        if (h.includes(pattern)) return i;
+      }
+    }
+    return null;
+  };
+
+  const colMap = {
+    order_number: findCol(["order"]),
+    description: findCol(["description"]),
+    sys_status: findCol(["sys", "status", "system status"]),
+    cost_center: findCol(["cost center"]),
+    ctrl_key: findCol(["control key", "ctrl key", "ctrlkey"]),
+    confirm_number: findCol(["confirm", "confirmation"]),
+    work_center: findCol(["work center", "workcenter", "oper.work center"]),
+    activity: findCol(["activity"]),
+    short_text: findCol(["short text", "op. short text"]),
+    normal_dur: findCol(["normal dur", "norm dur", "normal duration"]),
+    normal_dur_un: findCol(["duratn un", "dur un", "dur. un", "norm.duratn un", "norm.duratn un."]),
+    dur_plan: findCol(["duration plan", "dur plan", "dur. plan"]),
+    unit_for_work: findCol(["unit for work", "un."]),
+    dur_act: findCol(["duration actual", "dur act", "dur. act"]),
+    posting_date: findCol(["posting date"]),
+    conf_text: findCol(["confirmation text", "conf text", "conf. text"]),
+    reason_of_var: findCol(["reason of var", "reason of variance"]),
+    work_start: findCol(["work start", "bas. start date", "basic start", "bas.start"]),
+    work_finish: findCol(["work finish", "basic fin. date", "basic fin", "basic finish", "bas.finish"]),
+    start_time: findCol(["start time"]),
+    finish_time: findCol(["finish time"]),
+    report_by: findCol(["reported by", "report by", "report. by"]),
+    equipment_name: findCol(["equipment"]),
+    functional_location: findCol(["functional loc", "functional location", "functional loc."]),
+    maint_activ_type: findCol(["maintactivtype", "maint activ type", "maint. activ. type"]),
+    actual_work: findCol(["actual work"]),
+    num_of_work: findCol(["no. of work", "num of work", "no.of work", "number of work", "numofwork"]),
+    location: findCol(["location"]),
+  };
+
+  if (!colMap.order_number) {
+    throw new Error("Cannot find 'Order' column in the Excel file");
+  }
+
+  const rowsToUpsert = [];
+
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === headerRowIndex) return;
+
+    const getVal = (key) => {
+      const colIdx = colMap[key];
+      if (!colIdx) return null;
+      let val = row.getCell(colIdx).value;
+      if (val === null || val === undefined) return null;
+      if (typeof val === "object" && val.text) val = val.text;
+      if (val instanceof Date) {
+        return val.toISOString().split("T")[0];
+      }
+      return val.toString().trim();
+    };
+
+    const orderNum = getVal("order_number");
+    if (!orderNum) return;
+
+    const sysStatus = getVal("sys_status") || "";
+    const isTeco = sysStatus.toUpperCase().includes("TECO");
+    const status = isTeco ? "selesai" : "baru_import";
+    const jobResultDesc = isTeco ? "History Import (TECO)" : null;
+
+    rowsToUpsert.push({
+      order_number: orderNum,
+      description: getVal("description"),
+      sys_status: sysStatus,
+      cost_center: getVal("cost_center"),
+      ctrl_key: getVal("ctrl_key"),
+      confirm_number: getVal("confirm_number"),
+      work_center: getVal("work_center"),
+      activity: getVal("activity"),
+      short_text: getVal("short_text"),
+      normal_dur: parseFloat(getVal("normal_dur")) || null,
+      normal_dur_un: getVal("normal_dur_un"),
+      dur_plan: parseFloat(getVal("dur_plan")) || null,
+      unit_for_work: getVal("unit_for_work"),
+      dur_act: parseFloat(getVal("dur_act")) || null,
+      posting_date: getVal("posting_date"),
+      conf_text: getVal("conf_text"),
+      reason_of_var: getVal("reason_of_var"),
+      work_start: getVal("work_start"),
+      work_finish: getVal("work_finish"),
+      start_time: getVal("start_time"),
+      finish_time: getVal("finish_time"),
+      report_by: getVal("report_by"),
+      equipment_name: getVal("equipment_name"),
+      functional_location: getVal("functional_location"),
+      maint_activ_type: getVal("maint_activ_type"),
+      actual_work: parseFloat(getVal("actual_work")) || null,
+      num_of_work: parseInt(getVal("num_of_work")) || null,
+      location: getVal("location"),
+      status: status,
+      job_result_description: jobResultDesc,
+    });
+  });
+
+  return rowsToUpsert;
+};
+
 // 2. Upload and Parse Excel
 const uploadExcel = async (req, res) => {
   try {
@@ -88,109 +204,12 @@ const uploadExcel = async (req, res) => {
       return res.status(400).json({ status: "error", message: "Excel file is empty" });
     }
 
-    let headerRowIndex = 1;
-    let headers = [];
-    worksheet.getRow(headerRowIndex).eachCell((cell, colNumber) => {
-      headers[colNumber] = cell.value ? cell.value.toString().trim() : "";
-    });
-
-    const findCol = (namePatterns) => {
-      for (let i = 1; i < headers.length; i++) {
-        if (!headers[i]) continue;
-        const h = headers[i].toLowerCase();
-        for (const pattern of namePatterns) {
-          if (h.includes(pattern)) return i;
-        }
-      }
-      return null;
-    };
-
-    const colMap = {
-      order_number: findCol(["order"]),
-      description: findCol(["description"]),
-      sys_status: findCol(["sys", "status", "system status"]),
-      cost_center: findCol(["cost center"]),
-      ctrl_key: findCol(["control key", "ctrl key", "ctrlkey"]),
-      confirm_number: findCol(["confirm", "confirmation"]),
-      work_center: findCol(["work center", "workcenter", "oper.work center"]),
-      activity: findCol(["activity"]),
-      short_text: findCol(["short text", "op. short text"]),
-      normal_dur: findCol(["normal dur", "norm dur", "normal duration"]),
-      normal_dur_un: findCol(["duratn un", "dur un", "dur. un", "norm.duratn un", "norm.duratn un."]),
-      dur_plan: findCol(["duration plan", "dur plan", "dur. plan"]),
-      unit_for_work: findCol(["unit for work", "un."]),
-      dur_act: findCol(["duration actual", "dur act", "dur. act"]),
-      posting_date: findCol(["posting date"]),
-      conf_text: findCol(["confirmation text", "conf text", "conf. text"]),
-      reason_of_var: findCol(["reason of var", "reason of variance"]),
-      work_start: findCol(["work start"]),
-      work_finish: findCol(["work finish"]),
-      start_time: findCol(["start time"]),
-      finish_time: findCol(["finish time"]),
-      report_by: findCol(["reported by", "report by", "report. by"]),
-      equipment_name: findCol(["equipment"]),
-      functional_location: findCol(["functional loc", "functional location", "functional loc."]),
-      maint_activ_type: findCol(["maintactivtype", "maint activ type", "maint. activ. type"]),
-      actual_work: findCol(["actual work"]),
-      num_of_work: findCol(["no. of work", "num of work", "no.of work", "number of work", "numofwork"]),
-      location: findCol(["location"]),
-    };
-
-    if (!colMap.order_number) {
-      return res.status(400).json({ status: "error", message: "Cannot find 'Order' column in the Excel file" });
+    let rowsToUpsert;
+    try {
+      rowsToUpsert = parseSapSpkExcel(worksheet);
+    } catch (err) {
+      return res.status(400).json({ status: "error", message: err.message });
     }
-
-    const rowsToUpsert = [];
-
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === headerRowIndex) return;
-
-      const getVal = (key) => {
-        const colIdx = colMap[key];
-        if (!colIdx) return null;
-        let val = row.getCell(colIdx).value;
-        if (val === null || val === undefined) return null;
-        if (typeof val === "object" && val.text) val = val.text;
-        if (val instanceof Date) {
-          return val.toISOString().split("T")[0];
-        }
-        return val.toString().trim();
-      };
-
-      const orderNum = getVal("order_number");
-      if (!orderNum) return;
-
-      rowsToUpsert.push({
-        order_number: orderNum,
-        description: getVal("description"),
-        sys_status: getVal("sys_status"),
-        cost_center: getVal("cost_center"),
-        ctrl_key: getVal("ctrl_key"),
-        confirm_number: getVal("confirm_number"),
-        work_center: getVal("work_center"),
-        activity: getVal("activity"),
-        short_text: getVal("short_text"),
-        normal_dur: parseFloat(getVal("normal_dur")) || null,
-        normal_dur_un: getVal("normal_dur_un"),
-        dur_plan: parseFloat(getVal("dur_plan")) || null,
-        unit_for_work: getVal("unit_for_work"),
-        dur_act: parseFloat(getVal("dur_act")) || null,
-        posting_date: getVal("posting_date"),
-        conf_text: getVal("conf_text"),
-        reason_of_var: getVal("reason_of_var"),
-        work_start: getVal("work_start"),
-        work_finish: getVal("work_finish"),
-        start_time: getVal("start_time"),
-        finish_time: getVal("finish_time"),
-        report_by: getVal("report_by"),
-        equipment_name: getVal("equipment_name"),
-        functional_location: getVal("functional_location"),
-        maint_activ_type: getVal("maint_activ_type"),
-        actual_work: parseFloat(getVal("actual_work")) || null,
-        num_of_work: parseInt(getVal("num_of_work")) || null,
-        location: getVal("location"),
-      });
-    });
 
     if (fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
@@ -260,7 +279,7 @@ const bulkInsertSapSpk = async (req, res) => {
         "dur_plan", "unit_for_work", "dur_act", "posting_date", "conf_text",
         "reason_of_var", "work_start", "work_finish", "start_time", "finish_time",
         "report_by", "equipment_name", "functional_location", "maint_activ_type",
-        "actual_work", "num_of_work", "location",
+        "actual_work", "num_of_work", "location", "status", "job_result_description",
       ],
     });
 
@@ -446,12 +465,34 @@ const updateSapSpk = async (req, res) => {
     const spk = await SapSpkCorrective.findByPk(orderNumber);
     if (!spk) return res.status(404).json({ status: "error", message: "SPK tidak ditemukan" });
 
-    const { description, short_text, num_of_work, dur_plan } = req.body;
+    const {
+      description, short_text, num_of_work, dur_plan,
+      normal_dur, normal_dur_un, unit_for_work, activity, maint_activ_type,
+      work_start, work_finish, start_time, finish_time,
+      conf_text, confirm_number, reason_of_var, dur_act, actual_work,
+      job_result_description
+    } = req.body;
+
     const updates = {};
     if (description !== undefined) updates.description = description;
     if (short_text !== undefined) updates.short_text = short_text;
-    if (num_of_work !== undefined) updates.num_of_work = num_of_work;
-    if (dur_plan !== undefined) updates.dur_plan = dur_plan;
+    if (num_of_work !== undefined) updates.num_of_work = num_of_work !== null ? parseInt(num_of_work) : null;
+    if (dur_plan !== undefined) updates.dur_plan = dur_plan !== null ? parseFloat(dur_plan) : null;
+    if (normal_dur !== undefined) updates.normal_dur = normal_dur !== null ? parseFloat(normal_dur) : null;
+    if (normal_dur_un !== undefined) updates.normal_dur_un = normal_dur_un;
+    if (unit_for_work !== undefined) updates.unit_for_work = unit_for_work;
+    if (activity !== undefined) updates.activity = activity;
+    if (maint_activ_type !== undefined) updates.maint_activ_type = maint_activ_type;
+    if (work_start !== undefined) updates.work_start = work_start || null;
+    if (work_finish !== undefined) updates.work_finish = work_finish || null;
+    if (start_time !== undefined) updates.start_time = start_time || null;
+    if (finish_time !== undefined) updates.finish_time = finish_time || null;
+    if (conf_text !== undefined) updates.conf_text = conf_text;
+    if (confirm_number !== undefined) updates.confirm_number = confirm_number;
+    if (reason_of_var !== undefined) updates.reason_of_var = reason_of_var;
+    if (dur_act !== undefined) updates.dur_act = dur_act !== null ? parseFloat(dur_act) : null;
+    if (actual_work !== undefined) updates.actual_work = actual_work !== null ? parseFloat(actual_work) : null;
+    if (job_result_description !== undefined) updates.job_result_description = job_result_description;
 
     await spk.update(updates);
     res.status(200).json({ status: "success", message: "Data SPK diperbarui", data: spk });
@@ -591,21 +632,133 @@ const exportHistory = async (req, res) => {
 
 const uploadHistoryExcel = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ status: "error", message: "No Excel" });
+    if (!req.file) {
+      return res.status(400).json({ status: "error", message: "No Excel file uploaded" });
+    }
+
     const workbook = new exceljs.Workbook();
     await workbook.xlsx.readFile(req.file.path);
+
     const worksheet = workbook.worksheets[0];
-    const rowsToUpsert = [];
-    // Simplifed for brevity but keeping essential logic
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
-      const orderNum = row.getCell(1).value?.toString();
-      if (orderNum) rowsToUpsert.push({ order_number: orderNum, status: "selesai", job_result_description: "History Import" });
+    if (!worksheet) {
+      return res.status(400).json({ status: "error", message: "Excel file is empty" });
+    }
+
+    let parsedRows;
+    try {
+      parsedRows = parseSapSpkExcel(worksheet);
+    } catch (err) {
+      return res.status(400).json({ status: "error", message: err.message });
+    }
+
+    // History import: force ALL rows to status "selesai"
+    const rowsToProcess = parsedRows.map((row) => ({
+      ...row,
+      status: "selesai",
+      job_result_description: row.job_result_description || "History Import",
+    }));
+
+    // Check which order numbers already exist and what their current status is
+    const incomingOrderNumbers = rowsToProcess.map((r) => r.order_number);
+    const existingSpks = await SapSpkCorrective.findAll({
+      attributes: ["order_number", "status"],
+      where: { order_number: incomingOrderNumbers },
     });
-    await SapSpkCorrective.bulkCreate(rowsToUpsert, { updateOnDuplicate: ["status"] });
-    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    res.json({ status: "success", message: "Imported" });
+
+    const existingMap = new Map(existingSpks.map((s) => [s.order_number, s.status]));
+
+    const rowsToInsert = [];   // New records to insert
+    const rowsToUpdate = [];   // Existing records with status "selesai" to update selectively
+    const skippedRows = [];    // Existing with active status (NOT "selesai") — must not overwrite
+
+    for (const row of rowsToProcess) {
+      const currentStatus = existingMap.get(row.order_number);
+
+      if (!currentStatus) {
+        // New record — insert as "selesai"
+        rowsToInsert.push(row);
+      } else if (currentStatus === "selesai") {
+        // Already "selesai" in DB — safe to update with fresh SAP data selectively
+        rowsToUpdate.push(row);
+      } else {
+        // Active status (eksekusi, menunggu_review, etc.) — DO NOT overwrite
+        skippedRows.push({
+          order_number: row.order_number,
+          description: row.description,
+          current_status: currentStatus,
+        });
+      }
+    }
+
+    // Perform database operations within a transaction
+    const t = await sequelize.transaction();
+    try {
+      // 1. Insert new records in bulk
+      if (rowsToInsert.length > 0) {
+        await SapSpkCorrective.bulkCreate(rowsToInsert, { transaction: t });
+      }
+
+      // 2. Update existing "selesai" records selectively (only fields with values)
+      if (rowsToUpdate.length > 0) {
+        const updateFields = [
+          "description", "sys_status", "cost_center", "ctrl_key", "confirm_number",
+          "work_center", "activity", "short_text", "normal_dur", "normal_dur_un",
+          "dur_plan", "unit_for_work", "dur_act", "posting_date", "conf_text",
+          "reason_of_var", "work_start", "work_finish", "start_time", "finish_time",
+          "report_by", "equipment_name", "functional_location", "maint_activ_type",
+          "actual_work", "num_of_work", "location", "status", "job_result_description",
+        ];
+
+        for (const row of rowsToUpdate) {
+          const updateData = {};
+          for (const key of updateFields) {
+            const val = row[key];
+            // Only update fields that have a value (not null, undefined, or empty string)
+            if (val !== null && val !== undefined && val !== "") {
+              updateData[key] = val;
+            }
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            await SapSpkCorrective.update(updateData, {
+              where: { order_number: row.order_number },
+              transaction: t,
+            });
+          }
+        }
+      }
+
+      await t.commit();
+    } catch (dbErr) {
+      await t.rollback();
+      throw dbErr;
+    }
+
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    const totalProcessed = rowsToInsert.length + rowsToUpdate.length;
+    // Build response message
+    let message = `Berhasil mengimport ${totalProcessed} data history.`;
+    if (skippedRows.length > 0) {
+      message += ` ${skippedRows.length} data dilewati karena statusnya masih aktif di sistem.`;
+    }
+
+    res.json({
+      status: "success",
+      message,
+      data: {
+        imported: totalProcessed,
+        skipped: skippedRows.length,
+        skippedDetail: skippedRows,
+      },
+    });
   } catch (error) {
+    console.error("Error uploading history Excel:", error);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ status: "error", message: error.message });
   }
 };
