@@ -124,10 +124,11 @@ function EquipmentHistoryContent() {
   }
 
   function exportCsv() {
-    if (!enriched.length) return;
+    if (!tableRows.length) return;
     const name = equip ? `${equip.equipmentId}-${equip.equipmentName}` : equipmentId;
+    const typeLabel = selectedType ? `-${selectedType.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : '';
     const header = ['Tanggal', 'No. SPK', 'Teknisi', 'Aktivitas', 'Nilai Ukur', 'Satuan'];
-    const rows = enriched.map(r => [
+    const rows = tableRows.map(r => [
       fmtDate(r.submittedAt),
       r.spkNumber,
       r.technicianName,
@@ -142,7 +143,7 @@ function EquipmentHistoryContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `riwayat-pengukuran-${name}.csv`;
+    a.download = `riwayat-pengukuran-${name}${typeLabel}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -154,7 +155,7 @@ function EquipmentHistoryContent() {
     return { ...r, measLabel: meas?.label || r.activityNumber, measUnit: meas?.unit || '' };
   }), [history]);
 
-  // Apply date range filter — export uses `enriched` (unfiltered)
+  // Apply date range filter
   const filteredEnriched = useMemo(() => {
     if (!dateFrom && !dateTo) return enriched;
     return enriched.filter(r => {
@@ -226,7 +227,7 @@ function EquipmentHistoryContent() {
         <Button variant="outline" size="sm" onClick={load} disabled={loading}>
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
-        {enriched.length > 0 && (
+        {tableRows.length > 0 && (
           <Button variant="outline" size="sm" onClick={exportCsv} className="gap-1.5">
             <Download size={14} /> Export CSV
           </Button>

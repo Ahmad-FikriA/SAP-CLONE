@@ -93,6 +93,13 @@ const getForYear = async (req, res) => {
   res.json({ year, schedule: result });
 };
 
+function getWeeksInYear(year) {
+  const d = new Date(Date.UTC(year, 0, 1));
+  const day = d.getUTCDay() || 7;
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+  return (day === 4 || (day === 3 && isLeap)) ? 53 : 52;
+}
+
 // POST /api/preventive-schedule/generate
 // Body: { year: 2026, overwrite: true }
 // Auto-generates the full yearly schedule using formula: interval N active at week W if (W-1) % N === 0
@@ -106,8 +113,9 @@ const generateFromFormula = async (req, res) => {
     await PreventiveWeekSchedule.destroy({ where: { year } });
   }
 
+  const totalWeeks = getWeeksInYear(year);
   const toInsert = [];
-  for (let week = 1; week <= 53; week++) {
+  for (let week = 1; week <= totalWeeks; week++) {
     for (const { key, weeks } of INTERVALS) {
       if ((week - 1) % weeks === 0) {
         toInsert.push({ year, weekNumber: week, interval: key });

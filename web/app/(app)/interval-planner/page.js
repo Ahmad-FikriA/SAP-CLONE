@@ -23,19 +23,18 @@ function getISOWeekDateRange(week, year) {
 }
 
 function fmtShort(d) {
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('id-ID', { timeZone: 'UTC', day: 'numeric', month: 'short' });
 }
 
 function getWeeksInYear(year) {
-  const dec28 = new Date(Date.UTC(year, 11, 28));
-  const day = dec28.getUTCDay() || 7;
-  const thu = new Date(dec28);
-  thu.setUTCDate(dec28.getUTCDate() + (4 - day));
-  return thu.getUTCFullYear() === year ? 53 : 52;
+  const d = new Date(Date.UTC(year, 0, 1));
+  const day = d.getUTCDay() || 7;
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+  return (day === 4 || (day === 3 && isLeap)) ? 53 : 52;
 }
 
 function getMonthLabel(d) {
-  return d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  return d.toLocaleDateString('id-ID', { timeZone: 'UTC', month: 'long', year: 'numeric' });
 }
 
 function getCurrentWeek() {
@@ -220,7 +219,9 @@ export default function IntervalPlannerPage() {
   let lastMonth = null;
   for (let w = 1; w <= totalWeeks; w++) {
     const { start, end } = getISOWeekDateRange(w, year);
-    const monthLabel = getMonthLabel(start);
+    const thursday = new Date(start);
+    thursday.setUTCDate(start.getUTCDate() + 3);
+    const monthLabel = getMonthLabel(thursday);
     if (monthLabel !== lastMonth) {
       lastMonth = monthLabel;
       rows.push({ type: 'month', label: monthLabel, key: 'month-' + monthLabel });
