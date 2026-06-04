@@ -273,6 +273,7 @@ const INITIAL_FORM_DATA = {
 export default function HseDashboardPage() {
   const [tab, setTab] = useState("dashboard");
   const [bannerSlide, setBannerSlide] = useState(0);
+  const [cameraSource, setCameraSource] = useState("create"); // "create" or "action"
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -799,11 +800,13 @@ export default function HseDashboardPage() {
     }
   };
 
-  const openCamera = async () => {
+  const openCamera = async (source = "create", customFacingMode) => {
+    setCameraSource(source);
+    const mode = customFacingMode || facingMode;
     try {
       if (stream) stream.getTracks().forEach((t) => t.stop());
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode },
+        video: { facingMode: mode },
       });
       setStream(mediaStream);
       setIsCameraOpen(true);
@@ -829,8 +832,9 @@ export default function HseDashboardPage() {
   };
 
   const switchCamera = () => {
-    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
-    openCamera();
+    const nextMode = facingMode === "environment" ? "user" : "environment";
+    setFacingMode(nextMode);
+    openCamera(cameraSource, nextMode);
   };
 
   const closeCamera = () => {
@@ -841,8 +845,12 @@ export default function HseDashboardPage() {
 
   const takePhoto = async () => {
     if (!videoRef.current) return;
-    if (createPhotos.length >= MAX_PHOTOS) {
-      toast.error(`Maksimal ${MAX_PHOTOS} foto`);
+    
+    const limit = cameraSource === "action" ? 2 : MAX_PHOTOS;
+    const currentPhotos = cameraSource === "action" ? actionPhotos : createPhotos;
+
+    if (currentPhotos.length >= limit) {
+      toast.error(`Maksimal ${limit} foto`);
       closeCamera();
       return;
     }
@@ -910,7 +918,12 @@ export default function HseDashboardPage() {
     const rawFile = new File([blob], `camera_${Date.now()}.jpg`, { type: "image/jpeg" });
     const compressed = await compressImage(rawFile, MAX_SIZE_KB);
     const preview = URL.createObjectURL(compressed);
-    setCreatePhotos((prev) => [...prev, { file: compressed, preview }]);
+    
+    if (cameraSource === "action") {
+      setActionPhotos((prev) => [...prev, { file: compressed, preview }]);
+    } else {
+      setCreatePhotos((prev) => [...prev, { file: compressed, preview }]);
+    }
     closeCamera();
   };
 
@@ -2553,7 +2566,42 @@ export default function HseDashboardPage() {
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5 space-y-6">
-            {selectedReport?.jenisTindakan === "perbaikan_langsung" ? (
+            {isCameraOpen && cameraSource === "action" ? (
+              <div className="space-y-4 py-2 flex flex-col items-center">
+                <div className="relative w-full aspect-[3/4] bg-black rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    playsInline
+                    autoPlay
+                    muted
+                  />
+                  <button
+                    className="absolute top-3 right-3 bg-black/50 text-white p-2 rounded-full hover:bg-white/20 transition-colors backdrop-blur-md"
+                    onClick={switchCamera}
+                    title="Ganti Kamera"
+                  >
+                    <SwitchCamera size={18} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    className="rounded-full w-12 h-12 p-0"
+                    onClick={closeCamera}
+                  >
+                    <XCircle size={20} className="text-gray-500" />
+                  </Button>
+                  <Button
+                    className="rounded-full w-16 h-16 bg-white border-4 border-rose-500 hover:bg-gray-100 shadow-xl p-0"
+                    onClick={takePhoto}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-rose-600" />
+                  </Button>
+                  <div className="w-12 h-12" />
+                </div>
+              </div>
+            ) : selectedReport?.jenisTindakan === "perbaikan_langsung" ? (
               /* perbaikan_langsung UI */
               <div className="space-y-5">
                 <div className="space-y-2">
@@ -2608,18 +2656,14 @@ export default function HseDashboardPage() {
                   )}
 
                   {actionPhotos.length < 2 && (
-                    <label className="border-2 border-dashed border-slate-200 rounded-2xl h-28 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group">
+                    <div
+                      onClick={() => openCamera("action")}
+                      className="border-2 border-dashed border-slate-200 rounded-2xl h-28 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group"
+                    >
                       <Camera size={24} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
-                      <span className="text-xs font-medium text-slate-500 mt-1.5">Tambah Foto Perbaikan</span>
-                      <span className="text-[10px] text-slate-400 mt-0.5">Format Gambar (JPG/PNG)</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="sr-only"
-                        onChange={handleActionPhotosChange}
-                      />
-                    </label>
+                      <span className="text-xs font-medium text-slate-500 mt-1.5">Ambil Foto Perbaikan (Kamera)</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">Wajib ambil gambar langsung dari kamera</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -2875,17 +2919,14 @@ export default function HseDashboardPage() {
                   )}
 
                   {actionPhotos.length < 2 && (
-                    <label className="border-2 border-dashed border-slate-200 rounded-2xl h-24 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group">
+                    <div
+                      onClick={() => openCamera("action")}
+                      className="border-2 border-dashed border-slate-200 rounded-2xl h-24 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group"
+                    >
                       <Camera size={22} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
-                      <span className="text-xs font-medium text-slate-500 mt-1">Tambah Foto Investigasi</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="sr-only"
-                        onChange={handleActionPhotosChange}
-                      />
-                    </label>
+                      <span className="text-xs font-medium text-slate-500 mt-1">Ambil Foto Investigasi (Kamera)</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">Wajib ambil gambar langsung dari kamera</span>
+                    </div>
                   )}
                 </div>
 
@@ -2954,39 +2995,41 @@ export default function HseDashboardPage() {
           </div>
 
           {/* Dialog Footer */}
-          <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50 flex items-center justify-end gap-3">
-            <Button
-              variant="outline"
-              className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 font-semibold px-6"
-              onClick={() => setIsActionOpen(false)}
-            >
-              Batal
-            </Button>
-            
-            {selectedReport?.jenisTindakan === "investigasi" && (
+          {!(isCameraOpen && cameraSource === "action") && (
+            <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50 flex items-center justify-end gap-3">
               <Button
                 variant="outline"
-                className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-6"
-                onClick={() => submitAction(true)}
+                className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 font-semibold px-6"
+                onClick={() => setIsActionOpen(false)}
+              >
+                Batal
+              </Button>
+              
+              {selectedReport?.jenisTindakan === "investigasi" && (
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-6"
+                  onClick={() => submitAction(true)}
+                  disabled={isSubmitting}
+                >
+                  Simpan Draft
+                </Button>
+              )}
+
+              <Button
+                className="bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md shadow-rose-100 font-semibold px-6 text-white"
+                onClick={() => submitAction(false)}
                 disabled={isSubmitting}
               >
-                Simpan Draft
+                {isSubmitting ? (
+                  <RefreshCw size={16} className="mr-2 animate-spin" />
+                ) : (
+                  <ShieldCheck size={16} className="mr-2" />
+                )}
+                Kirim Tindakan
               </Button>
-            )}
-
-            <Button
-              className="bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md shadow-rose-100 font-semibold px-6 text-white"
-              onClick={() => submitAction(false)}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <RefreshCw size={16} className="mr-2 animate-spin" />
-              ) : (
-                <ShieldCheck size={16} className="mr-2" />
-              )}
-              Kirim Tindakan
-            </Button>
-          </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
