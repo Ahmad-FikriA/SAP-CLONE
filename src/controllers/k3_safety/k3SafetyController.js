@@ -524,34 +524,64 @@ exports.revertStep = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
     }
 
-    const validStatuses = [
-      'menunggu_verifikasi_investigasi',
-      'investigasi_ditolak_kadis_hse',
-      'menunggu_validasi_kadiv',
-      'investigasi_ditolak_kadiv'
-    ];
+    if (report.status === 'selesai') {
+      return res.status(400).json({ success: false, message: 'Laporan yang sudah selesai tidak dapat dimundurkan tahapan' });
+    }
 
-    if (!validStatuses.includes(report.status)) {
+    const currentStatus = report.status;
+    const statusPrevStepMap = {
+      // --- Validasi Awal / Tindakan ---
+      'menunggu_tindakan_hse': 'menunggu_validasi_kadis_hse',
+
+      // --- Perbaikan Langsung Flow ---
+      'menunggu_validasi_hasil_kadis_hse': 'menunggu_tindakan_hse',
+      'perbaikan_ditolak_pphse': 'menunggu_tindakan_hse',
+      'perbaikan_ditolak_kadis_hse': 'menunggu_validasi_hasil_kadis_hse', // membatalkan ditolak
+      'menunggu_validasi_akhir_kadiv_pphse': 'menunggu_validasi_hasil_kadis_hse',
+      'perbaikan_ditolak_kadiv_pphse': 'menunggu_validasi_akhir_kadiv_pphse',
+
+      // --- Investigasi Flow ---
+      'menunggu_verifikasi_investigasi': 'menunggu_tindakan_hse',
+      'investigasi_ditolak_kadis_hse': 'menunggu_verifikasi_investigasi',
+      'menunggu_validasi_kadiv': 'menunggu_verifikasi_investigasi',
+      'investigasi_ditolak_kadiv': 'menunggu_validasi_kadiv',
+    };
+
+    const targetStatus = statusPrevStepMap[currentStatus];
+
+    if (!targetStatus) {
       return res.status(400).json({ 
         success: false, 
-        message: `Hanya laporan dalam tahap investigasi yang dapat dimundurkan. (Status saat ini: ${report.status})` 
+        message: `Status saat ini (${currentStatus}) adalah tahap paling awal atau tidak dapat dimundurkan.` 
       });
     }
 
-    // Revert status and clear investigation data
-    report.status = 'menunggu_tindakan_hse';
-    report.jenisTindakan = null;
-    report.investigasiCategory = null;
-    report.investigasiData = null;
-    report.fotoInvestigasi = null;
-    report.dokumenInvestigasi = null;
-    report.isDraftInvestigasi = false;
-    
+    // --- Clean up fields based on target status ---
+    if (targetStatus === 'menunggu_validasi_kadis_hse') {
+      // Kembali ke awal: hapus penugasan & jenis tindakan
+      report.ditugaskanKepada = null;
+      report.jenisTindakan = null;
+    } else if (targetStatus === 'menunggu_tindakan_hse') {
+      // Kembali ke pengerjaan staf HSE: hapus input hasil tindakan/investigasi
+      if (report.jenisTindakan === 'investigasi') {
+        report.investigasiCategory = null;
+        report.investigasiData = null;
+        report.fotoInvestigasi = null;
+        report.dokumenInvestigasi = null;
+        report.isDraftInvestigasi = false;
+      } else {
+        report.fotoPerbaikan = null;
+        report.tindakanPerbaikan = null;
+      }
+    }
+
+    // Update status
+    report.status = targetStatus;
     await report.save();
 
     res.status(200).json({ 
       success: true, 
-      message: 'Status berhasil dimundurkan ke "Menunggu Tindakan HSE"',
+      message: `Status berhasil dimundurkan ke "${targetStatus}"`,
       data: report 
     });
   } catch (error) {
@@ -994,14 +1024,17 @@ exports.getStats = async (req, res, next) => {
       ],
     });
 
-    const totalReports = reports.length;
-    const totalSelesai = reports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;
-    const totalInvestigasi = reports.filter(r => r.jenisTindakan === 'investigasi').length;
-    const totalPerbaikanLangsung = reports.filter(r => r.jenisTindakan === 'perbaikan_langsung').length;
+    // Filter laporan untuk mengecualikan yang ditolak (initial rejection)
+    const activeReports = reports.filter(r => !['ditolak', 'ditolak_kadiv_pphse', 'ditolak_kadis_hse'].includes(r.status));
+
+    const totalReports = activeReports.length;
+    const totalSelesai = activeReports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;
+    const totalInvestigasi = activeReports.filter(r => r.jenisTindakan === 'investigasi').length;
+    const totalPerbaikanLangsung = activeReports.filter(r => r.jenisTindakan === 'perbaikan_langsung').length;
 
     // ── Reporters: siapa yang paling sering membuat laporan ────────────────
     const reporterMap = {};
-    for (const r of reports) {
+    for (const r of activeReports) {
       const uid = r.dilaporkanOleh;
       if (!uid) continue;
       if (!reporterMap[uid]) {
@@ -1025,7 +1058,7 @@ exports.getStats = async (req, res, next) => {
     // ── HSE Officers: siapa di Dinas HSE yang paling sering ditugaskan ────
     // Pertama, kumpulkan semua user HSE dari penugasan di K3Report
     const hseOfficerMap = {};
-    for (const r of reports) {
+    for (const r of activeReports) {
       const uid = r.ditugaskanKepada;
       if (!uid) continue;
       if (!hseOfficerMap[uid]) {
@@ -1076,7 +1109,7 @@ exports.getStats = async (req, res, next) => {
 
     // ── Categories: distribusi laporan per kategori ────────────────────────
     const categoryMap = {};
-    for (const r of reports) {
+    for (const r of activeReports) {
       const cat = r.kategori || 'Lainnya';
       categoryMap[cat] = (categoryMap[cat] || 0) + 1;
     }

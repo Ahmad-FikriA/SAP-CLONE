@@ -40,6 +40,32 @@ const K3Settings = sequelize.define('K3Settings', {
     allowNull: false,
     field: 'jumlah_fatality',
   },
+  bannerTitle1: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'banner_title_1',
+  },
+  bannerTitle2: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'banner_title_2',
+  },
+  bannerDescription: {
+    type: DataTypes.STRING(140),
+    allowNull: true,
+    field: 'banner_description',
+  },
+  bannerSlides: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'banner_slides',
+  },
+  formInvestigasi: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'form_investigasi',
+    comment: 'Dynamic investigation form config (kecelakaan, penyakit_kerja, kebakaran)',
+  },
 }, {
   tableName: 'k3_settings',
   underscored: true,

@@ -48,6 +48,7 @@ import {
   Zap,
   Award,
   ChevronRight,
+  ChevronLeft,
   MoreVertical,
   ExternalLink,
   ClipboardCheck,
@@ -77,7 +78,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, getMediaUrl } from "@/lib/utils";
 
 const TABS = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -218,13 +219,68 @@ function getMetricClassification(id, valueNum) {
   return null;
 }
 
+const BANNER_SLIDES = [
+  {
+    id: 1,
+    url: "https://picsum.photos/seed/k3safety1/800/600",
+    title: "Safety Briefing Harian",
+    subtitle: "Komitmen keselamatan dimulai dari awal hari kerja",
+  },
+  {
+    id: 2,
+    url: "https://picsum.photos/seed/k3safety2/800/600",
+    title: "Inspeksi Alat Pelindung Diri",
+    subtitle: "Pemeriksaan kelengkapan APD sebelum bekerja",
+  },
+  {
+    id: 3,
+    url: "https://picsum.photos/seed/k3safety3/800/600",
+    title: "Pelatihan Tanggap Darurat",
+    subtitle: "Simulasi evakuasi dan penanganan keadaan darurat",
+  },
+  {
+    id: 4,
+    url: "https://picsum.photos/seed/k3safety4/800/600",
+    title: "Audit Keselamatan Kerja",
+    subtitle: "Evaluasi berkala sistem manajemen K3",
+  },
+  {
+    id: 5,
+    url: "https://picsum.photos/seed/k3safety5/800/600",
+    title: "Zero Accident Achievement",
+    subtitle: "Target nihil kecelakaan kerja tercapai",
+  },
+];
+
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ];
 
+const INITIAL_FORM_DATA = {
+  kecelakaan: {
+    title: "Form Investigasi Kecelakaan",
+    description:
+      "Form ini digunakan untuk melengkapi data investigasi insiden kecelakaan kerja. Isi semua pertanyaan dengan lengkap dan akurat.",
+    questions: [],
+  },
+  penyakit_kerja: {
+    title: "Form Investigasi Penyakit Akibat Kerja",
+    description:
+      "Form ini digunakan untuk investigasi kasus penyakit yang disebabkan oleh kondisi kerja.",
+    questions: [],
+  },
+  kebakaran: {
+    title: "Form Investigasi Kebakaran",
+    description:
+      "Form ini digunakan untuk investigasi insiden kebakaran di area kerja.",
+    questions: [],
+  },
+};
+
 export default function HseDashboardPage() {
   const [tab, setTab] = useState("dashboard");
+  const [bannerSlide, setBannerSlide] = useState(0);
   
   // ── States for Inspeksi K3 ──
   const [k3Schedules,      setK3Schedules]      = useState([]);
@@ -243,6 +299,26 @@ export default function HseDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [k3Settings, setK3Settings] = useState(null);
 
+  const activeSlides = useMemo(() => {
+    if (k3Settings?.bannerSlides) {
+      try {
+        const parsed = typeof k3Settings.bannerSlides === 'string'
+          ? JSON.parse(k3Settings.bannerSlides)
+          : k3Settings.bannerSlides;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error("Error parsing bannerSlides", e);
+      }
+    }
+    return BANNER_SLIDES;
+  }, [k3Settings]);
+
+  const bannerTitle1 = k3Settings?.bannerTitle1 || "Zero Accident Strategy";
+  const bannerTitle2 = k3Settings?.bannerTitle2 || "Safety First, Always.";
+  const displayDescription = k3Settings?.bannerDescription || "Data kinerja keselamatan kerja yang diagregasi berdasarkan standar formulasi pelaporan insiden internasional.";
+
   const [selectedReport, setSelectedReport] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -254,6 +330,14 @@ export default function HseDashboardPage() {
   const [assignedTo, setAssignedTo] = useState("");
   const [catatanValidasi, setCatatanValidasi] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // ── States for Action / Investigation Form ──
+  const [isActionOpen, setIsActionOpen] = useState(false);
+  const [actionCategory, setActionCategory] = useState("kecelakaan");
+  const [actionAnswers, setActionAnswers] = useState({});
+  const [actionPhotos, setActionPhotos] = useState([]); // array of { file, preview }
+  const [actionDoc, setActionDoc] = useState(null); // { file, name }
+  const [tindakanLangsungText, setTindakanLangsungText] = useState("");
 
   // Create Report States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -282,6 +366,150 @@ export default function HseDashboardPage() {
   const isKadivPphse = useMemo(() =>
     (role.includes("kadiv") || role.includes("kepala divisi")) &&
     (divisi.includes("pphse") || divisi.includes("hse")), [role, divisi]);
+
+  const openActionForm = () => {
+    const repCat = selectedReport?.kategori?.toLowerCase() || "";
+    let defaultCat = "kecelakaan";
+    if (repCat.includes("penyakit") || repCat.includes("sakit")) {
+      defaultCat = "penyakit_kerja";
+    } else if (repCat.includes("kebakaran") || repCat.includes("api")) {
+      defaultCat = "kebakaran";
+    }
+    setActionCategory(defaultCat);
+    
+    if (selectedReport?.investigasiData) {
+      setActionAnswers(selectedReport.investigasiData);
+    } else {
+      setActionAnswers({});
+    }
+
+    if (selectedReport?.tindakanPerbaikan) {
+      setTindakanLangsungText(selectedReport.tindakanPerbaikan);
+    } else {
+      setTindakanLangsungText("");
+    }
+
+    setActionPhotos([]);
+    setActionDoc(null);
+    setIsActionOpen(true);
+  };
+
+  const handleActionPhotosChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const maxPhotos = selectedReport?.jenisTindakan === "investigasi" ? 2 : 2;
+    const remaining = maxPhotos - actionPhotos.length;
+    if (remaining <= 0) {
+      toast.error(`Maksimal ${maxPhotos} foto`);
+      return;
+    }
+    const toProcess = files.slice(0, remaining);
+    for (const file of toProcess) {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} bukan file gambar`);
+        continue;
+      }
+      const compressed = await compressImage(file, MAX_SIZE_KB);
+      const preview = URL.createObjectURL(compressed);
+      setActionPhotos((prev) => [...prev, { file: compressed, preview }]);
+    }
+  };
+
+  const removeActionPhoto = (index) => {
+    setActionPhotos((prev) => {
+      const copy = [...prev];
+      URL.revokeObjectURL(copy[index].preview);
+      copy.splice(index, 1);
+      return copy;
+    });
+  };
+
+  const handleActionDocChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const allowedExtensions = [".pdf", ".doc", ".docx", ".xlsx", ".xls"];
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      toast.error("Format file tidak didukung! Hanya PDF, DOC, DOCX, XLS, atau XLSX.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ukuran file maksimal 5MB.");
+      return;
+    }
+    setActionDoc({ file, name: file.name });
+  };
+
+  const removeActionDoc = () => {
+    setActionDoc(null);
+  };
+
+  const submitAction = async (isDraft = false) => {
+    if (!selectedReport) return;
+
+    if (!isDraft) {
+      if (selectedReport.jenisTindakan === "perbaikan_langsung") {
+        if (!tindakanLangsungText.trim()) {
+          toast.error("Tindakan perbaikan wajib diisi.");
+          return;
+        }
+        if (actionPhotos.length === 0) {
+          toast.error("Minimal 1 foto bukti perbaikan wajib diupload.");
+          return;
+        }
+      } else {
+        const formConfig = k3Settings?.formInvestigasi?.[actionCategory] || INITIAL_FORM_DATA[actionCategory];
+        const questions = formConfig?.questions || [];
+        for (const q of questions) {
+          if (q.type === "section") continue;
+          if (q.required) {
+            const ans = actionAnswers[q.id];
+            if (ans === undefined || ans === null || ans === "" || (Array.isArray(ans) && ans.length === 0)) {
+              toast.error(`Pertanyaan "${q.label}" wajib diisi.`);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    setIsSubmitting(true);
+    try {
+      const fd = new FormData();
+      if (selectedReport.jenisTindakan === "perbaikan_langsung") {
+        fd.append("tindakanPerbaikan", tindakanLangsungText);
+        actionPhotos.forEach((p) => fd.append("fotoPerbaikan", p.file));
+        
+        await apiUpload(`/k3-safety/${selectedReport.id}/perbaikan`, fd);
+      } else {
+        fd.append("investigasiCategory", actionCategory);
+        fd.append("isDraftInvestigasi", isDraft ? "true" : "false");
+        fd.append("investigasiData", JSON.stringify(actionAnswers));
+        
+        actionPhotos.forEach((p) => fd.append("fotoInvestigasi", p.file));
+        if (actionDoc) {
+          fd.append("dokumenInvestigasi", actionDoc.file);
+        }
+
+        await apiUpload(`/k3-safety/${selectedReport.id}/investigasi`, fd);
+      }
+
+      toast.success(
+        isDraft 
+          ? "Draft investigasi berhasil disimpan" 
+          : "Tindakan berhasil dikirim"
+      );
+      
+      setIsActionOpen(false);
+      setIsDetailOpen(false);
+      loadData();
+    } catch (e) {
+      toast.error(e.message || "Gagal mengirim tindakan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const openDetail = (report) => {
     setSelectedReport(report);
@@ -817,6 +1045,15 @@ export default function HseDashboardPage() {
     };
   }, []);
 
+  // ── Banner auto-slide ──
+  useEffect(() => {
+    if (tab !== "dashboard" || activeSlides.length === 0) return;
+    const timer = setInterval(() => {
+      setBannerSlide((prev) => (prev + 1) % activeSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [tab, activeSlides]);
+
   // ── Konfigurasi Safety Performance Standard KS Group ──────────────────────
   const TOTAL_KARYAWAN = k3Settings?.totalKaryawan || 280;
   const JAM_KERJA_PER_BULAN = (k3Settings?.jamKerjaPerHari || 8) * (k3Settings?.hariKerjaPerBulan || 20);
@@ -1083,12 +1320,16 @@ export default function HseDashboardPage() {
                   HSE Performance
                 </Badge>
                 <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold mb-3 sm:mb-4 tracking-tight leading-tight">
-                  Zero Accident Strategy <br />
-                  <span className="text-rose-500">Safety First, Always.</span>
+                  {bannerTitle1}
+                  {bannerTitle2 && (
+                    <>
+                      <br />
+                      <span className="text-rose-500">{bannerTitle2}</span>
+                    </>
+                  )}
                 </h1>
                 <p className="text-slate-400 text-xs sm:text-sm md:text-base max-w-md leading-relaxed mb-5 sm:mb-8">
-                  Data kinerja keselamatan kerja yang diagregasi berdasarkan
-                  standar formulasi pelaporan insiden internasional.
+                  {displayDescription}
                 </p>
                 <div className="flex gap-5 sm:gap-6">
                   <div>
@@ -1101,13 +1342,97 @@ export default function HseDashboardPage() {
                   </div>
                 </div>
               </div>
-              <div className="hidden md:flex justify-end">
-                <div className="w-64 h-64 bg-rose-600/10 rounded-full flex items-center justify-center relative">
-                  <div className="absolute inset-0 animate-pulse bg-rose-500/20 rounded-full blur-3xl" />
-                  <TrendingUp
-                    size={120}
-                    className="text-rose-500 relative z-10"
-                  />
+              <div className="hidden md:block">
+                <div className="relative w-full max-w-sm ml-auto">
+                  {/* Glow effect */}
+                  <div className="absolute -inset-3 bg-gradient-to-br from-rose-500/20 via-transparent to-indigo-500/10 rounded-3xl blur-2xl" />
+
+                  {/* Carousel */}
+                  <div className="relative rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl aspect-[4/3] group cursor-pointer">
+                    {activeSlides.map((slide, idx) => (
+                      <div
+                        key={slide.id || idx}
+                        className={cn(
+                          "absolute inset-0 transition-all duration-700 ease-in-out",
+                          idx === bannerSlide
+                            ? "opacity-100 scale-100"
+                            : "opacity-0 scale-105"
+                        )}
+                      >
+                        <img
+                          src={getMediaUrl(slide.path || slide.url)}
+                          alt={slide.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-black/20" />
+                      </div>
+                    ))}
+
+                    {/* Caption */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 z-10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-1 h-4 bg-rose-500 rounded-full flex-shrink-0" />
+                        <p className="text-white font-bold text-sm leading-snug line-clamp-1">
+                          {activeSlides[bannerSlide]?.title}
+                        </p>
+                      </div>
+                      <p className="text-white/50 text-[11px] ml-3 leading-relaxed line-clamp-1">
+                        {activeSlides[bannerSlide]?.subtitle}
+                      </p>
+                    </div>
+
+                    {/* Arrows */}
+                    <button
+                      onClick={() =>
+                        setBannerSlide(
+                          (p) =>
+                            (p - 1 + activeSlides.length) %
+                            activeSlides.length
+                        )
+                      }
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white/80 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white/20 hover:text-white z-20"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setBannerSlide(
+                          (p) => (p + 1) % activeSlides.length
+                        )
+                      }
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white/80 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white/20 hover:text-white z-20"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+
+                    {/* Dot indicators */}
+                    <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+                      {activeSlides.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setBannerSlide(idx)}
+                          className={cn(
+                            "rounded-full transition-all duration-300",
+                            idx === bannerSlide
+                              ? "w-5 h-1.5 bg-rose-500"
+                              : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Slide counter */}
+                  <div className="flex justify-between items-center mt-3">
+                    <p className="text-[10px] text-white/30 font-semibold tracking-widest uppercase">
+                      Galeri K3
+                    </p>
+                    <p className="text-[10px] text-white/40 font-mono">
+                      {String(bannerSlide + 1).padStart(2, "0")} /{" "}
+                      {String(activeSlides.length).padStart(2, "0")}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1776,6 +2101,31 @@ export default function HseDashboardPage() {
                 )}
               </div>
 
+              {/* Action Buttons for Staf HSE to execute task */}
+              {(selectedReport?.status === "menunggu_tindakan_hse" ||
+                selectedReport?.status === "perbaikan_ditolak_pphse" ||
+                selectedReport?.status === "perbaikan_ditolak_kadis_hse" ||
+                selectedReport?.status === "perbaikan_ditolak_kadiv_pphse" ||
+                selectedReport?.status === "investigasi_ditolak_kadis_hse" ||
+                selectedReport?.status === "investigasi_ditolak_kadiv") &&
+                (currentUser?.nik === selectedReport?.ditugaskanKepada || 
+                 currentUser?.id === selectedReport?.ditugaskanKepada ||
+                 isAdminVal || role.includes("admin") || role.includes("developer") || 
+                 userDinasVal.includes("hse") || userDinasVal.includes("pphse")) && (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg sm:rounded-xl gap-1.5"
+                      onClick={openActionForm}
+                    >
+                      <Wrench size={14} />
+                      {selectedReport?.jenisTindakan === "investigasi"
+                        ? "Isi Form Investigasi"
+                        : "Isi Tindakan Perbaikan"}
+                    </Button>
+                  </div>
+                )}
+
               {/* Action Buttons for Validasi Awal */}
               {(isKadisHse || isKadivPphse) &&
                 (selectedReport?.status === "menunggu_validasi_kadis_hse" ||
@@ -2279,6 +2629,411 @@ export default function HseDashboardPage() {
               {isSubmitting ? "Memproses..." : "Konfirmasi"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Isi Tindakan / Investigasi Staf HSE */}
+      <Dialog open={isActionOpen} onOpenChange={setIsActionOpen}>
+        <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+          {/* Styled Header */}
+          <div className="px-6 pt-6 pb-4 border-b border-slate-100 bg-white">
+            <div className="flex items-center gap-2 text-rose-600 mb-1">
+              <Wrench size={18} />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">HSE Action Execution</span>
+            </div>
+            <DialogHeader className="p-0">
+              <DialogTitle className="text-xl font-black text-slate-900 tracking-tight">
+                {selectedReport?.jenisTindakan === "investigasi"
+                  ? "Form Investigasi Insiden K3"
+                  : "Input Tindakan Perbaikan Langsung"}
+              </DialogTitle>
+              <DialogDescription className="text-xs font-medium text-slate-500">
+                Lengkapi seluruh data tindakan penanganan K3 Safety.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5 space-y-6">
+            {selectedReport?.jenisTindakan === "perbaikan_langsung" ? (
+              /* perbaikan_langsung UI */
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText size={14} />
+                    Tindakan Perbaikan Yang Dilakukan
+                  </label>
+                  <Textarea
+                    placeholder="Sebutkan tindakan perbaikan yang telah dilakukan secara lengkap..."
+                    value={tindakanLangsungText}
+                    onChange={(e) => setTindakanLangsungText(e.target.value)}
+                    className="min-h-[120px] rounded-xl border-slate-200 resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Camera size={14} />
+                    Foto Bukti Perbaikan (Maks 2)
+                  </label>
+                  
+                  {/* Photo grid preview */}
+                  {actionPhotos.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3 mb-2">
+                      {actionPhotos.map((p, i) => (
+                        <div key={i} className="relative border border-slate-200 rounded-xl overflow-hidden aspect-video group shadow-sm">
+                          <img src={p.preview} className="w-full h-full object-cover" alt={`Foto Perbaikan ${i + 1}`} />
+                          <button
+                            className="absolute top-1.5 right-1.5 bg-black/60 text-white p-1 rounded-full hover:bg-rose-600 transition-colors backdrop-blur-sm"
+                            onClick={() => removeActionPhoto(i)}
+                          >
+                            <XCircle size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {actionPhotos.length < 2 && (
+                    <label className="border-2 border-dashed border-slate-200 rounded-2xl h-28 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group">
+                      <Camera size={24} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
+                      <span className="text-xs font-medium text-slate-500 mt-1.5">Tambah Foto Perbaikan</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">Format Gambar (JPG/PNG)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="sr-only"
+                        onChange={handleActionPhotosChange}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* investigasi UI */
+              <div className="space-y-6">
+                {/* Category Selection */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Kategori Investigasi
+                  </label>
+                  <Select value={actionCategory} onValueChange={setActionCategory}>
+                    <SelectTrigger className="w-full h-11 rounded-xl">
+                      <SelectValue placeholder="Pilih Kategori Investigasi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kecelakaan">Kecelakaan Kerja</SelectItem>
+                      <SelectItem value="penyakit_kerja">Penyakit Akibat Kerja</SelectItem>
+                      <SelectItem value="kebakaran">Kebakaran</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Dynamic Questions Form */}
+                <div className="space-y-4">
+                  {(() => {
+                    const formConfig = k3Settings?.formInvestigasi?.[actionCategory] || INITIAL_FORM_DATA[actionCategory];
+                    const questions = formConfig?.questions || [];
+                    let qNum = 0;
+
+                    return questions.map((q) => {
+                      if (q.type === "section") {
+                        return (
+                          <div key={q.id} className="rounded-xl overflow-hidden border border-slate-150 shadow-sm mt-4">
+                            <div className="h-1.5 bg-rose-500" />
+                            <div className="p-4 bg-slate-50/50">
+                              <h3 className="text-sm font-bold text-slate-800">{q.label}</h3>
+                              {q.description && <p className="text-xs text-slate-400 mt-0.5">{q.description}</p>}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      qNum++;
+                      return (
+                        <div key={q.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm">
+                          <div>
+                            <label className="text-xs sm:text-sm font-bold text-slate-700">
+                              {qNum}. {q.label || "Pertanyaan tanpa judul"}
+                              {q.required && <span className="text-rose-500 ml-1">*</span>}
+                            </label>
+                            {q.description && <p className="text-[11px] text-slate-400 mt-0.5">{q.description}</p>}
+                          </div>
+
+                          {/* Dynamic Inputs */}
+                          {q.type === "short_text" && (
+                            <Input
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              placeholder="Ketik jawaban singkat..."
+                              className="h-10 rounded-lg"
+                            />
+                          )}
+                          {q.type === "long_text" && (
+                            <Textarea
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              placeholder="Ketik jawaban lengkap..."
+                              className="min-h-[80px] rounded-lg resize-none"
+                            />
+                          )}
+                          {q.type === "number" && (
+                            <Input
+                              type="number"
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              placeholder="Ketik angka..."
+                              min={q.config?.min}
+                              max={q.config?.max}
+                              className="h-10 w-40 rounded-lg"
+                            />
+                          )}
+                          {q.type === "yes_no" && (
+                            <div className="flex gap-4">
+                              {["Ya", "Tidak"].map((opt) => (
+                                <label key={opt} className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={q.id}
+                                    value={opt}
+                                    checked={actionAnswers[q.id] === opt}
+                                    onChange={() => setActionAnswers({ ...actionAnswers, [q.id]: opt })}
+                                    className="w-4 h-4 text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                                  />
+                                  {opt}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                          {q.type === "multiple_choice" && (
+                            <div className="space-y-2">
+                              {q.options.map((opt, i) => (
+                                <label key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={q.id}
+                                    value={opt}
+                                    checked={actionAnswers[q.id] === opt}
+                                    onChange={() => setActionAnswers({ ...actionAnswers, [q.id]: opt })}
+                                    className="w-4 h-4 text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                                  />
+                                  {opt}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                          {q.type === "checkbox" && (
+                            <div className="space-y-2">
+                              {q.options.map((opt, i) => {
+                                const currentVal = actionAnswers[q.id] || [];
+                                const isChecked = currentVal.includes(opt);
+                                return (
+                                  <label key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setActionAnswers({ ...actionAnswers, [q.id]: [...currentVal, opt] });
+                                        } else {
+                                          setActionAnswers({ ...actionAnswers, [q.id]: currentVal.filter((x) => x !== opt) });
+                                        }
+                                      }}
+                                      className="w-4 h-4 text-rose-600 border-slate-300 rounded focus:ring-rose-500 cursor-pointer"
+                                    />
+                                    {opt}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {q.type === "dropdown" && (
+                            <Select
+                              value={actionAnswers[q.id] || ""}
+                              onValueChange={(val) => setActionAnswers({ ...actionAnswers, [q.id]: val })}
+                            >
+                              <SelectTrigger className="h-10 w-full sm:w-60">
+                                <SelectValue placeholder="Pilih opsi..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {q.options.map((opt, i) => (
+                                  <SelectItem key={i} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {q.type === "linear_scale" && (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1 px-1 max-w-xs">
+                                <span>{q.config?.labelMin || "1"}</span>
+                                <span>{q.config?.labelMax || "5"}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {Array.from(
+                                  { length: (q.config?.scaleMax || 5) - (q.config?.scaleMin || 1) + 1 },
+                                  (_, i) => (q.config?.scaleMin || 1) + i
+                                ).map((n) => (
+                                  <label key={n} className="flex flex-col items-center gap-1 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name={q.id}
+                                      value={n}
+                                      checked={Number(actionAnswers[q.id]) === n}
+                                      onChange={() => setActionAnswers({ ...actionAnswers, [q.id]: n })}
+                                      className="sr-only"
+                                    />
+                                    <span
+                                      className={cn(
+                                        "w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all",
+                                        Number(actionAnswers[q.id]) === n
+                                          ? "border-rose-500 bg-rose-50 text-rose-600 scale-110"
+                                          : "border-slate-200 text-slate-500 hover:border-rose-300"
+                                      )}
+                                    >
+                                      {n}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {q.type === "date" && (
+                            <Input
+                              type="date"
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              className="h-10 w-48 rounded-lg"
+                            />
+                          )}
+                          {q.type === "time" && (
+                            <Input
+                              type="time"
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              className="h-10 w-36 rounded-lg"
+                            />
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* Upload Foto Investigasi (Maks 2) */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Camera size={14} />
+                    Foto Investigasi (Maks 2 Gambar)
+                  </label>
+
+                  {/* Photo grid preview */}
+                  {actionPhotos.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3 mb-2">
+                      {actionPhotos.map((p, i) => (
+                        <div key={i} className="relative border border-slate-200 rounded-xl overflow-hidden aspect-video group shadow-sm">
+                          <img src={p.preview} className="w-full h-full object-cover" alt={`Foto Investigasi ${i + 1}`} />
+                          <button
+                            className="absolute top-1.5 right-1.5 bg-black/60 text-white p-1 rounded-full hover:bg-rose-600 transition-colors backdrop-blur-sm"
+                            onClick={() => removeActionPhoto(i)}
+                          >
+                            <XCircle size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {actionPhotos.length < 2 && (
+                    <label className="border-2 border-dashed border-slate-200 rounded-2xl h-24 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group">
+                      <Camera size={22} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
+                      <span className="text-xs font-medium text-slate-500 mt-1">Tambah Foto Investigasi</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="sr-only"
+                        onChange={handleActionPhotosChange}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Upload Dokumen Investigasi (Maks 1) */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText size={14} />
+                    Dokumen Pendukung (Maks 1 File - PDF, Word, Excel)
+                  </label>
+
+                  {actionDoc ? (
+                    <div className="flex items-center justify-between bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-red-50 text-rose-600 flex items-center justify-center shrink-0">
+                          <FileText size={16} />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 truncate max-w-xs">{actionDoc.name}</span>
+                      </div>
+                      <button
+                        className="text-slate-400 hover:text-rose-600 transition-colors"
+                        onClick={removeActionDoc}
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="border-2 border-dashed border-slate-200 rounded-2xl h-24 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group">
+                      <FileText size={22} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
+                      <span className="text-xs font-medium text-slate-500 mt-1">Pilih Dokumen Pendukung</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx"
+                        className="sr-only"
+                        onChange={handleActionDocChange}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Dialog Footer */}
+          <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50 flex items-center justify-end gap-3">
+            <Button
+              variant="outline"
+              className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 font-semibold px-6"
+              onClick={() => setIsActionOpen(false)}
+            >
+              Batal
+            </Button>
+            
+            {selectedReport?.jenisTindakan === "investigasi" && (
+              <Button
+                variant="outline"
+                className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-6"
+                onClick={() => submitAction(true)}
+                disabled={isSubmitting}
+              >
+                Simpan Draft
+              </Button>
+            )}
+
+            <Button
+              className="bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md shadow-rose-100 font-semibold px-6 text-white"
+              onClick={() => submitAction(false)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <RefreshCw size={16} className="mr-2 animate-spin" />
+              ) : (
+                <ShieldCheck size={16} className="mr-2" />
+              )}
+              Kirim Tindakan
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
