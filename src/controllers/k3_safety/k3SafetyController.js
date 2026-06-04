@@ -6,6 +6,21 @@ const sequelize = require('../../config/database');
 const { Op } = require('sequelize');
 const NotificationService = require('../../services/notificationService');
 
+function safeParseArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      if (val.startsWith('[')) return [];
+      return [val];
+    }
+  }
+  return [];
+}
+
 exports.createReport = async (req, res, next) => {
   try {
     const { kategori, deskripsi, lokasiTemuan } = req.body;
@@ -281,7 +296,7 @@ exports.actionPerbaikan = async (req, res, next) => {
     }
 
     // Handle foto perbaikan
-    let fotos = report.fotoPerbaikan || [];
+    let fotos = safeParseArray(report.fotoPerbaikan);
     if (req.files && req.files.length > 0) {
       const newPhotos = req.files.map(file => `uploads/k3_safety/${file.filename}`);
       fotos = fotos.concat(newPhotos);
@@ -634,7 +649,7 @@ exports.submitInvestigasi = async (req, res, next) => {
     const isDraft = isDraftInvestigasi === true || isDraftInvestigasi === 'true';
 
     // Handle foto investigasi
-    let fotos = report.fotoInvestigasi || [];
+    let fotos = safeParseArray(report.fotoInvestigasi);
     if (req.files) {
       // Check for 'fotoInvestigasi' field in uploaded files
       const fotoFiles = Array.isArray(req.files) 
