@@ -265,40 +265,41 @@ export default function RevertStepTab() {
               <Undo2 size={18} className="text-amber-600" />
               Konfirmasi Mundurkan Tahapan
             </DialogTitle>
-            <DialogDescription asChild>
-              <div className="space-y-3 pt-2">
-                <p className="text-sm text-slate-600">
-                  Anda akan memundurkan tahapan laporan ini 1 langkah ke belakang ke tahap{" "}
-                  <strong>&quot;{targetLabel}&quot;</strong>.
-                </p>
-                {selectedReport && (
-                  <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
-                    <p>
-                      <span className="text-slate-400">No:</span>{" "}
-                      <strong>{selectedReport.reportNumber}</strong>
-                    </p>
-                    <p>
-                      <span className="text-slate-400">Kategori:</span>{" "}
-                      {selectedReport.kategori}
-                    </p>
-                    <p>
-                      <span className="text-slate-400">Status saat ini:</span>{" "}
-                      {STATUS_MAP[selectedReport.status]?.label || selectedReport.status}
-                    </p>
-                  </div>
-                )}
-                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <AlertTriangle
-                    size={14}
-                    className="text-amber-500 mt-0.5 shrink-0"
-                  />
-                  <p className="text-xs text-amber-700">
-                    Tindakan ini akan memundurkan alur persetujuan ke tahap sebelumnya. Anda dapat memundurkannya kembali jika diperlukan.
-                  </p>
-                </div>
-              </div>
+            <DialogDescription>
+              Tindakan ini akan memundurkan alur persetujuan laporan ke tahap sebelumnya.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <p className="text-sm text-slate-600">
+              Anda akan memundurkan tahapan laporan ini 1 langkah ke belakang ke tahap{" "}
+              <strong>&quot;{targetLabel}&quot;</strong>.
+            </p>
+            {selectedReport && (
+              <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
+                <p>
+                  <span className="text-slate-400">No:</span>{" "}
+                  <strong>{selectedReport.reportNumber}</strong>
+                </p>
+                <p>
+                  <span className="text-slate-400">Kategori:</span>{" "}
+                  {selectedReport.kategori}
+                </p>
+                <p>
+                  <span className="text-slate-400">Status saat ini:</span>{" "}
+                  {STATUS_MAP[selectedReport.status]?.label || selectedReport.status}
+                </p>
+              </div>
+            )}
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <AlertTriangle
+                size={14}
+                className="text-amber-500 mt-0.5 shrink-0"
+              />
+              <p className="text-xs text-amber-700">
+                Tindakan ini akan memundurkan alur persetujuan ke tahap sebelumnya. Anda dapat memundurkannya kembali jika diperlukan.
+              </p>
+            </div>
+          </div>
           <DialogFooter className="gap-3 sm:gap-3">
             <Button
               variant="outline"

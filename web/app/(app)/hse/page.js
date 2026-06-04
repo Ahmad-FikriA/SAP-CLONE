@@ -925,10 +925,8 @@ export default function HseDashboardPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const userName = currentUser?.name || currentUser?.nik || "User";
     const watermarkLines = [
       `MANTIS PPHSE - PT KTI`,
-      `Oleh: ${userName}`,
       `Waktu: ${dateStr}`,
     ];
 
