@@ -60,6 +60,12 @@ const K3Settings = sequelize.define('K3Settings', {
     allowNull: true,
     field: 'banner_slides',
   },
+  formInvestigasi: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'form_investigasi',
+    comment: 'Dynamic investigation form config (kecelakaan, penyakit_kerja, kebakaran)',
+  },
 }, {
   tableName: 'k3_settings',
   underscored: true,

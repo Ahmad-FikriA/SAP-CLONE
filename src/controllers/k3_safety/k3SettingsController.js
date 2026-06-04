@@ -47,7 +47,8 @@ exports.updateSettings = async (req, res, next) => {
       bannerTitle1,
       bannerTitle2,
       bannerDescription,
-      bannerSlides
+      bannerSlides,
+      formInvestigasi
     } = req.body;
     
     if (bannerTitle1 && bannerTitle1.length > 35) {
@@ -75,6 +76,7 @@ exports.updateSettings = async (req, res, next) => {
     if (bannerTitle2 !== undefined) settings.bannerTitle2 = bannerTitle2;
     if (bannerDescription !== undefined) settings.bannerDescription = bannerDescription;
     if (bannerSlides !== undefined) settings.bannerSlides = bannerSlides;
+    if (formInvestigasi !== undefined) settings.formInvestigasi = formInvestigasi;
 
     await settings.save();
 
