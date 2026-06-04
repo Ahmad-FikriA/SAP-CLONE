@@ -15,44 +15,45 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const NAV = [
-  { key: 'dashboard',         href: '/dashboard',          label: 'Dashboard',          Icon: LayoutDashboard },
-  { divider: true},
-  { key: 'spk',               href: '/spk',                label: 'Preventive',         Icon: FileText },
-  { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan Preventive', Icon: ClipboardCheck },
-  { divider: true},
-  { key: 'corrective',        href: '/corrective',         label: 'Corrective',         Icon: Wrench },
+  { key: 'dashboard', href: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { divider: true },
+  { key: 'spk', href: '/spk', label: 'Preventive', Icon: FileText },
+  { key: 'spk-approval', href: '/spk/approval', label: 'Persetujuan Preventive', Icon: ClipboardCheck },
+  { key: 'track-record', href: '/users/track-record', label: 'Riwayat PM', Icon: BarChart2 },
+
+  { divider: true },
+  { key: 'corrective', href: '/corrective', label: 'Corrective', Icon: Wrench },
   { key: 'corrective-record', href: '/corrective/track-record', label: 'Riwayat CM', Icon: BarChart2 },
   { key: 'corrective-approval', href: '/corrective/approval', label: 'Persetujuan Corrective', Icon: ClipboardCheck },
   { divider: true },
-  { key: 'users',             href: '/users',              label: 'Users',              Icon: Users },
-  { key: 'track-record',      href: '/users/track-record', label: 'Track Record',       Icon: BarChart2 },
-  { divider: true},
-  { key: 'equipment',         href: '/equipment',          label: 'Equipment',          Icon: Radio },
-  { key: 'maps',              href: '/maps',               label: 'Maps',               Icon: Map },
-  { key: 'task-mapping',      href: '/equipment/mappings', label: 'Task List',          Icon: Link2 },
-  { key: 'interval-planner',  href: '/interval-planner',   label: 'Interval Planner',   Icon: Calendar },
+  { key: 'users', href: '/users', label: 'Users', Icon: Users },
   { divider: true },
-  { key: 'submissions',       href: '/submissions',        label: 'Submissions',        Icon: Activity },
+  { key: 'equipment', href: '/equipment', label: 'Equipment', Icon: Radio },
+  { key: 'maps', href: '/maps', label: 'Maps', Icon: Map },
+  { key: 'task-mapping', href: '/equipment/mappings', label: 'Task List', Icon: Link2 },
+  { key: 'interval-planner', href: '/interval-planner', label: 'Interval Planner', Icon: Calendar },
   { divider: true },
-  { key: 'hse',               href: '/hse',                label: 'HSE Command Center', Icon: ShieldCheck },
-  { key: 'hse',               href: '/hse/admin',          label: 'Admin K3',           Icon: Settings },
-  { key: 'hse',               href: '/hse/track-record',   label: 'Riwayat K3',         Icon: BarChart2 },
-  { key: 'inspeksi',          href: '/inspeksi',           label: 'Inspeksi',           Icon: ClipboardList },
-  { key: 'supervisi',         href: '/supervisi',          label: 'Supervisi',          Icon: MapPin },
-  { divider: true},
-  { key: 'kalender',          href: '/kalender',           label: 'Kalender Jadwal',    Icon: CalendarRange },
-  { key: 'settings',          href: '/settings',           label: 'Pengaturan Akses',   Icon: Settings },
+  { key: 'submissions', href: '/submissions', label: 'Submissions', Icon: Activity },
   { divider: true },
-  { key: 'material',          href: '/material',           label: 'Material Gudang',    Icon: Package },
+  { key: 'hse', href: '/hse', label: 'HSE Command Center', Icon: ShieldCheck },
+  { key: 'hse', href: '/hse/admin', label: 'Admin K3', Icon: Settings },
+  { key: 'hse', href: '/hse/track-record', label: 'Riwayat K3', Icon: BarChart2 },
+  { key: 'inspeksi', href: '/inspeksi', label: 'Inspeksi', Icon: ClipboardList },
+  { key: 'supervisi', href: '/supervisi', label: 'Supervisi', Icon: MapPin },
+  { divider: true },
+  { key: 'kalender', href: '/kalender', label: 'Kalender Jadwal', Icon: CalendarRange },
+  { key: 'settings', href: '/settings', label: 'Pengaturan Akses', Icon: Settings },
+  { divider: true },
+  { key: 'material', href: '/material', label: 'Material Gudang', Icon: Package },
 ];
 
 export default function Sidebar() {
-  const pathname  = usePathname();
-  const router    = useRouter();
-  const [collapsed,   setCollapsed]   = useState(false);
-  const [mobileOpen,  setMobileOpen]  = useState(false);
-  const [user,        setUser]        = useState(null);
-  const [isMounted,   setIsMounted]   = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -78,15 +79,15 @@ export default function Sidebar() {
 
   function isActive(href) {
     if (href === '/dashboard') return pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard/');
-    
+
     // Check if there is another nav item that is a more specific match for the current pathname
-    const hasMoreSpecificMatch = NAV.some(item => 
-      item.href && 
-      item.href.length > href.length && 
-      item.href.startsWith(href) && 
+    const hasMoreSpecificMatch = NAV.some(item =>
+      item.href &&
+      item.href.length > href.length &&
+      item.href.startsWith(href) &&
       (pathname === item.href || pathname.startsWith(item.href + '/'))
     );
-    
+
     if (hasMoreSpecificMatch) return false;
 
     return pathname === href || pathname.startsWith(href + '/');
@@ -108,7 +109,7 @@ export default function Sidebar() {
         const isPlanner = user?.role === 'admin' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
         if (!isPlanner) label = 'Corrective';
       }
-      const active  = isActive(href);
+      const active = isActive(href);
       const showLabel = forceExpanded || !collapsed;
       return (
         <Link
