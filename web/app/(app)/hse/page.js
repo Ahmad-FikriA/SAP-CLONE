@@ -48,6 +48,7 @@ import {
   Zap,
   Award,
   ChevronRight,
+  ChevronLeft,
   MoreVertical,
   ExternalLink,
   ClipboardCheck,
@@ -77,7 +78,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, getMediaUrl } from "@/lib/utils";
 
 const TABS = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -218,6 +219,39 @@ function getMetricClassification(id, valueNum) {
   return null;
 }
 
+const BANNER_SLIDES = [
+  {
+    id: 1,
+    url: "https://picsum.photos/seed/k3safety1/800/600",
+    title: "Safety Briefing Harian",
+    subtitle: "Komitmen keselamatan dimulai dari awal hari kerja",
+  },
+  {
+    id: 2,
+    url: "https://picsum.photos/seed/k3safety2/800/600",
+    title: "Inspeksi Alat Pelindung Diri",
+    subtitle: "Pemeriksaan kelengkapan APD sebelum bekerja",
+  },
+  {
+    id: 3,
+    url: "https://picsum.photos/seed/k3safety3/800/600",
+    title: "Pelatihan Tanggap Darurat",
+    subtitle: "Simulasi evakuasi dan penanganan keadaan darurat",
+  },
+  {
+    id: 4,
+    url: "https://picsum.photos/seed/k3safety4/800/600",
+    title: "Audit Keselamatan Kerja",
+    subtitle: "Evaluasi berkala sistem manajemen K3",
+  },
+  {
+    id: 5,
+    url: "https://picsum.photos/seed/k3safety5/800/600",
+    title: "Zero Accident Achievement",
+    subtitle: "Target nihil kecelakaan kerja tercapai",
+  },
+];
+
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
@@ -225,6 +259,7 @@ const MONTH_NAMES = [
 
 export default function HseDashboardPage() {
   const [tab, setTab] = useState("dashboard");
+  const [bannerSlide, setBannerSlide] = useState(0);
   
   // ── States for Inspeksi K3 ──
   const [k3Schedules,      setK3Schedules]      = useState([]);
@@ -242,6 +277,26 @@ export default function HseDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [k3Settings, setK3Settings] = useState(null);
+
+  const activeSlides = useMemo(() => {
+    if (k3Settings?.bannerSlides) {
+      try {
+        const parsed = typeof k3Settings.bannerSlides === 'string'
+          ? JSON.parse(k3Settings.bannerSlides)
+          : k3Settings.bannerSlides;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error("Error parsing bannerSlides", e);
+      }
+    }
+    return BANNER_SLIDES;
+  }, [k3Settings]);
+
+  const bannerTitle1 = k3Settings?.bannerTitle1 || "Zero Accident Strategy";
+  const bannerTitle2 = k3Settings?.bannerTitle2 || "Safety First, Always.";
+  const displayDescription = k3Settings?.bannerDescription || "Data kinerja keselamatan kerja yang diagregasi berdasarkan standar formulasi pelaporan insiden internasional.";
 
   const [selectedReport, setSelectedReport] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -817,6 +872,15 @@ export default function HseDashboardPage() {
     };
   }, []);
 
+  // ── Banner auto-slide ──
+  useEffect(() => {
+    if (tab !== "dashboard" || activeSlides.length === 0) return;
+    const timer = setInterval(() => {
+      setBannerSlide((prev) => (prev + 1) % activeSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [tab, activeSlides]);
+
   // ── Konfigurasi Safety Performance Standard KS Group ──────────────────────
   const TOTAL_KARYAWAN = k3Settings?.totalKaryawan || 280;
   const JAM_KERJA_PER_BULAN = (k3Settings?.jamKerjaPerHari || 8) * (k3Settings?.hariKerjaPerBulan || 20);
@@ -1083,12 +1147,16 @@ export default function HseDashboardPage() {
                   HSE Performance
                 </Badge>
                 <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold mb-3 sm:mb-4 tracking-tight leading-tight">
-                  Zero Accident Strategy <br />
-                  <span className="text-rose-500">Safety First, Always.</span>
+                  {bannerTitle1}
+                  {bannerTitle2 && (
+                    <>
+                      <br />
+                      <span className="text-rose-500">{bannerTitle2}</span>
+                    </>
+                  )}
                 </h1>
                 <p className="text-slate-400 text-xs sm:text-sm md:text-base max-w-md leading-relaxed mb-5 sm:mb-8">
-                  Data kinerja keselamatan kerja yang diagregasi berdasarkan
-                  standar formulasi pelaporan insiden internasional.
+                  {displayDescription}
                 </p>
                 <div className="flex gap-5 sm:gap-6">
                   <div>
@@ -1101,13 +1169,97 @@ export default function HseDashboardPage() {
                   </div>
                 </div>
               </div>
-              <div className="hidden md:flex justify-end">
-                <div className="w-64 h-64 bg-rose-600/10 rounded-full flex items-center justify-center relative">
-                  <div className="absolute inset-0 animate-pulse bg-rose-500/20 rounded-full blur-3xl" />
-                  <TrendingUp
-                    size={120}
-                    className="text-rose-500 relative z-10"
-                  />
+              <div className="hidden md:block">
+                <div className="relative w-full max-w-sm ml-auto">
+                  {/* Glow effect */}
+                  <div className="absolute -inset-3 bg-gradient-to-br from-rose-500/20 via-transparent to-indigo-500/10 rounded-3xl blur-2xl" />
+
+                  {/* Carousel */}
+                  <div className="relative rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl aspect-[4/3] group cursor-pointer">
+                    {activeSlides.map((slide, idx) => (
+                      <div
+                        key={slide.id || idx}
+                        className={cn(
+                          "absolute inset-0 transition-all duration-700 ease-in-out",
+                          idx === bannerSlide
+                            ? "opacity-100 scale-100"
+                            : "opacity-0 scale-105"
+                        )}
+                      >
+                        <img
+                          src={getMediaUrl(slide.path || slide.url)}
+                          alt={slide.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-black/20" />
+                      </div>
+                    ))}
+
+                    {/* Caption */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 z-10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-1 h-4 bg-rose-500 rounded-full flex-shrink-0" />
+                        <p className="text-white font-bold text-sm leading-snug line-clamp-1">
+                          {activeSlides[bannerSlide]?.title}
+                        </p>
+                      </div>
+                      <p className="text-white/50 text-[11px] ml-3 leading-relaxed line-clamp-1">
+                        {activeSlides[bannerSlide]?.subtitle}
+                      </p>
+                    </div>
+
+                    {/* Arrows */}
+                    <button
+                      onClick={() =>
+                        setBannerSlide(
+                          (p) =>
+                            (p - 1 + activeSlides.length) %
+                            activeSlides.length
+                        )
+                      }
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white/80 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white/20 hover:text-white z-20"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setBannerSlide(
+                          (p) => (p + 1) % activeSlides.length
+                        )
+                      }
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white/80 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white/20 hover:text-white z-20"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+
+                    {/* Dot indicators */}
+                    <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+                      {activeSlides.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setBannerSlide(idx)}
+                          className={cn(
+                            "rounded-full transition-all duration-300",
+                            idx === bannerSlide
+                              ? "w-5 h-1.5 bg-rose-500"
+                              : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Slide counter */}
+                  <div className="flex justify-between items-center mt-3">
+                    <p className="text-[10px] text-white/30 font-semibold tracking-widest uppercase">
+                      Galeri K3
+                    </p>
+                    <p className="text-[10px] text-white/40 font-mono">
+                      {String(bannerSlide + 1).padStart(2, "0")} /{" "}
+                      {String(activeSlides.length).padStart(2, "0")}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -38,8 +38,28 @@ exports.updateSettings = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin/Kadiv/HSE yang dapat mengubah pengaturan K3' });
     }
 
-    const { totalKaryawan, jamKerjaPerHari, hariKerjaPerBulan, jamKerjaTanpaKecelakaan, jumlahFatality } = req.body;
+    const {
+      totalKaryawan,
+      jamKerjaPerHari,
+      hariKerjaPerBulan,
+      jamKerjaTanpaKecelakaan,
+      jumlahFatality,
+      bannerTitle1,
+      bannerTitle2,
+      bannerDescription,
+      bannerSlides
+    } = req.body;
     
+    if (bannerTitle1 && bannerTitle1.length > 35) {
+      return res.status(400).json({ success: false, message: 'Judul Baris 1 maksimal 35 karakter' });
+    }
+    if (bannerTitle2 && bannerTitle2.length > 35) {
+      return res.status(400).json({ success: false, message: 'Judul Baris 2 maksimal 35 karakter' });
+    }
+    if (bannerDescription && bannerDescription.length > 140) {
+      return res.status(400).json({ success: false, message: 'Deskripsi Banner maksimal 140 karakter' });
+    }
+
     let settings = await K3Settings.findByPk('main');
     if (!settings) {
       settings = await K3Settings.create({ id: 'main' });
@@ -51,6 +71,10 @@ exports.updateSettings = async (req, res, next) => {
     if (hariKerjaPerBulan !== undefined) settings.hariKerjaPerBulan = hariKerjaPerBulan;
     if (jamKerjaTanpaKecelakaan !== undefined) settings.jamKerjaTanpaKecelakaan = jamKerjaTanpaKecelakaan;
     if (jumlahFatality !== undefined) settings.jumlahFatality = jumlahFatality;
+    if (bannerTitle1 !== undefined) settings.bannerTitle1 = bannerTitle1;
+    if (bannerTitle2 !== undefined) settings.bannerTitle2 = bannerTitle2;
+    if (bannerDescription !== undefined) settings.bannerDescription = bannerDescription;
+    if (bannerSlides !== undefined) settings.bannerSlides = bannerSlides;
 
     await settings.save();
 
