@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { apiGet, apiPut, apiDelete, apiUpload } from "@/lib/api";
+import { apiGet, apiPut, apiDelete, apiFetch } from "@/lib/api";
 import { getUser, canDelete } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -490,7 +490,7 @@ export default function HseDashboardPage() {
         fd.append("tindakanPerbaikan", tindakanLangsungText);
         actionPhotos.forEach((p) => fd.append("fotoPerbaikan", p.file));
         
-        await apiUpload(`/k3-safety/${selectedReport.id}/perbaikan`, fd);
+        await apiFetch(`/k3-safety/${selectedReport.id}/perbaikan`, { method: 'PUT', body: fd });
       } else {
         fd.append("investigasiCategory", actionCategory);
         fd.append("isDraftInvestigasi", isDraft ? "true" : "false");
@@ -501,7 +501,7 @@ export default function HseDashboardPage() {
           fd.append("dokumenInvestigasi", actionDoc.file);
         }
 
-        await apiUpload(`/k3-safety/${selectedReport.id}/investigasi`, fd);
+        await apiFetch(`/k3-safety/${selectedReport.id}/investigasi`, { method: 'PUT', body: fd });
       }
 
       toast.success(
@@ -954,7 +954,7 @@ export default function HseDashboardPage() {
         fd.append("lokasiTemuan", createData.lokasiTemuan);
       createPhotos.forEach((p) => fd.append("foto", p.file));
 
-      await apiUpload("/k3-safety", fd);
+      await apiFetch("/k3-safety", { method: 'POST', body: fd });
       toast.success("Laporan K3 berhasil dikirim");
       setIsCreateOpen(false);
       setCreateData({ kategori: "", deskripsi: "", lokasiTemuan: "" });
