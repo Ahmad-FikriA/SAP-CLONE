@@ -528,10 +528,18 @@ exports.revertStep = async (req, res, next) => {
   try {
     const reportId = req.params.id;
     const role = (req.user.role || '').toLowerCase();
+    const dinas = (req.user.dinas || '').toLowerCase();
     
-    // Auth Check: Cuma Admin atau Kadiv yang boleh
-    if (!role.includes('admin') && !role.includes('developer') && !role.includes('kadiv')) {
-      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin/Kadiv yang dapat memundurkan tahapan' });
+    // Auth Check: Cuma Admin, Developer, atau Kadis HSE
+    let allowed = false;
+    if (role.includes('admin') || role.includes('developer')) {
+      allowed = true;
+    } else if (role.includes('kadis') && dinas.includes('hse') && !dinas.includes('pphse')) {
+      allowed = true;
+    }
+
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin dan Kadis HSE yang dapat memundurkan tahapan' });
     }
 
     const report = await K3Report.findByPk(reportId);
