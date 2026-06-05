@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
-import { isAuthenticated, canRead } from '@/lib/auth';
+import { isAuthenticated, canRead, getUser } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 
 const ROUTE_ACCESS = [
@@ -63,7 +63,10 @@ export default function AppLayout({ children }) {
   const pathname = usePathname();
   const [isReady, setIsReady] = useState(false);
   const accessKey = accessKeyForPath(pathname);
-  const denied = isReady && accessKey && !canRead(accessKey);
+  const user = getUser();
+  const isPlanner = user?.role === 'admin' || user?.role === 'planner' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
+  const hasAccess = canRead(accessKey) || (accessKey === 'material' && isPlanner);
+  const denied = isReady && accessKey && !hasAccess;
 
   useEffect(() => {
     if (!isAuthenticated()) {
