@@ -101,7 +101,12 @@ export default function Sidebar() {
   function renderNavLinks(forceExpanded = false) {
     return NAV.map((item, i) => {
       if (item.divider) return <div key={i} className="my-2 border-t border-white/10" />;
-      if (!canRead(item.key)) return null;
+      
+      // Planner override: always show material menu for planner users
+      const isPlanner = user?.role === 'admin' || user?.role === 'planner' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
+      if (item.key === 'material' && !canRead(item.key) && !isPlanner) return null;
+      else if (item.key !== 'material' && !canRead(item.key)) return null;
+
       if (item.key === 'inspeksi' && user?.dinas?.toLowerCase().includes('hse') && !user?.dinas?.toLowerCase().includes('pphse')) return null;
       const { href, Icon } = item;
       let label = item.label;
