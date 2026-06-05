@@ -1246,7 +1246,7 @@ export default function HseDashboardPage() {
             />
             Segarkan
           </Button>
-          {canDelete("hse") && (
+          {(canDelete("hse") || isKadisHse) && (
             <Button
               variant="destructive"
               size="sm"
@@ -1998,7 +1998,7 @@ export default function HseDashboardPage() {
                 <Button variant="outline" size="sm" className="rounded-lg sm:rounded-xl" onClick={() => setIsDetailOpen(false)}>
                   Tutup
                 </Button>
-                {canDelete("hse") && (
+                {(canDelete("hse") || isKadisHse) && (
                   <Button
                     variant="outline"
                     size="sm"

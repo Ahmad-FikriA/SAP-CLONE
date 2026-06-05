@@ -976,10 +976,18 @@ exports.deleteReport = async (req, res, next) => {
   try {
     const reportId = req.params.id;
     const role = (req.user.role || '').toLowerCase();
+    const dinas = (req.user.dinas || '').toLowerCase();
     
-    // Auth Check: Cuma Admin/Superadmin yang boleh (atau developer)
-    if (!role.includes('admin') && !role.includes('developer')) {
-      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin yang dapat menghapus data' });
+    let allowed = false;
+    if (role.includes('admin') || role.includes('developer')) {
+      allowed = true;
+    } else if (role.includes('kadis') && dinas.includes('hse') && !dinas.includes('pphse')) {
+      allowed = true;
+    }
+
+    // Auth Check: Cuma Admin, Developer, dan Kadis HSE yang boleh
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin dan Kadis HSE yang dapat menghapus data' });
     }
 
     const report = await K3Report.findByPk(reportId);
@@ -1003,10 +1011,18 @@ exports.deleteReport = async (req, res, next) => {
 exports.deleteAllReports = async (req, res, next) => {
   try {
     const role = (req.user.role || '').toLowerCase();
+    const dinas = (req.user.dinas || '').toLowerCase();
     
+    let allowed = false;
+    if (role.includes('admin') || role.includes('developer')) {
+      allowed = true;
+    } else if (role.includes('kadis') && dinas.includes('hse') && !dinas.includes('pphse')) {
+      allowed = true;
+    }
+
     // Auth Check
-    if (!role.includes('admin') && !role.includes('developer')) {
-      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin yang dapat melakukan hapus semua data' });
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin dan Kadis HSE yang dapat melakukan hapus semua data' });
     }
 
     const count = await K3Report.destroy({
