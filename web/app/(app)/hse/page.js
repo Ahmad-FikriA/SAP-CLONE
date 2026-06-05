@@ -345,9 +345,11 @@ export default function HseDashboardPage() {
   const role = useMemo(() => (currentUser?.role || "").toLowerCase(), [currentUser]);
   const divisi = useMemo(() => (currentUser?.divisi || "").toLowerCase(), [currentUser]);
 
-  const isKadisHse = useMemo(() =>
-    (role.includes("kadis") || role.includes("kepala dinas")) &&
-    (divisi.includes("pphse") || divisi.includes("hse")), [role, divisi]);
+  const isKadisHse = useMemo(() => {
+    const dinas = (currentUser?.dinas || '').toLowerCase();
+    return (role.includes("kadis") || role.includes("kepala dinas")) &&
+           dinas.includes("hse") && !dinas.includes("pphse");
+  }, [role, currentUser]);
   const isKadivPphse = useMemo(() =>
     (role.includes("kadiv") || role.includes("kepala divisi")) &&
     (divisi.includes("pphse") || divisi.includes("hse")), [role, divisi]);
