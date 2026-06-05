@@ -11,7 +11,7 @@ export async function apiFetch(path, options = {}) {
     ...(options.headers || {}),
   };
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${BASE}${path}`, { cache: 'no-store', ...options, headers });
 
   if (res.status === 401) {
     clearAuth();

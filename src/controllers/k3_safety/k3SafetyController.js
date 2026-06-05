@@ -1063,8 +1063,11 @@ exports.getStats = async (req, res, next) => {
       ],
     });
 
-    // Filter laporan untuk mengecualikan yang ditolak (initial rejection)
-    const activeReports = reports.filter(r => !['ditolak', 'ditolak_kadiv_pphse', 'ditolak_kadis_hse'].includes(r.status));
+    // Filter laporan untuk mengecualikan yang ditolak (semua status yang mengandung 'ditolak')
+    const activeReports = reports.filter(r => {
+      const status = r.status || '';
+      return !status.toLowerCase().includes('ditolak');
+    });
 
     const totalReports = activeReports.length;
     const totalSelesai = activeReports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;
