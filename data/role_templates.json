@@ -36,6 +36,7 @@
     "submissions":      ["C","R"],
     "hse":              ["R"],
     "interval-planner": ["C","R","U","D"],
+    "material":         ["C","R","U","D"],
     "inspeksi":         ["R"],
     "supervisi":        ["R"],
     "kalender":         ["R"]

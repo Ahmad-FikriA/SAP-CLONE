@@ -6,6 +6,21 @@ const sequelize = require('../../config/database');
 const { Op } = require('sequelize');
 const NotificationService = require('../../services/notificationService');
 
+function safeParseArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      if (val.startsWith('[')) return [];
+      return [val];
+    }
+  }
+  return [];
+}
+
 exports.createReport = async (req, res, next) => {
   try {
     const { kategori, deskripsi, lokasiTemuan } = req.body;
@@ -281,7 +296,7 @@ exports.actionPerbaikan = async (req, res, next) => {
     }
 
     // Handle foto perbaikan
-    let fotos = report.fotoPerbaikan || [];
+    let fotos = safeParseArray(report.fotoPerbaikan);
     if (req.files && req.files.length > 0) {
       const newPhotos = req.files.map(file => `uploads/k3_safety/${file.filename}`);
       fotos = fotos.concat(newPhotos);
@@ -513,10 +528,18 @@ exports.revertStep = async (req, res, next) => {
   try {
     const reportId = req.params.id;
     const role = (req.user.role || '').toLowerCase();
+    const dinas = (req.user.dinas || '').toLowerCase();
     
-    // Auth Check: Cuma Admin atau Kadiv yang boleh
-    if (!role.includes('admin') && !role.includes('developer') && !role.includes('kadiv')) {
-      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin/Kadiv yang dapat memundurkan tahapan' });
+    // Auth Check: Cuma Admin, Developer, atau Kadis HSE
+    let allowed = false;
+    if (role.includes('admin') || role.includes('developer')) {
+      allowed = true;
+    } else if (role.includes('kadis') && dinas.includes('hse') && !dinas.includes('pphse')) {
+      allowed = true;
+    }
+
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin dan Kadis HSE yang dapat memundurkan tahapan' });
     }
 
     const report = await K3Report.findByPk(reportId);
@@ -634,7 +657,7 @@ exports.submitInvestigasi = async (req, res, next) => {
     const isDraft = isDraftInvestigasi === true || isDraftInvestigasi === 'true';
 
     // Handle foto investigasi
-    let fotos = report.fotoInvestigasi || [];
+    let fotos = safeParseArray(report.fotoInvestigasi);
     if (req.files) {
       // Check for 'fotoInvestigasi' field in uploaded files
       const fotoFiles = Array.isArray(req.files) 
@@ -953,10 +976,18 @@ exports.deleteReport = async (req, res, next) => {
   try {
     const reportId = req.params.id;
     const role = (req.user.role || '').toLowerCase();
+    const dinas = (req.user.dinas || '').toLowerCase();
     
-    // Auth Check: Cuma Admin/Superadmin yang boleh (atau developer)
-    if (!role.includes('admin') && !role.includes('developer')) {
-      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin yang dapat menghapus data' });
+    let allowed = false;
+    if (role.includes('admin') || role.includes('developer')) {
+      allowed = true;
+    } else if (role.includes('kadis') && dinas.includes('hse') && !dinas.includes('pphse')) {
+      allowed = true;
+    }
+
+    // Auth Check: Cuma Admin, Developer, dan Kadis HSE yang boleh
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin dan Kadis HSE yang dapat menghapus data' });
     }
 
     const report = await K3Report.findByPk(reportId);
@@ -980,10 +1011,18 @@ exports.deleteReport = async (req, res, next) => {
 exports.deleteAllReports = async (req, res, next) => {
   try {
     const role = (req.user.role || '').toLowerCase();
+    const dinas = (req.user.dinas || '').toLowerCase();
     
+    let allowed = false;
+    if (role.includes('admin') || role.includes('developer')) {
+      allowed = true;
+    } else if (role.includes('kadis') && dinas.includes('hse') && !dinas.includes('pphse')) {
+      allowed = true;
+    }
+
     // Auth Check
-    if (!role.includes('admin') && !role.includes('developer')) {
-      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin yang dapat melakukan hapus semua data' });
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin dan Kadis HSE yang dapat melakukan hapus semua data' });
     }
 
     const count = await K3Report.destroy({
@@ -1024,8 +1063,11 @@ exports.getStats = async (req, res, next) => {
       ],
     });
 
-    // Filter laporan untuk mengecualikan yang ditolak (initial rejection)
-    const activeReports = reports.filter(r => !['ditolak', 'ditolak_kadiv_pphse', 'ditolak_kadis_hse'].includes(r.status));
+    // Filter laporan untuk mengecualikan yang ditolak (semua status yang mengandung 'ditolak')
+    const activeReports = reports.filter(r => {
+      const status = r.status || '';
+      return !status.toLowerCase().includes('ditolak');
+    });
 
     const totalReports = activeReports.length;
     const totalSelesai = activeReports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;

@@ -26,6 +26,7 @@ export default function AdminK3Page() {
   const [settings, setSettings] = useState(null);
   const router = useRouter();
   const [isAllowed, setIsAllowed] = useState(null);
+  const [canRevert, setCanRevert] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -49,14 +50,23 @@ export default function AdminK3Page() {
     const dinas = String(user.dinas || "").toLowerCase();
 
     let allowed = false;
-    if (role === "admin") allowed = true;
-    else if (role === "kadiv" && divisi.includes("pphse")) allowed = true;
-    else if (role === "kadis" && dinas.includes("hse") && !dinas.includes("pphse")) allowed = true;
+    let revertAllowed = false;
+    if (role === "admin") {
+      allowed = true;
+      revertAllowed = true;
+    } else if (role === "kadis" && dinas.includes("hse") && !dinas.includes("pphse")) {
+      allowed = true;
+      revertAllowed = true;
+    } else if (role === "kadiv" && divisi.includes("pphse")) {
+      allowed = true;
+      revertAllowed = false;
+    }
 
     if (!allowed) {
       setIsAllowed(false);
     } else {
       setIsAllowed(true);
+      setCanRevert(revertAllowed);
       fetchSettings();
     }
   }, [fetchSettings, router]);
@@ -104,6 +114,8 @@ export default function AdminK3Page() {
       {/* Tab Switcher */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-xl sm:rounded-2xl w-full overflow-x-auto">
         {TABS.map((t) => {
+          if (t.key === "revert" && !canRevert) return null;
+          
           const Icon = t.icon;
           const isActive = activeTab === t.key;
           return (
@@ -135,7 +147,7 @@ export default function AdminK3Page() {
       {activeTab === "settings" && (
         <SettingsTab settings={settings} fetchSettings={fetchSettings} />
       )}
-      {activeTab === "revert" && <RevertStepTab />}
+      {activeTab === "revert" && canRevert && <RevertStepTab />}
       {activeTab === "form-builder" && <FormBuilderTab />}
     </div>
   );

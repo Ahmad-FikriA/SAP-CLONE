@@ -16,6 +16,8 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
+  SelectLabel,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -830,10 +832,11 @@ export default function FormBuilderTab() {
                 {/* Expanded Editor */}
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-1 border-t border-slate-100 space-y-4">
-                    {/* Question text + Description */}
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-600">
+                    {/* Row 1: Teks Pertanyaan & Tipe Jawaban (Google Forms style) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Left: Question text (2/3 width) */}
+                      <div className="md:col-span-2 space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                           Teks Pertanyaan
                         </label>
                         <Input
@@ -842,97 +845,107 @@ export default function FormBuilderTab() {
                             updateQuestion(q.id, { label: e.target.value })
                           }
                           placeholder="Tulis pertanyaan di sini..."
-                          className="h-10"
+                          className="h-10 text-sm font-medium"
                           autoFocus
                         />
                       </div>
+
+                      {/* Right: Type selector (1/3 width) */}
                       <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-600 flex items-center gap-1">
-                          <HelpCircle size={11} className="text-slate-400" />
-                          Deskripsi / Petunjuk
-                          <span className="text-slate-300 font-normal">
-                            (opsional)
-                          </span>
+                        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                          Tipe Jawaban
                         </label>
-                        <Input
-                          value={q.description || ""}
-                          onChange={(e) =>
-                            updateQuestion(q.id, {
-                              description: e.target.value,
-                            })
-                          }
-                          placeholder="Tambahkan deskripsi atau petunjuk pengisian..."
-                          className="h-9 text-sm"
-                        />
+                        <Select
+                          value={q.type}
+                          onValueChange={(v) => {
+                            const updates = { type: v };
+                            if (!needsOptions(v) && needsOptions(q.type)) {
+                              updates.options = [];
+                            }
+                            if (needsOptions(v) && !needsOptions(q.type)) {
+                              updates.options = ["Opsi 1", "Opsi 2"];
+                            }
+                            if (
+                              v === "linear_scale" &&
+                              q.type !== "linear_scale"
+                            ) {
+                              updates.config = {
+                                scaleMin: 1,
+                                scaleMax: 5,
+                                labelMin: "",
+                                labelMax: "",
+                              };
+                            }
+                            if (v === "number" && q.type !== "number") {
+                              updates.config = { min: undefined, max: undefined };
+                            }
+                            if (v === "file_upload" && q.type !== "file_upload") {
+                              updates.config = {
+                                accept: "image/*",
+                                maxFiles: 5,
+                                maxSizeKB: 500,
+                              };
+                            }
+                            updateQuestion(q.id, updates);
+                          }}
+                        >
+                          <SelectTrigger className="h-10 text-sm font-medium">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-80 min-w-[240px]">
+                            {QUESTION_TYPE_GROUPS.filter(
+                              (g) => g.key !== "layout",
+                            ).map((group) => {
+                              const items = QUESTION_TYPES.filter(
+                                (t) => t.group === group.key,
+                              );
+                              if (items.length === 0) return null;
+                              return (
+                                <SelectGroup key={group.key}>
+                                  <SelectLabel className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    {group.label}
+                                  </SelectLabel>
+                                  {items.map((t) => {
+                                    const Icon = t.icon;
+                                    return (
+                                      <SelectItem key={t.key} value={t.key} className="py-2.5 pl-8 cursor-pointer">
+                                        <div className="flex items-center gap-2">
+                                          <Icon
+                                            size={14}
+                                            className="text-slate-400 shrink-0"
+                                          />
+                                          <span className="text-slate-700 text-sm font-medium">{t.label}</span>
+                                        </div>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectGroup>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
-                    {/* Type selector */}
+                    {/* Row 2: Description / Petunjuk (opsional, full width) */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-600">
-                        Tipe Jawaban
+                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                        <HelpCircle size={11} className="text-slate-400" />
+                        Deskripsi / Petunjuk
+                        <span className="text-slate-300 font-normal">
+                          (opsional)
+                        </span>
                       </label>
-                      <Select
-                        value={q.type}
-                        onValueChange={(v) => {
-                          const updates = { type: v };
-                          if (!needsOptions(v) && needsOptions(q.type)) {
-                            updates.options = [];
-                          }
-                          if (needsOptions(v) && !needsOptions(q.type)) {
-                            updates.options = ["Opsi 1", "Opsi 2"];
-                          }
-                          if (
-                            v === "linear_scale" &&
-                            q.type !== "linear_scale"
-                          ) {
-                            updates.config = {
-                              scaleMin: 1,
-                              scaleMax: 5,
-                              labelMin: "",
-                              labelMax: "",
-                            };
-                          }
-                          if (v === "number" && q.type !== "number") {
-                            updates.config = { min: undefined, max: undefined };
-                          }
-                          if (v === "file_upload" && q.type !== "file_upload") {
-                            updates.config = {
-                              accept: "image/*",
-                              maxFiles: 5,
-                              maxSizeKB: 500,
-                            };
-                          }
-                          updateQuestion(q.id, updates);
-                        }}
-                      >
-                        <SelectTrigger className="h-10">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {QUESTION_TYPE_GROUPS.filter(
-                            (g) => g.key !== "layout",
-                          ).map((group) => {
-                            const items = QUESTION_TYPES.filter(
-                              (t) => t.group === group.key,
-                            );
-                            return items.map((t) => {
-                              const Icon = t.icon;
-                              return (
-                                <SelectItem key={t.key} value={t.key}>
-                                  <div className="flex items-center gap-2">
-                                    <Icon
-                                      size={14}
-                                      className="text-slate-400"
-                                    />
-                                    {t.label}
-                                  </div>
-                                </SelectItem>
-                              );
-                            });
-                          })}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        value={q.description || ""}
+                        onChange={(e) =>
+                          updateQuestion(q.id, {
+                            description: e.target.value,
+                          })
+                        }
+                        placeholder="Tambahkan deskripsi atau petunjuk pengisian..."
+                        className="h-9 text-xs"
+                      />
                     </div>
 
                     {/* Options Editor */}
