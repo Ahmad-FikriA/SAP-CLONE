@@ -168,6 +168,22 @@ SpkMaterial.belongsTo(User, {
   as: "addedByUser",
   constraints: false,
 });
+
+// ── Spk (Preventive) ↔ SpkMaterial (Planned Materials) ──────────────────────
+Spk.hasMany(SpkMaterial, {
+  foreignKey: "order_number",
+  sourceKey: "spkNumber",
+  as: "spkMaterials",
+  onDelete: "CASCADE",
+  constraints: false,
+});
+SpkMaterial.belongsTo(Spk, {
+  foreignKey: "order_number",
+  targetKey: "spkNumber",
+  as: "preventiveSpk",
+  constraints: false,
+});
+
 // ── Supervisi Module ─────────────────────────────────────────────────────────
 const SupervisiJob = require("./SupervisiJob");
 const SupervisiVisit = require("./SupervisiVisit");

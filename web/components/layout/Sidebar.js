@@ -23,8 +23,8 @@ const NAV = [
 
   { divider: true },
   { key: 'corrective', href: '/corrective', label: 'Corrective', Icon: Wrench },
-  { key: 'corrective-record', href: '/corrective/track-record', label: 'Riwayat CM', Icon: BarChart2 },
   { key: 'corrective-approval', href: '/corrective/approval', label: 'Persetujuan Corrective', Icon: ClipboardCheck },
+  { key: 'corrective-record', href: '/corrective/track-record', label: 'Riwayat CM', Icon: BarChart2 },
   { divider: true },
   { key: 'users', href: '/users', label: 'Users', Icon: Users },
   { divider: true },

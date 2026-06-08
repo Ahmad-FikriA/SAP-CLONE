@@ -283,4 +283,90 @@ describe('📋 Preventive SPK API Tests', () => {
       console.log('  ✓ Missing ids rejected for bulk delete');
     });
   });
+
+  describe('SPK Material Reservation API Tests', () => {
+    let testMaterial = null;
+    let testSpkForMaterials = null;
+    let materialRecordId = null;
+
+    beforeAll(async () => {
+      const { Material, Spk } = require('../src/models/associations');
+      // Create a test material
+      testMaterial = await Material.create({
+        materialCode: 'TEST-PREV-MAT-01',
+        name: 'Test Preventive Material',
+        quantity: 50,
+        price: 1000,
+        cabinetCode: 'CAB-T1'
+      });
+
+      // Create a test SPK
+      testSpkForMaterials = await Spk.create({
+        spkNumber: 'SPK-TEST-MAT-999',
+        description: 'SPK Test for Material Reservation',
+        category: 'Mekanik',
+        status: 'pending'
+      });
+    });
+
+    afterAll(async () => {
+      const { Material, Spk, SpkMaterial } = require('../src/models/associations');
+      // Clean up
+      if (testMaterial) {
+        await SpkMaterial.destroy({ where: { materialId: testMaterial.id } });
+        await Material.destroy({ where: { id: testMaterial.id } });
+      }
+      if (testSpkForMaterials) {
+        await Spk.destroy({ where: { spkNumber: testSpkForMaterials.spkNumber } });
+      }
+    });
+
+    it('should add material to preventive SPK and deduct stock', async () => {
+      const response = await authRequest('post', `/spk/${testSpkForMaterials.spkNumber}/materials`)
+        .send({
+          materialId: testMaterial.id,
+          quantityUsed: 10
+        });
+
+      expectSuccess(response, 201);
+      expect(response.body.status).toBe('success');
+      expect(response.body.data).toHaveProperty('id');
+      expect(Number(response.body.data.quantityUsed)).toBe(10);
+      materialRecordId = response.body.data.id;
+
+      // Verify stock in database
+      const { Material } = require('../src/models/associations');
+      const updatedMaterial = await Material.findByPk(testMaterial.id);
+      expect(Number(updatedMaterial.quantity)).toBe(40); // 50 - 10
+    });
+
+    it('should reject adding material if stock is insufficient', async () => {
+      const response = await authRequest('post', `/spk/${testSpkForMaterials.spkNumber}/materials`)
+        .send({
+          materialId: testMaterial.id,
+          quantityUsed: 100 // Exceeds available 40
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('message');
+      expect(response.body.message).toContain('Stok tidak cukup');
+    });
+
+    it('should remove material from preventive SPK and restore stock', async () => {
+      if (!materialRecordId) {
+        console.log('  ⚠ Skipping: No material record created');
+        return;
+      }
+
+      const response = await authRequest('delete', `/spk/${testSpkForMaterials.spkNumber}/materials/${materialRecordId}`);
+
+      expectSuccess(response);
+      expect(response.body.status).toBe('success');
+
+      // Verify stock is restored
+      const { Material } = require('../src/models/associations');
+      const restoredMaterial = await Material.findByPk(testMaterial.id);
+      expect(Number(restoredMaterial.quantity)).toBe(50); // Restored to 50
+    });
+  });
 });

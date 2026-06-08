@@ -10,8 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { CATEGORIES, STATUS_LABELS, KADIS_AREAS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS } from '@/lib/constants';
 import { formatDate, formatDateShort } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Trash2, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin, CheckCircle2, Circle } from 'lucide-react';
-import { canCreate, canUpdate, canDelete, getUserCategory } from '@/lib/auth';
+import { RefreshCw, Trash2, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin, CheckCircle2, Circle, Package, Search } from 'lucide-react';
+import { canCreate, canUpdate, canDelete, getUserCategory, getUser } from '@/lib/auth';
 import Link from 'next/link';
 
 const STATUS_OPTIONS = ['pending', 'awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis', 'approved', 'rejected'];
@@ -98,13 +98,27 @@ function SpkPageInner() {
   const [saving, setSaving]         = useState(false);
   const actIdxRef = useRef(0);
 
+  // Material states
+  const [user, setUser] = useState(null);
+  const [matSearch, setMatSearch] = useState('');
+  const [matResults, setMatResults] = useState([]);
+  const [matSearching, setMatSearching] = useState(false);
+  const [matQty, setMatQty] = useState(1);
+  const [matSelected, setMatSelected] = useState(null);
+  const [matAdding, setMatAdding] = useState(false);
+  const matSearchTimeout = useRef(null);
+  const matDropdownRef = useRef(null);
+
   // Detail view
   const [detailSpk, setDetailSpk]   = useState(null);
   const [detailFull, setDetailFull] = useState(null); // enriched single-SPK (names resolved)
   const [detailSubs, setDetailSubs] = useState([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
 
-  useEffect(() => { setUserCategory(getUserCategory()); }, []);
+  useEffect(() => {
+    setUserCategory(getUserCategory());
+    setUser(getUser());
+  }, []);
   useEffect(() => { apiGet('/maps').then(setPlants).catch(() => {}); }, []);
   useEffect(() => { load(); }, [category, plantFilter, statusFilter, weekFilter, yearFilter, hasAbnormal, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -196,11 +210,14 @@ function SpkPageInner() {
   async function openEdit(spk) {
     const eqRes = await apiGet('/equipment?limit=9999').catch(() => ({ data: [] }));
     setAllEquipment(eqRes.data || eqRes);
-    setEditingSpk(spk);
-    setForm({ spkNumber: spk.spkNumber, description: spk.description || '', category: spk.category || 'Mekanik', status: spk.status || 'pending', scheduledDate: spk.scheduledDate || '', interval: spk.interval || '', evaluasi: spk.evaluasi || '', equipmentStatus: spk.equipmentStatus || 'Running' });
-    const eqIds = (spk.equipmentModels || []).map((e) => e.equipmentId);
+    
+    // Fetch fresh SPK details including materials
+    const freshSpk = await apiGet(`/spk/${spk.spkNumber}`).catch(() => spk);
+    setEditingSpk(freshSpk);
+    setForm({ spkNumber: freshSpk.spkNumber, description: freshSpk.description || '', category: freshSpk.category || 'Mekanik', status: freshSpk.status || 'pending', scheduledDate: freshSpk.scheduledDate || '', interval: freshSpk.interval || '', evaluasi: freshSpk.evaluasi || '', equipmentStatus: freshSpk.equipmentStatus || 'Running' });
+    const eqIds = (freshSpk.equipmentModels || []).map((e) => e.equipmentId);
     setSelectedEqIds(eqIds);
-    setActivities((spk.activitiesModel || []).map((a) => ({
+    setActivities((freshSpk.activitiesModel || []).map((a) => ({
       _id: actIdxRef.current++,
       activityNumber: a.activityNumber,
       equipmentId:    a.equipmentId    ?? null,
@@ -212,6 +229,12 @@ function SpkPageInner() {
       isVerified:     a.isVerified     ?? false,
       measurementValue: a.measurementValue ?? '',
     })));
+    // Reset material states
+    setMatSearch('');
+    setMatResults([]);
+    setMatSelected(null);
+    setMatQty(1);
+
     setEqSearch('');
     setPanelOpen(true);
   }
@@ -259,6 +282,101 @@ function SpkPageInner() {
   function updateActivity(id, field, value) {
     setActivities((prev) => prev.map((a) => a._id === id ? { ...a, [field]: value } : a));
   }
+
+  // Material search with debounce
+  const handleMatSearch = (value) => {
+    setMatSearch(value);
+    setMatSelected(null);
+    if (matSearchTimeout.current) clearTimeout(matSearchTimeout.current);
+    if (!value || value.length < 1) {
+      setMatResults([]);
+      return;
+    }
+    setMatSearching(true);
+    matSearchTimeout.current = setTimeout(async () => {
+      try {
+        const results = await apiGet(`/materials?search=${encodeURIComponent(value)}`);
+        const data = Array.isArray(results?.data) ? results.data : (Array.isArray(results) ? results : []);
+        setMatResults(data.slice(0, 20));
+      } catch {
+        setMatResults([]);
+      } finally {
+        setMatSearching(false);
+      }
+    }, 300);
+  };
+
+  const handleSelectMaterial = (mat) => {
+    if (Number(mat.quantity) <= 0) return;
+    setMatSelected(mat);
+    setMatSearch(`${mat.materialCode} — ${mat.name}`);
+    setMatResults([]);
+    setMatQty(1);
+  };
+
+  const handleAddMaterial = async () => {
+    if (!matSelected || matQty <= 0 || !editingSpk) return;
+    setMatAdding(true);
+    try {
+      const res = await apiPost(`/spk/${editingSpk.spkNumber}/materials`, {
+        materialId: matSelected.id,
+        quantityUsed: Number(matQty),
+      });
+      if (res.status === 'success') {
+        toast.success('Material berhasil ditambahkan');
+        
+        // Refresh editingSpk details
+        const refreshed = await apiGet(`/spk/${editingSpk.spkNumber}`);
+        setEditingSpk(refreshed);
+        
+        // Update local spkList
+        setSpkList((prev) => prev.map((s) => s.spkNumber === refreshed.spkNumber ? refreshed : s));
+        
+        // Reset inputs
+        setMatSelected(null);
+        setMatSearch('');
+        setMatQty(1);
+      } else {
+        toast.error(res.message || 'Gagal menambahkan material');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Gagal menambahkan material');
+    } finally {
+      setMatAdding(false);
+    }
+  };
+
+  const handleRemoveMaterial = async (recordId) => {
+    if (!editingSpk) return;
+    try {
+      const res = await apiDelete(`/spk/${editingSpk.spkNumber}/materials/${recordId}`);
+      if (res.status === 'success') {
+        toast.success('Material dihapus, stok dikembalikan');
+        
+        // Refresh editingSpk details
+        const refreshed = await apiGet(`/spk/${editingSpk.spkNumber}`);
+        setEditingSpk(refreshed);
+        
+        // Update local spkList
+        setSpkList((prev) => prev.map((s) => s.spkNumber === refreshed.spkNumber ? refreshed : s));
+      } else {
+        toast.error(res.message || 'Gagal menghapus material');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Gagal menghapus material');
+    }
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (matDropdownRef.current && !matDropdownRef.current.contains(e.target)) {
+        setMatResults([]);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   async function saveSpk() {
     const { spkNumber, description, category: cat, status, scheduledDate, evaluasi, equipmentStatus } = form;
@@ -636,6 +754,153 @@ function SpkPageInner() {
                 <Plus size={12} /> Tambah Aktivitas
               </button>
             </section>
+
+            {/* ── Reservasi Material ── */}
+            <section className="bg-blue-50/50 rounded-xl border border-blue-100 p-4 space-y-4">
+              <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide flex items-center gap-1.5">
+                <Package size={14} /> Reservasi Material
+                {editingSpk?.spkMaterials?.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-700 font-bold">
+                    {editingSpk.spkMaterials.length}
+                  </span>
+                )}
+              </p>
+
+              {/* Add material controls */}
+              <div className="space-y-2.5">
+                <div className="relative" ref={matDropdownRef}>
+                  <div className="flex gap-1.5">
+                    <div className="relative flex-1">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        value={matSearch}
+                        onChange={(e) => handleMatSearch(e.target.value)}
+                        placeholder="Cari material..."
+                        className="w-full pl-7 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      />
+                    </div>
+                    <input
+                      type="number"
+                      min={1}
+                      max={matSelected ? Number(matSelected.quantity) : 99999}
+                      value={matQty}
+                      onChange={(e) => setMatQty(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      placeholder="Qty"
+                      disabled={!matSelected}
+                    />
+                    <Button
+                      size="sm"
+                      className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5"
+                      disabled={!matSelected || matAdding || matQty <= 0}
+                      onClick={handleAddMaterial}
+                    >
+                      {matAdding ? "..." : "Tambah"}
+                    </Button>
+                  </div>
+
+                  {/* Search results dropdown */}
+                  {matResults.length > 0 && (
+                    <div className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                      {matResults.map((mat) => {
+                        const isOut = Number(mat.quantity) <= 0;
+                        return (
+                          <button
+                            key={mat.id}
+                            disabled={isOut}
+                            onClick={() => handleSelectMaterial(mat)}
+                            className={`w-full px-3 py-2 text-left flex items-center justify-between border-b border-gray-50 last:border-0 text-xs ${
+                              isOut ? "opacity-45 cursor-not-allowed bg-gray-50" : "hover:bg-blue-50 cursor-pointer"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-[10px] font-bold text-gray-500">{mat.materialCode}</span>
+                                {isOut && <span className="text-[9px] bg-red-100 text-red-600 px-1 rounded font-semibold">Habis</span>}
+                              </div>
+                              <p className="text-gray-700 truncate mt-0.5">{mat.name}</p>
+                            </div>
+                            <div className="text-right ml-2 shrink-0">
+                              <div className={`font-bold ${isOut ? "text-red-400" : "text-green-600"}`}>
+                                {Number(mat.quantity).toLocaleString()}
+                              </div>
+                              <div className="text-[9px] text-gray-400">{mat.uom || "PCS"}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {matSearching && matSearch.length >= 1 && (
+                    <div className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-xs text-gray-400">
+                      Mencari material...
+                    </div>
+                  )}
+                </div>
+
+                {matSelected && (
+                  <div className="flex items-center gap-1.5 bg-blue-100/40 border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-blue-800">
+                    <Package size={12} className="text-blue-600 shrink-0" />
+                    <span className="font-medium truncate flex-1">
+                      {matSelected.materialCode} — {matSelected.name}
+                    </span>
+                    <span className="text-[10px] text-blue-600 shrink-0">
+                      (Stok: {Number(matSelected.quantity).toLocaleString()} {matSelected.uom || "PCS"})
+                    </span>
+                    <button onClick={() => { setMatSelected(null); setMatSearch(""); }} className="text-blue-400 hover:text-blue-600 shrink-0 ml-1">
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Material list table */}
+              {editingSpk?.spkMaterials?.length > 0 ? (
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-gray-50 border-b border-gray-200 text-[10px] font-semibold text-gray-500 uppercase">
+                      <tr>
+                        <th className="px-2.5 py-1.5">Kode</th>
+                        <th className="px-2.5 py-1.5">Nama</th>
+                        <th className="px-2.5 py-1.5 text-center">Qty</th>
+                        <th className="px-2.5 py-1.5 text-center">UoM</th>
+                        <th className="px-2.5 py-1.5 text-center">Stok</th>
+                        <th className="px-2 py-1.5 w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-gray-700">
+                      {editingSpk.spkMaterials.map((sm) => (
+                        <tr key={sm.id} className="hover:bg-gray-50/50">
+                          <td className="px-2.5 py-2 font-mono text-[10px] text-gray-500">{sm.material?.materialCode || "-"}</td>
+                          <td className="px-2.5 py-2 truncate max-w-[100px]" title={sm.material?.name}>{sm.material?.name || "-"}</td>
+                          <td className="px-2.5 py-2 text-center font-bold text-blue-600">{Number(sm.quantityUsed)}</td>
+                          <td className="px-2.5 py-2 text-center text-gray-400 text-[10px]">{sm.material?.uom || "PCS"}</td>
+                          <td className="px-2.5 py-2 text-center">
+                            <span className={`px-1 rounded text-[10px] font-semibold ${Number(sm.material?.quantity) > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+                              {Number(sm.material?.quantity ?? 0).toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="px-2 py-2 text-center">
+                            <button
+                              onClick={() => handleRemoveMaterial(sm.id)}
+                              className="text-red-400 hover:text-red-600 p-0.5 rounded hover:bg-red-50 transition-colors"
+                              title="Hapus material & kembalikan stok"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-xs text-gray-400">
+                  Belum ada material yang ditambahkan
+                </div>
+              )}
+            </section>
           </div>
 
           {/* Panel footer */}
@@ -789,6 +1054,44 @@ function SpkPageInner() {
                               </tr>
                             );
                           })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Material yang Direncanakan (Reservasi Material) */}
+              {((detailFull?.spkMaterials || detailSpk?.spkMaterials || []).length > 0) && (() => {
+                const materials = detailFull?.spkMaterials || detailSpk?.spkMaterials || [];
+                return (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                      <Package size={13} className="text-gray-400" /> Reservasi Material ({materials.length})
+                    </p>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto bg-white">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            {['Kode Material', 'Nama Material', 'Jumlah', 'UoM', 'Sisa Stok Gudang'].map((h) => (
+                              <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-gray-700">
+                          {materials.map((sm) => (
+                            <tr key={sm.id} className="hover:bg-gray-50/40">
+                              <td className="px-3 py-2 font-mono text-gray-500">{sm.material?.materialCode || "-"}</td>
+                              <td className="px-3 py-2 font-medium text-gray-800">{sm.material?.name || "-"}</td>
+                              <td className="px-3 py-2 font-bold text-blue-600">{Number(sm.quantityUsed)}</td>
+                              <td className="px-3 py-2 text-gray-400 text-xs">{sm.material?.uom || "PCS"}</td>
+                              <td className="px-3 py-2">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${Number(sm.material?.quantity) > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+                                  {Number(sm.material?.quantity ?? 0).toLocaleString()}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>

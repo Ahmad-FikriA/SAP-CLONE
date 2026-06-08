@@ -3,6 +3,7 @@
 const express = require('express');
 const multer  = require('multer');
 const { verifyToken } = require('../middleware/auth');
+const { requirePlanner } = require('../middleware/correctiveAccess');
 
 const excelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -33,6 +34,8 @@ spkRouter.post('/', verifyToken, spkController.create);
 spkRouter.put('/:spkNumber', verifyToken, spkController.update);
 spkRouter.delete('/:spkNumber', verifyToken, spkController.remove);
 spkRouter.post('/:spkNumber/submit', verifyToken, spkController.submit);
+spkRouter.post('/:spkNumber/materials', verifyToken, requirePlanner, spkController.addMaterialToSpk);
+spkRouter.delete('/:spkNumber/materials/:materialRecordId', verifyToken, requirePlanner, spkController.removeMaterialFromSpk);
 spkRouter.post('/:spkNumber/approve-kasie', verifyToken, spkController.approveKasie);
 spkRouter.post('/:spkNumber/approve-kadis-perawatan', verifyToken, spkController.approveKadisPerawatan);
 spkRouter.post('/:spkNumber/approve-kadis', verifyToken, spkController.approveKadis);

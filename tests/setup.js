@@ -154,6 +154,21 @@ beforeAll(async () => {
   // Wait for database connection
   await sequelize.authenticate();
   
+  // Ensure the default test user exists in the database
+  const User = require('../src/models/User');
+  await User.findOrCreate({
+    where: { nik: TEST_CONFIG.DEFAULT_USER.nik },
+    defaults: {
+      id: TEST_CONFIG.DEFAULT_USER.nik,
+      nik: TEST_CONFIG.DEFAULT_USER.nik,
+      password: TEST_CONFIG.DEFAULT_USER.password,
+      name: 'Test Administrator',
+      role: 'admin',
+      divisi: 'Perencanaan',
+      group: 'perencanaan',
+    }
+  });
+
   // Get auth token
   await getAuthToken();
   
