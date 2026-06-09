@@ -20,6 +20,8 @@ const NAV = [
   { key: 'spk', href: '/spk', label: 'Preventive', Icon: FileText },
   { key: 'spk-approval', href: '/spk/approval', label: 'Persetujuan Preventive', Icon: ClipboardCheck },
   { key: 'track-record', href: '/users/track-record', label: 'Riwayat PM', Icon: BarChart2 },
+  { key: 'submissions', href: '/submissions', label: 'Rekapan PM', Icon: Activity },
+
 
   { divider: true },
   { key: 'corrective', href: '/corrective', label: 'Corrective', Icon: Wrench },
@@ -33,18 +35,19 @@ const NAV = [
   { key: 'task-mapping', href: '/equipment/mappings', label: 'Task List', Icon: Link2 },
   { key: 'interval-planner', href: '/interval-planner', label: 'Interval Planner', Icon: Calendar },
   { divider: true },
-  { key: 'submissions', href: '/submissions', label: 'Submissions', Icon: Activity },
-  { divider: true },
-  { key: 'hse', href: '/hse', label: 'HSE Command Center', Icon: ShieldCheck },
-  { key: 'hse', href: '/hse/admin', label: 'Admin K3', Icon: Settings },
-  { key: 'hse', href: '/hse/track-record', label: 'Riwayat K3', Icon: BarChart2 },
   { key: 'inspeksi', href: '/inspeksi', label: 'Inspeksi', Icon: ClipboardList },
   { key: 'supervisi', href: '/supervisi', label: 'Supervisi', Icon: MapPin },
+  { key: 'hse', href: '/hse', label: 'HSE Command Center', Icon: ShieldCheck },
+  { key: 'hse', href: '/hse/track-record', label: 'Riwayat K3', Icon: BarChart2 },
+  { key: 'hse', href: '/hse/admin', label: 'Admin K3', Icon: Settings },
+
   { divider: true },
   { key: 'kalender', href: '/kalender', label: 'Kalender Jadwal', Icon: CalendarRange },
-  { key: 'settings', href: '/settings', label: 'Pengaturan Akses', Icon: Settings },
-  { divider: true },
   { key: 'material', href: '/material', label: 'Material Gudang', Icon: Package },
+
+  { divider: true },
+  { key: 'settings', href: '/settings', label: 'Pengaturan Akses', Icon: Settings },
+
 ];
 
 export default function Sidebar() {
@@ -101,7 +104,7 @@ export default function Sidebar() {
   function renderNavLinks(forceExpanded = false) {
     return NAV.map((item, i) => {
       if (item.divider) return <div key={i} className="my-2 border-t border-white/10" />;
-      
+
       // Planner override: always show material menu for planner users
       const isPlanner = user?.role === 'admin' || user?.role === 'planner' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
       if (item.key === 'material' && !canRead(item.key) && !isPlanner) return null;
