@@ -32,7 +32,13 @@
       "Bash(git -C C:/Users/fik/Projects/SAP-CLONE status --short)",
       "Bash(find *)",
       "Bash(wc -l /c/Users/fik/Projects/SAP-CLONE/web/app/\\\\\\(app\\\\\\)/**/page.js)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(rtk wc *)",
+      "Bash(rtk grep *)",
+      "Bash(rtk ls *)",
+      "Bash(rtk read *)",
+      "Bash(cd /c/Users/fik/Projects/SAP-CLONE)",
+      "Bash(rtk git *)"
     ]
   }
 }

@@ -190,7 +190,7 @@ const confirm = async (req, res) => {
             equipmentId:    spkEqId ?? null,
             controlKey:     act.controlKey ?? null,
             operationText:  act.operationText ?? null,
-            durationPlan:   null, // SAP Excel doesn't carry duration per activity
+            durationPlan:   act.durationPlan ?? null, // from SAP "Duration Plan" column; null when absent/empty
           }, { transaction: t });
         }
 

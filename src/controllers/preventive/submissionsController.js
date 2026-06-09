@@ -217,6 +217,16 @@ function fmtTimeSAP(ts) {
   return `${hours}:${minutes}:00`;
 }
 
+// SAP expects dates as DD.MM.YYYY with dot separators (not the slashes id-ID uses)
+function fmtDateSAP(ts) {
+  if (!ts) return '';
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric',
+  }).formatToParts(new Date(ts));
+  const get = (t) => parts.find(p => p.type === t)?.value;
+  return `${get('day')}.${get('month')}.${get('year')}`;
+}
+
 // Shared border style
 const BORDER_THIN = {
   top: { style: 'thin' },
@@ -793,9 +803,9 @@ const exportIW49 = async (req, res) => {
         ? Math.round((sj.durationActual / 60) * 100) / 100
         : null;
 
-      const postingDate   = fmtDate(sj.submittedAt);
-      const workStartDate = fmtDate(sj.workStart);
-      const workFinishDate = fmtDate(sj.submittedAt);
+      const postingDate   = fmtDateSAP(sj.submittedAt);
+      const workStartDate = fmtDateSAP(sj.workStart);
+      const workFinishDate = fmtDateSAP(sj.submittedAt);
       const startTime     = fmtTimeSAP(sj.workStart);
       const finishTime    = fmtTimeSAP(sj.submittedAt);
 
@@ -853,7 +863,7 @@ const exportIW49 = async (req, res) => {
     for (const spk of historicalSpks) {
       const sj = spk.toJSON();
       const activities = sj.activitiesModel || [];
-      const postingDate = fmtDate(sj.scheduledDate);
+      const postingDate = fmtDateSAP(sj.scheduledDate);
       const rows = activities.length
         ? activities
         : [{ activityNumber: '', controlKey: '', operationText: '', durationPlan: null }];

@@ -2,6 +2,10 @@
 
 require("dotenv").config();
 const express = require("express");
+// Patches Express so rejected promises from async route handlers are forwarded
+// to the error-handling middleware instead of becoming unhandledRejections.
+// Must be required before any routes are defined.
+require("express-async-errors");
 const cors = require("cors");
 const path = require("path");
 const multer = require("multer");
@@ -47,13 +51,15 @@ require("./models/associations");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Catch unhandled promise rejections to pinpoint the mystery crash
+// Log unhandled promise rejections, but DO NOT kill the server — a single bad
+// request must never take the whole API down for every other user. With
+// express-async-errors wired in above, rejected route handlers now flow to the
+// error middleware, so anything reaching here is a genuine background bug to log.
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('🚨 UNHANDLED PROMISE REJECTION DETECTED!');
+  console.error('🚨 UNHANDLED PROMISE REJECTION (logged, server kept alive)');
   console.error('Promise:', promise);
   console.error('Reason:', reason);
   console.error('Stack Trace:', reason && reason.stack ? reason.stack : 'No stack');
-  process.exit(1);
 });
 
 // ── Middleware ──────────────────────────────────────────────────────────────

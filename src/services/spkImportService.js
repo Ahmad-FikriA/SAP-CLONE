@@ -51,6 +51,17 @@ function normaliseHeader(h) {
   return String(h ?? '').toLowerCase().trim();
 }
 
+// ── Duration Plan header aliases (SAP exports vary: "Duration Plan" / "Duration P") ──
+const DURATION_PLAN_HEADERS = ['duration plan', 'duration p', 'dur. plan', 'dur plan'];
+
+// ── Parse a duration cell — may be a number, numeric string, or empty ─────────
+// Returns null when empty/absent (the fallback) so the column is optional.
+function parseDuration(val) {
+  if (val === null || val === undefined || val === '') return null;
+  const n = typeof val === 'number' ? val : parseFloat(String(val).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
 // ── FuncLoc prefix → Kadis area ID (per-order, handles mixed-plant files) ────
 // Longer prefixes (kadis_keamanan) must come first — A-A1-01-006 would otherwise
 // match the shorter A-A1-01 prefix of kadis_airbaku before being checked.
@@ -125,6 +136,15 @@ function parseExcelBuffer(buffer) {
     return orig !== undefined ? row[orig] : '';
   };
 
+  // Helper to pull a value by the first matching header from a list of aliases
+  const getAny = (row, normKeys) => {
+    for (const nk of normKeys) {
+      const orig = keyMap[nk];
+      if (orig !== undefined) return row[orig];
+    }
+    return '';
+  };
+
   // Read the Location code from the first data row (same value on every row in a file)
   const locationCode  = String(get(rows[0], 'location') ?? '').trim() || null;
   const detectedKadisId = detectKadisFromLocationCode(locationCode);
@@ -187,11 +207,13 @@ function parseExcelBuffer(buffer) {
     // Add activity if it has an activity number and op text
     const operationText = String(get(row, 'op. short text') ?? '').trim();
     const controlKey    = String(get(row, 'control key') ?? '').trim() || null;
+    const durationPlan  = parseDuration(getAny(row, DURATION_PLAN_HEADERS));
     if (activityRaw) {
       orderMap.get(orderNumber).activitiesModel.push({
         activityNumber: activityRaw,
         operationText,
         controlKey,
+        durationPlan,
       });
     }
   }
