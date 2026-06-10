@@ -51,7 +51,9 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], fu
           <TableHead>Equipment & Lokasi</TableHead>
           <TableHead className="w-[140px] max-w-[140px]">Work Start</TableHead>
           <TableHead className="w-[160px] max-w-[160px] pr-4">Status SAP</TableHead>
-          <TableHead className="text-right w-[190px] max-w-[190px] pr-4">Aksi</TableHead>
+          <TableHead className="w-[190px] max-w-[190px] pr-6">
+            <div className="text-right">Aksi</div>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -134,7 +136,7 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], fu
                 ) : "—"}
               </TableCell>
               <TableCell
-                className="text-right w-[190px] max-w-[190px] pr-4"
+                className="text-right w-[190px] max-w-[190px] pr-6"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex justify-end items-center gap-1">

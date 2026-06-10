@@ -26,7 +26,9 @@ export function SpkTable({
           <TableHead>Equipment & Lokasi</TableHead>
           <TableHead>Jam / Pekerja</TableHead>
           <TableHead>Status Sistem</TableHead>
-          <TableHead className="text-right pr-16">Aksi</TableHead>
+          <TableHead className="pr-6">
+            <div className="text-right">Aksi</div>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -132,7 +134,7 @@ export function SpkTable({
                   />
                 </TableCell>
                 <TableCell
-                  className="text-right"
+                  className="text-right pr-6"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex justify-end items-center gap-1">
