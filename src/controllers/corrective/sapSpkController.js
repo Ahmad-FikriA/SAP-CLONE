@@ -152,6 +152,13 @@ const parseSapSpkExcel = (worksheet) => {
     const status = isTeco ? "selesai" : "baru_import";
     const jobResultDesc = isTeco ? "History Import (TECO)" : null;
 
+    const durPlan = parseFloat(getVal("dur_plan")) || null;
+    const numOfWork = parseInt(getVal("num_of_work")) || null;
+    let normalDur = parseFloat(getVal("normal_dur")) || null;
+    if (durPlan !== null && numOfWork !== null) {
+      normalDur = parseFloat((durPlan * numOfWork).toFixed(2));
+    }
+
     rowsToUpsert.push({
       order_number: orderNum,
       description: getVal("description"),
@@ -162,9 +169,9 @@ const parseSapSpkExcel = (worksheet) => {
       work_center: getVal("work_center"),
       activity: getVal("activity"),
       short_text: getVal("short_text"),
-      normal_dur: parseFloat(getVal("normal_dur")) || null,
+      normal_dur: normalDur,
       normal_dur_un: getVal("normal_dur_un"),
-      dur_plan: parseFloat(getVal("dur_plan")) || null,
+      dur_plan: durPlan,
       unit_for_work: getVal("unit_for_work"),
       dur_act: parseFloat(getVal("dur_act")) || null,
       posting_date: getVal("posting_date"),
@@ -179,7 +186,7 @@ const parseSapSpkExcel = (worksheet) => {
       functional_location: getVal("functional_location"),
       maint_activ_type: getVal("maint_activ_type"),
       actual_work: parseFloat(getVal("actual_work")) || null,
-      num_of_work: parseInt(getVal("num_of_work")) || null,
+      num_of_work: numOfWork,
       location: getVal("location"),
       status: status,
       job_result_description: jobResultDesc,
@@ -352,11 +359,11 @@ const REASON_OF_VARIANCE_CODES = {
   '0001': 'Machine malfunction',
   '0002': 'Operating error',
   '0003': 'Defective material',
-  '0004': 'Object running',
-  '0005': 'Object breakdown',
-  '0006': 'Bad weather',
+  '0004': 'Object Running',
+  '0005': 'Object Breakdown',
+  '0006': 'Bad Weather',
   '0007': 'Duplicate WO',
-  '0008': 'No fault found',
+  '0008': 'No Fault Found',
   '0009': 'Others',
 };
 
@@ -476,9 +483,25 @@ const updateSapSpk = async (req, res) => {
     const updates = {};
     if (description !== undefined) updates.description = description;
     if (short_text !== undefined) updates.short_text = short_text;
-    if (num_of_work !== undefined) updates.num_of_work = num_of_work !== null ? parseInt(num_of_work) : null;
-    if (dur_plan !== undefined) updates.dur_plan = dur_plan !== null ? parseFloat(dur_plan) : null;
-    if (normal_dur !== undefined) updates.normal_dur = normal_dur !== null ? parseFloat(normal_dur) : null;
+    let finalNumOfWork = spk.num_of_work;
+    if (num_of_work !== undefined) {
+      finalNumOfWork = num_of_work !== null ? parseInt(num_of_work) : null;
+      updates.num_of_work = finalNumOfWork;
+    }
+    let finalDurPlan = spk.dur_plan;
+    if (dur_plan !== undefined) {
+      finalDurPlan = dur_plan !== null ? parseFloat(dur_plan) : null;
+      updates.dur_plan = finalDurPlan;
+    }
+    if (dur_plan !== undefined || num_of_work !== undefined) {
+      if (finalDurPlan !== null && finalNumOfWork !== null) {
+        updates.normal_dur = parseFloat((finalDurPlan * finalNumOfWork).toFixed(2));
+      } else {
+        updates.normal_dur = null;
+      }
+    } else if (normal_dur !== undefined) {
+      updates.normal_dur = normal_dur !== null ? parseFloat(normal_dur) : null;
+    }
     if (normal_dur_un !== undefined) updates.normal_dur_un = normal_dur_un;
     if (unit_for_work !== undefined) updates.unit_for_work = unit_for_work;
     if (activity !== undefined) updates.activity = activity;
@@ -631,11 +654,17 @@ const exportHistory = async (req, res) => {
       return dateStr;
     };
 
+    const formatReasonCode = (val) => {
+      if (!val) return "";
+      const match = String(val).trim().match(/^(\d{4})/);
+      return match ? match[1] : val;
+    };
+
     const headers = isCsv
       ? [
           "Order", "Description", "System status", "Cost Center", "Control Key", "Confirmation", "Oper.Work Center", "Activity", "Op. Short Text",
           "Normal duration", "Norm.duratn un.", "Duration Plan", "Unit for Work", "Duration Actual", "Actual work", "Posting Date", "Confirmation Text",
-          "Reason of Variance", "Work Start", "Work Finish", "Start Time", "Finish Time", "Equipment",
+          "Reason of Variance", "Work Start", "Work Finish", "Start Time", "Finish Time",
         ]
       : [
           "Order", "Description", "System status", "Cost Center", "Control Key", "Confirmation", "Oper.Work Center", "Activity", "Op. Short Text",
@@ -650,13 +679,13 @@ const exportHistory = async (req, res) => {
         ws.addRow([
           s.order_number, s.description, s.sys_status, s.cost_center, s.ctrl_key, s.confirm_number, s.work_center, s.activity, s.short_text || s.description,
           s.normal_dur, "STD", s.dur_plan, "STD", s.dur_act, s.actual_work || s.total_actual_hour, formatCsvDate(s.work_start), s.conf_text,
-          s.reason_of_var, formatCsvDate(s.work_start), formatCsvDate(s.work_finish), s.start_time, s.finish_time, s.equipment_name
+          formatReasonCode(s.reason_of_var), formatCsvDate(s.work_start), formatCsvDate(s.work_finish), s.start_time, s.finish_time
         ]);
       } else {
         ws.addRow([
           s.order_number, s.description, s.sys_status, s.cost_center, s.ctrl_key, s.confirm_number, s.work_center, s.activity, s.short_text || s.description,
           s.normal_dur, s.normal_dur_un, s.dur_plan, s.unit_for_work, s.dur_act, s.actual_work || s.total_actual_hour, s.posting_date, s.conf_text,
-          s.reason_of_var, s.work_start, s.work_finish, s.start_time, s.finish_time, s.maint_activ_type, s.location, s.functional_location, s.equipment_name, s.num_of_work,
+          formatReasonCode(s.reason_of_var), s.work_start, s.work_finish, s.start_time, s.finish_time, s.maint_activ_type, s.location, s.functional_location, s.equipment_name, s.num_of_work,
         ]);
       }
     }

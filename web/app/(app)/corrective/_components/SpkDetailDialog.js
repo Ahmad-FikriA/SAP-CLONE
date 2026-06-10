@@ -27,6 +27,7 @@ import {
   SAP_STATUS_COLORS,
   SAP_STATUS_LABELS,
   SAP_SPK_STEPS,
+  REASON_OF_VAR_MAP,
 } from "./constants";
 import {
   CorrectiveStatusBadge,
@@ -920,17 +921,23 @@ export function SpkDetailDialog({
                   <label className="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-2">
                     Reason of Var <EditableBadge />
                   </label>
-                  <Input
-                    type="text"
+                  <select
                     value={editData.reason_of_var ?? ""}
                     onChange={(e) =>
                       setEditData({ ...editData, reason_of_var: e.target.value })
                     }
                     className={cn(
-                      "bg-white h-9",
+                      "bg-white h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
                       validationErrors.some(f => f.key === "reason_of_var") && "ring-2 ring-red-500 animate-pulse border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
                     )}
-                  />
+                  >
+                    <option value="">- Pilih Reason of Variance -</option>
+                    {Object.entries(REASON_OF_VAR_MAP).map(([code, label]) => (
+                      <option key={code} value={code}>
+                        {code} - {label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             ) : (
@@ -945,7 +952,13 @@ export function SpkDetailDialog({
                 />
                 <InfoCard
                   label="Reason of Var"
-                  value={selectedSpk.reason_of_var}
+                  value={
+                    selectedSpk.reason_of_var
+                      ? REASON_OF_VAR_MAP[selectedSpk.reason_of_var]
+                        ? `${selectedSpk.reason_of_var} - ${REASON_OF_VAR_MAP[selectedSpk.reason_of_var]}`
+                        : selectedSpk.reason_of_var
+                      : "-"
+                  }
                 />
               </div>
             )}
