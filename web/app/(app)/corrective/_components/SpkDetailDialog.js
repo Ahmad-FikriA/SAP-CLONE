@@ -834,7 +834,7 @@ export function SpkDetailDialog({
                     <>
                       <Row
                         label="Jam Pekerja (Planned)"
-                        value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || "Jam"} / ${selectedSpk.num_of_work || 0} Orang`}
+                        value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || "Jam"}`}
                       />
                       <Row
                         label="Normal Duration"
@@ -1039,7 +1039,7 @@ export function SpkDetailDialog({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <MetricCard
                     label="Jam Pekerja (Planned)"
-                    value={`${selectedSpk.dur_plan || 0} Jam / ${selectedSpk.num_of_work || 0} Org`}
+                    value={`${selectedSpk.dur_plan || 0} Jam`}
                     className="bg-blue-50/50 border-blue-100"
                   />
                   <div className={cn(

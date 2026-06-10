@@ -159,6 +159,19 @@ const parseSapSpkExcel = (worksheet) => {
       normalDur = parseFloat((durPlan * numOfWork).toFixed(2));
     }
 
+    const durAct = parseFloat(getVal("dur_act")) || null;
+    let actualWorkVal = parseFloat(getVal("actual_work")) || null;
+    let actualPersonnel = null;
+    let totalActualHour = null;
+
+    if (isTeco) {
+      actualPersonnel = numOfWork;
+      actualWorkVal = durAct !== null ? durAct : (durPlan !== null ? durPlan : null);
+      if (actualPersonnel !== null && actualWorkVal !== null) {
+        totalActualHour = parseFloat((actualPersonnel * actualWorkVal).toFixed(2));
+      }
+    }
+
     rowsToUpsert.push({
       order_number: orderNum,
       description: getVal("description"),
@@ -173,7 +186,7 @@ const parseSapSpkExcel = (worksheet) => {
       normal_dur_un: getVal("normal_dur_un"),
       dur_plan: durPlan,
       unit_for_work: getVal("unit_for_work"),
-      dur_act: parseFloat(getVal("dur_act")) || null,
+      dur_act: durAct,
       posting_date: getVal("posting_date"),
       conf_text: getVal("conf_text"),
       reason_of_var: getVal("reason_of_var"),
@@ -185,7 +198,9 @@ const parseSapSpkExcel = (worksheet) => {
       equipment_name: getVal("equipment_name"),
       functional_location: getVal("functional_location"),
       maint_activ_type: getVal("maint_activ_type"),
-      actual_work: parseFloat(getVal("actual_work")) || null,
+      actual_work: actualWorkVal,
+      actual_personnel: actualPersonnel,
+      total_actual_hour: totalActualHour,
       num_of_work: numOfWork,
       location: getVal("location"),
       status: status,
@@ -286,7 +301,7 @@ const bulkInsertSapSpk = async (req, res) => {
         "dur_plan", "unit_for_work", "dur_act", "posting_date", "conf_text",
         "reason_of_var", "work_start", "work_finish", "start_time", "finish_time",
         "report_by", "equipment_name", "functional_location", "maint_activ_type",
-        "actual_work", "num_of_work", "location", "status", "job_result_description",
+        "actual_work", "actual_personnel", "total_actual_hour", "num_of_work", "location", "status", "job_result_description",
       ],
     });
 
@@ -477,7 +492,7 @@ const updateSapSpk = async (req, res) => {
       normal_dur, normal_dur_un, unit_for_work, activity, maint_activ_type,
       work_start, work_finish, start_time, finish_time,
       conf_text, confirm_number, reason_of_var, dur_act, actual_work,
-      job_result_description
+      actual_personnel, job_result_description
     } = req.body;
 
     const updates = {};
@@ -515,6 +530,18 @@ const updateSapSpk = async (req, res) => {
     if (reason_of_var !== undefined) updates.reason_of_var = reason_of_var;
     if (dur_act !== undefined) updates.dur_act = dur_act !== null ? parseFloat(dur_act) : null;
     if (actual_work !== undefined) updates.actual_work = actual_work !== null ? parseFloat(actual_work) : null;
+    if (actual_personnel !== undefined) updates.actual_personnel = actual_personnel !== null ? parseInt(actual_personnel) : null;
+
+    // Recalculate total_actual_hour if actuals are modified or exist
+    const personnel = actual_personnel !== undefined
+      ? (actual_personnel !== null ? parseInt(actual_personnel) : null)
+      : spk.actual_personnel;
+    const workHours = actual_work !== undefined
+      ? (actual_work !== null ? parseFloat(actual_work) : null)
+      : spk.actual_work;
+    const computedTotalHour = personnel && workHours ? parseFloat((personnel * workHours).toFixed(2)) : null;
+    updates.total_actual_hour = computedTotalHour;
+
     if (job_result_description !== undefined) updates.job_result_description = job_result_description;
 
     await spk.update(updates);
@@ -783,7 +810,7 @@ const uploadHistoryExcel = async (req, res) => {
           "dur_plan", "unit_for_work", "dur_act", "posting_date", "conf_text",
           "reason_of_var", "work_start", "work_finish", "start_time", "finish_time",
           "report_by", "equipment_name", "functional_location", "maint_activ_type",
-          "actual_work", "num_of_work", "location", "status", "job_result_description",
+          "actual_work", "actual_personnel", "total_actual_hour", "num_of_work", "location", "status", "job_result_description",
         ];
 
         for (const row of rowsToUpdate) {
