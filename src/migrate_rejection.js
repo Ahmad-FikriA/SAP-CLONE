@@ -22,25 +22,25 @@ async function migrate() {
             'approved','rejected'
           ) NOT NULL DEFAULT 'pending'
         `);
-        console.log('✅ SPK status ENUM extended with rejected');
+        console.log('SPK status ENUM extended with rejected');
       } catch (e) {
         if (e.message.includes('already exists') || e.message.includes('Duplicate')) {
-          console.log('ℹ️  ENUM already includes rejected, skip');
+          console.log('ENUM already includes rejected, skip');
         } else {
           throw e;
         }
       }
     } else {
-      console.log('ℹ️  Skipping ENUM modification — status column is VARCHAR (STRING) on MSSQL.');
+      console.log('Skipping ENUM modification — status column is VARCHAR (STRING) on MSSQL.');
     }
 
     // 2. Create spk_rejection_logs table via Sequelize model sync (dialect-agnostic)
     const SpkRejectionLog = require('./models/SpkRejectionLog');
     await SpkRejectionLog.sync();
-    console.log('✅ spk_rejection_logs table ensured');
+    console.log('spk_rejection_logs table ensured');
 
   } catch (e) {
-    console.error('❌ Migration failed:', e.message);
+    console.error('Migration failed:', e.message);
     process.exit(1);
   } finally {
     await sequelize.close();

@@ -47,13 +47,13 @@ function loadUsersFromExcel() {
 
   if (xlsxFiles.length === 0) {
     console.warn(
-      "  ⚠  No Data_Users_*.xlsx found in project root — users table will be empty!",
+      "No Data_Users_*.xlsx found in project root — users table will be empty!",
     );
     return [];
   }
 
   const filePath = path.join(projectRoot, xlsxFiles[0].name);
-  console.log(`  ℹ  Loading users from: ${xlsxFiles[0].name}`);
+  console.log(`Loading users from: ${xlsxFiles[0].name}`);
 
   const workbook = XLSX.readFile(filePath);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];

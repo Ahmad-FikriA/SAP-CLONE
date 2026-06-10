@@ -55,11 +55,11 @@ const migrate = async () => {
 
     for (const script of migrations) {
       try {
-        console.log(`── Running: ${script} ──`);
+        console.log(`Running: ${script}`);
         execSync(`node ${script}`, { stdio: "inherit" });
-        console.log(`── Done: ${script} ──\n`);
+        console.log(`Done: ${script}\n`);
       } catch (err) {
-        console.error(`⚠️  Warning: ${script} exited with error (continuing...)\n`);
+        console.error(`Warning: ${script} exited with error (continuing...)\n`);
       }
     }
 

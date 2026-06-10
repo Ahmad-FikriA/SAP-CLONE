@@ -11,19 +11,19 @@ async function migrate() {
     const tableDesc = await qi.describeTable('equipment');
 
     if (tableDesc.extra_categories) {
-      console.log('ℹ️  Kolom extra_categories sudah ada, skip ALTER TABLE');
+      console.log('Kolom extra_categories sudah ada, skip ALTER TABLE');
     } else {
       await qi.addColumn('equipment', 'extra_categories', {
         type: DataTypes.TEXT,
         allowNull: true,
         defaultValue: null,
       });
-      console.log('✅ Kolom extra_categories ditambahkan ke tabel equipment');
+      console.log('Kolom extra_categories ditambahkan ke tabel equipment');
     }
 
-    console.log('✅ Migrasi selesai. Tidak ada backfill — kolom default NULL untuk baris lama.');
+    console.log('Migrasi selesai. Tidak ada backfill — kolom default NULL untuk baris lama.');
   } catch (e) {
-    console.error('❌ Migrasi gagal:', e.message);
+    console.error('Migrasi gagal:', e.message);
     process.exit(1);
   } finally {
     await sequelize.close();

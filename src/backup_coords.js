@@ -22,7 +22,7 @@ async function main() {
   });
 
   if (rows.length === 0) {
-    console.log('  ⚠  No coordinates found in DB — nothing to back up.\n');
+    console.log('No coordinates found in DB — nothing to back up.\n');
     process.exit(0);
   }
 

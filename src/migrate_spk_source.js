@@ -12,14 +12,14 @@ async function migrate() {
 
     // 1. Add source column if it doesn't exist
     if (tableDesc.source) {
-      console.log('ℹ️  Kolom source sudah ada, skip');
+      console.log('Kolom source sudah ada, skip');
     } else {
       await qi.addColumn('spk', 'source', {
         type: DataTypes.STRING(50),
         allowNull: false,
         defaultValue: 'mantis',
       });
-      console.log('✅ Kolom source ditambahkan');
+      console.log('Kolom source ditambahkan');
     }
 
     // 2. Make category nullable
@@ -28,10 +28,10 @@ async function migrate() {
         type: DataTypes.STRING(50),
         allowNull: true,
       });
-      console.log('✅ Kolom category dibuat nullable');
+      console.log('Kolom category dibuat nullable');
     }
   } catch (e) {
-    console.error('❌ Migrasi gagal:', e.message);
+    console.error('Migrasi gagal:', e.message);
     process.exit(1);
   } finally {
     await sequelize.close();

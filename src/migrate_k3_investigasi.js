@@ -8,7 +8,7 @@ async function migrate() {
 
   console.log("Starting K3 Investigasi migration...\n");
 
-  console.log("📝 Skipping ENUM modification — status column is now VARCHAR (STRING type).");
+  console.log("Skipping ENUM modification — status column is now VARCHAR (STRING type).");
 
   const columnsToAdd = [
     {
@@ -72,7 +72,7 @@ async function migrate() {
     }
   }
 
-  console.log("\n✅ K3 Investigasi migration complete!\n");
+  console.log("\nK3 Investigasi migration complete!\n");
 }
 
 sequelize
