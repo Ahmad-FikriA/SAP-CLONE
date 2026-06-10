@@ -46,7 +46,7 @@ const cron = require("node-cron");
 require("./models/associations");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8200;
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error("UNHANDLED PROMISE REJECTION DETECTED!");
@@ -64,7 +64,7 @@ const corsOptions = {
     if (
       !origin ||
       origin.endsWith(".devlabfortirta.cloud") ||
-      origin === "http://localhost:3001"
+      origin === "http://localhost:8100"
     ) {
       callback(null, true);
     } else {
