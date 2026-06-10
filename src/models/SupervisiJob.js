@@ -113,7 +113,8 @@ const SupervisiJob = sequelize.define(
       type: DataTypes.JSON,
       allowNull: true,
       defaultValue: [],
-      comment: "Array of locations: [{ id, namaArea, latitude, longitude, radius }]",
+      comment:
+        "Array of locations: [{ id, namaArea, latitude, longitude, radius }]",
     },
     radiusExemptionStartDate: {
       type: DataTypes.DATEONLY,

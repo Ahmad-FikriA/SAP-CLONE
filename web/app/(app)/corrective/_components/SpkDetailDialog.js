@@ -27,6 +27,7 @@ import {
   SAP_STATUS_COLORS,
   SAP_STATUS_LABELS,
   SAP_SPK_STEPS,
+  REASON_OF_VAR_MAP,
 } from "./constants";
 import {
   CorrectiveStatusBadge,
@@ -136,6 +137,7 @@ export function SpkDetailDialog({
   const [loading, setLoading] = useState(false);
   const [highlightButtons, setHighlightButtons] = useState(false);
   const highlightTimeout = useRef(null);
+  const prevOrderNumberRef = useRef(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showTecoWarning, setShowTecoWarning] = useState(false);
   const [showTecoSaveWarning, setShowTecoSaveWarning] = useState(false);
@@ -176,7 +178,14 @@ export function SpkDetailDialog({
   const matDropdownRef = useRef(null);
 
   useEffect(() => {
-    if (selectedSpk) {
+    if (!selectedSpk) {
+      prevOrderNumberRef.current = null;
+      return;
+    }
+
+    const isNewSpk = selectedSpk.order_number !== prevOrderNumberRef.current;
+
+    if (isNewSpk) {
       setEditData({
         sys_status: selectedSpk.sys_status || "",
         description: selectedSpk.description || "",
@@ -206,8 +215,35 @@ export function SpkDetailDialog({
       setMatResults([]);
       setMatSelected(null);
       setMatQty(1);
+      prevOrderNumberRef.current = selectedSpk.order_number;
+    } else {
+      // If same SPK, only update editData if user is NOT actively editing
+      // to avoid overwriting typed changes during background polling
+      if (!isEditing) {
+        setEditData({
+          sys_status: selectedSpk.sys_status || "",
+          description: selectedSpk.description || "",
+          short_text: selectedSpk.short_text || "",
+          num_of_work: selectedSpk.num_of_work || 0,
+          dur_plan: selectedSpk.dur_plan || 0,
+          normal_dur: selectedSpk.normal_dur || 0,
+          normal_dur_un: selectedSpk.normal_dur_un || "",
+          unit_for_work: selectedSpk.unit_for_work || "",
+          activity: selectedSpk.activity || "",
+          maint_activ_type: selectedSpk.maint_activ_type || "",
+          work_start: selectedSpk.work_start || "",
+          work_finish: selectedSpk.work_finish || "",
+          start_time: selectedSpk.start_time || "",
+          finish_time: selectedSpk.finish_time || "",
+          conf_text: selectedSpk.conf_text || "",
+          confirm_number: selectedSpk.confirm_number || "",
+          reason_of_var: selectedSpk.reason_of_var || "",
+          dur_act: selectedSpk.dur_act || 0,
+          actual_work: selectedSpk.actual_work || 0,
+        });
+      }
     }
-  }, [selectedSpk, initialEditMode]);
+  }, [selectedSpk, initialEditMode, isEditing]);
 
   const triggerHighlight = () => {
     setHighlightButtons(true);
@@ -526,7 +562,7 @@ export function SpkDetailDialog({
                   </div>
                 </div>
 
-                {!(editData.sys_status || selectedSpk.sys_status)?.toUpperCase().includes("TECO") && (
+                {selectedSpk?.status === "selesai" && !(editData.sys_status || selectedSpk.sys_status)?.toUpperCase().includes("TECO") && (
                   <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center justify-between gap-6 shadow-sm lg:max-w-md w-full">
                     <div className="space-y-1">
                       <h4 className="text-emerald-800 font-bold text-sm flex items-center gap-1.5">
@@ -798,7 +834,7 @@ export function SpkDetailDialog({
                     <>
                       <Row
                         label="Jam Pekerja (Planned)"
-                        value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || "Jam"} / ${selectedSpk.num_of_work || 0} Orang`}
+                        value={`${selectedSpk.dur_plan || 0} ${selectedSpk.normal_dur_un || "Jam"}`}
                       />
                       <Row
                         label="Normal Duration"
@@ -885,17 +921,23 @@ export function SpkDetailDialog({
                   <label className="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-2">
                     Reason of Var <EditableBadge />
                   </label>
-                  <Input
-                    type="text"
+                  <select
                     value={editData.reason_of_var ?? ""}
                     onChange={(e) =>
                       setEditData({ ...editData, reason_of_var: e.target.value })
                     }
                     className={cn(
-                      "bg-white h-9",
+                      "bg-white h-9 w-full rounded-md border border-input px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
                       validationErrors.some(f => f.key === "reason_of_var") && "ring-2 ring-red-500 animate-pulse border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
                     )}
-                  />
+                  >
+                    <option value="">- Pilih Reason of Variance -</option>
+                    {Object.entries(REASON_OF_VAR_MAP).map(([code, label]) => (
+                      <option key={code} value={code}>
+                        {code} - {label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             ) : (
@@ -910,7 +952,13 @@ export function SpkDetailDialog({
                 />
                 <InfoCard
                   label="Reason of Var"
-                  value={selectedSpk.reason_of_var}
+                  value={
+                    selectedSpk.reason_of_var
+                      ? REASON_OF_VAR_MAP[selectedSpk.reason_of_var]
+                        ? `${selectedSpk.reason_of_var} - ${REASON_OF_VAR_MAP[selectedSpk.reason_of_var]}`
+                        : selectedSpk.reason_of_var
+                      : "-"
+                  }
                 />
               </div>
             )}
@@ -991,7 +1039,7 @@ export function SpkDetailDialog({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <MetricCard
                     label="Jam Pekerja (Planned)"
-                    value={`${selectedSpk.dur_plan || 0} Jam / ${selectedSpk.num_of_work || 0} Org`}
+                    value={`${selectedSpk.dur_plan || 0} Jam`}
                     className="bg-blue-50/50 border-blue-100"
                   />
                   <div className={cn(

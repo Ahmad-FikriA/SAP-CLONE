@@ -48,3 +48,16 @@ export const SAP_SPK_STEPS = [
   { label: "Review Pelapor", key: "menunggu_review_kadis_pelapor" },
   { label: "Selesai", key: "selesai" },
 ];
+
+export const REASON_OF_VAR_MAP = {
+  "0001": "Machine malfunction",
+  "0002": "Operating error",
+  "0003": "Defective material",
+  "0004": "Object Running",
+  "0005": "Object Breakdown",
+  "0006": "Bad Weather",
+  "0007": "Duplicate WO",
+  "0008": "No Fault Found",
+  "0009": "Others",
+};
+

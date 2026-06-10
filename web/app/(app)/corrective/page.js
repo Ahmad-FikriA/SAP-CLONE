@@ -54,6 +54,7 @@ export default function CorrectivePage() {
   const [exportEndDate, setExportEndDate] = useState("");
   const [selectedExportIds, setSelectedExportIds] = useState([]);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const [highlightCheckboxes, setHighlightCheckboxes] = useState(false);
   const highlightTimeout = useRef(null);
 
@@ -692,12 +693,45 @@ export default function CorrectivePage() {
                   <Button
                     variant="outline"
                     className={cn(
+                      "shadow-md border-blue-200 text-blue-700 transition-all",
+                      selectedExportIds.length === 0
+                        ? "opacity-50 cursor-not-allowed bg-slate-50"
+                        : "bg-white hover:bg-blue-50",
+                    )}
+                    disabled={exportingCsv || exportingExcel}
+                    onClick={async () => {
+                      if (selectedExportIds.length === 0) {
+                        toast.error("Pilih minimal satu data terlebih dahulu!");
+                        triggerHighlightCheckboxes();
+                        return;
+                      }
+                      setExportingCsv(true);
+                      try {
+                        await exportHistoryAction(selectedExportIds, "csv");
+                        setIsExportMode(false);
+                        setSelectedExportIds([]);
+                        setExportStartDate("");
+                        setExportEndDate("");
+                        setHighlightCheckboxes(false);
+                      } catch (e) {
+                        // error handled in action
+                      } finally {
+                        setExportingCsv(false);
+                      }
+                    }}
+                  >
+                    <Download size={16} className="mr-2" />{" "}
+                    {exportingCsv ? "Mengekspor..." : "Export CSV"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className={cn(
                       "shadow-md border-green-200 text-green-700 transition-all",
                       selectedExportIds.length === 0
                         ? "opacity-50 cursor-not-allowed bg-slate-50"
                         : "bg-white hover:bg-green-50",
                     )}
-                    disabled={exportingExcel}
+                    disabled={exportingCsv || exportingExcel}
                     onClick={async () => {
                       if (selectedExportIds.length === 0) {
                         toast.error("Pilih minimal satu data terlebih dahulu!");
@@ -706,7 +740,7 @@ export default function CorrectivePage() {
                       }
                       setExportingExcel(true);
                       try {
-                        await exportHistoryAction(selectedExportIds);
+                        await exportHistoryAction(selectedExportIds, "xlsx");
                         setIsExportMode(false);
                         setSelectedExportIds([]);
                         setExportStartDate("");
@@ -748,7 +782,7 @@ export default function CorrectivePage() {
                     className="shadow-md bg-white hover:bg-green-50 border-green-200 text-green-700"
                     onClick={() => setIsExportMode(true)}
                   >
-                    <Download size={16} className="mr-2" /> Mode Export Excel
+                    <Download size={16} className="mr-2" /> Mode Export
                   </Button>
                 </>
               )}
@@ -821,6 +855,7 @@ export default function CorrectivePage() {
               history={histPag.paginatedItems}
               fullHistory={history}
               equipment={equipment}
+              functionalLocations={functionalLocations}
               onSelectSpk={(spk) => {
                 setOpenSpkInEditMode(false);
                 setSelectedSpk(spk);
