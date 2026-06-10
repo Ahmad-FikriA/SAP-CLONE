@@ -10,6 +10,9 @@ const { GeneralTaskList, GeneralTaskListActivity } = require('../../models/Gener
 const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping');
 const NotificationService = require('../../services/notificationService');
 const User = require('../../models/User');
+const SpkRejectionLog = require('../../models/SpkRejectionLog');
+const SpkMaterial = require('../../models/SpkMaterial');
+const Material = require('../../models/Material');
 
 
 async function destroySpksByNumbers(spkNumbers, transaction) {
@@ -24,7 +27,10 @@ async function destroySpksByNumbers(spkNumbers, transaction) {
     await Submission.destroy({ where: { id: { [Op.in]: subIds } }, transaction });
   }
 
+  // 2. SPK Material Reservations
+  await SpkMaterial.destroy({ where: { orderNumber: { [Op.in]: spkNumbers } }, transaction });
 
+  // 3. SPK children with existing CASCADE (belt-and-suspenders)
   await SpkActivity.destroy({ where, transaction });
   await SpkEquipment.destroy({ where, transaction });
 
@@ -42,6 +48,22 @@ const INCLUDE_FULL = [
   {
     model: SpkActivity, as: 'activitiesModel',
     attributes: ['activityNumber', 'equipmentId', 'operationText', 'resultComment', 'durationPlan', 'durationActual', 'isVerified', 'measurementType', 'measurementUnit', 'measurementValue'],
+  },
+  {
+    model: GeneralTaskList, as: 'taskList',
+    attributes: ['taskListId', 'taskListName'],
+    required: false,
+  },
+  {
+    model: SpkRejectionLog, as: 'rejectionLogs',
+    attributes: ['id', 'rejectedBy', 'rejectedAt', 'rejectionReason', 'rejectedLevel', 'resubmittedAt'],
+    include: [{ model: User, as: 'rejector', attributes: ['name'] }],
+  },
+  {
+    model: SpkMaterial, as: 'spkMaterials',
+    attributes: ['id', 'orderNumber', 'materialId', 'quantityUsed', 'addedBy'],
+    include: [{ model: Material, as: 'material', attributes: ['id', 'materialCode', 'name', 'quantity', 'uom'] }],
+    required: false,
   },
 ];
 
@@ -75,6 +97,7 @@ function fmt(spk) {
     weekYear: weekYear ?? null,
     dueDate: j.scheduledDate ? new Date(j.scheduledDate).toISOString() : null,
     orderNumber: j.orderNumber ?? null,
+    source: j.source ?? 'mantis',
     evaluasi: j.evaluasi ?? null,
     equipmentStatus: j.equipmentStatus ?? 'Running',
     submittedBy: j.submittedBy ?? null,
@@ -85,6 +108,9 @@ function fmt(spk) {
     kadisPerawatanApprovedAt: j.kadisPerawatanApprovedAt ?? null,
     kadisApprovedBy: j.kadisApprovedBy ?? null,
     kadisApprovedAt: j.kadisApprovedAt ?? null,
+    kadisArea: j.kadisArea || null,
+    taskListId: j.taskListId ?? null,
+    taskListName: j.taskList?.taskListName ?? null,
     equipmentModels: (j.equipmentModels || []).map(em => ({
       equipmentId: em.equipmentId,
       equipmentName: em.equipmentName,
@@ -94,18 +120,76 @@ function fmt(spk) {
       longitude: em.equipmentDetails?.longitude ?? null,
     })),
     activitiesModel: j.activitiesModel || [],
+    rejectionLogs: (j.rejectionLogs || []).map(log => ({
+      id: log.id,
+      rejectedBy: log.rejector?.name || log.rejectedBy,
+      rejectedAt: log.rejectedAt,
+      rejectionReason: log.rejectionReason,
+      rejectedLevel: log.rejectedLevel,
+      resubmittedAt: log.resubmittedAt ?? null,
+    })),
+    spkMaterials: (j.spkMaterials || []).map(sm => ({
+      id: sm.id,
+      orderNumber: sm.orderNumber,
+      materialId: sm.materialId,
+      quantityUsed: sm.quantityUsed,
+      addedBy: sm.addedBy,
+      material: sm.material ? {
+        id: sm.material.id,
+        materialCode: sm.material.materialCode,
+        name: sm.material.name,
+        quantity: sm.material.quantity,
+        uom: sm.material.uom,
+      } : null,
+    })),
+    abnormalCount: parseInt(j.abnormalCount ?? '0', 10),
+  };
+}
+
+// Merge resolved names into a formatted SPK object (approval chain + rejection logs).
+function applyNames(base, j, nameMap) {
+  return {
+    ...base,
+    submittedByName:              nameMap[j.submittedBy] ?? null,
+    kasieApprovedByName:          nameMap[j.kasieApprovedBy] ?? null,
+    kadisPerawatanApprovedByName: nameMap[j.kadisPerawatanApprovedBy] ?? null,
+    kadisApprovedByName:          nameMap[j.kadisApprovedBy] ?? null,
+    rejectionLogs: (j.rejectionLogs || []).map((rawLog, i) => ({
+      ...base.rejectionLogs[i],
+      rejectedBy: nameMap[rawLog.rejectedBy] ?? base.rejectionLogs[i]?.rejectedBy ?? rawLog.rejectedBy,
+    })),
   };
 }
 
 const VALID_CATEGORIES = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
 
+// Maps user.group → SPK category (reverse of CATEGORY_GROUP_MAP below)
+const GROUP_TO_CATEGORY = {
+  Mekanik: 'Mekanik',
+  Elektrik: 'Listrik',
+  Sipil:    'Sipil',
+  Otomasi:  'Otomasi',
+};
 
+const ABNORMAL_COUNT_ATTR = [
+  sequelize.literal(`(
+    SELECT COUNT(*)
+    FROM submission_activity_results sar
+    INNER JOIN submissions s ON s.id = sar.submission_id
+    WHERE s.spk_number = Spk.spk_number
+      AND sar.is_normal = false
+  )`),
+  'abnormalCount'
+];
+
+// GET /api/spk
 const getAll = async (req, res) => {
   if (req.query.category && !VALID_CATEGORIES.includes(req.query.category)) {
     return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
   }
   const where = req.query.category ? { category: req.query.category } : {};
   if (req.query.status) where.status = req.query.status;
+  if (req.query.source) where.source = req.query.source;
   if (req.query.submittedBy) where.submittedBy = req.query.submittedBy;
   if (req.query.from) where.scheduledDate = { ...where.scheduledDate, [Op.gte]: req.query.from };
   if (req.query.to)   where.scheduledDate = { ...where.scheduledDate, [Op.lte]: req.query.to };
@@ -128,7 +212,41 @@ const getAll = async (req, res) => {
     };
   }
 
+  // Category-scoping: kasie always scoped to their discipline; kadis scoped unless Pusat Perawatan
+  {
+    const userRole = req.user?.role;
+    const isPuratPerawatan = userRole === 'kadis' && req.user?.dinas?.toLowerCase().includes('pusat perawatan');
+    if (userRole === 'kasie' || (userRole === 'kadis' && !isPuratPerawatan)) {
+      const scopedCategory = GROUP_TO_CATEGORY[req.user?.group];
+      if (scopedCategory) where.category = scopedCategory; // server enforces regardless of client param
+    }
+  }
 
+  // When a non-PP Kadis fetches awaiting_kadis SPKs, filter to their plant only
+  if (
+    req.query.status === 'awaiting_kadis' &&
+    req.user?.role === 'kadis' &&
+    !req.user?.dinas?.toLowerCase().includes('pusat perawatan')
+  ) {
+    const kadisDinas = req.user.dinas || '';
+    const plantEntry = PLANT_KADIS_MAP.find(
+      e => e.dinas.toLowerCase() === kadisDinas.toLowerCase()
+    );
+    if (plantEntry) {
+      const terms = plantEntry.pattern.source.split('|').map(t => t.trim());
+      const likeConditions = terms
+        .map(t => `e.plant_name LIKE ${sequelize.escape('%' + t + '%')}`)
+        .join(' OR ');
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(
+        sequelize.literal(
+          `Spk.spk_number IN (SELECT DISTINCT se.spk_number FROM spk_equipment se INNER JOIN equipment e ON se.equipment_id = e.equipment_id WHERE ${likeConditions})`
+        )
+      );
+    }
+  }
+
+  // Plant filter — subquery through SpkEquipment → Equipment
   if (req.query.plantId) {
     where[Op.and] = where[Op.and] || [];
     where[Op.and].push(
@@ -138,7 +256,22 @@ const getAll = async (req, res) => {
     );
   }
 
+  // Abnormal filter — only SPKs with at least one abnormal activity result
+  if (req.query.hasAbnormal === 'true') {
+    where[Op.and] = where[Op.and] || [];
+    where[Op.and].push(
+      sequelize.literal(`EXISTS (
+        SELECT 1
+        FROM submission_activity_results sar
+        INNER JOIN submissions s ON s.id = sar.submission_id
+        WHERE s.spk_number = Spk.spk_number
+          AND sar.is_normal = false
+      )`)
+    );
+  }
 
+  // If equipmentId is given, replace the SpkEquipment include with a filtered one
+  // (INNER JOIN — only SPKs that have this equipment)
   let include = INCLUDE_FULL;
   if (req.query.equipmentId) {
     include = [
@@ -155,21 +288,62 @@ const getAll = async (req, res) => {
 
   const order = [['scheduled_date', 'DESC'], ['spk_number', 'ASC']];
 
+  // Bulk-resolve all user IDs/NIKs → names for a set of SPK rows.
+  // Covers approval chain fields AND rejection log rejectedBy values.
+  // Some older records store NIK, newer ones store user.id — match both.
+  async function resolveApprovalNames(rows) {
+    const allIds = new Set();
+    for (const spk of rows) {
+      const j = spk.toJSON();
+      [j.submittedBy, j.kasieApprovedBy, j.kadisPerawatanApprovedBy, j.kadisApprovedBy]
+        .filter(Boolean).forEach(id => allIds.add(id));
+      (j.rejectionLogs || []).forEach(log => {
+        if (log.rejectedBy) allIds.add(log.rejectedBy);
+      });
+    }
+    const nameMap = {};
+    if (allIds.size > 0) {
+      const users = await User.findAll({
+        where: {
+          [Op.or]: [
+            { id:  { [Op.in]: [...allIds] } },
+            { nik: { [Op.in]: [...allIds] } },
+          ],
+        },
+        attributes: ['id', 'nik', 'name'],
+      });
+      for (const u of users) {
+        nameMap[u.id]  = u.name;
+        nameMap[u.nik] = u.name;
+      }
+    }
+    return nameMap;
+  }
 
+  // Pagination — only active when client explicitly passes ?limit=
   if (req.query.limit !== undefined) {
     const limit  = Math.min(parseInt(req.query.limit,  10) || 50, 200);
     const offset = parseInt(req.query.offset, 10) || 0;
-    const { count, rows } = await Spk.findAndCountAll({ where, include, order, limit, offset });
-    return res.json({ total: count, limit, offset, data: rows.map(fmt) });
+    const { count, rows } = await Spk.findAndCountAll({ where, include, order, limit, offset, distinct: true, col: 'spk_number', attributes: { include: [ABNORMAL_COUNT_ATTR] } });
+    const nameMap = await resolveApprovalNames(rows);
+    return res.json({
+      total: count, limit, offset,
+      data: rows.map(spk => applyNames(fmt(spk), spk.toJSON(), nameMap)),
+    });
   }
 
-  const data = await Spk.findAll({ where, include, order });
-  res.json(data.map(fmt));
+  const data = await Spk.findAll({ where, include, order, attributes: { include: [ABNORMAL_COUNT_ATTR] } });
+  const nameMap = await resolveApprovalNames(data);
+  res.json(data.map(spk => applyNames(fmt(spk), spk.toJSON(), nameMap)));
 };
 
 
 const getOne = async (req, res) => {
-  const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
+  const spk = await Spk.findOne({
+    where: { spkNumber: req.params.spkNumber },
+    include: INCLUDE_FULL,
+    attributes: { include: [ABNORMAL_COUNT_ATTR] },
+  });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
 
 
@@ -186,7 +360,34 @@ const getOne = async (req, res) => {
     photoUrls = photos.map(p => p.photoPath);
   }
 
-  res.json({ ...fmt(spk), photoUrls });
+  // Resolve all user IDs/NIKs → names (approval chain + rejection logs, id OR nik)
+  const j = spk.toJSON();
+  const allUserIds = new Set([
+    j.submittedBy, j.kasieApprovedBy, j.kadisPerawatanApprovedBy, j.kadisApprovedBy,
+    ...(j.rejectionLogs || []).map(l => l.rejectedBy),
+  ].filter(Boolean));
+  const userNameMap = {};
+  if (allUserIds.size > 0) {
+    const users = await User.findAll({
+      where: {
+        [Op.or]: [
+          { id:  { [Op.in]: [...allUserIds] } },
+          { nik: { [Op.in]: [...allUserIds] } },
+        ],
+      },
+      attributes: ['id', 'nik', 'name'],
+    });
+    for (const u of users) {
+      userNameMap[u.id]  = u.name;
+      userNameMap[u.nik] = u.name;
+    }
+  }
+
+  const base = fmt(spk);
+  res.json({
+    ...applyNames(base, j, userNameMap),
+    photoUrls,
+  });
 };
 
 
@@ -234,14 +435,89 @@ const update = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber);
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
   const { interval, equipmentModels, activitiesModel, ...rest } = req.body;
-  await spk.update({ ...rest, intervalPeriod: interval ?? spk.intervalPeriod, spkNumber: spk.spkNumber });
+
+  const t = await sequelize.transaction();
+  try {
+    await spk.update(
+      { ...rest, intervalPeriod: interval ?? spk.intervalPeriod, spkNumber: spk.spkNumber },
+      { transaction: t }
+    );
+
+    if (Array.isArray(activitiesModel)) {
+      await SpkActivity.destroy({ where: { spkNumber: spk.spkNumber }, transaction: t });
+      if (activitiesModel.length > 0) {
+        await SpkActivity.bulkCreate(
+          activitiesModel.map(a => ({
+            spkNumber:        spk.spkNumber,
+            activityNumber:   a.activityNumber,
+            equipmentId:      a.equipmentId      ?? null,
+            controlKey:       a.controlKey       ?? null,
+            operationText:    a.operationText,
+            resultComment:    a.resultComment    ?? null,
+            durationPlan:     a.durationPlan     != null ? parseFloat(a.durationPlan)     || null : null,
+            durationActual:   a.durationActual   != null ? parseFloat(a.durationActual)   || null : null,
+            isVerified:       a.isVerified       ?? false,
+            measurementType:  a.measurementType  ?? null,
+            measurementUnit:  a.measurementUnit  ?? null,
+            measurementValue: a.measurementValue != null ? parseFloat(a.measurementValue) : null,
+          })),
+          { transaction: t }
+        );
+      }
+    }
+
+    await t.commit();
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
+
   const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
   res.json(fmt(fresh));
 };
 
-
+// POST /api/spk/bulk-delete
+// Accepts either:
+//   { ids: ['SPK-001', ...] }                        — explicit list
+//   { matchFilters: true, filters: { category, status, from, to, plantId, hasAbnormal } }  — filter-based
 const bulkDelete = async (req, res) => {
-  const { ids } = req.body;
+  const { ids, matchFilters, filters } = req.body;
+
+  if (matchFilters && filters && typeof filters === 'object') {
+    const where = {};
+    if (filters.category) where.category = filters.category;
+    if (filters.status)   where.status   = filters.status;
+    if (filters.source)   where.source   = filters.source;
+    if (filters.from)     where.scheduledDate = { ...where.scheduledDate, [Op.gte]: filters.from };
+    if (filters.to)       where.scheduledDate = { ...where.scheduledDate, [Op.lte]: filters.to };
+    if (filters.plantId) {
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(sequelize.literal(
+        `Spk.spk_number IN (SELECT DISTINCT se.spk_number FROM spk_equipment se INNER JOIN equipment e ON se.equipment_id = e.equipment_id WHERE e.plant_id = ${sequelize.escape(filters.plantId)})`
+      ));
+    }
+    if (filters.hasAbnormal) {
+      where[Op.and] = where[Op.and] || [];
+      where[Op.and].push(sequelize.literal(
+        `EXISTS (SELECT 1 FROM submission_activity_results sar INNER JOIN submissions s ON s.id = sar.submission_id WHERE s.spk_number = Spk.spk_number AND sar.is_normal = false)`
+      ));
+    }
+
+    const matching = await Spk.findAll({ where, attributes: ['spkNumber'], raw: true });
+    const spkNumbers = matching.map(s => s.spkNumber);
+    if (!spkNumbers.length) return res.json({ message: 'Tidak ada SPK yang cocok', count: 0 });
+
+    const t = await sequelize.transaction();
+    try {
+      const count = await destroySpksByNumbers(spkNumbers, t);
+      await t.commit();
+      return res.json({ message: `Deleted ${count} SPK(s)`, count });
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  }
+
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
 
   const t = await sequelize.transaction();
@@ -275,18 +551,20 @@ const submit = async (req, res) => {
   const spk = await Spk.findByPk(req.params.spkNumber, { include: INCLUDE_FULL });
   if (!spk) return res.status(404).json({ error: 'SPK not found' });
 
-
-  if (!['pending', 'rejected'].includes(spk.status)) {
+  // Block re-submission of an already-submitted or approved SPK
+  if (!['pending', 'in_progress', 'rejected'].includes(spk.status)) {
     return res.status(409).json({ error: `SPK sudah disubmit (status: ${spk.status})` });
   }
 
   const { durationActual, activityResultsModel = [], photoPaths = [], evaluasi, latitude, longitude, workStart, locationQuality, lateReason, equipmentStatus = 'Running' } = req.body;
   const subId = `SUB-${uuid().slice(0, 8).toUpperCase()}`;
 
-  
+  // ── 8h duplicate prevention (per equipment + category + task list) ───────────
+  // Block key: equipmentId + category + intervalPeriod + taskListId
+  // Skip entirely when taskListId is null (identity unknown → can't block safely)
   const equipmentIds = (spk.equipmentModels ?? []).map(e => e.equipmentId);
-  if (equipmentIds.length > 0) {
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  if (equipmentIds.length > 0 && spk.taskListId) {
+    const cutoff = new Date(Date.now() - 8 * 60 * 60 * 1000);
 
     const conflictingSpkNumbers = await SpkEquipment.findAll({
       where: { equipmentId: { [Op.in]: equipmentIds } },
@@ -295,8 +573,10 @@ const submit = async (req, res) => {
         model: Spk,
         as: 'spk',
         where: {
+          category:       spk.category,
           intervalPeriod: spk.intervalPeriod,
-          spkNumber: { [Op.ne]: spk.spkNumber },
+          taskListId:     spk.taskListId,
+          spkNumber:      { [Op.ne]: spk.spkNumber },
         },
         attributes: [],
         required: true,
@@ -308,17 +588,17 @@ const submit = async (req, res) => {
       const spkNums = [...new Set(conflictingSpkNumbers.map(r => r.spkNumber))];
       const recentSubmission = await Submission.findOne({
         where: {
-          spkNumber: { [Op.in]: spkNums },
+          spkNumber:   { [Op.in]: spkNums },
           submittedAt: { [Op.gte]: cutoff },
         },
-        order: [['submittedAt', 'DESC']],
+        order:      [['submittedAt', 'DESC']],
         attributes: ['submittedAt'],
       });
 
       if (recentSubmission) {
-        const nextAvailableAt = new Date(recentSubmission.submittedAt.getTime() + 24 * 60 * 60 * 1000);
+        const nextAvailableAt = new Date(recentSubmission.submittedAt.getTime() + 8 * 60 * 60 * 1000);
         return res.status(409).json({
-          error: 'Equipment ini sudah memiliki laporan dalam 24 jam terakhir',
+          error: `SPK ${spk.category} untuk equipment ini sudah disubmit dalam 8 jam terakhir`,
           lastSubmittedAt: recentSubmission.submittedAt.toISOString(),
           nextAvailableAt: nextAvailableAt.toISOString(),
         });
@@ -347,8 +627,34 @@ const submit = async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
+    // Re-read with exclusive row lock — prevents the race condition where two
+    // requests both pass the pre-flight status check above before either commits.
+    // The second request will block here until the first commits, then re-read
+    // the updated status (awaiting_kasie) and abort with 409.
+    const lockedSpk = await Spk.findByPk(req.params.spkNumber, {
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+      include: INCLUDE_FULL,
+    });
+    if (!['pending', 'in_progress', 'rejected'].includes(lockedSpk.status)) {
+      await t.rollback();
+      return res.status(409).json({ error: `SPK sudah disubmit (status: ${lockedSpk.status})` });
+    }
+
+    // If resubmitting after rejection, stamp the latest open rejection log
+    if (lockedSpk.status === 'rejected') {
+      await SpkRejectionLog.update(
+        { resubmittedAt: new Date() },
+        {
+          where: { spkNumber: lockedSpk.spkNumber, resubmittedAt: null },
+          transaction: t,
+        }
+      );
+    }
+
+    // Create submission record
     const sub = await Submission.create({
-      id: subId, spkNumber: spk.spkNumber, durationActual: durationActual ?? null,
+      id: subId, spkNumber: lockedSpk.spkNumber, durationActual: durationActual ?? null,
       evaluasi: evaluasi || null, latitude: latitude ?? 0, longitude: longitude ?? 0,
       submittedAt: new Date(),
       workStart: workStart ? new Date(workStart) : null,
@@ -369,41 +675,48 @@ const submit = async (req, res) => {
 
       await SpkActivity.update(
         { resultComment: r.resultComment ?? null, isVerified: r.isVerified ?? false, durationActual: r.durationActual ?? null, measurementValue: r.measurementValue ?? null },
-        { where: { spkNumber: spk.spkNumber, activityNumber: r.activityNumber }, transaction: t }
+        { where: { spkNumber: lockedSpk.spkNumber, activityNumber: r.activityNumber }, transaction: t }
       );
     }
 
-    await spk.update({
+    // Move SPK into approval chain.
+    // Only stamp submittedAt on first submission — resubmissions preserve the original.
+    const isResubmission = lockedSpk.status === 'rejected';
+    await lockedSpk.update({
       status: 'awaiting_kasie',
-      durationActual: durationActual ?? spk.durationActual,
+      durationActual: durationActual ?? lockedSpk.durationActual,
       evaluasi: evaluasi || null,
       equipmentStatus: ['Running', 'Standby', 'Breakdown'].includes(equipmentStatus) ? equipmentStatus : 'Running',
       submittedBy: req.user?.userId ?? null,
-      submittedAt: new Date(),
+      ...(isResubmission ? {} : { submittedAt: new Date() }),
     }, { transaction: t });
 
     await t.commit();
 
-    const kasieGroupKeyword = CATEGORY_GROUP_MAP[spk.category];
-    const kasieUsers = await User.findAll({
-      where: {
-        role: ['supervisor', 'kepala_seksi', 'kasie'],
-        ...(kasieGroupKeyword ? { group: { [Op.like]: `%${kasieGroupKeyword}%` } } : {}),
-      },
-      attributes: ['id'],
-    });
-    if (kasieUsers.length > 0) {
-      await NotificationService.notify({
-        module: 'preventive',
-        type: 'spk_submitted',
-        title: 'SPK Menunggu Persetujuan',
-        body: `SPK ${spk.spkNumber} telah disubmit dan menunggu persetujuan Kasie`,
-        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
-        recipientIds: kasieUsers.map((u) => u.id),
+    // Notify Kasie whose discipline matches the SPK category.
+    // If category has no group mapping, skip — we can't determine which Kasie to target.
+    const kasieGroupKeyword = CATEGORY_GROUP_MAP[lockedSpk.category];
+    if (kasieGroupKeyword) {
+      const kasieUsers = await User.findAll({
+        where: {
+          role: ['supervisor', 'kepala_seksi', 'kasie'],
+          group: { [Op.like]: `%${kasieGroupKeyword}%` },
+        },
+        attributes: ['id'],
       });
+      if (kasieUsers.length > 0) {
+        await NotificationService.notify({
+          module: 'preventive',
+          type: 'spk_submitted',
+          title: 'SPK Menunggu Persetujuan',
+          body: `SPK ${lockedSpk.spkNumber} telah disubmit dan menunggu persetujuan Kasie`,
+          data: { spkNumber: lockedSpk.spkNumber, deepLink: 'preventive/spk-detail' },
+          recipientIds: kasieUsers.map((u) => u.id),
+        });
+      }
     }
 
-    res.json({ message: 'SPK submitted', spkNumber: spk.spkNumber, submissionId: subId });
+    res.json({ message: 'SPK submitted', spkNumber: lockedSpk.spkNumber, submissionId: subId });
   } catch (err) { await t.rollback(); throw err; }
 };
 
@@ -508,7 +821,16 @@ const CATEGORY_GROUP_MAP = {
   Otomasi: 'Otomasi',
 };
 
+// Plant name → kadisArea ID (matches KADIS_AREAS ids in frontend constants.js)
+const PLANT_TO_KADIS_AREA = [
+  { pattern: /Krenceng/i,           id: 'kadis_krenceng' },
+  { pattern: /Waduk|Re-use/i,       id: 'kadis_airbaku' },
+  { pattern: /Cidanau|Cipasauran/i, id: 'kadis_cipasauran_cidanau' },
+  { pattern: /Keamanan/i,           id: 'kadis_keamanan' },
+];
 
+// Plant name → Kadis dinas routing map
+// plantName comes from Equipment.plantName (set during SAP import), not the raw funcloc code.
 const PLANT_KADIS_MAP = [
   { pattern: /Cidanau|Cipasauran|WTP Cidanau/i, dinas: 'Pengolahan Air Cipasauran & Cidanau' },
   { pattern: /Waduk|Re-use/i,                    dinas: 'Pengolahan Air Baku' },
@@ -586,13 +908,17 @@ const approveKadisPerawatan = async (req, res) => {
     return res.status(403).json({ error: 'Only Kadis Perawatan (dinas: Pusat Perawatan) can approve this step' });
   }
 
+  const plantName = spk.equipmentModels?.[0]?.equipmentDetails?.plantName ?? null;
+  const areaEntry = PLANT_TO_KADIS_AREA.find(e => plantName && e.pattern.test(plantName));
+
   await spk.update({
     status: 'awaiting_kadis',
+    kadisArea: areaEntry?.id ?? null,
     kadisPerawatanApprovedBy: req.user.userId,
     kadisPerawatanApprovedAt: new Date(),
   });
 
-  const plantName = spk.equipmentModels?.[0]?.equipmentDetails?.plantName ?? null;
+  // Notify the correct Kadis using plant name routing
   const expectedDinasForNotif = getExpectedKadisDinas(plantName);
   if (expectedDinasForNotif) {
     const kadisUsers = await User.findAll({
@@ -667,7 +993,147 @@ const approveKadis = async (req, res) => {
   res.json(fmt(fresh));
 };
 
+// POST /api/spk/:spkNumber/reject-kasie
+const rejectKasie = async (req, res) => {
+  const spk = await Spk.findByPk(req.params.spkNumber);
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+  if (spk.status !== 'awaiting_kasie') {
+    return res.status(400).json({ error: `SPK status is '${spk.status}', expected 'awaiting_kasie'` });
+  }
 
+  const role = req.user?.role;
+  const validKasieRoles = ['supervisor', 'kepala_seksi', 'kasie'];
+  if (!validKasieRoles.includes(role)) {
+    return res.status(403).json({ error: 'Only Kasie/Supervisor can reject this step' });
+  }
+
+  const { rejectionReason } = req.body;
+  if (!rejectionReason || rejectionReason.trim().length < 10) {
+    return res.status(422).json({ error: 'Alasan penolakan wajib diisi (min. 10 karakter)' });
+  }
+
+  await SpkRejectionLog.create({
+    spkNumber: spk.spkNumber,
+    rejectedBy: req.user.userId,
+    rejectedAt: new Date(),
+    rejectionReason: rejectionReason.trim(),
+    rejectedLevel: 'kasie',
+  });
+
+  await spk.update({ status: 'rejected' });
+
+  if (spk.submittedBy) {
+    const submitter = await User.findOne({ where: { nik: spk.submittedBy }, attributes: ['id'] });
+    if (submitter) {
+      await NotificationService.notify({
+        module: 'preventive',
+        type: 'spk_rejected',
+        title: 'SPK Ditolak',
+        body: `SPK ${spk.spkNumber} ditolak oleh Kasie: ${rejectionReason.trim()}`,
+        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        recipientIds: [submitter.id],
+      });
+    }
+  }
+
+  const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
+  res.json(fmt(fresh));
+};
+
+// POST /api/spk/:spkNumber/reject-kadis-perawatan
+const rejectKadisPerawatan = async (req, res) => {
+  const spk = await Spk.findByPk(req.params.spkNumber);
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+  if (spk.status !== 'awaiting_kadis_perawatan') {
+    return res.status(400).json({ error: `SPK status is '${spk.status}', expected 'awaiting_kadis_perawatan'` });
+  }
+
+  const role = req.user?.role;
+  const dinas = req.user?.dinas || '';
+  if (role !== 'kadis' || !dinas.toLowerCase().includes('pusat perawatan')) {
+    return res.status(403).json({ error: 'Only Kadis Perawatan (dinas: Pusat Perawatan) can reject this step' });
+  }
+
+  const { rejectionReason } = req.body;
+  if (!rejectionReason || rejectionReason.trim().length < 10) {
+    return res.status(422).json({ error: 'Alasan penolakan wajib diisi (min. 10 karakter)' });
+  }
+
+  await SpkRejectionLog.create({
+    spkNumber: spk.spkNumber,
+    rejectedBy: req.user.userId,
+    rejectedAt: new Date(),
+    rejectionReason: rejectionReason.trim(),
+    rejectedLevel: 'kadis_perawatan',
+  });
+
+  await spk.update({ status: 'rejected' });
+
+  if (spk.submittedBy) {
+    const submitter = await User.findOne({ where: { nik: spk.submittedBy }, attributes: ['id'] });
+    if (submitter) {
+      await NotificationService.notify({
+        module: 'preventive',
+        type: 'spk_rejected',
+        title: 'SPK Ditolak',
+        body: `SPK ${spk.spkNumber} ditolak oleh Kadis Perawatan: ${rejectionReason.trim()}`,
+        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        recipientIds: [submitter.id],
+      });
+    }
+  }
+
+  const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
+  res.json(fmt(fresh));
+};
+
+// POST /api/spk/:spkNumber/reject-kadis
+const rejectKadis = async (req, res) => {
+  const spk = await Spk.findByPk(req.params.spkNumber);
+  if (!spk) return res.status(404).json({ error: 'SPK not found' });
+  if (spk.status !== 'awaiting_kadis') {
+    return res.status(400).json({ error: `SPK status is '${spk.status}', expected 'awaiting_kadis'` });
+  }
+
+  const role = req.user?.role;
+  if (role !== 'kadis') {
+    return res.status(403).json({ error: 'Only Kadis can reject this step' });
+  }
+
+  const { rejectionReason } = req.body;
+  if (!rejectionReason || rejectionReason.trim().length < 10) {
+    return res.status(422).json({ error: 'Alasan penolakan wajib diisi (min. 10 karakter)' });
+  }
+
+  await SpkRejectionLog.create({
+    spkNumber: spk.spkNumber,
+    rejectedBy: req.user.userId,
+    rejectedAt: new Date(),
+    rejectionReason: rejectionReason.trim(),
+    rejectedLevel: 'kadis',
+  });
+
+  await spk.update({ status: 'rejected' });
+
+  if (spk.submittedBy) {
+    const submitter = await User.findOne({ where: { nik: spk.submittedBy }, attributes: ['id'] });
+    if (submitter) {
+      await NotificationService.notify({
+        module: 'preventive',
+        type: 'spk_rejected',
+        title: 'SPK Ditolak',
+        body: `SPK ${spk.spkNumber} ditolak oleh Kadis: ${rejectionReason.trim()}`,
+        data: { spkNumber: spk.spkNumber, deepLink: 'preventive/spk-detail' },
+        recipientIds: [submitter.id],
+      });
+    }
+  }
+
+  const fresh = await Spk.findByPk(spk.spkNumber, { include: INCLUDE_FULL });
+  res.json(fmt(fresh));
+};
+
+// POST /api/spk/batch-generate
 const batchGenerate = async (req, res) => {
   const { week, year, interval, category, equipmentIds = [] } = req.body;
 
@@ -809,4 +1275,116 @@ const batchGenerate = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync, generateFromTaskList, approveKasie, approveKadisPerawatan, approveKadis, batchGenerate };
+const addMaterialToSpk = async (req, res) => {
+  const { spkNumber } = req.params;
+  const { materialId, quantityUsed } = req.body;
+  const t = await sequelize.transaction();
+
+  try {
+    const { role, group, userId } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      await t.rollback();
+      return res.status(403).json({ status: 'error', message: 'Access denied. Only Admin and Planner can add materials.' });
+    }
+
+    if (!materialId || !quantityUsed || quantityUsed <= 0) {
+      await t.rollback();
+      return res.status(400).json({ status: 'error', message: 'materialId dan quantityUsed wajib diisi (> 0)' });
+    }
+
+    const spk = await Spk.findByPk(spkNumber, { transaction: t });
+    if (!spk) {
+      await t.rollback();
+      return res.status(404).json({ status: 'error', message: 'SPK tidak ditemukan' });
+    }
+
+    const material = await Material.findByPk(materialId, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!material) {
+      await t.rollback();
+      return res.status(404).json({ status: 'error', message: 'Material tidak ditemukan' });
+    }
+
+    if (Number(material.quantity) < Number(quantityUsed)) {
+      await t.rollback();
+      return res.status(400).json({
+        status: 'error',
+        message: `Stok tidak cukup. Tersedia: ${material.quantity} ${material.uom || 'PCS'}, diminta: ${quantityUsed}`,
+      });
+    }
+
+    // Deduct stock
+    await material.update(
+      { quantity: Number(material.quantity) - Number(quantityUsed) },
+      { transaction: t },
+    );
+
+    // Create junction record
+    const record = await SpkMaterial.create(
+      {
+        orderNumber: spkNumber,
+        materialId,
+        quantityUsed,
+        addedBy: userId || req.user.id,
+      },
+      { transaction: t },
+    );
+
+    await t.commit();
+
+    // Re-fetch with material data
+    const full = await SpkMaterial.findByPk(record.id, {
+      include: [{ model: Material, as: 'material', attributes: ['id', 'materialCode', 'name', 'quantity', 'uom'] }],
+    });
+
+    res.status(201).json({ status: 'success', data: full });
+  } catch (error) {
+    await t.rollback();
+    console.error('Error adding material to SPK:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
+const removeMaterialFromSpk = async (req, res) => {
+  const { spkNumber, materialRecordId } = req.params;
+  const t = await sequelize.transaction();
+
+  try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      await t.rollback();
+      return res.status(403).json({ status: 'error', message: 'Access denied. Only Admin and Planner can remove materials.' });
+    }
+
+    const record = await SpkMaterial.findOne({
+      where: { id: materialRecordId, orderNumber: spkNumber },
+      transaction: t,
+    });
+
+    if (!record) {
+      await t.rollback();
+      return res.status(404).json({ status: 'error', message: 'Record material tidak ditemukan' });
+    }
+
+    // Restore stock
+    const material = await Material.findByPk(record.materialId, { transaction: t, lock: t.LOCK.UPDATE });
+    if (material) {
+      await material.update(
+        { quantity: Number(material.quantity) + Number(record.quantityUsed) },
+        { transaction: t },
+      );
+    }
+
+    await record.destroy({ transaction: t });
+    await t.commit();
+
+    res.json({ status: 'success', message: 'Material dihapus dari SPK dan stok dikembalikan' });
+  } catch (error) {
+    await t.rollback();
+    console.error('Error removing material from SPK:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
+module.exports = { getAll, getOne, create, update, bulkDelete, remove, submit, sync, generateFromTaskList, approveKasie, approveKadisPerawatan, approveKadis, rejectKasie, rejectKadisPerawatan, rejectKadis, batchGenerate, addMaterialToSpk, removeMaterialFromSpk };

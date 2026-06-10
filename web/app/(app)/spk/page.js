@@ -1,19 +1,43 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api';
 import { StatusBadge, CategoryBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CATEGORIES, STATUS_LABELS } from '@/lib/constants';
+import { CATEGORIES, STATUS_LABELS, KADIS_AREAS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS } from '@/lib/constants';
 import { formatDate, formatDateShort } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Trash2, Wrench, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin } from 'lucide-react';
-import { canCreate, canUpdate, canDelete } from '@/lib/auth';
+import { RefreshCw, Trash2, Upload, Plus, X, RotateCcw, Pencil, Eye, MapPin, CheckCircle2, Circle, Package, Search } from 'lucide-react';
+import { canCreate, canUpdate, canDelete, getUserCategory, getUser } from '@/lib/auth';
 import Link from 'next/link';
 
-const STATUS_OPTIONS = ['pending', 'in_progress', 'completed', 'approved', 'rejected'];
+const STATUS_OPTIONS = ['pending', 'awaiting_kasie', 'awaiting_kadis_perawatan', 'awaiting_kadis', 'approved', 'rejected'];
+const PAGE_SIZE = 50;
+const YEAR_OPTIONS = Array.from({ length: new Date().getFullYear() - 2024 + 2 }, (_, i) => 2024 + i);
+const WEEK_OPTIONS = Array.from({ length: 52 }, (_, i) => i + 1);
+
+/** ISO week → { from, to } date strings */
+function isoWeekRange(year, week) {
+  const jan4    = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const mon1    = new Date(jan4);
+  mon1.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
+  const wkStart = new Date(mon1);
+  wkStart.setUTCDate(mon1.getUTCDate() + (week - 1) * 7);
+  const wkEnd   = new Date(wkStart);
+  wkEnd.setUTCDate(wkStart.getUTCDate() + 6);
+  return { from: wkStart.toISOString().slice(0, 10), to: wkEnd.toISOString().slice(0, 10) };
+}
+
+const UPLOADS_BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '');
+
+function kadisStatusLabel(kadisArea) {
+  const area = KADIS_AREAS.find(a => a.id === kadisArea);
+  return area ? `Menunggu Kadis — ${area.label}` : 'Menunggu Kadis';
+}
 
 function detectMeasurementUnit(operationText) {
   if (!operationText) return null;
@@ -37,88 +61,103 @@ function detectMeasurementUnit(operationText) {
   if (l.includes('turbid') || l.includes('kekeruhan')) return 'NTU';
   return null;
 }
-const INTERVALS = ['1wk', '2wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
-const curYear = new Date().getFullYear();
-const YEARS = [curYear - 1, curYear, curYear + 1];
-const WEEKS = Array.from({ length: 53 }, (_, i) => i + 1);
-
-function getWeekStart(week, year) {
-  const jan4 = new Date(year, 0, 4);
-  const jan4Day = jan4.getDay() || 7;
-  const mon = new Date(jan4);
-  mon.setDate(jan4.getDate() - (jan4Day - 1) + (week - 1) * 7);
-  const y = mon.getFullYear(), m = String(mon.getMonth() + 1).padStart(2, '0'), d = String(mon.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-function fmtDate(d) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-function getCurrentWeek() {
-  const now = new Date();
-  const jan4 = new Date(now.getFullYear(), 0, 4);
-  const jan4Day = jan4.getDay() || 7;
-  const diff = Math.floor((now - jan4) / 86400000) + (jan4Day - 1);
-  return Math.min(53, Math.max(1, Math.ceil((diff + 1) / 7)));
-}
-function suggestNumber(category, list) {
-  const code = { Mekanik: 'M', Listrik: 'L', Sipil: 'S', Otomasi: 'O' }[category] || 'X';
-  const prefix = `SPK-${code}-`;
-  const max = list.reduce((m, s) => {
-    if (!s.spkNumber.startsWith(prefix)) return m;
-    const match = s.spkNumber.match(/SPK-[A-Z]+-(\d+)$/);
-    return match ? Math.max(m, parseInt(match[1])) : m;
-  }, 0);
-  return `${prefix}${String(max + 1).padStart(3, '0')}`;
-}
 
 export default function SpkPage() {
+  return <Suspense><SpkPageInner /></Suspense>;
+}
+
+function SpkPageInner() {
+  const searchParams = useSearchParams();
   const [spkList, setSpkList]       = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [userCategory, setUserCategory] = useState(null); // null = unrestricted
   const [category, setCategory]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selected, setSelected]     = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('q') || '');
   const [weekFilter, setWeekFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [plantFilter, setPlantFilter] = useState('');
   const [plants, setPlants] = useState([]);
+  const [hasAbnormal, setHasAbnormal] = useState(false);
+  const [lightbox, setLightbox] = useState(null); // photo path string for detail view
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
 
   // Side panel
   const [panelOpen, setPanelOpen]   = useState(false);
   const [editingSpk, setEditingSpk] = useState(null); // null = create, obj = edit
-  const [form, setForm]             = useState({ spkNumber: '', description: '', category: 'Mekanik', status: 'pending', scheduledDate: '', interval: '' });
-  const [panelYear, setPanelYear]   = useState(curYear);
-  const [panelWeek, setPanelWeek]   = useState(getCurrentWeek());
-  const [activeIntervals, setActiveIntervals] = useState([]);
-  const [selectedInterval, setSelectedInterval] = useState('');
+  const [form, setForm]             = useState({ spkNumber: '', description: '', category: 'Mekanik', status: 'pending', scheduledDate: '', interval: '', evaluasi: '', equipmentStatus: 'Running' });
   const [allEquipment, setAllEquipment] = useState([]);
-  const [allMappings, setAllMappings]   = useState([]);
   const [eqSearch, setEqSearch]     = useState('');
   const [selectedEqIds, setSelectedEqIds] = useState([]);
-  const [activities, setActivities] = useState([]); // [{ equipmentId, operationText, durationPlan }]
-  const [loadingIntervals, setLoadingIntervals] = useState(false);
+  const [activities, setActivities] = useState([]);
   const [saving, setSaving]         = useState(false);
   const actIdxRef = useRef(0);
 
+  // Material states
+  const [user, setUser] = useState(null);
+  const [matSearch, setMatSearch] = useState('');
+  const [matResults, setMatResults] = useState([]);
+  const [matSearching, setMatSearching] = useState(false);
+  const [matQty, setMatQty] = useState(1);
+  const [matSelected, setMatSelected] = useState(null);
+  const [matAdding, setMatAdding] = useState(false);
+  const matSearchTimeout = useRef(null);
+  const matDropdownRef = useRef(null);
+
   // Detail view
   const [detailSpk, setDetailSpk]   = useState(null);
+  const [detailFull, setDetailFull] = useState(null); // enriched single-SPK (names resolved)
   const [detailSubs, setDetailSubs] = useState([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
 
+  useEffect(() => {
+    setUserCategory(getUserCategory());
+    setUser(getUser());
+  }, []);
   useEffect(() => { apiGet('/maps').then(setPlants).catch(() => {}); }, []);
-  useEffect(() => { load(); }, [category, plantFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [category, plantFilter, statusFilter, weekFilter, yearFilter, hasAbnormal, page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function buildCurrentFilters() {
+    const yr = yearFilter ? parseInt(yearFilter, 10) : null;
+    const wk = weekFilter ? parseInt(weekFilter, 10) : null;
+    const f = {};
+    if (category)    f.category    = category;
+    if (plantFilter) f.plantId     = plantFilter;
+    if (statusFilter)f.status      = statusFilter;
+    if (hasAbnormal) f.hasAbnormal = true;
+    if (yr && wk) { Object.assign(f, isoWeekRange(yr, wk)); }
+    else if (yr) { f.from = `${yr}-01-01`; f.to = `${yr}-12-31`; }
+    else if (wk) { Object.assign(f, isoWeekRange(new Date().getFullYear(), wk)); }
+    return f;
+  }
 
   async function load() {
     setLoading(true);
+    setSelectAllMatching(false);
     try {
+      const filters = buildCurrentFilters();
       const params = new URLSearchParams();
-      if (category) params.set('category', category);
-      if (plantFilter) params.set('plantId', plantFilter);
-      const qs = params.toString();
-      const data = await apiGet('/spk' + (qs ? `?${qs}` : ''));
-      setSpkList(Array.isArray(data) ? data : []);
+      if (filters.category)    params.set('category',    filters.category);
+      if (filters.plantId)     params.set('plantId',     filters.plantId);
+      if (filters.status)      params.set('status',      filters.status);
+      if (filters.hasAbnormal) params.set('hasAbnormal', 'true');
+      if (filters.from)        params.set('from',        filters.from);
+      if (filters.to)          params.set('to',          filters.to);
+      params.set('limit',  String(PAGE_SIZE));
+      params.set('offset', String((page - 1) * PAGE_SIZE));
+      const res = await apiGet('/spk?' + params.toString());
+      if (res && !Array.isArray(res) && res.data) {
+        setSpkList(res.data);
+        setTotalCount(res.total ?? res.data.length);
+      } else {
+        setSpkList(Array.isArray(res) ? res : []);
+        setTotalCount(Array.isArray(res) ? res.length : 0);
+      }
       setSelected([]);
     } catch (e) { toast.error('Gagal memuat: ' + e.message); }
     finally { setLoading(false); }
@@ -135,9 +174,16 @@ export default function SpkPage() {
 
   async function handleBulkDelete() {
     try {
-      await apiPost('/spk/bulk-delete', { ids: selected });
-      toast.success(`${selected.length} SPK dihapus`);
+      if (selectAllMatching) {
+        const filters = buildCurrentFilters();
+        await apiPost('/spk/bulk-delete', { matchFilters: true, filters });
+        toast.success(`Semua ${totalCount} SPK sesuai filter dihapus`);
+      } else {
+        await apiPost('/spk/bulk-delete', { ids: selected });
+        toast.success(`${selected.length} SPK dihapus`);
+      }
       setBulkDeleteOpen(false);
+      setSelectAllMatching(false);
       load();
     } catch (e) { toast.error(e.message); }
   }
@@ -157,112 +203,78 @@ export default function SpkPage() {
   }
   function toggleAll(checked) {
     setSelected(checked ? displayed.map((s) => s.spkNumber) : []);
+    if (!checked) setSelectAllMatching(false);
   }
 
   // ── Panel open/close ────────────────────────────────────────────────────────
-  async function openCreate() {
-    const [eqRes, mapRes] = await Promise.all([
-      apiGet('/equipment?limit=9999').catch(() => ({ data: [] })),
-      apiGet('/equipment-mappings').catch(() => []),
-    ]);
-    setAllEquipment(eqRes.data || eqRes);
-    setAllMappings(Array.isArray(mapRes) ? mapRes : []);
-    setEditingSpk(null);
-    const week = getCurrentWeek();
-    setPanelYear(curYear); setPanelWeek(week);
-    setForm({ spkNumber: suggestNumber('Mekanik', spkList), description: '', category: 'Mekanik', status: 'pending', scheduledDate: '', interval: '' });
-    setSelectedEqIds([]); setActivities([]); setSelectedInterval(''); setEqSearch('');
-    await fetchIntervals(curYear, week);
-    setPanelOpen(true);
-  }
-
   async function openEdit(spk) {
-    const [eqRes, mapRes] = await Promise.all([
-      apiGet('/equipment?limit=9999').catch(() => ({ data: [] })),
-      apiGet('/equipment-mappings').catch(() => []),
-    ]);
+    const eqRes = await apiGet('/equipment?limit=9999').catch(() => ({ data: [] }));
     setAllEquipment(eqRes.data || eqRes);
-    setAllMappings(Array.isArray(mapRes) ? mapRes : []);
-    setEditingSpk(spk);
-    setForm({ spkNumber: spk.spkNumber, description: spk.description || '', category: spk.category || 'Mekanik', status: spk.status || 'pending', scheduledDate: spk.scheduledDate || '', interval: spk.interval || '' });
-    const eqIds = (spk.equipmentModels || []).map((e) => e.equipmentId);
+    
+    // Fetch fresh SPK details including materials
+    const freshSpk = await apiGet(`/spk/${spk.spkNumber}`).catch(() => spk);
+    setEditingSpk(freshSpk);
+    setForm({ spkNumber: freshSpk.spkNumber, description: freshSpk.description || '', category: freshSpk.category || 'Mekanik', status: freshSpk.status || 'pending', scheduledDate: freshSpk.scheduledDate || '', interval: freshSpk.interval || '', evaluasi: freshSpk.evaluasi || '', equipmentStatus: freshSpk.equipmentStatus || 'Running' });
+    const eqIds = (freshSpk.equipmentModels || []).map((e) => e.equipmentId);
     setSelectedEqIds(eqIds);
-    setActivities((spk.activitiesModel || []).map((a) => ({ _id: actIdxRef.current++, equipmentId: a.equipmentId, operationText: a.operationText || '', durationPlan: a.durationPlan ?? '' })));
-    setSelectedInterval(spk.interval || '');
+    setActivities((freshSpk.activitiesModel || []).map((a) => ({
+      _id: actIdxRef.current++,
+      activityNumber: a.activityNumber,
+      equipmentId:    a.equipmentId    ?? null,
+      controlKey:     a.controlKey     ?? null,
+      operationText:  a.operationText  || '',
+      durationPlan:   a.durationPlan   ?? '',
+      durationActual: a.durationActual ?? '',
+      resultComment:  a.resultComment  || '',
+      isVerified:     a.isVerified     ?? false,
+      measurementValue: a.measurementValue ?? '',
+    })));
+    // Reset material states
+    setMatSearch('');
+    setMatResults([]);
+    setMatSelected(null);
+    setMatQty(1);
+
     setEqSearch('');
     setPanelOpen(true);
   }
 
-  async function fetchIntervals(year, week) {
-    setLoadingIntervals(true);
-    try {
-      const data = await apiGet(`/preventive-schedule?year=${year}&week=${week}`);
-      const ivs = data.activeIntervals || [];
-      setActiveIntervals(ivs);
-      if (ivs.length) setSelectedInterval(ivs[0]);
-    } catch { setActiveIntervals([]); }
-    finally { setLoadingIntervals(false); }
-  }
-
   async function openDetail(spk) {
     setDetailSpk(spk);
+    setDetailFull(null);
     setDetailSubs([]);
     setLoadingSubs(true);
     try {
-      const data = await apiGet(`/submissions?spkNumber=${spk.spkNumber}`);
-      setDetailSubs(Array.isArray(data) ? data : []);
-    } catch { setDetailSubs([]); }
-    finally { setLoadingSubs(false); }
+      const [fullData, subsData] = await Promise.all([
+        apiGet(`/spk/${spk.spkNumber}`).catch(() => null),
+        apiGet(`/submissions?spkNumber=${spk.spkNumber}`).catch(() => []),
+      ]);
+      setDetailFull(fullData);
+      setDetailSubs(Array.isArray(subsData) ? subsData : []);
+    } finally { setLoadingSubs(false); }
   }
 
-  function onWeekChange(year, week) {
-    setPanelYear(year); setPanelWeek(week);
-    fetchIntervals(year, week);
-  }
-
-  // When interval changes in create mode, auto-populate activities from mappings
-  function onIntervalSelect(iv) {
-    setSelectedInterval(iv);
-    if (!editingSpk) {
-      const newActs = [];
-      selectedEqIds.forEach((eqId) => {
-        const mapping = allMappings.find((m) => m.equipmentId === eqId && m.interval === iv);
-        if (mapping?.activities?.length) {
-          mapping.activities.forEach((step) => {
-            newActs.push({ _id: actIdxRef.current++, equipmentId: eqId, operationText: step.operationText || '', durationPlan: 30 });
-          });
-        }
-      });
-      setActivities(newActs);
-      if (newActs.length > 0) toast.info(`${newActs.length} aktivitas ditambahkan dari task mapping`);
-    }
-  }
-
-  // When equipment selection changes in create mode, refresh activities
   function onEqToggle(eqId) {
     setSelectedEqIds((prev) => {
       const next = prev.includes(eqId) ? prev.filter((x) => x !== eqId) : [...prev, eqId];
-      // Auto-populate activities for newly added equipment
-      if (!editingSpk && !prev.includes(eqId) && selectedInterval) {
-        const mapping = allMappings.find((m) => m.equipmentId === eqId && m.interval === selectedInterval);
-        if (mapping?.activities?.length) {
-          setActivities((acts) => [
-            ...acts,
-            ...mapping.activities.map((step) => ({ _id: actIdxRef.current++, equipmentId: eqId, operationText: step.operationText || '', durationPlan: 30 })),
-          ]);
-          toast.info(`${mapping.activities.length} aktivitas ditambahkan untuk equipment ini`);
-        }
-      }
       if (prev.includes(eqId)) {
-        // Remove activities for deselected equipment
         setActivities((acts) => acts.filter((a) => a.equipmentId !== eqId));
       }
       return next;
     });
   }
 
-  function addActivity(eqId) {
-    setActivities((prev) => [...prev, { _id: actIdxRef.current++, equipmentId: eqId, operationText: '', durationPlan: '' }]);
+  function addActivity(eqId = null) {
+    setActivities((prev) => [...prev, {
+      _id: actIdxRef.current++,
+      activityNumber: null,
+      equipmentId: eqId ?? (selectedEqIds[0] ?? null),
+      controlKey: null,
+      operationText: '',
+      durationPlan: '', durationActual: '',
+      resultComment: '', isVerified: false,
+      measurementValue: '',
+    }]);
   }
   function removeActivity(id) {
     setActivities((prev) => prev.filter((a) => a._id !== id));
@@ -271,77 +283,161 @@ export default function SpkPage() {
     setActivities((prev) => prev.map((a) => a._id === id ? { ...a, [field]: value } : a));
   }
 
+  // Material search with debounce
+  const handleMatSearch = (value) => {
+    setMatSearch(value);
+    setMatSelected(null);
+    if (matSearchTimeout.current) clearTimeout(matSearchTimeout.current);
+    if (!value || value.length < 1) {
+      setMatResults([]);
+      return;
+    }
+    setMatSearching(true);
+    matSearchTimeout.current = setTimeout(async () => {
+      try {
+        const results = await apiGet(`/materials?search=${encodeURIComponent(value)}`);
+        const data = Array.isArray(results?.data) ? results.data : (Array.isArray(results) ? results : []);
+        setMatResults(data.slice(0, 20));
+      } catch {
+        setMatResults([]);
+      } finally {
+        setMatSearching(false);
+      }
+    }, 300);
+  };
+
+  const handleSelectMaterial = (mat) => {
+    if (Number(mat.quantity) <= 0) return;
+    setMatSelected(mat);
+    setMatSearch(`${mat.materialCode} — ${mat.name}`);
+    setMatResults([]);
+    setMatQty(1);
+  };
+
+  const handleAddMaterial = async () => {
+    if (!matSelected || matQty <= 0 || !editingSpk) return;
+    setMatAdding(true);
+    try {
+      const res = await apiPost(`/spk/${editingSpk.spkNumber}/materials`, {
+        materialId: matSelected.id,
+        quantityUsed: Number(matQty),
+      });
+      if (res.status === 'success') {
+        toast.success('Material berhasil ditambahkan');
+        
+        // Refresh editingSpk details
+        const refreshed = await apiGet(`/spk/${editingSpk.spkNumber}`);
+        setEditingSpk(refreshed);
+        
+        // Update local spkList
+        setSpkList((prev) => prev.map((s) => s.spkNumber === refreshed.spkNumber ? refreshed : s));
+        
+        // Reset inputs
+        setMatSelected(null);
+        setMatSearch('');
+        setMatQty(1);
+      } else {
+        toast.error(res.message || 'Gagal menambahkan material');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Gagal menambahkan material');
+    } finally {
+      setMatAdding(false);
+    }
+  };
+
+  const handleRemoveMaterial = async (recordId) => {
+    if (!editingSpk) return;
+    try {
+      const res = await apiDelete(`/spk/${editingSpk.spkNumber}/materials/${recordId}`);
+      if (res.status === 'success') {
+        toast.success('Material dihapus, stok dikembalikan');
+        
+        // Refresh editingSpk details
+        const refreshed = await apiGet(`/spk/${editingSpk.spkNumber}`);
+        setEditingSpk(refreshed);
+        
+        // Update local spkList
+        setSpkList((prev) => prev.map((s) => s.spkNumber === refreshed.spkNumber ? refreshed : s));
+      } else {
+        toast.error(res.message || 'Gagal menghapus material');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Gagal menghapus material');
+    }
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (matDropdownRef.current && !matDropdownRef.current.contains(e.target)) {
+        setMatResults([]);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   async function saveSpk() {
-    const { spkNumber, description, category: cat, status, scheduledDate } = form;
+    const { spkNumber, description, category: cat, status, scheduledDate, evaluasi, equipmentStatus } = form;
     if (!spkNumber || !description) { toast.error('SPK Number dan Deskripsi wajib diisi'); return; }
-    if (!editingSpk && !selectedInterval) { toast.error('Pilih interval SPK'); return; }
 
     const equipmentModels = selectedEqIds.map((id) => {
       const eq = allEquipment.find((e) => e.equipmentId === id);
       return { equipmentId: id, equipmentName: eq?.equipmentName || id, functionalLocation: eq?.functionalLocationId || null };
     });
 
-    let actCounter = 1;
+    let fallbackCounter = 1;
     const activitiesModel = activities
       .filter((a) => a.operationText?.trim())
       .map((a) => ({
-        activityNumber: `ACT-${String(actCounter++).padStart(3, '0')}`,
-        equipmentId: a.equipmentId,
-        operationText: a.operationText.trim(),
-        durationPlan: parseFloat(a.durationPlan) || 0,
-        resultComment: null, durationActual: null, isVerified: false,
+        activityNumber:   a.activityNumber || `ACT-${String(fallbackCounter++).padStart(3, '0')}`,
+        equipmentId:      a.equipmentId    ?? null,
+        controlKey:       a.controlKey     ?? null,
+        operationText:    a.operationText.trim(),
+        durationPlan:     a.durationPlan   !== '' ? parseFloat(a.durationPlan)   || null : null,
+        durationActual:   a.durationActual !== '' ? parseFloat(a.durationActual) || null : null,
+        resultComment:    a.resultComment?.trim()  || null,
+        isVerified:       a.isVerified     ?? false,
+        measurementType:  null,
+        measurementUnit:  detectMeasurementUnit(a.operationText) || null,
+        measurementValue: a.measurementValue !== '' ? parseFloat(a.measurementValue) : null,
       }));
 
     const body = {
       spkNumber, description, category: cat, status,
-      interval: editingSpk ? (editingSpk.interval || selectedInterval) : selectedInterval,
-      scheduledDate: editingSpk ? (scheduledDate || null) : getWeekStart(panelWeek, panelYear),
+      interval: editingSpk.interval,
+      scheduledDate: scheduledDate || null,
+      evaluasi: evaluasi?.trim() || null,
+      equipmentStatus: equipmentStatus || 'Running',
       durationActual: null, equipmentModels, activitiesModel,
     };
 
     setSaving(true);
     try {
-      if (editingSpk) {
-        await apiPut(`/spk/${editingSpk.spkNumber}`, body);
-        toast.success(`SPK ${spkNumber} diperbarui`);
-      } else {
-        await apiPost('/spk', body);
-        toast.success(`SPK ${spkNumber} dibuat`);
-      }
+      await apiPut(`/spk/${editingSpk.spkNumber}`, body);
+      toast.success(`SPK ${spkNumber} diperbarui`);
       setPanelOpen(false);
       load();
     } catch (e) { toast.error(e.message); }
     finally { setSaving(false); }
   }
 
-  const displayed = spkList.filter((s) => {
-    if (statusFilter && s.status !== statusFilter) return false;
-    if (weekFilter && String(s.weekNumber) !== weekFilter) return false;
-    if (yearFilter && String(s.weekYear) !== yearFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      const matchSpk  = s.spkNumber?.toLowerCase().includes(q);
-      const matchDesc = s.description?.toLowerCase().includes(q);
-      const matchEq   = (s.equipmentModels || []).some(
-        (e) => e.equipmentId?.toLowerCase().includes(q) || e.equipmentName?.toLowerCase().includes(q)
-      );
-      if (!matchSpk && !matchDesc && !matchEq) return false;
-    }
-    return true;
-  });
+  const displayed = search
+    ? spkList.filter((s) => {
+        const q = search.toLowerCase();
+        return s.spkNumber?.toLowerCase().includes(q)
+          || s.description?.toLowerCase().includes(q)
+          || (s.equipmentModels || []).some(
+            (e) => e.equipmentId?.toLowerCase().includes(q) || e.equipmentName?.toLowerCase().includes(q)
+          );
+      })
+    : spkList;
 
-  // Collect unique week numbers and years from current list for filter dropdowns
-  const weekOptions  = [...new Set(spkList.map((s) => s.weekNumber).filter(Boolean))].sort((a, b) => a - b);
-  const yearOptions  = [...new Set(spkList.map((s) => s.weekYear).filter(Boolean))].sort((a, b) => b - a);
-
-  // Equipment list for panel (grouped mapped/unmapped in create mode)
   const filteredEq = allEquipment.filter((eq) => {
     const q = eqSearch.toLowerCase();
     return !q || eq.equipmentId?.toLowerCase().includes(q) || eq.equipmentName?.toLowerCase().includes(q);
   });
-  const mappedForInterval = !editingSpk && selectedInterval
-    ? new Set(allMappings.filter((m) => m.interval === selectedInterval).map((m) => m.equipmentId))
-    : null;
 
   return (
     <div className="flex h-full">
@@ -350,18 +446,18 @@ export default function SpkPage() {
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">SPK / Preventive</h2>
-            <p className="text-sm text-gray-500">{displayed.length} SPK</p>
+            <p className="text-sm text-gray-500">{totalCount} SPK</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap ">
             <Button variant="outline" size="sm" onClick={load}><RefreshCw size={13} /></Button>
             {canCreate('spk') && (
               <Link href="/spk/import">
-                <Button variant="outline" size="sm" className="gap-1.5"><Upload size={13} /> Import SAP</Button>
+                <Button variant="outline" size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"><Upload size={13} /> Import SAP</Button>
               </Link>
             )}
             {canCreate('spk') && (
-              <Link href="/spk/generate">
-                <Button variant="outline" size="sm" className="gap-1.5"><Wrench size={13} /> Generate</Button>
+              <Link href="/spk/import-historis">
+                <Button variant="outline" size="sm" className="gap-1.5"><Upload size={13} /> Import Historis</Button>
               </Link>
             )}
           </div>
@@ -374,50 +470,97 @@ export default function SpkPage() {
             placeholder="Cari SPK, deskripsi, equipment..."
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white min-w-[220px] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           />
-          <select value={category} onChange={(e) => setCategory(e.target.value)}
-            className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-            <option value="">Semua Kategori</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+          {userCategory ? (
+            <span className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 font-medium select-none">
+              {userCategory}
+            </span>
+          ) : (
+            <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+              className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+              <option value="">Semua Kategori</option>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
             <option value="">Semua Status</option>
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>)}
           </select>
-          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}
+          <select value={yearFilter} onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
             className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
             <option value="">Semua Tahun</option>
-            {yearOptions.map((y) => <option key={y} value={String(y)}>{y}</option>)}
+            {YEAR_OPTIONS.map((y) => <option key={y} value={String(y)}>{y}</option>)}
           </select>
-          <select value={weekFilter} onChange={(e) => setWeekFilter(e.target.value)}
+          <select value={weekFilter} onChange={(e) => { setWeekFilter(e.target.value); setPage(1); }}
             className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
             <option value="">Semua Minggu</option>
-            {weekOptions.map((w) => <option key={w} value={String(w)}>Minggu {w}</option>)}
+            {WEEK_OPTIONS.map((w) => <option key={w} value={String(w)}>Minggu {w}</option>)}
           </select>
           {plants.length > 0 && (
-            <select value={plantFilter} onChange={(e) => setPlantFilter(e.target.value)}
+            <select value={plantFilter} onChange={(e) => { setPlantFilter(e.target.value); setPage(1); }}
               className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
               <option value="">Semua Plant</option>
               {plants.map((p) => <option key={p.plantId} value={p.plantId}>{p.plantName}</option>)}
             </select>
           )}
-          {(search || statusFilter || weekFilter || yearFilter || category || plantFilter) && (
+          <button
+            onClick={() => { setHasAbnormal(v => !v); setPage(1); }}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+              hasAbnormal
+                ? 'bg-red-50 text-red-700 border-red-300'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <span>⚠</span>
+            <span>Ada Hasil Abnormal</span>
+          </button>
+          {(search || statusFilter || weekFilter || yearFilter || (!userCategory && category) || plantFilter || hasAbnormal) && (
             <button
-              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); setCategory(''); setPlantFilter(''); }}
+              onClick={() => { setSearch(''); setStatusFilter(''); setWeekFilter(''); setYearFilter(''); if (!userCategory) setCategory(''); setPlantFilter(''); setHasAbnormal(false); setPage(1); }}
               className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 px-2 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
             >
               <X size={12} /> Reset Filter
             </button>
           )}
-          {selected.length > 0 && canDelete('spk') && (
+          {(selected.length > 0 || selectAllMatching) && canDelete('spk') && (
             <div className="flex items-center gap-2 ml-auto bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
-              <span className="text-sm text-red-700 font-medium">{selected.length} dipilih</span>
+              <span className="text-sm text-red-700 font-medium">
+                {selectAllMatching ? `${totalCount} dipilih (semua)` : `${selected.length} dipilih`}
+              </span>
               <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)} className="gap-1 h-7 text-xs">
                 <Trash2 size={12} /> Hapus
               </Button>
             </div>
           )}
         </div>
+
+        {/* Select-all banner */}
+        {selected.length > 0 && !selectAllMatching && selected.length === displayed.length && totalCount > displayed.length && (
+          <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+            <span className="text-sm text-blue-700">
+              {selected.length} SPK di halaman ini dipilih.
+            </span>
+            <button
+              onClick={() => setSelectAllMatching(true)}
+              className="text-sm font-semibold text-blue-600 hover:text-blue-800 underline"
+            >
+              Pilih semua {totalCount} SPK sesuai filter
+            </button>
+          </div>
+        )}
+        {selectAllMatching && (
+          <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
+            <span className="text-sm text-blue-700 font-medium">
+              Semua {totalCount} SPK sesuai filter dipilih.
+            </span>
+            <button
+              onClick={() => setSelectAllMatching(false)}
+              className="text-sm text-blue-500 hover:text-blue-700 underline"
+            >
+              Batalkan
+            </button>
+          </div>
+        )}
 
         {/* Table */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -449,7 +592,20 @@ export default function SpkPage() {
                   <td className="px-3 py-3 text-gray-700 max-w-[200px] truncate">{s.description}</td>
                   <td className="px-3 py-3"><CategoryBadge category={s.category} /></td>
                   <td className="px-3 py-3 text-gray-500 text-xs">{s.interval}</td>
-                  <td className="px-3 py-3"><StatusBadge status={s.status} /></td>
+                  <td className="px-3 py-3">
+                    <div className="flex flex-col gap-1">
+                      <StatusBadge status={s.status} label={
+                        s.status === 'awaiting_kasie' && s.category ? `Menunggu Kasie ${s.category}`
+                        : s.status === 'awaiting_kadis' ? kadisStatusLabel(s.kadisArea)
+                        : undefined
+                      } />
+                      {s.abnormalCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700 w-fit">
+                          ⚠ {s.abnormalCount} abnormal
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-3">
                     {(s.equipmentModels || []).length === 0 ? (
                       <span className="text-gray-400 text-xs">—</span>
@@ -492,6 +648,7 @@ export default function SpkPage() {
               ))}
             </tbody>
           </table>
+          <Pagination page={page} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </div>
       </div>
 
@@ -500,7 +657,7 @@ export default function SpkPage() {
         <div className="fixed top-0 right-0 h-full w-[420px] bg-white border-l border-gray-200 shadow-xl flex flex-col z-40 overflow-hidden">
           {/* Panel header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
-            <h3 className="text-base font-semibold text-gray-800">{editingSpk ? `Edit SPK` : 'Buat SPK'}</h3>
+            <h3 className="text-base font-semibold text-gray-800">Edit SPK</h3>
             <button onClick={() => setPanelOpen(false)} className="p-1 rounded hover:bg-gray-100 text-gray-500"><X size={16} /></button>
           </div>
 
@@ -514,11 +671,17 @@ export default function SpkPage() {
                     onChange={(v) => setForm((f) => ({ ...f, spkNumber: v }))} />
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Kategori *</label>
-                    <select value={form.category}
-                      onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, category: v, spkNumber: editingSpk ? f.spkNumber : suggestNumber(v, spkList) })); }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    {userCategory ? (
+                      <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 font-medium">
+                        {userCategory}
+                      </div>
+                    ) : (
+                      <select value={form.category}
+                        onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
                   </div>
                 </div>
                 <PanelField label="Deskripsi *" value={form.description} onChange={(v) => setForm((f) => ({ ...f, description: v }))} />
@@ -530,61 +693,29 @@ export default function SpkPage() {
                       {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>)}
                     </select>
                   </div>
-                  {editingSpk
-                    ? <PanelField label="Tanggal Mulai" type="date" value={form.scheduledDate} onChange={(v) => setForm((f) => ({ ...f, scheduledDate: v }))} />
-                    : <PanelField label="Interval" value={form.interval} disabled placeholder={editingSpk?.interval || '—'} />
-                  }
+                  <PanelField label="Tanggal Mulai" type="date" value={form.scheduledDate} onChange={(v) => setForm((f) => ({ ...f, scheduledDate: v }))} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Status Peralatan</label>
+                    <select value={form.equipmentStatus} onChange={(e) => setForm((f) => ({ ...f, equipmentStatus: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                      <option value="Running">Running</option>
+                      <option value="Standby">Standby</option>
+                      <option value="Breakdown">Breakdown</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Evaluasi</label>
+                  <textarea value={form.evaluasi} onChange={(e) => setForm((f) => ({ ...f, evaluasi: e.target.value }))}
+                    placeholder="Catatan evaluasi..."
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none" />
                 </div>
               </div>
             </section>
 
-            {/* ── Week / Interval (create only) ── */}
-            {!editingSpk && (
-              <section>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Periode & Interval</p>
-                <div className="grid grid-cols-2 gap-3 mb-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Tahun</label>
-                    <select value={panelYear} onChange={(e) => onWeekChange(Number(e.target.value), panelWeek)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-                      {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Minggu ke-</label>
-                    <select value={panelWeek} onChange={(e) => onWeekChange(panelYear, Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-                      {WEEKS.map((w) => <option key={w} value={w}>Minggu {w}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 mb-2">Mulai: {fmtDate(getWeekStart(panelWeek, panelYear))}</p>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Interval *</label>
-                  {loadingIntervals ? (
-                    <p className="text-xs text-gray-400">Memuat jadwal...</p>
-                  ) : activeIntervals.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {activeIntervals.map((iv) => (
-                        <button key={iv} onClick={() => onIntervalSelect(iv)}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${selectedInterval === iv ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
-                          {iv}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {INTERVALS.map((iv) => (
-                        <button key={iv} onClick={() => onIntervalSelect(iv)}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${selectedInterval === iv ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
-                          {iv}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
 
             {/* ── Equipment ── */}
             <section>
@@ -594,88 +725,206 @@ export default function SpkPage() {
               <div className="border border-gray-200 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
                 {filteredEq.length === 0 ? (
                   <p className="px-3 py-4 text-xs text-gray-400 text-center">Tidak ada equipment</p>
-                ) : (
-                  <>
-                    {mappedForInterval && (
-                      <>
-                        {filteredEq.filter((eq) => mappedForInterval.has(eq.equipmentId)).length > 0 && (
-                          <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50">Terpetakan — {selectedInterval}</p>
-                        )}
-                        {filteredEq.filter((eq) => mappedForInterval.has(eq.equipmentId)).map((eq) => (
-                          <EqItem key={eq.equipmentId} eq={eq} checked={selectedEqIds.includes(eq.equipmentId)} onToggle={onEqToggle}
-                            badge={allMappings.find((m) => m.equipmentId === eq.equipmentId && m.interval === selectedInterval)?.taskListName} />
-                        ))}
-                        {filteredEq.filter((eq) => !mappedForInterval.has(eq.equipmentId)).length > 0 && (
-                          <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-t border-gray-100">Tanpa mapping</p>
-                        )}
-                        {filteredEq.filter((eq) => !mappedForInterval.has(eq.equipmentId)).map((eq) => (
-                          <EqItem key={eq.equipmentId} eq={eq} checked={selectedEqIds.includes(eq.equipmentId)} onToggle={onEqToggle} />
-                        ))}
-                      </>
-                    )}
-                    {!mappedForInterval && filteredEq.map((eq) => (
-                      <EqItem key={eq.equipmentId} eq={eq} checked={selectedEqIds.includes(eq.equipmentId)} onToggle={onEqToggle} />
-                    ))}
-                  </>
-                )}
+                ) : filteredEq.map((eq) => (
+                  <EqItem key={eq.equipmentId} eq={eq} checked={selectedEqIds.includes(eq.equipmentId)} onToggle={onEqToggle} />
+                ))}
               </div>
             </section>
 
-            {/* ── Activities per equipment ── */}
-            {selectedEqIds.length > 0 && (
-              <section>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Aktivitas</p>
-                {selectedEqIds.map((eqId) => {
-                  const eq = allEquipment.find((e) => e.equipmentId === eqId);
-                  const eqActs = activities.filter((a) => a.equipmentId === eqId);
-                  return (
-                    <div key={eqId} className="mb-4">
-                      <p className="text-xs font-semibold text-gray-700 mb-2">
-                        {eq?.equipmentName || eqId} <span className="font-normal text-gray-400">({eqId})</span>
-                      </p>
-                      <div className="space-y-2">
-                        {eqActs.map((act) => (
-                          <div key={act._id} className="flex gap-2 items-center">
-                            <input value={act.operationText} onChange={(e) => updateActivity(act._id, 'operationText', e.target.value)}
-                              placeholder="Teks operasi / deskripsi aktivitas"
-                              className="flex-1 px-3 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-                            <input type="number" value={act.durationPlan} onChange={(e) => updateActivity(act._id, 'durationPlan', e.target.value)}
-                              placeholder="Menit" className="w-20 px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-                            <button onClick={() => removeActivity(act._id)} className="p-1 text-gray-400 hover:text-red-500">
-                              <X size={13} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <button onClick={() => addActivity(eqId)}
-                        className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
-                        <Plus size={12} /> Tambah Aktivitas
-                      </button>
+            {/* ── Activities (flat list) ── */}
+            <section>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Aktivitas {activities.length > 0 && <span className="font-normal normal-case text-gray-400">({activities.length})</span>}
+              </p>
+              {activities.length === 0 && (
+                <p className="text-xs text-gray-400 py-2">Belum ada aktivitas.</p>
+              )}
+              <div className="space-y-2">
+                {activities.map((act) => (
+                  <ActivityEditRow
+                    key={act._id}
+                    act={act}
+                    onChange={(field, value) => updateActivity(act._id, field, value)}
+                    onRemove={() => removeActivity(act._id)}
+                  />
+                ))}
+              </div>
+              <button onClick={() => addActivity()}
+                className="mt-3 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+                <Plus size={12} /> Tambah Aktivitas
+              </button>
+            </section>
+
+            {/* ── Reservasi Material ── */}
+            <section className="bg-blue-50/50 rounded-xl border border-blue-100 p-4 space-y-4">
+              <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide flex items-center gap-1.5">
+                <Package size={14} /> Reservasi Material
+                {editingSpk?.spkMaterials?.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-700 font-bold">
+                    {editingSpk.spkMaterials.length}
+                  </span>
+                )}
+              </p>
+
+              {/* Add material controls */}
+              <div className="space-y-2.5">
+                <div className="relative" ref={matDropdownRef}>
+                  <div className="flex gap-1.5">
+                    <div className="relative flex-1">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        value={matSearch}
+                        onChange={(e) => handleMatSearch(e.target.value)}
+                        placeholder="Cari material..."
+                        className="w-full pl-7 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      />
                     </div>
-                  );
-                })}
-              </section>
-            )}
+                    <input
+                      type="number"
+                      min={1}
+                      max={matSelected ? Number(matSelected.quantity) : 99999}
+                      value={matQty}
+                      onChange={(e) => setMatQty(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-14 px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      placeholder="Qty"
+                      disabled={!matSelected}
+                    />
+                    <Button
+                      size="sm"
+                      className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5"
+                      disabled={!matSelected || matAdding || matQty <= 0}
+                      onClick={handleAddMaterial}
+                    >
+                      {matAdding ? "..." : "Tambah"}
+                    </Button>
+                  </div>
+
+                  {/* Search results dropdown */}
+                  {matResults.length > 0 && (
+                    <div className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                      {matResults.map((mat) => {
+                        const isOut = Number(mat.quantity) <= 0;
+                        return (
+                          <button
+                            key={mat.id}
+                            disabled={isOut}
+                            onClick={() => handleSelectMaterial(mat)}
+                            className={`w-full px-3 py-2 text-left flex items-center justify-between border-b border-gray-50 last:border-0 text-xs ${
+                              isOut ? "opacity-45 cursor-not-allowed bg-gray-50" : "hover:bg-blue-50 cursor-pointer"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-[10px] font-bold text-gray-500">{mat.materialCode}</span>
+                                {isOut && <span className="text-[9px] bg-red-100 text-red-600 px-1 rounded font-semibold">Habis</span>}
+                              </div>
+                              <p className="text-gray-700 truncate mt-0.5">{mat.name}</p>
+                            </div>
+                            <div className="text-right ml-2 shrink-0">
+                              <div className={`font-bold ${isOut ? "text-red-400" : "text-green-600"}`}>
+                                {Number(mat.quantity).toLocaleString()}
+                              </div>
+                              <div className="text-[9px] text-gray-400">{mat.uom || "PCS"}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {matSearching && matSearch.length >= 1 && (
+                    <div className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-xs text-gray-400">
+                      Mencari material...
+                    </div>
+                  )}
+                </div>
+
+                {matSelected && (
+                  <div className="flex items-center gap-1.5 bg-blue-100/40 border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-blue-800">
+                    <Package size={12} className="text-blue-600 shrink-0" />
+                    <span className="font-medium truncate flex-1">
+                      {matSelected.materialCode} — {matSelected.name}
+                    </span>
+                    <span className="text-[10px] text-blue-600 shrink-0">
+                      (Stok: {Number(matSelected.quantity).toLocaleString()} {matSelected.uom || "PCS"})
+                    </span>
+                    <button onClick={() => { setMatSelected(null); setMatSearch(""); }} className="text-blue-400 hover:text-blue-600 shrink-0 ml-1">
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Material list table */}
+              {editingSpk?.spkMaterials?.length > 0 ? (
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-gray-50 border-b border-gray-200 text-[10px] font-semibold text-gray-500 uppercase">
+                      <tr>
+                        <th className="px-2.5 py-1.5">Kode</th>
+                        <th className="px-2.5 py-1.5">Nama</th>
+                        <th className="px-2.5 py-1.5 text-center">Qty</th>
+                        <th className="px-2.5 py-1.5 text-center">UoM</th>
+                        <th className="px-2.5 py-1.5 text-center">Stok</th>
+                        <th className="px-2 py-1.5 w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-gray-700">
+                      {editingSpk.spkMaterials.map((sm) => (
+                        <tr key={sm.id} className="hover:bg-gray-50/50">
+                          <td className="px-2.5 py-2 font-mono text-[10px] text-gray-500">{sm.material?.materialCode || "-"}</td>
+                          <td className="px-2.5 py-2 truncate max-w-[100px]" title={sm.material?.name}>{sm.material?.name || "-"}</td>
+                          <td className="px-2.5 py-2 text-center font-bold text-blue-600">{Number(sm.quantityUsed)}</td>
+                          <td className="px-2.5 py-2 text-center text-gray-400 text-[10px]">{sm.material?.uom || "PCS"}</td>
+                          <td className="px-2.5 py-2 text-center">
+                            <span className={`px-1 rounded text-[10px] font-semibold ${Number(sm.material?.quantity) > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+                              {Number(sm.material?.quantity ?? 0).toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="px-2 py-2 text-center">
+                            <button
+                              onClick={() => handleRemoveMaterial(sm.id)}
+                              className="text-red-400 hover:text-red-600 p-0.5 rounded hover:bg-red-50 transition-colors"
+                              title="Hapus material & kembalikan stok"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-xs text-gray-400">
+                  Belum ada material yang ditambahkan
+                </div>
+              )}
+            </section>
           </div>
 
           {/* Panel footer */}
           <div className="shrink-0 px-5 py-4 border-t border-gray-200 flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setPanelOpen(false)}>Batal</Button>
             <Button size="sm" onClick={saveSpk} disabled={saving}>
-              {saving ? 'Menyimpan...' : editingSpk ? 'Simpan' : 'Buat SPK'}
+              {saving ? 'Menyimpan...' : 'Simpan'}
             </Button>
           </div>
         </div>
       )}
 
       {/* ── SPK Detail Dialog ─────────────────────────────────────────── */}
-      <Dialog open={!!detailSpk} onOpenChange={(open) => !open && setDetailSpk(null)}>
+      <Dialog open={!!detailSpk} onOpenChange={(open) => { if (!open) { setDetailSpk(null); setDetailFull(null); } }}>
         <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2 flex-wrap">
               <DialogTitle className="font-mono">{detailSpk?.spkNumber}</DialogTitle>
               {detailSpk?.category && <CategoryBadge category={detailSpk.category} />}
-              {detailSpk?.status && <StatusBadge status={detailSpk.status} />}
+              {detailSpk?.status && <StatusBadge status={detailSpk.status} label={
+                detailSpk.status === 'awaiting_kasie' && detailSpk.category ? `Menunggu Kasie ${detailSpk.category}`
+                : detailSpk.status === 'awaiting_kadis' ? kadisStatusLabel(detailSpk.kadisArea)
+                : undefined
+              } />}
             </div>
             {detailSpk?.description && (
               <p className="text-sm text-gray-500 mt-1">{detailSpk.description}</p>
@@ -688,11 +937,32 @@ export default function SpkPage() {
               <div className="grid grid-cols-3 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <SpkField label="Interval" value={detailSpk.interval || '—'} />
                 <SpkField label="Scheduled Date" value={detailSpk.scheduledDate ? formatDateShort(detailSpk.scheduledDate) : '—'} />
+                {detailFull?.taskListId && (
+                  <SpkField
+                    label="Daftar Kegiatan"
+                    value={detailFull.taskListName ? `${detailFull.taskListId} — ${detailFull.taskListName}` : detailFull.taskListId}
+                  />
+                )}
                 <SpkField label="Minggu ke-" value={detailSpk.weekNumber ? `W${detailSpk.weekNumber} / ${detailSpk.weekYear}` : '—'} />
                 <SpkField label="Durasi Aktual" value={detailSpk.durationActual != null ? `${detailSpk.durationActual} menit` : '—'} />
-                <SpkField label="Submitted By" value={detailSpk.submittedBy || '—'} />
+                <SpkField label="Disubmit Oleh" value={detailFull?.submittedByName || detailSpk.submittedBy || '—'} />
                 <SpkField label="Submitted At" value={detailSpk.submittedAt ? formatDate(detailSpk.submittedAt) : '—'} />
                 {detailSpk.orderNumber && <SpkField label="Order Number" value={detailSpk.orderNumber} />}
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Status Peralatan</p>
+                  {(() => {
+                    const st = detailSpk.equipmentStatus || 'Running';
+                    const colors = EQUIPMENT_STATUS_COLORS[st] || EQUIPMENT_STATUS_COLORS['Running'];
+                    return (
+                      <span
+                        className="mt-0.5 inline-block px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{ backgroundColor: colors.bg, color: colors.text }}
+                      >
+                        {EQUIPMENT_STATUS_LABELS[st] || st}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Evaluasi */}
@@ -734,77 +1004,52 @@ export default function SpkPage() {
               )}
 
               {/* Activities */}
-              {detailSpk.activitiesModel?.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                    Aktivitas ({detailSpk.activitiesModel.length})
-                  </p>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          {['No.', 'Operasi', 'Plan (mnt)', 'Aktual (mnt)', 'Hasil', 'Verified'].map((h) => (
-                            <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {detailSpk.activitiesModel.map((a) => (
-                          <tr key={a.activityNumber}>
-                            <td className="px-3 py-2 font-mono text-gray-500">{a.activityNumber}</td>
-                            <td className="px-3 py-2 text-gray-700 max-w-[220px]">{a.operationText}</td>
-                            <td className="px-3 py-2 text-gray-500">{a.durationPlan ?? '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{a.durationActual ?? '—'}</td>
-                            <td className="px-3 py-2 text-gray-500 max-w-[160px] truncate">{a.resultComment || '—'}</td>
-                            <td className="px-3 py-2">
-                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${a.isVerified ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
-                                {a.isVerified ? '✓ Ya' : '—'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Hasil Ukur — from latest submission's activity results */}
-              {(() => {
-                const latestSub = detailSubs[0];
-                const results = latestSub?.activityResultsModel || [];
-                const hasMeasurements = results.some(r => r.measurementValue != null);
-                if (!hasMeasurements || !detailSpk.activitiesModel?.length) return null;
-                const resultMap = new Map(results.map(r => [r.activityNumber, r]));
+              {detailSpk.activitiesModel?.length > 0 && (() => {
+                const subResults = detailSubs[0]?.activityResultsModel || [];
+                const resultMap = new Map(subResults.map(r => [r.activityNumber, r]));
+                const hasSubData = subResults.length > 0;
                 return (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Hasil Ukur</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                      Aktivitas ({detailSpk.activitiesModel.length})
+                    </p>
                     <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
-                            {['No.', 'Uraian Pekerjaan', 'Nilai Ukur', 'Komentar', 'Status'].map((h) => (
+                            {['No.', 'Operasi', 'Plan (mnt)', 'Aktual (mnt)', 'Hasil', 'Nilai Ukur', 'Verified', 'Status'].map((h) => (
                               <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {detailSpk.activitiesModel.map((act) => {
-                            const res = resultMap.get(act.activityNumber);
-                            if (!res?.measurementValue) return null;
-                            const unit = res.measurementUnit || detectMeasurementUnit(act.operationText);
+                          {detailSpk.activitiesModel.map((a) => {
+                            const res = resultMap.get(a.activityNumber);
+                            const unit = res?.measurementUnit || detectMeasurementUnit(a.operationText);
                             return (
-                              <tr key={act.activityNumber} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 font-mono text-gray-500">{act.activityNumber}</td>
-                                <td className="px-3 py-2 text-gray-700 max-w-[240px]">{act.operationText || '—'}</td>
+                              <tr key={a.activityNumber} className={res?.isNormal === false ? 'bg-red-50/40' : ''}>
+                                <td className="px-3 py-2 font-mono text-gray-500">{a.activityNumber}</td>
+                                <td className="px-3 py-2 text-gray-700 max-w-[220px]">{a.operationText}</td>
+                                <td className="px-3 py-2 text-gray-500">{a.durationPlan ?? '—'}</td>
+                                <td className="px-3 py-2 text-gray-500">{a.durationActual ?? '—'}</td>
+                                <td className="px-3 py-2 text-gray-500 max-w-[160px] truncate">{a.resultComment || '—'}</td>
                                 <td className="px-3 py-2 font-mono font-semibold text-gray-800">
-                                  {res.measurementValue}{unit ? ` ${unit}` : ''}
+                                  {(() => {
+                                    const val = res?.measurementValue ?? a.measurementValue;
+                                    return val != null ? `${val}${unit ? ` ${unit}` : ''}` : '—';
+                                  })()}
                                 </td>
-                                <td className="px-3 py-2 text-gray-500 max-w-[180px]">{res.resultComment || '—'}</td>
                                 <td className="px-3 py-2">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${res.isNormal ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                                    {res.isNormal ? 'Normal' : 'Tidak Normal'}
+                                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${a.isVerified ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
+                                    {a.isVerified ? '✓ Ya' : '—'}
                                   </span>
+                                </td>
+                                <td className="px-3 py-2">
+                                  {hasSubData ? (
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${res?.isNormal === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                      {res?.isNormal === false ? 'Tidak Normal' : 'Normal'}
+                                    </span>
+                                  ) : '—'}
                                 </td>
                               </tr>
                             );
@@ -815,6 +1060,132 @@ export default function SpkPage() {
                   </div>
                 );
               })()}
+
+              {/* Material yang Direncanakan (Reservasi Material) */}
+              {((detailFull?.spkMaterials || detailSpk?.spkMaterials || []).length > 0) && (() => {
+                const materials = detailFull?.spkMaterials || detailSpk?.spkMaterials || [];
+                return (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                      <Package size={13} className="text-gray-400" /> Reservasi Material ({materials.length})
+                    </p>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto bg-white">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            {['Kode Material', 'Nama Material', 'Jumlah', 'UoM', 'Sisa Stok Gudang'].map((h) => (
+                              <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-gray-700">
+                          {materials.map((sm) => (
+                            <tr key={sm.id} className="hover:bg-gray-50/40">
+                              <td className="px-3 py-2 font-mono text-gray-500">{sm.material?.materialCode || "-"}</td>
+                              <td className="px-3 py-2 font-medium text-gray-800">{sm.material?.name || "-"}</td>
+                              <td className="px-3 py-2 font-bold text-blue-600">{Number(sm.quantityUsed)}</td>
+                              <td className="px-3 py-2 text-gray-400 text-xs">{sm.material?.uom || "PCS"}</td>
+                              <td className="px-3 py-2">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${Number(sm.material?.quantity) > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+                                  {Number(sm.material?.quantity ?? 0).toLocaleString()}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Approval history */}
+              {detailFull && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Riwayat Approval</p>
+                  <div className="relative pl-5">
+                    {/* vertical line */}
+                    <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gray-200" />
+                    {[
+                      {
+                        label: 'Submit Teknisi',
+                        name: detailFull.submittedByName || detailFull.submittedBy,
+                        at: detailFull.submittedAt,
+                        done: !!detailFull.submittedAt,
+                      },
+                      {
+                        label: 'Kasie',
+                        name: detailFull.kasieApprovedByName || detailFull.kasieApprovedBy,
+                        at: detailFull.kasieApprovedAt,
+                        done: !!detailFull.kasieApprovedAt,
+                      },
+                      {
+                        label: 'Kadis Perawatan',
+                        name: detailFull.kadisPerawatanApprovedByName || detailFull.kadisPerawatanApprovedBy,
+                        at: detailFull.kadisPerawatanApprovedAt,
+                        done: !!detailFull.kadisPerawatanApprovedAt,
+                      },
+                      {
+                        label: 'Kadis',
+                        name: detailFull.kadisApprovedByName || detailFull.kadisApprovedBy,
+                        at: detailFull.kadisApprovedAt,
+                        done: !!detailFull.kadisApprovedAt,
+                      },
+                    ].map((step, i) => (
+                      <div key={i} className="relative flex items-start gap-3 mb-3 last:mb-0">
+                        <div className={`relative z-10 mt-0.5 shrink-0 w-[18px] h-[18px] rounded-full flex items-center justify-center ${step.done ? 'bg-green-500' : 'bg-gray-200'}`}>
+                          {step.done
+                            ? <CheckCircle2 size={12} className="text-white" />
+                            : <Circle size={10} className="text-gray-400" />
+                          }
+                        </div>
+                        <div>
+                          <p className={`text-xs font-semibold ${step.done ? 'text-gray-800' : 'text-gray-400'}`}>{step.label}</p>
+                          {step.done ? (
+                            <p className="text-xs text-gray-500">
+                              {step.name || '—'} &middot; {formatDate(step.at)}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-gray-400">Menunggu</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Rejection history */}
+              {detailFull && (detailFull.rejectionLogs || []).length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Riwayat Penolakan</p>
+                  <div className="space-y-2">
+                    {(detailFull.rejectionLogs || []).map((log, i) => {
+                      const levelLabel = log.rejectedLevel === 'kasie' ? 'Kasie'
+                        : log.rejectedLevel === 'kadis_perawatan' ? 'Kadis Perawatan'
+                        : 'Kadis';
+                      return (
+                        <div key={i} className="bg-red-50 border border-red-100 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded uppercase">
+                              {levelLabel}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {log.rejectedBy} &middot; {formatDate(log.rejectedAt)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-red-800">{log.rejectionReason}</p>
+                          {log.resubmittedAt && (
+                            <p className="text-xs text-green-600 mt-1 italic">
+                              Kirim ulang: {formatDate(log.resubmittedAt)}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Submission history */}
               <div>
@@ -830,30 +1201,76 @@ export default function SpkPage() {
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                          {['Work Start', 'Work Finish', 'Durasi (mnt)', 'Foto', 'Lokasi'].map((h) => (
+                          {['Work Start', 'Work Finish', 'Durasi (mnt)', 'Lokasi'].map((h) => (
                             <th key={h} className="px-3 py-2 text-left font-semibold text-gray-600">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {detailSubs.map((sub) => (
-                          <tr key={sub.id}>
-                            <td className="px-3 py-2 text-gray-600">{sub.workStart ? formatDate(sub.workStart) : '—'}</td>
-                            <td className="px-3 py-2 text-gray-600">{formatDate(sub.submittedAt)}</td>
-                            <td className="px-3 py-2 text-gray-500">{sub.durationActual ?? '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{(sub.photoPaths || []).length}</td>
-                            <td className="px-3 py-2">
-                              {sub.latitude != null ? (
-                                <a href={`https://maps.google.com/?q=${sub.latitude},${sub.longitude}`}
-                                  target="_blank" rel="noreferrer"
-                                  className="inline-flex items-center gap-1 text-blue-600 hover:underline"
-                                  onClick={(e) => e.stopPropagation()}>
-                                  <MapPin size={10} />
-                                  {parseFloat(sub.latitude).toFixed(4)}, {parseFloat(sub.longitude).toFixed(4)}
-                                </a>
-                              ) : '—'}
-                            </td>
-                          </tr>
+                          <Fragment key={sub.id}>
+                            <tr>
+                              <td className="px-3 py-2 text-gray-600">{sub.workStart ? formatDate(sub.workStart) : '—'}</td>
+                              <td className="px-3 py-2 text-gray-600">{formatDate(sub.submittedAt)}</td>
+                              <td className="px-3 py-2 text-gray-500">{sub.durationActual ?? '—'}</td>
+                              <td className="px-3 py-2">
+                                {sub.latitude != null ? (
+                                  <a href={`https://maps.google.com/?q=${sub.latitude},${sub.longitude}`}
+                                    target="_blank" rel="noreferrer"
+                                    className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                                    onClick={(e) => e.stopPropagation()}>
+                                    <MapPin size={10} />
+                                    {parseFloat(sub.latitude).toFixed(4)}, {parseFloat(sub.longitude).toFixed(4)}
+                                  </a>
+                                ) : '—'}
+                              </td>
+                            </tr>
+                            {(sub.photoPaths || []).length > 0 && (
+                              <tr>
+                                <td colSpan={4} className="px-3 pb-3 pt-1">
+                                  <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1.5">
+                                    Foto Lapangan ({sub.photoPaths.length})
+                                  </p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {sub.photoPaths.map((path, i) => (
+                                      <button
+                                        key={path}
+                                        onClick={(e) => { e.stopPropagation(); setLightbox(path); }}
+                                        className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition-colors shrink-0"
+                                      >
+                                        <img
+                                          src={`${UPLOADS_BASE}/${path.replace(/^\//, '')}`}
+                                          alt={`Foto ${i + 1}`}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                            {(sub.evaluasi || sub.lateReason) && (
+                              <tr>
+                                <td colSpan={4} className="px-3 pb-3 pt-0">
+                                  <div className="space-y-1.5">
+                                    {sub.evaluasi && (
+                                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5">
+                                        <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Evaluasi Teknisi</p>
+                                        <p className="text-xs text-gray-700">{sub.evaluasi}</p>
+                                      </div>
+                                    )}
+                                    {sub.lateReason && (
+                                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                                        <p className="text-[10px] font-semibold text-amber-600 uppercase mb-1">Alasan Terlambat</p>
+                                        <p className="text-xs text-amber-800">{sub.lateReason}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
                         ))}
                       </tbody>
                     </table>
@@ -869,8 +1286,30 @@ export default function SpkPage() {
         title={`Hapus SPK ${deleteTarget?.spkNumber}?`} description="Aksi ini tidak dapat diurungkan."
         onConfirm={handleDelete} confirmLabel="Hapus" destructive />
       <ConfirmDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}
-        title={`Hapus ${selected.length} SPK?`} description="Aksi ini tidak dapat diurungkan."
+        title={selectAllMatching ? `Hapus semua ${totalCount} SPK sesuai filter?` : `Hapus ${selected.length} SPK?`}
+        description="Aksi ini tidak dapat diurungkan."
         onConfirm={handleBulkDelete} confirmLabel="Hapus Semua" destructive />
+
+      {/* Photo lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/70 hover:text-white"
+            onClick={() => setLightbox(null)}
+          >
+            <X size={24} />
+          </button>
+          <img
+            src={`${UPLOADS_BASE}/${lightbox.replace(/^\//, '')}`}
+            alt="Foto lapangan"
+            className="max-h-[85vh] max-w-full rounded-lg shadow-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -891,6 +1330,110 @@ function PanelField({ label, value, onChange, disabled, placeholder, type = 'tex
       <input type={type} value={value} onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         disabled={disabled} placeholder={placeholder}
         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:bg-gray-50 disabled:text-gray-400" />
+    </div>
+  );
+}
+
+function Pagination({ page, totalCount, pageSize, onPageChange }) {
+  const totalPages = Math.ceil(totalCount / pageSize);
+  if (totalPages <= 1) return null;
+  const from = (page - 1) * pageSize + 1;
+  const to   = Math.min(page * pageSize, totalCount);
+
+  const pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push('…');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+  }
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+      <p className="text-sm text-gray-500">{from}–{to} dari {totalCount} SPK</p>
+      <div className="flex items-center gap-1">
+        <button onClick={() => onPageChange(page - 1)} disabled={page === 1}
+          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          ‹
+        </button>
+        {pages.map((p, i) =>
+          p === '…' ? (
+            <span key={`e${i}`} className="px-2 text-gray-400">…</span>
+          ) : (
+            <button key={p} onClick={() => onPageChange(p)}
+              className={`w-8 h-8 text-sm rounded-lg border transition-colors ${p === page ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50'}`}>
+              {p}
+            </button>
+          )
+        )}
+        <button onClick={() => onPageChange(page + 1)} disabled={page === totalPages}
+          className="px-2.5 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          ›
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ActivityEditRow({ act, onChange, onRemove }) {
+  return (
+    <div className="border border-gray-200 bg-gray-50 rounded-lg p-3 space-y-2">
+      {/* Operation text + activity number badge */}
+      <div className="flex items-center gap-2">
+        {act.activityNumber && (
+          <span className="text-[10px] font-mono text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded shrink-0">
+            {act.activityNumber}
+          </span>
+        )}
+        <input
+          value={act.operationText}
+          onChange={(e) => onChange('operationText', e.target.value)}
+          placeholder="Teks operasi / deskripsi aktivitas"
+          className="flex-1 px-2.5 py-1.5 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+        />
+        <button onClick={onRemove} className="p-1 text-gray-400 hover:text-red-500 shrink-0"><X size={13} /></button>
+      </div>
+
+      {/* Durations */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <p className="text-[10px] text-gray-400 font-medium mb-0.5">Plan (mnt)</p>
+          <input type="number" value={act.durationPlan} onChange={(e) => onChange('durationPlan', e.target.value)}
+            className="w-full px-2 py-1 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+        </div>
+        <div>
+          <p className="text-[10px] text-gray-400 font-medium mb-0.5">Aktual (mnt)</p>
+          <input type="number" value={act.durationActual} onChange={(e) => onChange('durationActual', e.target.value)}
+            className="w-full px-2 py-1 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+        </div>
+      </div>
+
+      {/* Result comment */}
+      <div>
+        <p className="text-[10px] text-gray-400 font-medium mb-0.5">Hasil / Catatan</p>
+        <input value={act.resultComment} onChange={(e) => onChange('resultComment', e.target.value)}
+          placeholder="Catatan hasil pemeriksaan..."
+          className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+      </div>
+
+      {/* Measurement value — always shown; unit auto-detected from operation text */}
+      <div>
+        <p className="text-[10px] text-gray-400 font-medium mb-0.5">Nilai Ukur</p>
+        <div className="flex items-center gap-2">
+          <input type="number" step="any" value={act.measurementValue}
+            onChange={(e) => onChange('measurementValue', e.target.value)}
+            placeholder="0.00"
+            className="flex-1 px-2 py-1 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+          {detectMeasurementUnit(act.operationText) && (
+            <span className="text-xs font-mono text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded shrink-0">
+              {detectMeasurementUnit(act.operationText)}
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

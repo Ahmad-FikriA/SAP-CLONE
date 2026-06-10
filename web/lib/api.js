@@ -6,11 +6,12 @@ export async function apiFetch(path, options = {}) {
   const isFormData = options.body instanceof FormData;
   const headers = {
     Authorization: `Bearer ${getToken()}`,
+    'X-Client-Platform': 'web',
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers || {}),
   };
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${BASE}${path}`, { cache: 'no-store', ...options, headers });
 
   if (res.status === 401) {
     clearAuth();
@@ -20,7 +21,7 @@ export async function apiFetch(path, options = {}) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    throw new Error(err.message || err.error || `HTTP ${res.status}`);
   }
 
   if (res.status === 204) return null;
@@ -43,6 +44,10 @@ export function apiDelete(path) {
   return apiFetch(path, { method: 'DELETE' });
 }
 
+export function apiPatch(path, body) {
+  return apiFetch(path, { method: 'PATCH', body: JSON.stringify(body) });
+}
+
 /** POST with FormData (file uploads) — does not set Content-Type */
 export function apiUpload(path, formData) {
   return apiFetch(path, { method: 'POST', body: formData });
@@ -51,11 +56,14 @@ export function apiUpload(path, formData) {
 /** GET that returns a Blob (for file downloads) */
 export async function apiBlob(path) {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { Authorization: `Bearer ${getToken()}` },
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+      'X-Client-Platform': 'web',
+    },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    throw new Error(err.message || err.error || `HTTP ${res.status}`);
   }
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('spreadsheet') && !contentType.includes('octet-stream')) {

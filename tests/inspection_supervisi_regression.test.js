@@ -8,6 +8,10 @@ const InspectionRequest = require('../src/models/InspectionRequest');
 const InspectionSchedule = require('../src/models/InspectionSchedule');
 const { InspectionReport } = require('../src/models/InspectionReport');
 const SupervisiJob = require('../src/models/SupervisiJob');
+const SupervisiVisit = require('../src/models/SupervisiVisit');
+const User = require('../src/models/User');
+const { getAppDateString } = require('../src/controllers/inspection/supervisiHelpers');
+const { recalculateViolationFlags } = require('../src/controllers/inspection/supervisiController');
 
 describe('Inspection and Supervisi regressions', () => {
   const cleanup = {
@@ -15,6 +19,15 @@ describe('Inspection and Supervisi regressions', () => {
     reportIds: [],
     scheduleIds: [],
     jobIds: [],
+    visitIds: [],
+    userIds: [],
+  };
+  const appAccess = {
+    preventive: true,
+    corrective: true,
+    inspection: true,
+    supervisi: true,
+    k3_safety: true,
   };
 
   const plannerToken = jwt.sign(
@@ -26,11 +39,76 @@ describe('Inspection and Supervisi regressions', () => {
       group: null,
       divisi: 'Inpeksi & Supervisi',
       dinas: 'Inpeksi & Supervisi',
+      permissions: { _app: appAccess, supervisi: ['R'], inspeksi: ['R'] },
+    },
+    process.env.JWT_SECRET || 'kti-mock-secret-dev',
+  );
+  const newPlannerToken = jwt.sign(
+    {
+      userId: 'USR-CODEX-NEW-KADIS',
+      nik: '123',
+      name: 'arhab',
+      role: 'kadis',
+      group: null,
+      divisi: 'PPHSE',
+      dinas: 'Inpeksi & Supervisi',
+      permissions: { _app: appAccess, supervisi: ['R'], inspeksi: ['R'] },
+    },
+    process.env.JWT_SECRET || 'kti-mock-secret-dev',
+  );
+  const executorToken = jwt.sign(
+    {
+      userId: 'codex-deni',
+      nik: 'codex-deni',
+      name: 'Deni Yuniardi',
+      role: 'staff',
+      group: 'Inspeksi',
+      divisi: null,
+      dinas: null,
+      permissions: { _app: appAccess, supervisi: ['R'] },
+    },
+    process.env.JWT_SECRET || 'kti-mock-secret-dev',
+  );
+  const webMonitorToken = jwt.sign(
+    {
+      userId: '10000359',
+      nik: '10000359',
+      name: 'Bayu Sogara',
+      role: 'teknisi',
+      group: 'Produksi',
+      divisi: 'Operasional',
+      dinas: 'Operasional',
+      permissions: { _app: { ...appAccess, supervisi: false }, supervisi: ['R'] },
     },
     process.env.JWT_SECRET || 'kti-mock-secret-dev',
   );
 
+  async function createSupervisiExecutor({
+    group = 'Supervisi Sipil & Perpipaan',
+    role = 'teknisi',
+  } = {}) {
+    const suffix = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+    const user = await User.create({
+      id: `CSP${suffix.slice(-14)}`,
+      nik: `SUP-PIC-${suffix}`,
+      password: 'password123',
+      name: `Codex PIC Supervisi ${suffix}`,
+      role,
+      dinas: 'Inpeksi & Supervisi',
+      divisi: 'PPHSE',
+      group,
+      permissions: { _app: appAccess, supervisi: ['R'] },
+    });
+    cleanup.userIds.push(user.id);
+    return user;
+  }
+
   afterEach(async () => {
+    if (cleanup.visitIds.length > 0) {
+      await SupervisiVisit.destroy({ where: { id: cleanup.visitIds } });
+      cleanup.visitIds = [];
+    }
+
     if (cleanup.reportIds.length > 0) {
       await InspectionReport.destroy({ where: { id: cleanup.reportIds } });
       cleanup.reportIds = [];
@@ -49,6 +127,11 @@ describe('Inspection and Supervisi regressions', () => {
     if (cleanup.scheduleIds.length > 0) {
       await InspectionSchedule.destroy({ where: { id: cleanup.scheduleIds } });
       cleanup.scheduleIds = [];
+    }
+
+    if (cleanup.userIds.length > 0) {
+      await User.destroy({ where: { id: cleanup.userIds } });
+      cleanup.userIds = [];
     }
   });
 
@@ -125,7 +208,182 @@ describe('Inspection and Supervisi regressions', () => {
     expect(reloadedSchedule.status).toBe('in_progress');
   });
 
+  it('approves an inspection report without writing an unsupported schedule status', async () => {
+    const schedule = await InspectionSchedule.create({
+      type: 'rutin',
+      title: 'Codex Approve Report Schedule',
+      location: 'Unit Test',
+      scheduledDate: '2026-04-23',
+      createdBy: '10000262',
+      assignedTo: '10000275',
+      triggerSource: 'planner',
+      status: 'completed',
+    });
+    cleanup.scheduleIds.push(schedule.id);
+
+    const report = await InspectionReport.create({
+      scheduleId: schedule.id,
+      inspectorName: 'Agus Miftakh',
+      inspectionDate: '2026-04-23',
+      status: 'submitted',
+      submittedBy: '10000275',
+      submittedAt: new Date(),
+      hasKerusakan: false,
+    });
+    cleanup.reportIds.push(report.id);
+
+    const response = await request(app)
+      .put(`/api/inspection/reports/${report.id}/approve`)
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({ notes: 'Regression approve report' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.status).toBe('approved');
+
+    const reloadedSchedule = await InspectionSchedule.findByPk(schedule.id);
+    expect(reloadedSchedule.status).toBe('completed');
+  });
+
+  it('keeps a ranged inspection active until each day has a submitted report', async () => {
+    const schedule = await InspectionSchedule.create({
+      type: 'rutin',
+      title: 'Codex Ranged Report Schedule',
+      location: 'Unit Test',
+      scheduledDate: '2026-04-23',
+      scheduledEndDate: '2026-04-24',
+      createdBy: '10000262',
+      assignedTo: 'codex-deni',
+      triggerSource: 'planner',
+      status: 'scheduled',
+    });
+    cleanup.scheduleIds.push(schedule.id);
+
+    const firstResponse = await request(app)
+      .post('/api/inspection/reports')
+      .set('Authorization', `Bearer ${executorToken}`)
+      .send({
+        scheduleId: schedule.id,
+        inspectorName: 'Deni Yuniardi',
+        inspectionDate: '2026-04-23',
+        location: 'Unit Test',
+        findings: 'Hari pertama',
+        status: 'submitted',
+      });
+
+    expect(firstResponse.status).toBe(201);
+    cleanup.reportIds.push(firstResponse.body.data.id);
+
+    const afterFirst = await InspectionSchedule.findByPk(schedule.id);
+    expect(afterFirst.status).toBe('in_progress');
+
+    const secondResponse = await request(app)
+      .post('/api/inspection/reports')
+      .set('Authorization', `Bearer ${executorToken}`)
+      .send({
+        scheduleId: schedule.id,
+        inspectorName: 'Deni Yuniardi',
+        inspectionDate: '2026-04-24',
+        location: 'Unit Test',
+        findings: 'Hari kedua',
+        status: 'submitted',
+      });
+
+    expect(secondResponse.status).toBe(201);
+    cleanup.reportIds.push(secondResponse.body.data.id);
+
+    const afterSecond = await InspectionSchedule.findByPk(schedule.id);
+    expect(afterSecond.status).toBe('completed');
+
+    const listResponse = await request(app)
+      .get(`/api/inspection/reports?scheduleId=${schedule.id}`)
+      .set('Authorization', `Bearer ${plannerToken}`);
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.data).toHaveLength(2);
+    expect(listResponse.body.data.map((r) => r.inspectionDate).sort()).toEqual([
+      '2026-04-23',
+      '2026-04-24',
+    ]);
+  });
+
+  it('does not complete a ranged inspection when only the first report is approved', async () => {
+    const schedule = await InspectionSchedule.create({
+      type: 'rutin',
+      title: 'Codex Ranged Approval Schedule',
+      location: 'Unit Test',
+      scheduledDate: '2026-04-23',
+      scheduledEndDate: '2026-04-24',
+      createdBy: '10000262',
+      assignedTo: '10000275',
+      triggerSource: 'planner',
+      status: 'in_progress',
+    });
+    cleanup.scheduleIds.push(schedule.id);
+
+    const report = await InspectionReport.create({
+      scheduleId: schedule.id,
+      inspectorName: 'Agus Miftakh',
+      inspectionDate: '2026-04-23',
+      status: 'submitted',
+      submittedBy: '10000275',
+      submittedAt: new Date(),
+      hasKerusakan: false,
+    });
+    cleanup.reportIds.push(report.id);
+
+    const response = await request(app)
+      .put(`/api/inspection/reports/${report.id}/approve`)
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({ notes: 'Approve hari pertama' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.status).toBe('approved');
+
+    const reloadedSchedule = await InspectionSchedule.findByPk(schedule.id);
+    expect(reloadedSchedule.status).toBe('in_progress');
+  });
+
+  it('reopens an already-completed ranged schedule when reports are incomplete', async () => {
+    const schedule = await InspectionSchedule.create({
+      type: 'rutin',
+      title: 'Codex Ranged Reconcile Schedule',
+      location: 'Unit Test',
+      scheduledDate: '2026-04-23',
+      scheduledEndDate: '2026-04-25',
+      createdBy: '10000262',
+      assignedTo: '10000275',
+      triggerSource: 'planner',
+      status: 'completed',
+    });
+    cleanup.scheduleIds.push(schedule.id);
+
+    const report = await InspectionReport.create({
+      scheduleId: schedule.id,
+      inspectorName: 'Agus Miftakh',
+      inspectionDate: '2026-04-23',
+      status: 'submitted',
+      submittedBy: '10000275',
+      submittedAt: new Date(),
+    });
+    cleanup.reportIds.push(report.id);
+
+    const response = await request(app)
+      .get(`/api/inspection/schedules/${schedule.id}`)
+      .set('Authorization', `Bearer ${plannerToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.status).toBe('in_progress');
+
+    const reloadedSchedule = await InspectionSchedule.findByPk(schedule.id);
+    expect(reloadedSchedule.status).toBe('in_progress');
+  });
+
   it('creates a supervisi job when PIC matches the executor group in user data', async () => {
+    const pic = await createSupervisiExecutor();
+
     const response = await request(app)
       .post('/api/inspection/supervisi/jobs')
       .set('Authorization', `Bearer ${plannerToken}`)
@@ -137,7 +395,7 @@ describe('Inspection and Supervisi regressions', () => {
         waktuMulai: '2026-04-23',
         waktuBerakhir: '2026-04-24',
         namaPengawas: 'Group supervisi Sipil dan Perpipaan',
-        picSupervisi: 'Deni Yuniardi',
+        picSupervisi: pic.name,
         latitude: -6.2,
         longitude: 106.8,
         radius: 100,
@@ -150,8 +408,400 @@ describe('Inspection and Supervisi regressions', () => {
     expect(response.body.data.namaPengawas).toBe(
       'Group supervisi Sipil dan Perpipaan',
     );
-    expect(response.body.data.picSupervisi).toBe('Deni Yuniardi');
+    expect(response.body.data.picSupervisi).toBe(pic.name);
 
     cleanup.jobIds.push(response.body.data.id);
+  });
+
+  it('lists new supervisi executor users as selectable personnel', async () => {
+    const user = await createSupervisiExecutor({
+      group: 'Supervisi Mekanikal, Elektrik & Instrumen',
+    });
+    const unrelatedUser = await createSupervisiExecutor({
+      group: 'Tim Sipil Operasional',
+    });
+
+    const response = await request(app)
+      .get('/api/inspection/supervisi/personnel')
+      .set('Authorization', `Bearer ${plannerToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+
+    const mekatronikGroup = response.body.data.find(
+      (group) => group.group === 'Group supervisi Mekanikal Elektrik dan Instrumen',
+    );
+    expect(mekatronikGroup).toBeTruthy();
+    expect(mekatronikGroup.users).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: user.name,
+          nik: user.nik,
+          source: 'users',
+        }),
+      ]),
+    );
+    expect(
+      response.body.data.some((group) =>
+        group.users.some((item) => item.name === unrelatedUser.name),
+      ),
+    ).toBe(false);
+  });
+
+  it('creates a supervisi draft with a 19-digit nilai pekerjaan', async () => {
+    const pic = await createSupervisiExecutor({
+      group: 'Supervisi Mekanikal, Elektrik & Instrumen',
+    });
+
+    const response = await request(app)
+      .post('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        namaKerja: `Codex Supervisi Big Value ${Date.now()}`,
+        nomorJo: `JO-CODEX-BIG-${Date.now()}`,
+        nilaiPekerjaan: '9999999999999999999',
+        pelaksana: 'Vendor Test',
+        namaPengawas: 'Group supervisi Mekanikal Elektrik dan Instrumen',
+        picSupervisi: pic.name,
+        status: 'draft',
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.success).toBe(true);
+    cleanup.jobIds.push(response.body.data.id);
+  });
+
+  it('allows a newly assigned kadis scheduler to see existing supervisi jobs', async () => {
+    const pic = await createSupervisiExecutor();
+
+    const createResponse = await request(app)
+      .post('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        namaKerja: `Codex Supervisi New Kadis ${Date.now()}`,
+        nomorJo: `JO-CODEX-NEW-KADIS-${Date.now()}`,
+        nilaiPekerjaan: 1500000,
+        pelaksana: 'Vendor Test',
+        waktuMulai: '2026-04-23',
+        waktuBerakhir: '2026-04-24',
+        namaPengawas: 'Group supervisi Sipil dan Perpipaan',
+        picSupervisi: pic.name,
+        latitude: -6.2,
+        longitude: 106.8,
+        radius: 100,
+        namaArea: 'Lokasi Test',
+        status: 'active',
+      });
+
+    expect(createResponse.status).toBe(201);
+    cleanup.jobIds.push(createResponse.body.data.id);
+
+    const listResponse = await request(app)
+      .get('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${newPlannerToken}`);
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.success).toBe(true);
+    expect(listResponse.body.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: createResponse.body.data.id }),
+      ]),
+    );
+  });
+
+  it('allows web reader with supervisi read permission to fetch supervisi jobs', async () => {
+    const pic = await createSupervisiExecutor({
+      group: 'Supervisi Mekanikal, Elektrik & Instrumen',
+    });
+
+    const createResponse = await request(app)
+      .post('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        namaKerja: `Codex Supervisi Web Read ${Date.now()}`,
+        nomorJo: `JO-CODEX-WEB-${Date.now()}`,
+        nilaiPekerjaan: 1500000,
+        pelaksana: 'Vendor Test',
+        waktuMulai: '2026-04-23',
+        waktuBerakhir: '2026-04-24',
+        namaPengawas: 'Group supervisi Mekanikal Elektrik dan Instrumen',
+        picSupervisi: pic.name,
+        status: 'active',
+      });
+
+    expect(createResponse.status).toBe(201);
+    cleanup.jobIds.push(createResponse.body.data.id);
+
+    const listResponse = await request(app)
+      .get('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${webMonitorToken}`)
+      .set('X-Client-Platform', 'web');
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.success).toBe(true);
+    expect(Array.isArray(listResponse.body.data)).toBe(true);
+  });
+
+  it('rejects nilai pekerjaan above the app-supported digit limit', async () => {
+    const pic = await createSupervisiExecutor({
+      group: 'Supervisi Mekanikal, Elektrik & Instrumen',
+    });
+
+    const response = await request(app)
+      .post('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        namaKerja: `Codex Supervisi Too Big ${Date.now()}`,
+        nomorJo: `JO-CODEX-TOO-BIG-${Date.now()}`,
+        nilaiPekerjaan: '10000000000000000000',
+        namaPengawas: 'Group supervisi Mekanikal Elektrik dan Instrumen',
+        picSupervisi: pic.name,
+        status: 'draft',
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toMatch(/Nilai pekerjaan maksimal 19 digit/);
+  });
+
+  it('updates supervisi job coordinates from the scheduler endpoint', async () => {
+    const pic = await createSupervisiExecutor();
+
+    const createResponse = await request(app)
+      .post('/api/inspection/supervisi/jobs')
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        namaKerja: `Codex Supervisi Location ${Date.now()}`,
+        nomorJo: `JO-CODEX-LOC-${Date.now()}`,
+        nilaiPekerjaan: 1500000,
+        pelaksana: 'Vendor Test',
+        waktuMulai: '2026-04-23',
+        waktuBerakhir: '2026-04-24',
+        namaPengawas: 'Group supervisi Sipil dan Perpipaan',
+        picSupervisi: pic.name,
+        latitude: -6.2,
+        longitude: 106.8,
+        radius: 100,
+        namaArea: 'Lokasi Test',
+        locations: [
+          {
+            id: 'loc-a',
+            namaArea: 'Lokasi Test',
+            latitude: -6.2,
+            longitude: 106.8,
+            radius: 100,
+          },
+        ],
+        status: 'active',
+      });
+
+    expect(createResponse.status).toBe(201);
+    cleanup.jobIds.push(createResponse.body.data.id);
+
+    const updateResponse = await request(app)
+      .put(`/api/inspection/supervisi/jobs/${createResponse.body.data.id}`)
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        latitude: -6.2054321,
+        longitude: 106.8123456,
+        radius: 120,
+        namaArea: 'Lokasi Geser',
+        locations: [
+          {
+            id: 'loc-a',
+            namaArea: 'Lokasi Geser',
+            latitude: -6.2054321,
+            longitude: 106.8123456,
+            radius: 120,
+          },
+        ],
+      });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.success).toBe(true);
+    expect(Number(updateResponse.body.data.latitude)).toBeCloseTo(-6.2054321, 6);
+    expect(Number(updateResponse.body.data.longitude)).toBeCloseTo(106.8123456, 6);
+    expect(updateResponse.body.data.locations).toHaveLength(1);
+    expect(Number(updateResponse.body.data.locations[0].latitude)).toBeCloseTo(-6.2054321, 6);
+
+    const reloaded = await SupervisiJob.findByPk(createResponse.body.data.id);
+    expect(Number(reloaded.latitude)).toBeCloseTo(-6.2054321, 6);
+    expect(Number(reloaded.longitude)).toBeCloseTo(106.8123456, 6);
+    expect(reloaded.locations).toHaveLength(1);
+    expect(Number(reloaded.locations[0].longitude)).toBeCloseTo(106.8123456, 6);
+  });
+
+  it('enforces supervisi radius for final hadir submit and respects radius exemption', async () => {
+    const job = await SupervisiJob.create({
+      namaKerja: `Codex Supervisi Radius ${Date.now()}`,
+      nomorJo: `JO-CODEX-RADIUS-${Date.now()}`,
+      nilaiPekerjaan: 1500000,
+      pelaksana: 'Vendor Test',
+      waktuMulai: '2026-04-23',
+      waktuBerakhir: '2026-04-24',
+      namaPengawas: 'Group supervisi Sipil dan Perpipaan',
+      picSupervisi: 'Deni Yuniardi',
+      latitude: -6.2,
+      longitude: 106.8,
+      radius: 100,
+      namaArea: 'Lokasi Test',
+      locations: [
+        {
+          id: 'loc-a',
+          namaArea: 'Lokasi Test',
+          latitude: -6.2,
+          longitude: 106.8,
+          radius: 100,
+        },
+      ],
+      status: 'active',
+      createdBy: '10000262',
+    });
+    cleanup.jobIds.push(job.id);
+
+    const missingGpsResponse = await request(app)
+      .post('/api/inspection/supervisi/visits?isDraft=false')
+      .set('Authorization', `Bearer ${executorToken}`)
+      .field('jobId', String(job.id))
+      .field('status', 'hadir')
+      .field('keterangan', 'Finalisasi laporan tanpa GPS.')
+      .field('locationId', 'loc-a');
+
+    expect(missingGpsResponse.status).toBe(400);
+    expect(missingGpsResponse.body.success).toBe(false);
+    expect(missingGpsResponse.body.message).toMatch(/GPS submit wajib/i);
+
+    const outsideRadiusResponse = await request(app)
+      .post('/api/inspection/supervisi/visits?isDraft=false')
+      .set('Authorization', `Bearer ${executorToken}`)
+      .field('jobId', String(job.id))
+      .field('status', 'hadir')
+      .field('keterangan', 'Finalisasi laporan dari luar radius.')
+      .field('locationId', 'loc-a')
+      .field('visitLatitude', '-6.25')
+      .field('visitLongitude', '106.85');
+
+    expect(outsideRadiusResponse.status).toBe(422);
+    expect(outsideRadiusResponse.body.success).toBe(false);
+    expect(outsideRadiusResponse.body.message).toMatch(/di luar radius/i);
+
+    const insideRadiusResponse = await request(app)
+      .post('/api/inspection/supervisi/visits?isDraft=false')
+      .set('Authorization', `Bearer ${executorToken}`)
+      .field('jobId', String(job.id))
+      .field('status', 'hadir')
+      .field('keterangan', 'Finalisasi laporan dalam radius.')
+      .field('locationId', 'loc-a')
+      .field('visitLatitude', '-6.2')
+      .field('visitLongitude', '106.8');
+
+    expect(insideRadiusResponse.status).toBe(201);
+    expect(insideRadiusResponse.body.success).toBe(true);
+    expect(insideRadiusResponse.body.data.status).toBe('hadir');
+    expect(insideRadiusResponse.body.data.locationId).toBe('loc-a');
+    expect(Number(insideRadiusResponse.body.data.visitLatitude)).toBeCloseTo(-6.2, 6);
+    cleanup.visitIds.push(insideRadiusResponse.body.data.id);
+
+    await SupervisiVisit.destroy({ where: { id: insideRadiusResponse.body.data.id } });
+    cleanup.visitIds = cleanup.visitIds.filter((id) => id !== insideRadiusResponse.body.data.id);
+
+    const today = getAppDateString();
+    const exemptionUpdateResponse = await request(app)
+      .put(`/api/inspection/supervisi/jobs/${job.id}`)
+      .set('Authorization', `Bearer ${plannerToken}`)
+      .send({
+        radiusExemptionStartDate: today,
+        radiusExemptionEndDate: today,
+        radiusExemptionReason: 'Unit test exemption',
+      });
+
+    expect(exemptionUpdateResponse.status).toBe(200);
+    expect(exemptionUpdateResponse.body.success).toBe(true);
+    expect(exemptionUpdateResponse.body.data.radiusExemptionStartDate).toBe(today);
+
+    const exemptResponse = await request(app)
+      .post('/api/inspection/supervisi/visits?isDraft=false')
+      .set('Authorization', `Bearer ${executorToken}`)
+      .field('jobId', String(job.id))
+      .field('status', 'hadir')
+      .field('keterangan', 'Finalisasi laporan saat radius dinonaktifkan.')
+      .field('locationId', 'loc-a');
+
+    expect(exemptResponse.status).toBe(201);
+    expect(exemptResponse.body.success).toBe(true);
+    expect(exemptResponse.body.data.visitLatitude).toBeNull();
+    expect(exemptResponse.body.data.visitLongitude).toBeNull();
+    cleanup.visitIds.push(exemptResponse.body.data.id);
+  });
+
+  it('flags supervisi pelanggaran only from the third consecutive absence', async () => {
+    const suffix = Date.now();
+    const job = await SupervisiJob.create({
+      namaKerja: `Codex Supervisi Streak ${suffix}`,
+      nomorJo: `JO-CODEX-STREAK-${suffix}`,
+      nilaiPekerjaan: 1500000,
+      pelaksana: 'Vendor Test',
+      waktuMulai: '2026-04-01',
+      waktuBerakhir: '2026-04-08',
+      namaPengawas: 'Group supervisi Sipil dan Perpipaan',
+      picSupervisi: 'Deni Yuniardi',
+      latitude: -6.2,
+      longitude: 106.8,
+      radius: 100,
+      namaArea: 'Lokasi Test',
+      locations: [
+        {
+          id: 'loc-a',
+          namaArea: 'Lokasi Test',
+          latitude: -6.2,
+          longitude: 106.8,
+          radius: 100,
+        },
+      ],
+      status: 'active',
+      createdBy: '10000262',
+    });
+    cleanup.jobIds.push(job.id);
+
+    await SupervisiVisit.bulkCreate(
+      [
+        ['2026-04-01', 'tidak_hadir'],
+        ['2026-04-02', 'tidak_hadir'],
+        ['2026-04-03', 'tidak_hadir'],
+        ['2026-04-04', 'hadir'],
+        ['2026-04-05', 'tidak_hadir'],
+        ['2026-04-06', 'tidak_hadir'],
+        ['2026-04-08', 'tidak_hadir'],
+      ].map(([visitDate, status]) => ({
+        jobId: job.id,
+        visitDate,
+        status,
+        keterangan: status === 'hadir' ? 'Kunjungan hadir.' : null,
+        alasanTidakHadir: status === 'tidak_hadir' ? 'Tidak hadir test.' : null,
+        locationId: 'loc-a',
+        isDraft: false,
+        isPelanggaran: status === 'tidak_hadir',
+        photos: [],
+        documents: [],
+      })),
+    );
+
+    await recalculateViolationFlags(job.id);
+
+    const reloadedVisits = await SupervisiVisit.findAll({
+      where: { jobId: job.id },
+      order: [['visitDate', 'ASC']],
+    });
+    cleanup.visitIds.push(...reloadedVisits.map((visit) => visit.id));
+
+    expect(reloadedVisits.map((visit) => Boolean(visit.isPelanggaran))).toEqual([
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+    ]);
   });
 });

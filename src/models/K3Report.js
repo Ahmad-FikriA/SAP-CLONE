@@ -19,12 +19,17 @@ const K3Report = sequelize.define('K3Report', {
     type: DataTypes.STRING(50),
     allowNull: false,
     field: 'kategori',
-    validate: { isIn: [['Kondisi Tidak Aman', 'Tindakan Tidak Aman', 'Near Miss', 'First Aid Case', 'Medical Treatment', 'Lost Time Injury', 'Permanent Disability', 'Fatality', 'Lainnya']] },
+    validate: { isIn: [['Kondisi Tidak Aman', 'Tindakan Tidak Aman', 'Near Miss', 'First Aid Case', 'Medical Treatment', 'Lost Time Injury', 'Permanent Disability', 'Fatality', 'Ide perbaikan K3', 'Lainnya']] },
   },
   deskripsi: {
     type: DataTypes.TEXT,
     allowNull: false,
     field: 'deskripsi',
+  },
+  lokasiTemuan: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'lokasi_temuan',
   },
   foto: {
     type: DataTypes.TEXT,

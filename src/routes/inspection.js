@@ -9,6 +9,7 @@ const {
   getSchedule,
   createSchedule,
   updateSchedule,
+  deleteSchedule,
   getNextSpkNumber,
   createRecurringSchedules,
 } = require("../controllers/inspection/scheduleController");
@@ -51,14 +52,17 @@ const {
 const {
   uploadVisitMedia,
   uploadJobAmendDocuments,
+  listPersonnel,
   listJobs,
   getJob,
   createJob,
   updateJob,
+  deleteJob,
   listVisits,
   submitVisit,
   listPelanggaran,
   submitViolationReason,
+  undoVisit,
 } = require("../controllers/inspection/supervisiController");
 
 const {
@@ -69,7 +73,10 @@ const {
   listAmends,
 } = require("../controllers/inspection/supervisiAmendController");
 
-const { clearInspectionSupervisiData } = require("../controllers/inspection/adminController");
+const {
+  clearInspectionSupervisiData,
+} = require("../controllers/inspection/adminController");
+
 
 
 router.use(verifyToken);
@@ -81,6 +88,7 @@ router.get("/schedules", listSchedules);
 router.get("/schedules/:id", getSchedule);
 router.post("/schedules", createSchedule);
 router.put("/schedules/:id", updateSchedule);
+router.delete("/schedules/:id", deleteSchedule);
 
 
 router.get("/reports", listReports);
@@ -113,21 +121,23 @@ router.put("/requests/:id/approve", approveRequest);
 router.put("/requests/:id/reject", rejectRequest);
 router.put("/requests/:id/cancel", cancelRequest);
 
-
+// ── Supervisi ───────────────────────────────────────────────────────────────────────────
+router.get("/supervisi/personnel", listPersonnel);
 router.get("/supervisi/jobs", listJobs);
 router.get("/supervisi/jobs/:id", getJob);
 router.post("/supervisi/jobs", createJob);
 router.put("/supervisi/jobs/:id", uploadJobAmendDocuments, updateJob);
+router.delete("/supervisi/jobs/:id", deleteJob);
 router.get("/supervisi/jobs/:id/visits", listVisits);
 router.post("/supervisi/visits", uploadVisitMedia, submitVisit);
 router.get("/supervisi/pelanggaran", listPelanggaran);
 router.put("/supervisi/visits/:id/violation-reason", submitViolationReason);
-
+router.put("/supervisi/visits/:id/undo", undoVisit);
+// ── Supervisi Amend ───────────────────────────────────────────────────────────
 router.get("/supervisi/jobs/:jobId/amends", listAmends);
 router.post("/supervisi/jobs/:jobId/amends", uploadAmendDocuments, createAmend);
 router.put("/supervisi/jobs/:jobId/amends/:amendId", uploadAmendDocuments, updateAmend);
 router.delete("/supervisi/jobs/:jobId/amends/:amendId", deleteAmend);
-
 
 router.delete("/clear-dummy-data", clearInspectionSupervisiData);
 

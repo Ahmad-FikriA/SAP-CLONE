@@ -4,10 +4,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, FileText, Wrench, Upload, Radio,
+  LayoutDashboard, FileText, Wrench, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
   ChevronLeft, ChevronRight, ClipboardCheck, BarChart2, ClipboardList,
-  MapPin, CalendarRange, ShieldCheck, Settings,
+  MapPin, CalendarRange, ShieldCheck, Settings, Package, Menu, X,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser, canRead } from '@/lib/auth';
@@ -15,26 +15,38 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const NAV = [
-  { key: 'dashboard',         href: '/dashboard',          label: 'Dashboard',          Icon: LayoutDashboard },
-  { key: 'spk',               href: '/spk',                label: 'SPK / Preventive',   Icon: FileText },
-  { key: 'spk-approval',      href: '/spk/approval',       label: 'Persetujuan SPK',    Icon: ClipboardCheck },
-  { key: 'corrective',        href: '/corrective',         label: 'Corrective Planner', Icon: Wrench },
-  { key: 'hse',               href: '/hse',                label: 'HSE Command Center', Icon: ShieldCheck },
-  { key: 'spk-import',        href: '/spk/import',         label: 'Import SAP',         Icon: Upload },
+  { key: 'dashboard', href: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
   { divider: true },
-  { key: 'equipment',         href: '/equipment',          label: 'Equipment',          Icon: Radio },
-  { key: 'maps',              href: '/maps',               label: 'Maps',               Icon: Map },
-  { key: 'users',             href: '/users',              label: 'Users',              Icon: Users },
-  { key: 'track-record',      href: '/users/track-record', label: 'Track Record',       Icon: BarChart2 },
-  { key: 'task-mapping',      href: '/equipment/mappings', label: 'Task Mapping',       Icon: Link2 },
-  { key: 'interval-planner',  href: '/interval-planner',   label: 'Interval Planner',   Icon: Calendar },
+  { key: 'spk', href: '/spk', label: 'Preventive', Icon: FileText },
+  { key: 'spk-approval', href: '/spk/approval', label: 'Persetujuan Preventive', Icon: ClipboardCheck },
+  { key: 'track-record', href: '/users/track-record', label: 'Riwayat PM', Icon: BarChart2 },
+  { key: 'submissions', href: '/submissions', label: 'Rekapan PM', Icon: Activity },
+
+
   { divider: true },
-  { key: 'submissions',       href: '/submissions',        label: 'Submissions',        Icon: Activity },
+  { key: 'corrective', href: '/corrective', label: 'Corrective', Icon: Wrench },
+  { key: 'corrective-approval', href: '/corrective/approval', label: 'Persetujuan Corrective', Icon: ClipboardCheck },
+  { key: 'corrective-record', href: '/corrective/track-record', label: 'Riwayat CM', Icon: BarChart2 },
   { divider: true },
-  { key: 'inspeksi',          href: '/inspeksi',           label: 'Inspeksi',           Icon: ClipboardList },
-  { key: 'supervisi',         href: '/supervisi',          label: 'Supervisi',          Icon: MapPin },
-  { key: 'kalender',          href: '/kalender',           label: 'Kalender Jadwal',    Icon: CalendarRange },
-  { key: 'settings',          href: '/settings',           label: 'Pengaturan Akses',   Icon: Settings },
+  { key: 'users', href: '/users', label: 'Users', Icon: Users },
+  { divider: true },
+  { key: 'equipment', href: '/equipment', label: 'Equipment', Icon: Radio },
+  { key: 'maps', href: '/maps', label: 'Maps', Icon: Map },
+  { key: 'task-mapping', href: '/equipment/mappings', label: 'Task List', Icon: Link2 },
+  { key: 'interval-planner', href: '/interval-planner', label: 'Interval Planner', Icon: Calendar },
+  { divider: true },
+  { key: 'inspeksi', href: '/inspeksi', label: 'Inspeksi', Icon: ClipboardList },
+  { key: 'supervisi', href: '/supervisi', label: 'Supervisi', Icon: MapPin },
+  { key: 'hse', href: '/hse', label: 'HSE Command Center', Icon: ShieldCheck },
+  { key: 'hse', href: '/hse/track-record', label: 'Riwayat K3', Icon: BarChart2 },
+  { key: 'hse', href: '/hse/admin', label: 'Admin K3', Icon: Settings },
+
+  { divider: true },
+  { key: 'kalender', href: '/kalender', label: 'Kalender Jadwal', Icon: CalendarRange },
+  { key: 'material', href: '/material', label: 'Material Gudang', Icon: Package },
+
+  { divider: true },
+  { key: 'settings', href: '/settings', label: 'Pengaturan Akses', Icon: Settings },
 
 ];
 
@@ -42,6 +54,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -50,6 +63,11 @@ export default function Sidebar() {
     setCollapsed(localStorage.getItem('sidebar_collapsed') === '1');
     setUser(getUser());
   }, []);
+
+  // Auto-close mobile drawer on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   function toggleCollapsed() {
     const next = !collapsed;
@@ -64,6 +82,17 @@ export default function Sidebar() {
 
   function isActive(href) {
     if (href === '/dashboard') return pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+
+    // Check if there is another nav item that is a more specific match for the current pathname
+    const hasMoreSpecificMatch = NAV.some(item =>
+      item.href &&
+      item.href.length > href.length &&
+      item.href.startsWith(href) &&
+      (pathname === item.href || pathname.startsWith(item.href + '/'))
+    );
+
+    if (hasMoreSpecificMatch) return false;
+
     return pathname === href || pathname.startsWith(href + '/');
   }
 
@@ -71,78 +100,186 @@ export default function Sidebar() {
     ? (user.name || user.nik || 'U').split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
     : 'U';
 
-  return (
-    <aside
-      className={cn(
-        'flex flex-col h-screen bg-[#0a2540] text-white transition-all duration-200 shrink-0',
-        collapsed ? 'w-14' : 'w-56'
-      )}
-    >
-      {/* Logo / header */}
-      <div className="flex items-center justify-between px-3 py-4 border-b border-white/10">
-        <div className="flex items-center gap-2 min-w-0">
-          <Image src="/app_icon.jpeg" alt="Logo" width={32} height={32} className="rounded shrink-0" />
-          {!collapsed && (
-            <span className="text-sm font-semibold tracking-wide truncate">MANTIS PPHSE</span>
+  // Shared nav links (used in both desktop & mobile drawers)
+  function renderNavLinks(forceExpanded = false) {
+    return NAV.map((item, i) => {
+      if (item.divider) return <div key={i} className="my-2 border-t border-white/10" />;
+
+      // Planner override: always show material menu for planner users
+      const isPlanner = user?.role === 'admin' || user?.role === 'planner' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
+      if (item.key === 'material' && !canRead(item.key) && !isPlanner) return null;
+      else if (item.key !== 'material' && !canRead(item.key)) return null;
+
+      if (item.key === 'inspeksi' && user?.dinas?.toLowerCase().includes('hse') && !user?.dinas?.toLowerCase().includes('pphse')) return null;
+      const { href, Icon } = item;
+      let label = item.label;
+      if (item.key === 'corrective') {
+        const isPlanner = user?.role === 'admin' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
+        if (!isPlanner) label = 'Corrective';
+      }
+      const active = isActive(href);
+      const showLabel = forceExpanded || !collapsed;
+      return (
+        <Link
+          key={href}
+          href={href}
+          className={cn(
+            'flex items-center rounded text-sm transition-colors',
+            showLabel ? 'gap-3 px-2 py-2' : 'justify-center p-2.5',
+            active ? 'bg-white/15 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white'
           )}
-        </div>
-        <button
-          onClick={toggleCollapsed}
-          className="ml-auto p-1 rounded hover:bg-white/10 transition-colors"
-          title={collapsed ? 'Expand' : 'Collapse'}
+          title={!showLabel ? label : undefined}
         >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          <Icon size={18} className="shrink-0" />
+          {showLabel && <span className="truncate">{label}</span>}
+        </Link>
+      );
+    });
+  }
+
+  return (
+    <>
+      {/* ════════════════════════════════════════════════════
+          MOBILE: Fixed top bar + slide-in drawer
+          ════════════════════════════════════════════════════ */}
+
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-[#0a2540] flex items-center px-4 gap-3 shadow-lg print:hidden">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          aria-label="Buka menu"
+        >
+          <Menu size={22} />
         </button>
+        <Image src="/app_icon.jpeg" alt="Logo" width={26} height={26} className="rounded shrink-0" />
+        <span className="text-sm font-semibold text-white tracking-wide">MANTIS PPHSE</span>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2">
-        {isMounted && NAV.map((item, i) => {
-          if (item.divider) {
-            return <div key={i} className="my-2 border-t border-white/10" />;
-          }
-          if (!canRead(item.key)) return null;
-          const { href, label, Icon } = item;
-          const active = isActive(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex items-center gap-3 px-2 py-2 rounded text-sm transition-colors',
-                active
-                  ? 'bg-white/15 text-white font-medium'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
-              )}
-              title={collapsed ? label : undefined}
-            >
-              <Icon size={18} className="shrink-0" />
-              {!collapsed && <span className="truncate">{label}</span>}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* Backdrop overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-      {/* User + Logout */}
-      {isMounted && (
-        <div className="border-t border-white/10 p-3 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">
-            {initials}
+      {/* Mobile drawer */}
+      <aside
+        className={cn(
+          'md:hidden fixed top-0 left-0 z-50 h-screen w-64 bg-[#0a2540] text-white flex flex-col',
+          'transition-transform duration-300 ease-in-out print:hidden',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 shrink-0">
+          <div className="flex items-center gap-2">
+            <Image src="/app_icon.jpeg" alt="Logo" width={28} height={28} className="rounded" />
+            <span className="text-sm font-semibold tracking-wide">MANTIS PPHSE</span>
           </div>
-          {!collapsed && (
-            <span className="text-xs text-white/70 truncate flex-1">
-              {user?.name || user?.nik || ''}
-            </span>
-          )}
           <button
-            onClick={handleLogout}
-            className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
-            title="Logout"
+            onClick={() => setMobileOpen(false)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Tutup menu"
           >
-            <LogOut size={16} />
+            <X size={18} />
           </button>
         </div>
-      )}
-    </aside>
+
+        {/* Mobile nav */}
+        <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2 custom-scrollbar">
+          {isMounted && renderNavLinks(true)}
+        </nav>
+
+        {isMounted && (
+          <div className="border-t border-white/10 p-3 flex items-center gap-2 shrink-0">
+            <Link href="/profile" className="flex items-center gap-2 flex-1 min-w-0 group" onClick={() => setMobileOpen(false)}>
+              <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center text-xs font-bold shrink-0 transition-colors overflow-hidden">
+                {user?.fotoProfil ? (
+                  <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/uploads/profiles/${user.fotoProfil}`} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+              </div>
+              <span className="text-xs text-white/70 group-hover:text-white truncate flex-1 transition-colors">
+                {user?.name || user?.nik || ''}
+              </span>
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        )}
+      </aside>
+
+      {/* ════════════════════════════════════════════════════
+          DESKTOP: Static collapsible sidebar
+          ════════════════════════════════════════════════════ */}
+      <aside
+        className={cn(
+          'hidden md:flex flex-col h-screen bg-[#0a2540] text-white transition-all duration-200 shrink-0 print:hidden',
+          collapsed ? 'w-14' : 'w-56'
+        )}
+      >
+        {/* Logo / header */}
+        <div className={cn(
+          'flex border-b border-white/10 py-4',
+          collapsed ? 'flex-col items-center gap-4 px-2' : 'items-center justify-between px-3'
+        )}>
+          <div className={cn('flex items-center gap-2 min-w-0', collapsed && 'justify-center')}>
+            <Image src="/app_icon.jpeg" alt="Logo" width={collapsed ? 28 : 32} height={collapsed ? 28 : 32} className="rounded shrink-0" />
+            {!collapsed && (
+              <span className="text-sm font-semibold tracking-wide truncate">MANTIS PPHSE</span>
+            )}
+          </div>
+          <button
+            onClick={toggleCollapsed}
+            className={cn(
+              'p-1 rounded hover:bg-white/10 transition-colors',
+              collapsed ? 'mt-1' : 'ml-auto'
+            )}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
+
+        {/* Desktop nav */}
+        <nav className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2 custom-scrollbar">
+          {isMounted && renderNavLinks(false)}
+        </nav>
+
+        {isMounted && (
+          <div className="border-t border-white/10 p-3 flex items-center gap-2">
+            <Link href="/profile" className={cn("flex items-center gap-2 min-w-0 group transition-colors", collapsed ? "mx-auto" : "flex-1")}>
+              <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center text-xs font-bold shrink-0 transition-colors overflow-hidden">
+                {user?.fotoProfil ? (
+                  <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/uploads/profiles/${user.fotoProfil}`} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+              </div>
+              {!collapsed && (
+                <span className="text-xs text-white/70 group-hover:text-white truncate flex-1 transition-colors">
+                  {user?.name || user?.nik || ''}
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={handleLogout}
+              className={cn("p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors shrink-0", collapsed ? "hidden" : "block")}
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        )}
+      </aside>
+    </>
   );
 }

@@ -3,6 +3,7 @@
 const express = require('express');
 const multer  = require('multer');
 const { verifyToken } = require('../middleware/auth');
+const { requirePlanner } = require('../middleware/correctiveAccess');
 
 const excelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -16,6 +17,7 @@ const taskListController = require('../controllers/preventive/generalTaskListCon
 const equipmentMappingController = require('../controllers/preventive/equipmentMappingController');
 const preventiveScheduleController = require('../controllers/preventive/preventiveScheduleController');
 const spkImportController = require('../controllers/preventive/spkImportController');
+const historicalImportController = require('../controllers/preventive/historicalImportController');
 
 
 const spkRouter = express.Router();
@@ -25,14 +27,21 @@ spkRouter.post('/generate-from-task-list', verifyToken, spkController.generateFr
 spkRouter.post('/batch-generate', verifyToken, spkController.batchGenerate);
 spkRouter.post('/import-excel/preview', verifyToken, excelUpload.single('file'), spkImportController.preview);
 spkRouter.post('/import-excel/confirm', verifyToken, spkImportController.confirm);
+spkRouter.post('/import-historical/preview', verifyToken, excelUpload.single('file'), historicalImportController.preview);
+spkRouter.post('/import-historical/confirm', verifyToken, historicalImportController.confirm);
 spkRouter.get('/:spkNumber', verifyToken, spkController.getOne);
 spkRouter.post('/', verifyToken, spkController.create);
 spkRouter.put('/:spkNumber', verifyToken, spkController.update);
 spkRouter.delete('/:spkNumber', verifyToken, spkController.remove);
 spkRouter.post('/:spkNumber/submit', verifyToken, spkController.submit);
+spkRouter.post('/:spkNumber/materials', verifyToken, requirePlanner, spkController.addMaterialToSpk);
+spkRouter.delete('/:spkNumber/materials/:materialRecordId', verifyToken, requirePlanner, spkController.removeMaterialFromSpk);
 spkRouter.post('/:spkNumber/approve-kasie', verifyToken, spkController.approveKasie);
 spkRouter.post('/:spkNumber/approve-kadis-perawatan', verifyToken, spkController.approveKadisPerawatan);
 spkRouter.post('/:spkNumber/approve-kadis', verifyToken, spkController.approveKadis);
+spkRouter.post('/:spkNumber/reject-kasie', verifyToken, spkController.rejectKasie);
+spkRouter.post('/:spkNumber/reject-kadis-perawatan', verifyToken, spkController.rejectKadisPerawatan);
+spkRouter.post('/:spkNumber/reject-kadis', verifyToken, spkController.rejectKadis);
 spkRouter.post('/:spkNumber/sync', verifyToken, spkController.sync);
 
 

@@ -41,6 +41,25 @@ const User = sequelize.define(
         this.setDataValue("permissions", val ? JSON.stringify(val) : null);
       },
     },
+    tanggalLahir: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: 'tanggal_lahir',
+    },
+    alamat: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    noHp: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: 'no_hp',
+    },
+    fotoProfil: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'foto_profil',
+    },
   },
   {
     tableName: "users",
@@ -53,7 +72,7 @@ const User = sequelize.define(
       { fields: ["role", "dinas"] },
       { fields: ["role", "group"] },
     ],
-  },
+  }
 );
 
 module.exports = User;

@@ -23,13 +23,20 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// ── Analytics ────────────────────────────────────────────────────────────────
+router.get("/stats", verifyToken, sapSpkController.getCorrectiveStats);
 
+// ── List SPKs ────────────────────────────────────────────────────────────────
 router.get("/", verifyToken, sapSpkController.getSapSpkList);
 
 
 router.get("/reason-codes", verifyToken, sapSpkController.getReasonOfVarianceCodes);
 
+// ── Export History to Excel (IW49 format) ────────────────────────────────────
+router.get("/export-history", verifyToken, sapSpkController.exportHistory);
+router.post("/export-history", verifyToken, sapSpkController.exportHistory);
 
+// ── Upload Excel endpoint (Returns Preview) ──────────────────────────────────
 router.post(
   "/upload-excel",
   verifyToken,
@@ -37,7 +44,15 @@ router.post(
   sapSpkController.uploadExcel
 );
 
+// ── Upload History Excel endpoint (TECO directly to Selesai) ─────────────────
+router.post(
+  "/upload-history",
+  verifyToken,
+  upload.single("excelFile"),
+  sapSpkController.uploadHistoryExcel
+);
 
+// ── Bulk Insert endpoint (Confirms Upload) ───────────────────────────────────
 router.post(
   "/bulk-insert",
   verifyToken,
@@ -51,7 +66,14 @@ router.post(
   sapSpkController.createManualSapSpk
 );
 
+// ── Update SPK (Planner only) ────────────────────────────────────────────────
+router.patch(
+  "/:orderNumber",
+  verifyToken,
+  sapSpkController.updateSapSpk
+);
 
+// ── Step 1: Claim SPK (Photo Before + Lock to NIK) ──────────────────────────
 router.post(
   "/:order_number/claim",
   verifyToken,
@@ -75,9 +97,15 @@ router.post("/:order_number/reject-kadis-pp", verifyToken, sapSpkController.reje
 router.post("/:order_number/approve-kadis-pelapor", verifyToken, sapSpkController.approveKadisPelapor);
 router.post("/:order_number/reject-kadis-pelapor", verifyToken, sapSpkController.rejectKadisPelapor);
 
+const { requirePlanner } = require("../middleware/correctiveAccess");
 
-router.delete("/", verifyToken, sapSpkController.deleteAllSapSpk);
-router.delete("/:order_number", verifyToken, sapSpkController.deleteSapSpk);
+// ── Delete Endpoints (Admin + Planner only) ──────────────────────────────────
+router.delete("/", verifyToken, requirePlanner, sapSpkController.deleteAllSapSpk);
+router.delete("/:order_number", verifyToken, requirePlanner, sapSpkController.deleteSapSpk);
+
+// ── SPK Material Management (Admin + Planner only) ───────────────────────────
+router.post("/:order_number/materials", verifyToken, requirePlanner, sapSpkController.addMaterialToSpk);
+router.delete("/:order_number/materials/:materialRecordId", verifyToken, requirePlanner, sapSpkController.removeMaterialFromSpk);
 
 module.exports = router;
 

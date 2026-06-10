@@ -13,7 +13,7 @@ function fixLeafletIcons(L) {
 }
 
 /**
- * LeafletMap — mounts a Leaflet map and exposes it via the onMapReady(map, L) callback.
+ * LeafletMap - mounts a Leaflet map and exposes it via the onMapReady(map, L) callback.
  * CSS is imported here so it only loads on the client.
  *
  * Usage:
@@ -21,13 +21,20 @@ function fixLeafletIcons(L) {
  *
  * Wrap in next/dynamic with ssr: false at the import site.
  */
-export default function LeafletMap({ onMapReady, className = 'h-96 w-full', center = [-6.2, 106.8], zoom = 13 }) {
+export default function LeafletMap({
+  onMapReady,
+  onMapUnmount,
+  className = 'h-96 w-full',
+  center = [-6.2, 106.8],
+  zoom = 13,
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
 
   useEffect(() => {
     let map;
     let L;
+    let cancelled = false;
 
     async function init() {
       // Dynamic import so Leaflet only runs on client
@@ -35,14 +42,35 @@ export default function LeafletMap({ onMapReady, className = 'h-96 w-full', cent
       await import('leaflet/dist/leaflet.css');
       fixLeafletIcons(L);
 
-      if (mapRef.current || !containerRef.current) return;
+      if (cancelled || mapRef.current || !containerRef.current) return;
 
       map = L.map(containerRef.current).setView(center, zoom);
       mapRef.current = map;
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-      }).addTo(map);
+      const satellite = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        {
+          attribution: 'Tiles (c) Esri - Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN',
+          maxZoom: 20,
+        },
+      );
+      const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '(c) OpenStreetMap contributors',
+        maxZoom: 19,
+      });
+      const labels = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        { attribution: '', maxZoom: 20, opacity: 0.8 },
+      );
+
+      satellite.addTo(map);
+      labels.addTo(map);
+
+      L.control.layers(
+        { 'Satelit (ESRI)': satellite, 'Street Map': streets },
+        { Label: labels },
+        { position: 'topright', collapsed: false },
+      ).addTo(map);
 
       if (onMapReady) onMapReady(map, L);
     }
@@ -50,8 +78,26 @@ export default function LeafletMap({ onMapReady, className = 'h-96 w-full', cent
     init();
 
     return () => {
+      cancelled = true;
       if (mapRef.current) {
-        mapRef.current.remove();
+        const currentMap = mapRef.current;
+        if (onMapUnmount) onMapUnmount();
+        currentMap.stop();
+        currentMap.scrollWheelZoom?.disable();
+        currentMap.doubleClickZoom?.disable();
+        currentMap.dragging?.disable();
+        currentMap.off();
+
+        // Stop all active CSS transitions to prevent the Leaflet _leaflet_pos error on unmount
+        if (containerRef.current) {
+          const animatedEl = containerRef.current.querySelectorAll('.leaflet-zoom-animated');
+          animatedEl.forEach((el) => {
+            el.style.transition = 'none';
+            el.style.webkitTransition = 'none';
+          });
+        }
+
+        currentMap.remove();
         mapRef.current = null;
       }
     };

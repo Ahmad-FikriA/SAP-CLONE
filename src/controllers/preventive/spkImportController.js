@@ -4,10 +4,11 @@ const { Op } = require('sequelize');
 const sequelize = require('../../config/database');
 const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
 const Equipment = require('../../models/Equipment');
+const Plant = require('../../models/Plant');
 const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping');
 const User = require('../../models/User');
 const NotificationService = require('../../services/notificationService');
-const { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders } = require('../../services/spkImportService');
+const { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders, detectKadisFromFuncLoc } = require('../../services/spkImportService');
 
 const CATEGORY_GROUP_MAP = {
   Mekanik: 'Mekanik',
@@ -106,7 +107,11 @@ const confirm = async (req, res) => {
       equipmentNameMap[eq.equipmentId] = eq.equipmentName;
     }
 
-    
+    // ── Bulk-fetch plant names (for Sipil upsert plantName resolution) ────────
+    const allPlants = await Plant.findAll({ attributes: ['plantId', 'plantName'] });
+    const plantNameMap = Object.fromEntries(allPlants.map(p => [p.plantId, p.plantName]));
+
+    // ── Single transaction for all creates ───────────────────────────────────
     const t = await sequelize.transaction();
     try {
       for (const order of toCreate) {
@@ -123,6 +128,8 @@ const confirm = async (req, res) => {
           systemStatus:  order.systemStatus ?? null,
           costCenter:    order.costCenter ?? null,
           operWorkCtr:   order.operWorkCtr ?? null,
+          kadisArea:     detectKadisFromFuncLoc(order.functionalLocation) || null,
+          taskListId:    order.taskListId ?? null,
         }, { transaction: t });
 
 
@@ -142,14 +149,17 @@ const confirm = async (req, res) => {
 
 
           if (order.isSipil) {
+            // Prefer SAP Location column; fall back to plantId from SipilFunclocMapping (set by sync-sipil)
+            const sipilPlantId   = order.locationCode ?? order.plantId ?? null;
+            const sipilPlantName = sipilPlantId ? (plantNameMap[sipilPlantId] ?? null) : null;
             await Equipment.upsert({
               equipmentId:        spkEqId,
               equipmentName:      spkEqName ?? spkEqId,
               category:           'Sipil',
               functionalLocation: order.functionalLocation ?? null,
               funcLocId:          order.functionalLocation ?? null,
-              plantId:            order.locationCode ?? null,
-              plantName:          order.plantName ?? null,
+              plantId:            sipilPlantId,
+              plantName:          sipilPlantName,
             }, { transaction: t });
           }
         }
@@ -163,7 +173,7 @@ const confirm = async (req, res) => {
             equipmentId:    spkEqId ?? null,
             controlKey:     act.controlKey ?? null,
             operationText:  act.operationText ?? null,
-            durationPlan:   null,
+            durationPlan:   act.durationPlan ?? null, // from SAP "Duration Plan" column; null when absent/empty
           }, { transaction: t });
         }
 
@@ -182,11 +192,20 @@ const confirm = async (req, res) => {
       o => !o.isSipil && o.autoMapped && o.suggestedTaskList && o.equipmentId
         && o.intervalResolution === 'unknown'
     );
-    for (const order of autoMappable) {
-      await EquipmentIntervalMapping.findOrCreate({
-        where: { equipmentId: order.equipmentId, taskListId: order.suggestedTaskList },
-        defaults: { interval: null },
+    if (autoMappable.length > 0) {
+      const candidateIds = [...new Set(autoMappable.map(o => o.equipmentId))];
+      const existing = await Equipment.findAll({
+        where: { equipmentId: { [Op.in]: candidateIds } },
+        attributes: ['equipmentId'],
+        raw: true,
       });
+      const knownIds = new Set(existing.map(e => e.equipmentId));
+      for (const order of autoMappable.filter(o => knownIds.has(o.equipmentId))) {
+        await EquipmentIntervalMapping.findOrCreate({
+          where: { equipmentId: order.equipmentId, taskListId: order.suggestedTaskList },
+          defaults: { interval: null },
+        });
+      }
     }
     if (autoMappable.length > 0) {
       console.log(`[spk-import] Auto-saved ${autoMappable.length} new equipment→task list mappings (interval pending)`);

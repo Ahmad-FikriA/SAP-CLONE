@@ -42,6 +42,28 @@ export const canCreate = (page) => canDo(page, 'C');
 export const canUpdate = (page) => canDo(page, 'U');
 export const canDelete = (page) => canDo(page, 'D');
 
+// Maps user.group → SPK category (mirrors backend GROUP_TO_CATEGORY)
+const GROUP_TO_CATEGORY = {
+  Mekanik: 'Mekanik',
+  Elektrik: 'Listrik',
+  Sipil:    'Sipil',
+  Otomasi:  'Otomasi',
+};
+
+/**
+ * Returns the SPK category this user is scoped to, or null if unrestricted.
+ * Kasie: always scoped by their group.
+ * Kadis: scoped by group unless their dinas is Pusat Perawatan.
+ */
+export function getUserCategory() {
+  const user = getUser();
+  if (!user) return null;
+  const { role, group, dinas } = user;
+  const isPuratPerawatan = role === 'kadis' && dinas?.toLowerCase().includes('pusat perawatan');
+  if (role !== 'kasie' && (role !== 'kadis' || isPuratPerawatan)) return null;
+  return GROUP_TO_CATEGORY[group] ?? null;
+}
+
 /**
  * Checks token presence and expiry (client-side decode, no signature check).
  * Returns true if valid, false if missing or expired.

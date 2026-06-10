@@ -1,283 +1,352 @@
 "use strict";
 
-const path = require("path");
-const fs = require("fs");
-const multer = require("multer");
 const { Op } = require("sequelize");
+const User = require("../../models/User");
 const SupervisiJob = require("../../models/SupervisiJob");
 const SupervisiVisit = require("../../models/SupervisiVisit");
 const SupervisiAmend = require("../../models/SupervisiAmend");
-const User = require("../../models/User");
-const NotificationService = require("../../services/notificationService");
 const {
   getSupervisiAccess,
   hasSupervisiAccess,
   isSupervisiScheduler,
   isSupervisiExecutor,
+  getKnownSupervisiGroups,
   normalizeSupervisiGroupLabel,
   isAllowedExecutorForGroup,
   canAccessSupervisiJob,
   forbiddenMessage,
 } = require("./supervisiAccess");
+const {
+  addCurrentUserNameFallback,
+  addDaysDateOnly,
+  buildNikNameMap,
+  buildRadiusExemptionPatch,
+  calculateDistanceOutsideRadius,
+  evaluateSupervisiGeofence,
+  enrichJobWithNames,
+  getAppDateString,
+  hasFiniteCoordinates,
+  hasOwn,
+  isRadiusExemptionActive,
+  maxDateOnly,
+  normalizeDateOnly,
+  normalizeNullableString,
+  parseDraftFlag,
+  parseLocations,
+  parseNullableDate,
+  parseNullableFloat,
+  parseStringArray,
+} = require("./supervisiHelpers");
+const {
+  filesToSupervisiPaths,
+  uploadJobAmendDocuments,
+  uploadVisitMedia,
+} = require("./supervisiUpload");
+const {
+  notifyExecutorAssignment,
+  notifySupervisorVisitUpdate,
+} = require("./supervisiNotifications");
 
+const NILAI_PEKERJAAN_MAX_INTEGER_DIGITS = 19;
+const ABSENCE_VIOLATION_STREAK_THRESHOLD = 3;
+const FINAL_SUPERVISI_STATUSES = ["completed", "cancelled"];
 
-function haversineMetres(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const toRad = (v) => (v * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+function isWebClientRequest(req) {
+  const platformHeader = String(req.headers["x-client-platform"] || "")
+    .trim()
+    .toLowerCase();
+  return platformHeader === "web";
 }
 
-const GEOFENCE_RADIUS_METRES = 200;
-
-
-const uploadDir = path.join(__dirname, "../../../uploads/supervisi");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `sv_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`);
-  },
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 },
-});
-
-const uploadVisitMedia = upload.fields([
-  { name: "photos", maxCount: 20 },
-  { name: "documents", maxCount: 5 }
-]);
-const uploadJobAmendDocuments = upload.fields([
-  { name: "amendDocuments", maxCount: 10 },
-]);
-
-function hasOwn(obj, key) {
-  return Object.prototype.hasOwnProperty.call(obj, key);
+function getSupervisiReadAccessOptions(req) {
+  return {
+    allowWebPermissionRead: isWebClientRequest(req),
+  };
 }
 
-function normalizeNullableString(value) {
-  if (value === undefined || value === null) return null;
-  const text = String(value).trim();
-  return text.length > 0 ? text : null;
+function isTruthyQuery(value) {
+  return ["1", "true", "yes", "y"].includes(String(value || "").toLowerCase());
 }
 
-function parseNullableFloat(value) {
-  if (value === undefined) return undefined;
-  if (value === null || value === "") return null;
-  const parsed = parseFloat(value);
-  return Number.isNaN(parsed) ? null : parsed;
+function parsePositiveInt(value, fallback, max = 100) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
 }
 
-function parseNullableDate(value) {
-  if (value === undefined) return undefined;
-  if (value === null || value === "") return null;
-  return String(value);
+function parseQueryList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
-function parseStringArray(value) {
-  if (value === undefined) return undefined;
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => normalizeNullableString(item))
-      .filter(Boolean);
+function buildDateRangeWhere(dateFrom, dateTo) {
+  const range = {};
+  if (dateFrom) range[Op.gte] = dateFrom;
+  if (dateTo) range[Op.lte] = dateTo;
+  return Object.keys(range).length > 0 ? range : null;
+}
+
+function buildPagination(query) {
+  if (!query.page && !query.limit) return null;
+  const page = parsePositiveInt(query.page, 1, 100000);
+  const limit = parsePositiveInt(query.limit, 20, 100);
+  return {
+    page,
+    limit,
+    offset: (page - 1) * limit,
+  };
+}
+
+function parseNilaiPekerjaan(value) {
+  if (value === undefined) return { value: undefined };
+  if (value === null || value === "") return { value: null };
+
+  const rawText = String(value).trim().replace(/\s/g, "").replace(/^rp/i, "");
+  let numericText = rawText;
+
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(rawText)) {
+    numericText = rawText.replace(/\./g, "").replace(",", ".");
+  } else if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(rawText)) {
+    numericText = rawText.replace(/,/g, "");
+  } else {
+    numericText = rawText.replace(/,/g, "");
   }
-  if (value === null || value === "") return [];
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        return parsed
-          .map((item) => normalizeNullableString(item))
-          .filter(Boolean);
-      }
-    } catch (_err) {
-      return [];
+
+  if (/e/i.test(numericText)) {
+    const parsed = Number(numericText);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return { error: "Nilai pekerjaan harus berupa angka positif." };
+    }
+    numericText = parsed.toFixed(2);
+  }
+
+  if (!/^\d+(\.\d+)?$/.test(numericText)) {
+    return { error: "Nilai pekerjaan harus berupa angka positif." };
+  }
+
+  const [integerPart, fractionPart = ""] = numericText.split(".");
+  const normalizedInteger = integerPart.replace(/^0+(?=\d)/, "") || "0";
+
+  if (normalizedInteger.length > NILAI_PEKERJAAN_MAX_INTEGER_DIGITS) {
+    return {
+      error: `Nilai pekerjaan maksimal ${NILAI_PEKERJAAN_MAX_INTEGER_DIGITS} digit.`,
+    };
+  }
+
+  const normalizedFraction = fractionPart.slice(0, 2).padEnd(2, "0");
+  return { value: `${normalizedInteger}.${normalizedFraction}` };
+}
+
+/**
+ * Hitung ulang flag pelanggaran supervisi.
+ *
+ * Aturan bisnis: tidak hadir baru menjadi pelanggaran pada tidak hadir ke-3
+ * secara beruntun untuk job + lokasi yang sama. Tidak hadir pertama dan kedua
+ * tetap tercatat sebagai tidak_hadir biasa.
+ *
+ * @param {number|number[]|null} jobIds - Jika diisi, hanya hitung job tersebut.
+ */
+async function recalculateViolationFlags(jobIds = null, { transaction = null } = {}) {
+  const where = {};
+  const normalizedJobIds = Array.isArray(jobIds)
+    ? jobIds.map((id) => parseInt(id, 10)).filter(Number.isFinite)
+    : (jobIds ? [parseInt(jobIds, 10)].filter(Number.isFinite) : []);
+
+  if (normalizedJobIds.length === 1) {
+    where.jobId = normalizedJobIds[0];
+  } else if (normalizedJobIds.length > 1) {
+    where.jobId = { [Op.in]: normalizedJobIds };
+  }
+
+  const visits = await SupervisiVisit.findAll({
+    where,
+    order: [
+      ["jobId", "ASC"],
+      ["locationId", "ASC"],
+      ["visitDate", "ASC"],
+      ["id", "ASC"],
+    ],
+    transaction,
+  });
+
+  const streaks = new Map();
+  const toViolation = [];
+  const toNonViolation = [];
+
+  for (const visit of visits) {
+    const date = normalizeDateOnly(visit.visitDate);
+    const key = `${visit.jobId}__${visit.locationId || ""}`;
+    let shouldBeViolation = false;
+
+    if (!visit.isDraft && visit.status === "tidak_hadir" && date) {
+      const previous = streaks.get(key);
+      const isConsecutive =
+        previous &&
+        previous.count > 0 &&
+        addDaysDateOnly(previous.date, 1) === date;
+      const count = isConsecutive ? previous.count + 1 : 1;
+      shouldBeViolation = count >= ABSENCE_VIOLATION_STREAK_THRESHOLD;
+      streaks.set(key, { date, count });
+    } else if (!visit.isDraft && visit.status === "hadir" && date) {
+      streaks.set(key, { date, count: 0 });
+    }
+
+    if (Boolean(visit.isPelanggaran) !== shouldBeViolation) {
+      (shouldBeViolation ? toViolation : toNonViolation).push(visit.id);
     }
   }
-  return [];
-}
 
-const SUPERVISI_MONITOR_NIK = "10000191";
-
-function normalizeName(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-
-
-
-async function buildNikNameMap(niks) {
-  if (!niks || niks.length === 0) return {};
-  const uniqueNiks = [...new Set(niks.filter(Boolean))];
-  if (uniqueNiks.length === 0) return {};
-  try {
-    const users = await User.findAll({
-      where: { nik: { [Op.in]: uniqueNiks } },
-      attributes: ["nik", "name"],
-    });
-    const map = {};
-    for (const u of users) {
-      if (u.nik) map[u.nik] = u.name || null;
-    }
-    return map;
-  } catch (_err) {
-    return {};
+  if (toViolation.length > 0) {
+    await SupervisiVisit.update(
+      { isPelanggaran: true },
+      { where: { id: { [Op.in]: toViolation } }, transaction },
+    );
+  }
+  if (toNonViolation.length > 0) {
+    await SupervisiVisit.update(
+      { isPelanggaran: false },
+      { where: { id: { [Op.in]: toNonViolation } }, transaction },
+    );
   }
 }
 
-
-function enrichJobWithNames(jobData, nikNameMap) {
-  const obj = typeof jobData.toJSON === "function" ? jobData.toJSON() : { ...jobData };
-  obj.creatorName = nikNameMap[obj.createdBy] || null;
-  if (Array.isArray(obj.visits)) {
-    obj.visits = obj.visits.map((v) => {
-      const visit = typeof v.toJSON === "function" ? v.toJSON() : { ...v };
-      visit.submitterName = nikNameMap[visit.submittedBy] || null;
-      return visit;
-    });
-  }
-  return obj;
-}
-
-function addCurrentUserNameFallback(nikNameMap, user) {
-  const nik = normalizeNullableString(user && user.nik);
-  const name = normalizeNullableString(user && user.name);
-  if (nik && name && !nikNameMap[nik]) {
-    nikNameMap[nik] = name;
-  }
-}
-
-async function findExecutorRecipientIds(picSupervisi) {
-  const targetName = normalizeNullableString(picSupervisi);
-  if (!targetName) return [];
-
-
-  const exactUsers = await User.findAll({
-    where: { name: targetName, group: { [Op.like]: "%supervisi%" } },
-    attributes: ["id"],
-  });
-  if (exactUsers.length > 0) {
-    return [...new Set(exactUsers.map((user) => user.id))];
-  }
-
-
-  const fallbackUsers = await User.findAll({
-    where: { group: { [Op.like]: "%supervisi%" } },
-    attributes: ["id", "name"],
-  });
-  return [
-    ...new Set(
-      fallbackUsers
-        .filter((user) => normalizeName(user.name) === normalizeName(targetName))
-        .map((user) => user.id),
-    ),
-  ];
-}
-
-async function findSupervisorRecipientIds(job) {
-  const targetNiks = [
-    normalizeNullableString(job && job.createdBy),
-    SUPERVISI_MONITOR_NIK,
-  ].filter(Boolean);
-  if (targetNiks.length === 0) return [];
-
-  const users = await User.findAll({
-    where: { nik: { [Op.in]: targetNiks } },
-    attributes: ["id"],
-  });
-  return [...new Set(users.map((user) => user.id))];
-}
-
-async function notifyExecutorAssignment(job, { updated = false } = {}) {
-  try {
-    const recipientIds = await findExecutorRecipientIds(job.picSupervisi);
-    if (recipientIds.length === 0) return;
-
-    const title = updated ? "Jadwal Supervisi Diperbarui" : "Jadwal Supervisi Baru";
-    const body = updated
-      ? `Jadwal ${job.nomorJo || "-"} telah diperbarui dan ditugaskan ke Anda.`
-      : `Anda mendapat jadwal supervisi ${job.nomorJo || "-"} (${job.namaKerja || "-"}).`;
-
-    await NotificationService.notify({
-      module: "supervisi",
-      type: updated ? "job_updated" : "job_assigned",
-      title,
-      body,
-      data: {
-        jobId: String(job.id || ""),
-        nomorJo: String(job.nomorJo || ""),
-        deepLink: "supervisi/dashboard",
-      },
-      recipientIds,
-    });
-  } catch (err) {
-    console.error("[Supervisi] Failed to notify executor assignment:", err.message);
-  }
-}
-
-async function notifySupervisorVisitUpdate({ job, visitStatus, visitDate, executorName }) {
-  try {
-    const recipientIds = await findSupervisorRecipientIds(job);
-    if (recipientIds.length === 0) return;
-
-    const isHadir = visitStatus === "hadir";
-    await NotificationService.notify({
-      module: "supervisi",
-      type: isHadir ? "visit_submitted" : "visit_absent",
-      title: isHadir ? "Laporan Kunjungan Masuk" : "Ketidakhadiran Supervisi",
-      body: isHadir
-        ? `${executorName} mengirim laporan kunjungan untuk ${job.nomorJo || "-"}.`
-        : `${executorName} melaporkan tidak hadir untuk ${job.nomorJo || "-"}.`,
-      data: {
-        jobId: String(job.id || ""),
-        nomorJo: String(job.nomorJo || ""),
-        visitDate: String(visitDate || ""),
-        status: String(visitStatus || ""),
-        deepLink: "supervisi/dashboard",
-      },
-      recipientIds,
-    });
-  } catch (err) {
-    console.error("[Supervisi] Failed to notify visit update:", err.message);
-  }
-}
-
-
+/**
+ * Konversi draft kunjungan yang kedaluwarsa menjadi tidak_hadir.
+ *
+ * Draft yang belum di-finalkan hingga pergantian hari dianggap tidak hadir.
+ * Pelanggaran dihitung terpisah berdasarkan streak 3x tidak hadir beruntun.
+ * Fungsi ini dipanggil secara lazy (tanpa cron job) di awal listJobs,
+ * getJob, dan submitVisit agar konversi selalu terjadi saat app aktif.
+ *
+ * @param {number|null} jobId - Jika diisi, hanya konversi draft untuk job tertentu.
+ */
 async function convertStaleDrafts(jobId = null) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getAppDateString();
   const where = {
     isDraft: true,
     visitDate: { [Op.lt]: today },
   };
   if (jobId) where.jobId = parseInt(jobId);
   try {
-    const [count] = await SupervisiVisit.update(
-      { isDraft: false, status: "tidak_hadir", isPelanggaran: true },
-      { where }
-    );
-    if (count > 0) {
-      console.log(`[Supervisi] convertStaleDrafts: ${count} draft kedaluwarsa dikonversi ke tidak_hadir.`);
-    }
+    await SupervisiVisit.sequelize.transaction(async (t) => {
+      const [count] = await SupervisiVisit.update(
+        { isDraft: false, status: "tidak_hadir", isPelanggaran: false },
+        { where, transaction: t }
+      );
+      if (count > 0) {
+        console.log(`[Supervisi] convertStaleDrafts: ${count} draft kedaluwarsa dikonversi ke tidak_hadir.`);
+        await recalculateViolationFlags(jobId, { transaction: t });
+      }
+    });
   } catch (err) {
     console.error("[Supervisi] convertStaleDrafts error:", err.message);
   }
 }
 
+/**
+ * Bersihkan data pengecualian radius yang batas waktunya telah terlewati.
+ *
+ * @param {number|null} jobId - Jika diisi, hanya bersihkan untuk job tertentu.
+ */
+async function clearExpiredRadiusExemptions(jobId = null) {
+  const today = getAppDateString();
+  const where = {
+    radiusExemptionEndDate: { [Op.lt]: today },
+  };
+  if (jobId) where.id = parseInt(jobId);
+  try {
+    const [count] = await SupervisiJob.update(
+      { 
+        radiusExemptionStartDate: null,
+        radiusExemptionEndDate: null,
+        radiusExemptionReason: null,
+        radiusExemptionBy: null
+      },
+      { where }
+    );
+    if (count > 0) {
+      console.log(`[Supervisi] clearExpiredRadiusExemptions: ${count} pengecualian radius kedaluwarsa dibersihkan.`);
+    }
+  } catch (err) {
+    console.error("[Supervisi] clearExpiredRadiusExemptions error:", err.message);
+  }
+}
 
 
+// GET /api/inspection/supervisi/personnel
+async function listPersonnel(req, res) {
+  try {
+    if (!hasSupervisiAccess(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: forbiddenMessage(),
+      });
+    }
 
+    const knownGroups = getKnownSupervisiGroups();
+    const knownGroupSet = new Set(knownGroups);
+    const grouped = new Map();
+
+    const ensureGroup = (group) => {
+      if (!grouped.has(group)) grouped.set(group, new Map());
+      return grouped.get(group);
+    };
+
+    const users = await User.findAll({
+      attributes: [
+        "id",
+        "nik",
+        "name",
+        "role",
+        "dinas",
+        "divisi",
+        "group",
+        "permissions",
+      ],
+      order: [["group", "ASC"], ["name", "ASC"]],
+    });
+
+    for (const user of users) {
+      const plain = user.toJSON();
+      if (!isSupervisiExecutor(plain)) continue;
+
+      const name = String(plain.name || "").trim();
+      const group = normalizeSupervisiGroupLabel(plain.group);
+      if (!name || !group || !knownGroupSet.has(group)) continue;
+
+      ensureGroup(group).set(name.toLowerCase(), {
+        id: plain.id,
+        nik: plain.nik,
+        name,
+        role: plain.role,
+        group,
+        source: "users",
+      });
+    }
+
+    const data = knownGroups.map((group) => ({
+      group,
+      users: Array.from((grouped.get(group) || new Map()).values())
+        .sort((a, b) => a.name.localeCompare(b.name, "id")),
+    }));
+
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+// GET /api/inspection/supervisi/jobs
 async function listJobs(req, res) {
   try {
     await convertStaleDrafts();
+    await clearExpiredRadiusExemptions();
+    await recalculateViolationFlags();
 
-    const access = getSupervisiAccess(req.user);
+    const accessOptions = getSupervisiReadAccessOptions(req);
+    const access = getSupervisiAccess(req.user, accessOptions);
     if (access.kind === "none") {
       return res.status(403).json({
         success: false,
@@ -286,24 +355,60 @@ async function listJobs(req, res) {
     }
 
     const where = {};
-    if (req.query.status) where.status = req.query.status;
-    if (access.kind === "scheduler") {
-      where.createdBy = access.nik;
-    } else if (access.kind === "executor") {
+    const archiveMode =
+      req.query.mode === "archive" || isTruthyQuery(req.query.archive);
+
+    if (req.query.status) {
+      const statuses = parseQueryList(req.query.status);
+      if (statuses.length > 0) {
+        where.status = statuses.length > 1 ? { [Op.in]: statuses } : statuses[0];
+      }
+    } else if (archiveMode) {
+      where.status = { [Op.in]: FINAL_SUPERVISI_STATUSES };
+    }
+    if (access.kind === "executor") {
       where.picSupervisi = access.displayName;
-    } else {
+    } else if (access.kind === "monitor") {
       if (req.query.createdBy) where.createdBy = req.query.createdBy;
       if (req.query.picSupervisi) where.picSupervisi = req.query.picSupervisi;
     }
 
-    const jobs = await SupervisiJob.findAll({
+    const dateRange = buildDateRangeWhere(req.query.dateFrom, req.query.dateTo);
+    if (dateRange) where.waktuMulai = dateRange;
+
+    const q = String(req.query.q || "").trim();
+    if (q) {
+      const like = `%${q}%`;
+      where[Op.or] = [
+        { namaKerja: { [Op.like]: like } },
+        { nomorJo: { [Op.like]: like } },
+        { pelaksana: { [Op.like]: like } },
+        { namaPengawas: { [Op.like]: like } },
+        { picSupervisi: { [Op.like]: like } },
+        { namaArea: { [Op.like]: like } },
+      ];
+    }
+
+    const pagination = buildPagination(req.query);
+    const queryOptions = {
       where,
       order: [["waktuMulai", "DESC"]],
       include: [
         { model: SupervisiVisit, as: "visits" },
         { model: SupervisiAmend, as: "amends", order: [["amendMulai", "ASC"]] },
       ],
-    });
+    };
+
+    const result = pagination
+      ? await SupervisiJob.findAndCountAll({
+          ...queryOptions,
+          limit: pagination.limit,
+          offset: pagination.offset,
+          distinct: true,
+        })
+      : { rows: await SupervisiJob.findAll(queryOptions), count: null };
+
+    const jobs = result.rows;
 
 
     const nikSet = new Set();
@@ -317,7 +422,17 @@ async function listJobs(req, res) {
     addCurrentUserNameFallback(nikNameMap, req.user);
     const enrichedJobs = jobs.map((job) => enrichJobWithNames(job, nikNameMap));
 
-    res.json({ success: true, data: enrichedJobs });
+    const response = { success: true, data: enrichedJobs };
+    if (pagination) {
+      response.meta = {
+        page: pagination.page,
+        limit: pagination.limit,
+        total: result.count,
+        totalPages: Math.max(1, Math.ceil(result.count / pagination.limit)),
+      };
+    }
+
+    res.json(response);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -326,7 +441,9 @@ async function listJobs(req, res) {
 
 async function getJob(req, res) {
   try {
-    if (!hasSupervisiAccess(req.user)) {
+    const accessOptions = getSupervisiReadAccessOptions(req);
+
+    if (!hasSupervisiAccess(req.user, accessOptions)) {
       return res.status(403).json({
         success: false,
         message: forbiddenMessage(),
@@ -334,6 +451,8 @@ async function getJob(req, res) {
     }
 
     await convertStaleDrafts(parseInt(req.params.id));
+    await clearExpiredRadiusExemptions(parseInt(req.params.id));
+    await recalculateViolationFlags(parseInt(req.params.id));
 
     const job = await SupervisiJob.findByPk(req.params.id, {
       include: [
@@ -342,7 +461,7 @@ async function getJob(req, res) {
       ],
     });
     if (!job) return res.status(404).json({ success: false, message: "Job tidak ditemukan." });
-    if (!canAccessSupervisiJob(req.user, job)) {
+    if (!canAccessSupervisiJob(req.user, job, accessOptions)) {
       return res.status(403).json({
         success: false,
         message: forbiddenMessage(),
@@ -426,10 +545,26 @@ async function createJob(req, res) {
       });
     }
 
+    const parsedNilaiPekerjaan = parseNilaiPekerjaan(nilaiPekerjaan);
+    if (parsedNilaiPekerjaan.error) {
+      return res.status(400).json({
+        success: false,
+        message: parsedNilaiPekerjaan.error,
+      });
+    }
+
+    const radiusExemptionPatch = buildRadiusExemptionPatch(req.body, null, req.user);
+    if (radiusExemptionPatch.error) {
+      return res.status(400).json({
+        success: false,
+        message: radiusExemptionPatch.error,
+      });
+    }
+
     const job = await SupervisiJob.create({
       namaKerja: normalizedNamaKerja,
       nomorJo: normalizedNomorJo,
-      nilaiPekerjaan: nilaiPekerjaan ? parseFloat(nilaiPekerjaan) : null,
+      nilaiPekerjaan: parsedNilaiPekerjaan.value,
       pelaksana: pelaksana || null,
       waktuMulai: waktuMulai || null,
       waktuBerakhir: waktuBerakhir || null,
@@ -441,27 +576,11 @@ async function createJob(req, res) {
       namaArea: normalizeNullableString(namaArea),
       status: isDraft ? "draft" : "active",
       createdBy: req.user.nik,
+      ...radiusExemptionPatch.patch,
     });
 
-    let parsedLocations = [];
-    if (req.body.locations) {
-      if (Array.isArray(req.body.locations)) {
-        parsedLocations = req.body.locations;
-      } else if (typeof req.body.locations === 'string') {
-        try {
-          parsedLocations = JSON.parse(req.body.locations);
-        } catch(e) {}
-      }
-    }
-    
-    if (Array.isArray(parsedLocations) && parsedLocations.length > 0) {
-      const formattedLocations = parsedLocations.map(loc => ({
-        id: loc.id || Math.random().toString(36).substring(2, 10),
-        namaArea: String(loc.namaArea || "").trim(),
-        latitude: parseFloat(loc.latitude),
-        longitude: parseFloat(loc.longitude),
-        radius: Math.min(parseFloat(loc.radius || 100) || 100, 300.0)
-      })).filter(loc => !isNaN(loc.latitude) && !isNaN(loc.longitude));
+    const formattedLocations = parseLocations(req.body.locations);
+    if (formattedLocations.length > 0) {
       await job.update({ locations: formattedLocations });
     }
 
@@ -498,7 +617,14 @@ async function updateJob(req, res) {
       nextData.nomorJo = String(req.body.nomorJo || "").trim();
     }
     if (hasOwn(req.body, "nilaiPekerjaan")) {
-      nextData.nilaiPekerjaan = parseNullableFloat(req.body.nilaiPekerjaan);
+      const parsedNilaiPekerjaan = parseNilaiPekerjaan(req.body.nilaiPekerjaan);
+      if (parsedNilaiPekerjaan.error) {
+        return res.status(400).json({
+          success: false,
+          message: parsedNilaiPekerjaan.error,
+        });
+      }
+      nextData.nilaiPekerjaan = parsedNilaiPekerjaan.value;
     }
     if (hasOwn(req.body, "pelaksana")) {
       nextData.pelaksana = normalizeNullableString(req.body.pelaksana);
@@ -539,6 +665,23 @@ async function updateJob(req, res) {
     if (hasOwn(req.body, "status")) {
       const normalizedStatus = normalizeNullableString(req.body.status);
       if (normalizedStatus) {
+        // Validasi transisi status: cancel hanya dari active
+        if (normalizedStatus === "cancelled") {
+          if (job.status !== "active") {
+            return res.status(400).json({
+              success: false,
+              message: `Pembatalan hanya bisa dilakukan pada pekerjaan berstatus aktif. Status saat ini: ${job.status}.`,
+            });
+          }
+          const reason = normalizeNullableString(req.body.cancelReason);
+          if (!reason) {
+            return res.status(400).json({
+              success: false,
+              message: "Alasan pembatalan (cancelReason) wajib diisi saat membatalkan pekerjaan.",
+            });
+          }
+          nextData.cancelReason = reason;
+        }
         nextData.status = normalizedStatus;
       }
     }
@@ -546,24 +689,25 @@ async function updateJob(req, res) {
       nextData.amendDocuments = parseStringArray(req.body.amendDocuments);
     }
     if (hasOwn(req.body, "locations")) {
-      if (Array.isArray(req.body.locations)) {
-        nextData.locations = req.body.locations.map(loc => ({
-          id: String(loc.id || Math.random().toString(36).substring(2, 10)),
-          namaArea: String(loc.namaArea || "").trim(),
-          latitude: parseFloat(loc.latitude),
-          longitude: parseFloat(loc.longitude),
-          radius: Math.min(parseFloat(loc.radius || 100) || 100, 300.0)
-        })).filter(loc => !isNaN(loc.latitude) && !isNaN(loc.longitude));
-      } else {
-        nextData.locations = [];
-      }
+      nextData.locations = parseLocations(req.body.locations);
     }
     if (hasOwn(req.body, "existingAmendDocuments")) {
       nextData.amendDocuments = parseStringArray(req.body.existingAmendDocuments);
     }
 
-    const uploadedAmendDocs = ((req.files && req.files.amendDocuments) || []).map(
-      (file) => `/uploads/supervisi/${file.filename}`,
+    const radiusExemptionPatch = buildRadiusExemptionPatch(req.body, job, req.user);
+    if (radiusExemptionPatch.error) {
+      return res.status(400).json({
+        success: false,
+        message: radiusExemptionPatch.error,
+      });
+    }
+    if (radiusExemptionPatch.hasPayload) {
+      Object.assign(nextData, radiusExemptionPatch.patch);
+    }
+
+    const uploadedAmendDocs = filesToSupervisiPaths(
+      (req.files && req.files.amendDocuments) || [],
     );
     if (uploadedAmendDocs.length > 0) {
       const existingDocs = nextData.amendDocuments ?? (job.amendDocuments || []);
@@ -667,7 +811,8 @@ async function updateJob(req, res) {
         hasOwn(req.body, "waktuBerakhir") ||
         hasOwn(req.body, "namaKerja") ||
         hasOwn(req.body, "nomorJo") ||
-        hasOwn(req.body, "locations")
+        hasOwn(req.body, "locations") ||
+        radiusExemptionPatch.hasPayload
       );
 
     if (shouldNotifyExecutor) {
@@ -680,12 +825,48 @@ async function updateJob(req, res) {
   }
 }
 
+// DELETE /api/inspection/supervisi/jobs/:id
+async function deleteJob(req, res) {
+  try {
+    if (!isSupervisiScheduler(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Hanya pembuat jadwal supervisi yang dapat menghapus pekerjaan.",
+      });
+    }
+
+    const job = await SupervisiJob.findByPk(req.params.id);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job tidak ditemukan." });
+    }
+
+    // Hanya boleh hapus permanen jika sudah dibatalkan, selesai, atau draft
+    if (job.status !== "cancelled" && job.status !== "completed" && job.status !== "draft") {
+      return res.status(400).json({
+        success: false,
+        message: `Pekerjaan hanya bisa dihapus jika berstatus 'dibatalkan', 'selesai', atau 'draft'. Status saat ini: ${job.status}.`,
+      });
+    }
+
+    await job.destroy();
+
+    res.json({ success: true, message: "Pekerjaan berhasil dihapus." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VISITS
+// ─────────────────────────────────────────────────────────────────────────────
 
 
 
 async function listVisits(req, res) {
   try {
-    if (!hasSupervisiAccess(req.user)) {
+    const accessOptions = getSupervisiReadAccessOptions(req);
+
+    if (!hasSupervisiAccess(req.user, accessOptions)) {
       return res.status(403).json({
         success: false,
         message: forbiddenMessage(),
@@ -700,12 +881,15 @@ async function listVisits(req, res) {
       });
     }
 
-    if (!canAccessSupervisiJob(req.user, job)) {
+    if (!canAccessSupervisiJob(req.user, job, accessOptions)) {
       return res.status(403).json({
         success: false,
         message: forbiddenMessage(),
       });
     }
+
+    await convertStaleDrafts(parseInt(req.params.id));
+    await recalculateViolationFlags(parseInt(req.params.id));
 
     const visits = await SupervisiVisit.findAll({
       where: { jobId: req.params.id },
@@ -717,7 +901,11 @@ async function listVisits(req, res) {
   }
 }
 
-
+// POST /api/inspection/supervisi/visits
+// Multipart form: jobId, status, keterangan/alasanTidakHadir,
+//                 optional visitLatitude/visitLongitude + photos[]
+// NOTE: visitDate is ALWAYS derived from the server clock — the client value is
+//       intentionally ignored to prevent device date/time manipulation.
 async function submitVisit(req, res) {
 
   try {
@@ -731,19 +919,13 @@ async function submitVisit(req, res) {
     const { jobId, status, keterangan, alasanTidakHadir,
             visitLatitude, visitLongitude, locationId } = req.body;
 
+    // Tentukan apakah submission ini adalah draft atau final.
+    // Baca dari query param ATAU body — query param lebih andal untuk multipart.
+    const isDraftBool =
+      parseDraftFlag(req.query.isDraft) || parseDraftFlag(req.body.isDraft);
 
-    const parseDraft = (val) => {
-      if (val === true || val === 1) return true;
-      if (!val) return false;
-      const str = Array.isArray(val) ? val[0] : String(val);
-      return str.trim() === "true" || str.trim() === "1";
-    };
-    const isDraftBool = parseDraft(req.query.isDraft) || parseDraft(req.body.isDraft);
-
-
-    const serverNow = new Date();
-
-    const visitDate = serverNow.toISOString().split('T')[0];
+    // Use server time in Asia/Jakarta; never trust the client's date.
+    const visitDate = getAppDateString();
 
     if (!jobId || !status) {
       return res.status(400).json({ success: false, message: "jobId dan status wajib diisi." });
@@ -776,40 +958,71 @@ async function submitVisit(req, res) {
     let jarakDariPusat = null;
     const vLat = parseNullableFloat(visitLatitude);
     const vLon = parseNullableFloat(visitLongitude);
+    const hasVisitCoordinates = hasFiniteCoordinates(vLat, vLon);
     const normalizedLocationId = locationId ? String(locationId).trim() : null;
+    const queryWhere = { jobId: parseInt(jobId), visitDate };
+    if (normalizedLocationId) {
+      queryWhere.locationId = normalizedLocationId;
+    } else {
+      queryWhere.locationId = null;
+    }
+    const existingVisit = await SupervisiVisit.findOne({ where: queryWhere });
 
     
     if (status === "hadir") {
+      const existingLat = parseNullableFloat(existingVisit && existingVisit.visitLatitude);
+      const existingLon = parseNullableFloat(existingVisit && existingVisit.visitLongitude);
+      const effectiveLat = hasVisitCoordinates ? vLat : existingLat;
+      const effectiveLon = hasVisitCoordinates ? vLon : existingLon;
+      const exemptionActive = isRadiusExemptionActive(job, visitDate);
 
-      if (!isDraftBool && (vLat === null || vLon === null || isNaN(vLat) || isNaN(vLon))) {
-        return res.status(400).json({
-          success: false,
-          message: "Koordinat GPS wajib dikirim saat hadir. Pastikan lokasi aktif.",
-        });
-      }
+      if (!exemptionActive && !isDraftBool) {
+        const geofence = evaluateSupervisiGeofence(
+          job,
+          normalizedLocationId,
+          vLat,
+          vLon,
+        );
 
-
-      if (vLat !== null && vLon !== null && !isNaN(vLat) && !isNaN(vLon)) {
-        let targetLocation = null;
-        if (job.locations && Array.isArray(job.locations)) {
-          targetLocation = job.locations.find(loc => String(loc.id) === normalizedLocationId);
+        if (geofence.status === "missing_visit") {
+          return res.status(400).json({
+            success: false,
+            message: "GPS submit wajib dikirim untuk laporan hadir supervisi.",
+          });
         }
-        const tLat = targetLocation ? parseFloat(targetLocation.latitude) : parseFloat(job.latitude);
-        const tLon = targetLocation ? parseFloat(targetLocation.longitude) : parseFloat(job.longitude);
-        const tRad = targetLocation ? parseFloat(targetLocation.radius) : parseFloat(job.radius || 100);
-        if (!isNaN(tLat) && !isNaN(tLon)) {
-          const dist = haversineMetres(tLat, tLon, vLat, vLon);
-          jarakDariPusat = dist > tRad ? Math.round(dist - tRad) : 0;
+
+        if (geofence.status === "missing_target") {
+          return res.status(400).json({
+            success: false,
+            message: "Titik lokasi/radius supervisi belum valid. Hubungi planner.",
+          });
         }
+
+        jarakDariPusat = geofence.outsideMeters;
+        if (geofence.status === "outside") {
+          return res.status(422).json({
+            success: false,
+            message: `Submit ditolak karena posisi berada ${geofence.outsideMeters} meter di luar radius ${Math.round(geofence.radius)} meter.`,
+            data: {
+              distanceMeters: geofence.distanceMeters,
+              outsideMeters: geofence.outsideMeters,
+              radius: geofence.radius,
+            },
+          });
+        }
+      } else if (hasFiniteCoordinates(effectiveLat, effectiveLon)) {
+        jarakDariPusat = calculateDistanceOutsideRadius(
+          job,
+          normalizedLocationId,
+          effectiveLat,
+          effectiveLon,
+        );
       }
     }
 
-
-    const photoPaths = ((req.files && req.files.photos) || []).map(
-      (f) => `/uploads/supervisi/${f.filename}`
-    );
-    const documentPaths = ((req.files && req.files.documents) || []).map(
-      (f) => `/uploads/supervisi/${f.filename}`
+    const photoPaths = filesToSupervisiPaths((req.files && req.files.photos) || []);
+    const documentPaths = filesToSupervisiPaths(
+      (req.files && req.files.documents) || [],
     );
 
 
@@ -819,58 +1032,61 @@ async function submitVisit(req, res) {
     const existingDocUrls    = sentExistingDocs   ? (parseStringArray(req.body.existingDocuments) || []) : null;
 
     await convertStaleDrafts(parseInt(jobId));
+    await clearExpiredRadiusExemptions(parseInt(jobId));
 
-
-    const queryWhere = { jobId: parseInt(jobId), visitDate };
-    if (normalizedLocationId) {
-      queryWhere.locationId = normalizedLocationId;
-    } else {
-      queryWhere.locationId = null;
-    }
-
-    const [visit, created] = await SupervisiVisit.findOrCreate({
-      where: queryWhere,
-      defaults: {
-        status,
-        keterangan: status === "hadir" ? (keterangan || null) : null,
-        alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
-        photos: photoPaths,
-        documents: documentPaths,
-        submittedBy: req.user.nik,
-        submittedAt: new Date(),
-        isPelanggaran: !isDraftBool && status === "tidak_hadir",
-        visitLatitude: vLat,
-        visitLongitude: vLon,
-        locationId: normalizedLocationId,
-        jarakDariPusat: jarakDariPusat,
-        isDraft: isDraftBool,
-      },
-    });
-
-    if (!created) {
-
-      const basePhotos = sentExistingPhotos ? existingPhotoUrls : (visit.photos || []);
-      const baseDocs   = sentExistingDocs   ? existingDocUrls   : (visit.documents || []);
-
-      await visit.update({
-        status,
-        keterangan: status === "hadir" ? (keterangan || null) : null,
-        alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
-
-        photos: [...basePhotos, ...photoPaths],
-
-        documents: [...baseDocs, ...documentPaths],
-        submittedBy: req.user.nik,
-        submittedAt: new Date(),
-        isPelanggaran: !isDraftBool && status === "tidak_hadir",
-        visitLatitude: vLat !== null ? vLat : visit.visitLatitude,
-        visitLongitude: vLon !== null ? vLon : visit.visitLongitude,
-        locationId: normalizedLocationId,
-        jarakDariPusat: jarakDariPusat !== null ? jarakDariPusat : visit.jarakDariPusat,
-        isDraft: isDraftBool,
+    let visit;
+    let created;
+    await SupervisiVisit.sequelize.transaction(async (t) => {
+      [visit, created] = await SupervisiVisit.findOrCreate({
+        where: queryWhere,
+        defaults: {
+          status,
+          keterangan: status === "hadir" ? (keterangan || null) : null,
+          alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
+          photos: photoPaths,
+          documents: documentPaths,
+          submittedBy: req.user.nik,
+          submittedAt: new Date(),
+          isPelanggaran: false,
+          visitLatitude: hasVisitCoordinates ? vLat : null,
+          visitLongitude: hasVisitCoordinates ? vLon : null,
+          locationId: normalizedLocationId,
+          jarakDariPusat: jarakDariPusat,
+          isDraft: isDraftBool,
+        },
+        transaction: t,
       });
-    }
 
+      if (!created) {
+        // Tentukan basis foto/dokumen:
+        // - Frontend kirim existingPhotos → pakai itu (user sudah filter mana yang mau disimpan)
+        // - Frontend tidak kirim → pakai semua foto lama dari server (backward compat)
+        const basePhotos = sentExistingPhotos ? existingPhotoUrls : (visit.photos || []);
+        const baseDocs   = sentExistingDocs   ? existingDocUrls   : (visit.documents || []);
+
+        // Update existing visit (draft → final, atau re-submit hari yang sama)
+        await visit.update({
+          status,
+          keterangan: status === "hadir" ? (keterangan || null) : null,
+          alasanTidakHadir: status === "tidak_hadir" ? (alasanTidakHadir || null) : null,
+          // Gabungkan: foto yang tersisa dari draft + foto baru yang diupload
+          photos: [...basePhotos, ...photoPaths],
+          // Dokumen: gabungkan yang tersisa + baru
+          documents: [...baseDocs, ...documentPaths],
+          submittedBy: req.user.nik,
+          submittedAt: new Date(),
+          isPelanggaran: false,
+          visitLatitude: hasVisitCoordinates ? vLat : visit.visitLatitude,
+          visitLongitude: hasVisitCoordinates ? vLon : visit.visitLongitude,
+          locationId: normalizedLocationId,
+          jarakDariPusat: jarakDariPusat !== null ? jarakDariPusat : visit.jarakDariPusat,
+          isDraft: isDraftBool,
+        }, { transaction: t });
+      }
+
+      await recalculateViolationFlags(parseInt(jobId), { transaction: t });
+      await visit.reload({ transaction: t });
+    });
 
     const executorName =
       normalizeNullableString(req.user && req.user.name) ||
@@ -914,13 +1130,18 @@ async function submitVisit(req, res) {
 
 async function listPelanggaran(req, res) {
   try {
-    const access = getSupervisiAccess(req.user);
+    const accessOptions = getSupervisiReadAccessOptions(req);
+    const access = getSupervisiAccess(req.user, accessOptions);
     if (access.kind === "none") {
       return res.status(403).json({
         success: false,
         message: forbiddenMessage(),
       });
     }
+
+    const scopedJobId = req.query.jobId ? parseInt(req.query.jobId, 10) : null;
+    await convertStaleDrafts(scopedJobId);
+    await recalculateViolationFlags(scopedJobId);
 
     const where = { isPelanggaran: true };
     if (req.query.jobId) where.jobId = req.query.jobId;
@@ -947,19 +1168,28 @@ async function listPelanggaran(req, res) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CRON JOB - Auto-create missed visits, then recalculate Pelanggaran
+// ─────────────────────────────────────────────────────────────────────────────
 
-
-
+/**
+ * markMissedVisitsAsPelanggaran
+ *
+ * Dipanggil oleh cron job setiap hari pukul 00:01.
+ * Logic:
+ *   1. Ambil semua SupervisiJob dengan status 'active' yang memiliki jadwal.
+ *   2. Untuk setiap tanggal yang sudah lewat (kemarin ke bawah) dalam range
+ *      waktuMulai–effectiveEndDate, cek apakah ada SupervisiVisit.
+ *   3. Jika belum ada visit, buat record tidak_hadir.
+ *   4. Hitung ulang isPelanggaran berdasarkan streak 3x tidak hadir beruntun.
+ */
 async function markMissedVisitsAsPelanggaran() {
   const LABEL = "[Supervisi Cron]";
   console.log(`${LABEL} Running missed-visit check at`, new Date().toISOString());
 
   try {
-    const today = new Date();
-    const todayOnly = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    const yesterday = new Date(todayOnly);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    const todayStr = getAppDateString();
+    const yesterdayStr = addDaysDateOnly(todayStr, -1);
 
 
     const activeJobs = await SupervisiJob.findAll({
@@ -982,27 +1212,26 @@ async function markMissedVisitsAsPelanggaran() {
     });
 
     let totalCreated = 0;
+    const affectedJobIds = new Set();
 
     for (const job of activeJobs) {
       if (!job.waktuMulai || !job.waktuBerakhir) continue;
 
-      const jobStart = new Date(job.waktuMulai);
-      const defaultEnd = new Date(job.waktuBerakhir);
-      const legacyAmendEnd = job.amendBerakhir ? new Date(job.amendBerakhir) : null;
-      const childAmendEnds = (job.amends || [])
-        .map((a) => (a && a.amendBerakhir ? new Date(a.amendBerakhir) : null))
+      const jobStartStr = normalizeDateOnly(job.waktuMulai);
+      const defaultEndStr = normalizeDateOnly(job.waktuBerakhir);
+      const legacyAmendEndStr = normalizeDateOnly(job.amendBerakhir);
+      const childAmendEndStrs = (job.amends || [])
+        .map((a) => normalizeDateOnly(a && a.amendBerakhir))
         .filter(Boolean);
 
-      const effectiveEnd = [defaultEnd, legacyAmendEnd, ...childAmendEnds]
-        .filter(Boolean)
-        .sort((a, b) => b.getTime() - a.getTime())[0];
+      const effectiveEndStr = maxDateOnly([defaultEndStr, legacyAmendEndStr, ...childAmendEndStrs]);
 
-      if (!effectiveEnd) continue;
+      if (!jobStartStr || !effectiveEndStr) continue;
 
 
       const existingVisitKeys = new Set(
         (job.visits || []).map((v) => {
-          const d = typeof v.visitDate === "string" ? v.visitDate : v.visitDate.toISOString().split("T")[0];
+          const d = normalizeDateOnly(v.visitDate);
           return `${d}__${v.locationId || ""}`;
         })
       );
@@ -1013,12 +1242,12 @@ async function markMissedVisitsAsPelanggaran() {
           : [{ id: null }];
 
 
-      if (yesterday < jobStart || yesterday > effectiveEnd) continue;
+      // Scope cron: kemarin harus berada dalam range waktuMulai–effectiveEndDate.
+      if (yesterdayStr < jobStartStr || yesterdayStr > effectiveEndStr) continue;
 
-
-      let cur = new Date(jobStart);
-      while (cur <= yesterday && cur <= effectiveEnd) {
-        const dateStr = cur.toISOString().split("T")[0];
+      // Iterasi setiap hari terlewat dari start hingga kemarin.
+      let dateStr = jobStartStr;
+      while (dateStr <= yesterdayStr && dateStr <= effectiveEndStr) {
 
         for (const loc of locations) {
           const locId = loc.id ? String(loc.id) : null;
@@ -1030,7 +1259,7 @@ async function markMissedVisitsAsPelanggaran() {
                 jobId: job.id,
                 visitDate: dateStr,
                 status: "tidak_hadir",
-                isPelanggaran: true,
+                isPelanggaran: false,
                 alasanTidakHadir: null,
                 locationId: locId,
                 submittedAt: null,
@@ -1039,23 +1268,77 @@ async function markMissedVisitsAsPelanggaran() {
                 documents: [],
               });
               totalCreated++;
-
+              affectedJobIds.add(job.id);
+              // Tambahkan ke set agar iterasi berikutnya tidak duplikat
               existingVisitKeys.add(key);
             } catch (createErr) {
 
               if (createErr.name !== "SequelizeUniqueConstraintError") {
-                console.warn(`${LABEL} Failed to create pelanggaran for job ${job.id} date ${dateStr} loc ${locId}:`, createErr.message);
+                console.warn(`${LABEL} Failed to create missed visit for job ${job.id} date ${dateStr} loc ${locId}:`, createErr.message);
               }
             }
           }
         }
 
-
-        cur.setUTCDate(cur.getUTCDate() + 1);
+        // Maju ke hari berikutnya
+        dateStr = addDaysDateOnly(dateStr, 1);
       }
     }
 
-    console.log(`${LABEL} Done. Created ${totalCreated} pelanggaran record(s).`);
+    if (affectedJobIds.size > 0) {
+      await recalculateViolationFlags(Array.from(affectedJobIds));
+    }
+
+    // ── PRO-AUTOMATION: Auto-complete ended jobs that are clean ──
+    const endedJobs = await SupervisiJob.findAll({
+      where: {
+        status: "active",
+      },
+      include: [
+        {
+          model: SupervisiAmend,
+          as: "amends",
+          attributes: ["amendBerakhir"],
+        },
+      ],
+    });
+
+    let completedCount = 0;
+    for (const job of endedJobs) {
+      if (!job.waktuMulai || !job.waktuBerakhir) continue;
+
+      const defaultEndStr = normalizeDateOnly(job.waktuBerakhir);
+      const legacyAmendEndStr = normalizeDateOnly(job.amendBerakhir);
+      const childAmendEndStrs = (job.amends || [])
+        .map((a) => normalizeDateOnly(a && a.amendBerakhir))
+        .filter(Boolean);
+
+      const effectiveEndStr = maxDateOnly([defaultEndStr, legacyAmendEndStr, ...childAmendEndStrs]);
+
+      if (effectiveEndStr && todayStr > effectiveEndStr) {
+        const unresolvedCount = await SupervisiVisit.count({
+          where: {
+            jobId: job.id,
+            isPelanggaran: true,
+            [Op.or]: [
+              { alasanTidakHadir: null },
+              { alasanTidakHadir: "" }
+            ]
+          }
+        });
+
+        if (unresolvedCount === 0) {
+          await job.update({ status: "completed" });
+          completedCount++;
+          console.log(`${LABEL} Job ID ${job.id} (${job.namaKerja}) otomatis diselesaikan (Auto-Completed).`);
+        } else {
+          console.log(`${LABEL} Job ID ${job.id} (${job.namaKerja}) tetap aktif karena memiliki ${unresolvedCount} pelanggaran menggantung.`);
+        }
+      }
+    }
+    console.log(`${LABEL} Auto-completed ${completedCount} ended clean job(s).`);
+
+    console.log(`${LABEL} Done. Created ${totalCreated} tidak_hadir record(s).`);
   } catch (err) {
     console.error(`${LABEL} Error during missed-visit check:`, err.message);
   }
@@ -1123,6 +1406,48 @@ async function submitViolationReason(req, res) {
       submittedAt: new Date(),
     });
 
+    // ── PRO-AUTOMATION: Real-time Auto-complete ended jobs after resolving all violations ──
+    if (visit.job && visit.job.id) {
+      const fullJob = await SupervisiJob.findByPk(visit.job.id, {
+        include: [
+          {
+            model: SupervisiAmend,
+            as: "amends",
+            attributes: ["amendBerakhir"],
+          },
+        ],
+      });
+
+      if (fullJob && fullJob.status === "active" && fullJob.waktuMulai && fullJob.waktuBerakhir) {
+        const todayStr = getAppDateString();
+        const defaultEndStr = normalizeDateOnly(fullJob.waktuBerakhir);
+        const legacyAmendEndStr = normalizeDateOnly(fullJob.amendBerakhir);
+        const childAmendEndStrs = (fullJob.amends || [])
+          .map((a) => normalizeDateOnly(a && a.amendBerakhir))
+          .filter(Boolean);
+
+        const effectiveEndStr = maxDateOnly([defaultEndStr, legacyAmendEndStr, ...childAmendEndStrs]);
+
+        if (effectiveEndStr && todayStr > effectiveEndStr) {
+          const unresolvedCount = await SupervisiVisit.count({
+            where: {
+              jobId: fullJob.id,
+              isPelanggaran: true,
+              [Op.or]: [
+                { alasanTidakHadir: null },
+                { alasanTidakHadir: "" }
+              ]
+            }
+          });
+
+          if (unresolvedCount === 0) {
+            await fullJob.update({ status: "completed" });
+            console.log(`[Supervisi Realtime Close] Job ID ${fullJob.id} otomatis diselesaikan karena semua alasan pelanggaran telah dilengkapi.`);
+          }
+        }
+      }
+    }
+
     res.json({
       success: true,
       message: "Alasan pelanggaran berhasil disimpan.",
@@ -1133,16 +1458,104 @@ async function submitViolationReason(req, res) {
   }
 }
 
+// PUT /api/inspection/supervisi/visits/:id/undo
+// Revert a finalized visit back to draft — only allowed on the same day.
+async function undoVisit(req, res) {
+  try {
+    if (!isSupervisiExecutor(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Hanya pelaksana supervisi yang dapat membatalkan submit kunjungan.",
+      });
+    }
+
+    const visit = await SupervisiVisit.findByPk(req.params.id, {
+      include: [{ model: SupervisiJob, as: "job" }],
+    });
+
+    if (!visit) {
+      return res.status(404).json({
+        success: false,
+        message: "Kunjungan tidak ditemukan.",
+      });
+    }
+
+    if (!canAccessSupervisiJob(req.user, visit.job)) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda hanya dapat membatalkan submit untuk pekerjaan yang ditugaskan ke Anda.",
+      });
+    }
+
+    if (visit.isDraft) {
+      return res.status(400).json({
+        success: false,
+        message: "Kunjungan ini sudah berstatus draft.",
+      });
+    }
+
+    // Only allow undo on the same calendar day (server time)
+    const serverToday = getAppDateString();
+    const visitDateStr = String(visit.visitDate);
+    if (visitDateStr !== serverToday) {
+      return res.status(400).json({
+        success: false,
+        message: "Batal submit hanya bisa dilakukan pada hari yang sama dengan tanggal kunjungan.",
+      });
+    }
+
+    await SupervisiVisit.sequelize.transaction(async (t) => {
+      await visit.update({ isDraft: true, isPelanggaran: false }, { transaction: t });
+      await recalculateViolationFlags(visit.jobId, { transaction: t });
+      await visit.reload({ include: [{ model: SupervisiJob, as: "job" }], transaction: t });
+    });
+
+    const executorName =
+      normalizeNullableString(req.user && req.user.name) ||
+      normalizeNullableString(req.user && req.user.nik) ||
+      "Pelaksana";
+
+    // Beritahu supervisor bahwa laporan ditarik kembali
+    await notifySupervisorVisitUpdate({
+      job: visit.job,
+      visitStatus: visit.status,
+      visitDate: visitDateStr,
+      executorName,
+      isUndo: true
+    });
+
+    // Inject submitterName
+    const nikMap = await buildNikNameMap(visit.submittedBy ? [visit.submittedBy] : []);
+    addCurrentUserNameFallback(nikMap, req.user);
+    const visitData = typeof visit.toJSON === "function" ? visit.toJSON() : { ...visit };
+    visitData.submitterName = nikMap[visit.submittedBy] || null;
+    // Remove included job to keep response lean
+    delete visitData.job;
+
+    res.json({
+      success: true,
+      message: "Laporan berhasil dikembalikan ke draft.",
+      data: visitData,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 module.exports = {
   uploadVisitMedia,
   uploadJobAmendDocuments,
+  listPersonnel,
   listJobs,
   getJob,
   createJob,
   updateJob,
+  deleteJob,
   listVisits,
   submitVisit,
   listPelanggaran,
   markMissedVisitsAsPelanggaran,
+  recalculateViolationFlags,
   submitViolationReason,
+  undoVisit,
 };

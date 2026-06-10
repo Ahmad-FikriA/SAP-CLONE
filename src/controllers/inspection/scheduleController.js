@@ -1,11 +1,51 @@
 "use strict";
 
+const { Op } = require("sequelize");
 const InspectionSchedule = require("../../models/InspectionSchedule");
 const InspectionRequest = require("../../models/InspectionRequest");
+const {
+  updateScheduleStatusFromReports,
+} = require("../../services/inspectionScheduleStatus");
 const { notify } = require("../../services/notificationService");
 
 
 const INSPECTION_PLANNER_NIK = "10000262";
+const FINAL_SCHEDULE_STATUSES = ["completed", "cancelled"];
+
+function isTruthyQuery(value) {
+  return ["1", "true", "yes", "y"].includes(String(value || "").toLowerCase());
+}
+
+function parsePositiveInt(value, fallback, max = 100) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
+}
+
+function parseQueryList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function buildDateRangeWhere(dateFrom, dateTo) {
+  const range = {};
+  if (dateFrom) range[Op.gte] = dateFrom;
+  if (dateTo) range[Op.lte] = dateTo;
+  return Object.keys(range).length > 0 ? range : null;
+}
+
+function buildPagination(query) {
+  if (!query.page && !query.limit) return null;
+  const page = parsePositiveInt(query.page, 1, 100000);
+  const limit = parsePositiveInt(query.limit, 20, 100);
+  return {
+    page,
+    limit,
+    offset: (page - 1) * limit,
+  };
+}
 
 
 
@@ -13,30 +53,82 @@ const INSPECTION_PLANNER_NIK = "10000262";
 async function listSchedules(req, res) {
   try {
     const where = {};
+    const archiveMode =
+      req.query.mode === "archive" || isTruthyQuery(req.query.archive);
 
     if (req.query.type) where.type = req.query.type;
-    if (req.query.status) where.status = req.query.status;
+    if (req.query.status) {
+      const statuses = parseQueryList(req.query.status);
+      if (statuses.length > 0) {
+        where.status = statuses.length > 1 ? { [Op.in]: statuses } : statuses[0];
+      }
+    } else if (archiveMode) {
+      where.status = { [Op.in]: FINAL_SCHEDULE_STATUSES };
+    }
     if (req.query.createdBy) where.createdBy = req.query.createdBy;
     if (req.query.assignedTo) where.assignedTo = req.query.assignedTo;
 
-    const schedules = await InspectionSchedule.findAll({
+    const dateRange = buildDateRangeWhere(req.query.dateFrom, req.query.dateTo);
+    if (dateRange) where.scheduledDate = dateRange;
+
+    const q = String(req.query.q || "").trim();
+    if (q) {
+      const like = `%${q}%`;
+      where[Op.or] = [
+        { title: { [Op.like]: like } },
+        { location: { [Op.like]: like } },
+        { nomorPoJo: { [Op.like]: like } },
+        { createdBy: { [Op.like]: like } },
+        { assignedTo: { [Op.like]: like } },
+      ];
+    }
+
+    const include = [
+      {
+        model: InspectionRequest,
+        as: "userRequest",
+        attributes: ["id", "deskripsi", "mediaPaths", "requestedBy", "judul"],
+        required: false,
+      },
+    ];
+    const pagination = buildPagination(req.query);
+    const queryOptions = {
       where,
       order: [["scheduledDate", "DESC"]],
-      include: [
-        {
-          model: InspectionRequest,
-          as: "userRequest",
-          attributes: ["id", "deskripsi", "mediaPaths", "requestedBy", "judul"],
-          required: false,
-        },
-      ],
-    });
+      include,
+    };
 
-    res.json({
+    const result = pagination
+      ? await InspectionSchedule.findAndCountAll({
+          ...queryOptions,
+          limit: pagination.limit,
+          offset: pagination.offset,
+          distinct: true,
+        })
+      : { rows: await InspectionSchedule.findAll(queryOptions), count: null };
+
+    const schedules = result.rows;
+
+    await Promise.all(
+      schedules.map((schedule) => updateScheduleStatusFromReports(schedule)),
+    );
+
+    const response = {
       success: true,
       message: "Schedules retrieved successfully.",
       data: schedules,
-    });
+    };
+
+    if (pagination) {
+      response.meta = {
+        page: pagination.page,
+        limit: pagination.limit,
+        total: result.count,
+        totalPages: Math.max(1, Math.ceil(result.count / pagination.limit)),
+      };
+    }
+
+    res.json(response);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -63,6 +155,8 @@ async function getSchedule(req, res) {
         .json({ success: false, message: "Schedule not found." });
     }
 
+    await updateScheduleStatusFromReports(schedule);
+
     res.json({ success: true, message: "Schedule retrieved.", data: schedule });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -88,6 +182,12 @@ async function createSchedule(req, res) {
       notes,
       intervalPeriod,
     } = req.body;
+
+    const start = new Date(scheduledDate);
+    start.setHours(0, 0, 0, 0);
+
+    let end = new Date(scheduledEndDate || scheduledDate);
+    end.setHours(0, 0, 0, 0);
 
     const schedule = await InspectionSchedule.create({
       type: type || "rutin",
@@ -169,7 +269,7 @@ async function getNextSpkNumber(req, res) {
     const yearSuffix = String(now.getFullYear()).slice(-2);
     const prefix = `SPK-INSP${yearSuffix}-`;
 
-    const { Op } = require('sequelize');
+    // Cari nomor SPK tertinggi dengan prefix tahun ini
     const lastSchedule = await InspectionSchedule.findOne({
       where: {
         nomorPoJo: {
@@ -278,7 +378,24 @@ async function createRecurringSchedules(req, res) {
   }
 }
 
+// DELETE /api/inspection/schedules/:id
+async function deleteSchedule(req, res) {
+  try {
+    const schedule = await InspectionSchedule.findByPk(req.params.id);
+    if (!schedule) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Schedule not found." });
+    }
 
+    await schedule.destroy();
+    res.json({ success: true, message: "Schedule deleted successfully." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+// CRON JOB — Send reminders for today and overdue schedules
 async function sendInspectionReminders() {
   const LABEL = "[Inspection Cron]";
   try {
@@ -342,4 +459,4 @@ async function sendInspectionReminders() {
   }
 }
 
-module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, getNextSpkNumber, createRecurringSchedules, sendInspectionReminders };
+module.exports = { listSchedules, getSchedule, createSchedule, updateSchedule, deleteSchedule, getNextSpkNumber, createRecurringSchedules, sendInspectionReminders };

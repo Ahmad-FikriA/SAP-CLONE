@@ -24,7 +24,7 @@ const SupervisiJob = sequelize.define(
       comment: "Nomor Job Order",
     },
     nilaiPekerjaan: {
-      type: DataTypes.DECIMAL(20, 2),
+      type: DataTypes.DECIMAL(24, 2),
       allowNull: true,
       comment: "Nilai kontrak pekerjaan (Rupiah)",
     },
@@ -87,6 +87,11 @@ const SupervisiJob = sequelize.define(
       defaultValue: "draft",
       validate: { isIn: [["draft", "active", "completed", "cancelled"]] },
     },
+    cancelReason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Alasan pembatalan pekerjaan (diisi saat status = cancelled)",
+    },
     latitude: {
       type: DataTypes.DECIMAL(10, 7),
       allowNull: true,
@@ -120,6 +125,31 @@ const SupervisiJob = sequelize.define(
       set(val) {
         this.setDataValue('locations', val ? JSON.stringify(val) : '[]');
       },
+    },
+    radiusExemptionStartDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      comment: "Tanggal mulai pengecualian kewajiban submit dalam radius",
+    },
+    radiusExemptionEndDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      comment: "Tanggal akhir pengecualian kewajiban submit dalam radius",
+    },
+    radiusExemptionReason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: "Alasan planner menonaktifkan kewajiban radius",
+    },
+    radiusExemptionBy: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: "NIK planner yang terakhir mengubah pengecualian radius",
+    },
+    radiusExemptionUpdatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: "Waktu perubahan pengecualian radius",
     },
     createdBy: {
       type: DataTypes.STRING(100),
@@ -220,9 +250,51 @@ async function ensureSupervisiJobSchema() {
     });
   }
 
+  if (!table.cancelReason) {
+    await queryInterface.addColumn(tableName, "cancelReason", {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    });
+  }
+
+  if (!table.radiusExemptionStartDate) {
+    await queryInterface.addColumn(tableName, "radiusExemptionStartDate", {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    });
+  }
+
+  if (!table.radiusExemptionEndDate) {
+    await queryInterface.addColumn(tableName, "radiusExemptionEndDate", {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    });
+  }
+
+  if (!table.radiusExemptionReason) {
+    await queryInterface.addColumn(tableName, "radiusExemptionReason", {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    });
+  }
+
+  if (!table.radiusExemptionBy) {
+    await queryInterface.addColumn(tableName, "radiusExemptionBy", {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    });
+  }
+
+  if (!table.radiusExemptionUpdatedAt) {
+    await queryInterface.addColumn(tableName, "radiusExemptionUpdatedAt", {
+      type: DataTypes.DATE,
+      allowNull: true,
+    });
+  }
+
   try {
     await queryInterface.changeColumn(tableName, "nilaiPekerjaan", {
-      type: DataTypes.DECIMAL(20, 2),
+      type: DataTypes.DECIMAL(24, 2),
       allowNull: true,
     });
     await queryInterface.changeColumn(tableName, "pelaksana", {
@@ -236,6 +308,11 @@ async function ensureSupervisiJobSchema() {
     await queryInterface.changeColumn(tableName, "waktuBerakhir", {
       type: DataTypes.DATEONLY,
       allowNull: true,
+    });
+    await queryInterface.changeColumn(tableName, "status", {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "draft",
     });
   } catch (err) {
     console.warn("[SupervisiJob] changeColumn warning:", err.message);

@@ -7,6 +7,7 @@ const Plant = require("./Plant");
 const FunctionalLocation = require("./FunctionalLocation");
 const Equipment = require("./Equipment");
 const { Spk, SpkEquipment, SpkActivity } = require("./Spk");
+const SpkRejectionLog = require('./SpkRejectionLog');
 const {
   Submission,
   SubmissionPhoto,
@@ -26,7 +27,10 @@ const Notification = require("./Notification");
 
 const PushNotification = require("./PushNotification");
 const K3Report = require("./K3Report");
+const K3Settings = require("./K3Settings");
 const SapSpkCorrective = require("./SapSpkCorrective");
+const Material = require("./Material");
+const SpkMaterial = require("./SpkMaterial");
 
 
 Plant.hasMany(Equipment, { foreignKey: "plantId", as: "equipment" });
@@ -55,7 +59,16 @@ Spk.hasMany(SpkActivity, {
 });
 SpkActivity.belongsTo(Spk, { foreignKey: "spkNumber", as: "spk" });
 
+// ── SPK ↔ SpkRejectionLog ────────────────────────────────────────────────────
+Spk.hasMany(SpkRejectionLog, {
+  foreignKey: 'spkNumber',
+  as: 'rejectionLogs',
+  onDelete: 'CASCADE',
+});
+SpkRejectionLog.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk' });
+SpkRejectionLog.belongsTo(User, { foreignKey: 'rejectedBy', as: 'rejector', constraints: false });
 
+// ── Submission ↔ Spk ─────────────────────────────────────────────────────────
 Submission.belongsTo(Spk, { foreignKey: 'spkNumber', as: 'spk', constraints: false });
 Spk.hasMany(Submission, { foreignKey: 'spkNumber', as: 'submissions', constraints: false });
 
@@ -128,6 +141,46 @@ SapSpkCorrective.belongsTo(User, {
   constraints: false,
 });
 
+// ── SapSpkCorrective ↔ SpkMaterial (Planned Materials) ──────────────────────
+SapSpkCorrective.hasMany(SpkMaterial, {
+  foreignKey: "order_number",
+  sourceKey: "order_number",
+  as: "spkMaterials",
+  onDelete: "CASCADE",
+  constraints: false,
+});
+SpkMaterial.belongsTo(SapSpkCorrective, {
+  foreignKey: "order_number",
+  targetKey: "order_number",
+  as: "sapSpk",
+  constraints: false,
+});
+SpkMaterial.belongsTo(Material, {
+  foreignKey: "material_id",
+  as: "material",
+});
+SpkMaterial.belongsTo(User, {
+  foreignKey: "added_by",
+  as: "addedByUser",
+  constraints: false,
+});
+
+// ── Spk (Preventive) ↔ SpkMaterial (Planned Materials) ──────────────────────
+Spk.hasMany(SpkMaterial, {
+  foreignKey: "order_number",
+  sourceKey: "spkNumber",
+  as: "spkMaterials",
+  onDelete: "CASCADE",
+  constraints: false,
+});
+SpkMaterial.belongsTo(Spk, {
+  foreignKey: "order_number",
+  targetKey: "spkNumber",
+  as: "preventiveSpk",
+  constraints: false,
+});
+
+// ── Supervisi Module ─────────────────────────────────────────────────────────
 const SupervisiJob = require("./SupervisiJob");
 const SupervisiVisit = require("./SupervisiVisit");
 const SupervisiAmend = require("./SupervisiAmend");
@@ -266,7 +319,11 @@ GeneralTaskListActivity.belongsTo(GeneralTaskList, {
   as: "taskList",
 });
 
+// ── SPK ↔ GeneralTaskList ─────────────────────────────────────────────────────
+Spk.belongsTo(GeneralTaskList, { foreignKey: 'taskListId', as: 'taskList', constraints: false });
+GeneralTaskList.hasMany(Spk, { foreignKey: 'taskListId', as: 'spks', constraints: false });
 
+// ── Equipment x GeneralTaskList interval mappings ────────────────────────────
 Equipment.hasMany(EquipmentIntervalMapping, { foreignKey: 'equipmentId', as: 'intervalMappings', onDelete: 'CASCADE' });
 EquipmentIntervalMapping.belongsTo(Equipment, { foreignKey: 'equipmentId', as: 'equipment' });
 GeneralTaskList.hasMany(EquipmentIntervalMapping, { foreignKey: 'taskListId', as: 'intervalMappings' });
@@ -280,6 +337,7 @@ module.exports = {
   Spk,
   SpkEquipment,
   SpkActivity,
+  SpkRejectionLog,
   Submission,
   SubmissionPhoto,
   SubmissionActivityResult,
@@ -303,4 +361,6 @@ module.exports = {
   K3Report,
   SupervisiAmend,
   SapSpkCorrective,
+  SpkMaterial,
+  Material,
 };

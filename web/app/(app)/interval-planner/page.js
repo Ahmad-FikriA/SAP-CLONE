@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import { canCreate, canUpdate, canDelete } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 const INTERVALS = ['1wk', '2wk', '3wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
 
@@ -22,19 +23,18 @@ function getISOWeekDateRange(week, year) {
 }
 
 function fmtShort(d) {
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('id-ID', { timeZone: 'UTC', day: 'numeric', month: 'short' });
 }
 
 function getWeeksInYear(year) {
-  const dec28 = new Date(Date.UTC(year, 11, 28));
-  const day = dec28.getUTCDay() || 7;
-  const thu = new Date(dec28);
-  thu.setUTCDate(dec28.getUTCDate() + (4 - day));
-  return thu.getUTCFullYear() === year ? 53 : 52;
+  const d = new Date(Date.UTC(year, 0, 1));
+  const day = d.getUTCDay() || 7;
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+  return (day === 4 || (day === 3 && isLeap)) ? 53 : 52;
 }
 
 function getMonthLabel(d) {
-  return d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  return d.toLocaleDateString('id-ID', { timeZone: 'UTC', month: 'long', year: 'numeric' });
 }
 
 function getCurrentWeek() {
@@ -63,6 +63,12 @@ export default function IntervalPlannerPage() {
   const [saving, setSaving] = useState(false);
   const pendingYearChange = useRef(null);
   const years = buildYears();
+
+  const [expandedWeek, setExpandedWeek] = useState(null); // week number or null
+  const [weekSpks, setWeekSpks] = useState({});           // keyed by `${year}-${week}`
+  const [weekSpkLoading, setWeekSpkLoading] = useState(false);
+  const [mappings, setMappings] = useState([]);
+  const [selectedInterval, setSelectedInterval] = useState(null);
 
   const isDirty = useCallback(() => {
     const sk = Object.keys(savedSet).sort().join(',');
@@ -96,7 +102,15 @@ export default function IntervalPlannerPage() {
   }
 
   useEffect(() => {
+    apiGet('/equipment-mappings').then(data => {
+      if (Array.isArray(data)) setMappings(data);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     loadYear(year);
+    setExpandedWeek(null);
+    setWeekSpks({});
     const handler = (e) => {
       if (isDirty()) { e.preventDefault(); e.returnValue = ''; }
     };
@@ -176,6 +190,27 @@ export default function IntervalPlannerPage() {
     } catch (e) { toast.error('Gagal menghapus: ' + e.message); }
   }
 
+  async function handleWeekClick(week) {
+    const key = `${year}-${week}`;
+    if (expandedWeek === week) {
+      setExpandedWeek(null);
+      return;
+    }
+    setExpandedWeek(week);
+    if (!weekSpks[key]) {
+      setWeekSpkLoading(true);
+      try {
+        const res = await apiGet(`/spk?week=${week}&year=${year}&limit=100`);
+        const list = Array.isArray(res) ? res : (res.data ?? []);
+        setWeekSpks(prev => ({ ...prev, [key]: list }));
+      } catch (err) {
+        toast.error('Gagal memuat SPK: ' + err.message);
+      } finally {
+        setWeekSpkLoading(false);
+      }
+    }
+  }
+
   // Build grid rows
   const totalWeeks = getWeeksInYear(year);
   const currentWeek = year === thisYear ? getCurrentWeek() : -1;
@@ -184,7 +219,9 @@ export default function IntervalPlannerPage() {
   let lastMonth = null;
   for (let w = 1; w <= totalWeeks; w++) {
     const { start, end } = getISOWeekDateRange(w, year);
-    const monthLabel = getMonthLabel(start);
+    const thursday = new Date(start);
+    thursday.setUTCDate(start.getUTCDate() + 3);
+    const monthLabel = getMonthLabel(thursday);
     if (monthLabel !== lastMonth) {
       lastMonth = monthLabel;
       rows.push({ type: 'month', label: monthLabel, key: 'month-' + monthLabel });
@@ -245,18 +282,26 @@ export default function IntervalPlannerPage() {
         </div>
       )}
 
-      {/* Grid */}
+      {/* Grid + side panel */}
+      <div className="flex gap-4 items-start">
       {loading ? (
-        <p className="text-sm text-gray-400 py-8 text-center">Memuat jadwal...</p>
+        <p className="flex-1 text-sm text-gray-400 py-8 text-center">Memuat jadwal...</p>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-auto">
+        <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-xl overflow-auto">
           <table className="w-full text-xs border-collapse">
             <thead className="sticky top-0 bg-gray-50 z-10">
               <tr>
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 border-b border-gray-200 w-16">Minggu</th>
                 <th className="px-3 py-2.5 text-left font-semibold text-gray-600 border-b border-gray-200 w-36">Tanggal</th>
                 {INTERVALS.map((iv) => (
-                  <th key={iv} className="px-2 py-2.5 text-center font-semibold text-gray-600 border-b border-gray-200 w-14">{iv}</th>
+                  <th key={iv}
+                    className="px-2 py-2.5 text-center border-b border-gray-200 w-14 cursor-pointer select-none"
+                    onClick={() => setSelectedInterval(prev => prev === iv ? null : iv)}
+                  >
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold transition-colors ${
+                      selectedInterval === iv ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'
+                    }`}>{iv}</span>
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -273,37 +318,147 @@ export default function IntervalPlannerPage() {
                 }
                 const { week, start, end } = row;
                 const isCurrent = week === currentWeek;
+                const isExpanded = expandedWeek === week;
+                const spkKey = `${year}-${week}`;
+                const spkList = weekSpks[spkKey];
+                const spkLoadingThis = weekSpkLoading && !spkList && isExpanded;
+
                 return (
-                  <tr key={row.key} className={cn('border-b border-gray-100', isCurrent && 'bg-yellow-50')}>
-                    <td className={cn('px-3 py-1.5 font-semibold', isCurrent ? 'text-yellow-700' : 'text-gray-700')}>{week}</td>
-                    <td className="px-3 py-1.5 text-gray-500">{fmtShort(start)} – {fmtShort(end)}</td>
-                    {INTERVALS.map((iv) => {
-                      const key = cellKey(year, week, iv);
-                      const active = !!currentSet[key];
-                      const changed = !!currentSet[key] !== !!savedSet[key];
-                      return (
-                        <td key={iv} className="px-1 py-1.5 text-center">
-                          <button
-                            onClick={() => canUpdate('interval-planner') && toggleCell(year, week, iv)}
-                            className={cn(
-                              'w-8 h-6 rounded text-[10px] font-semibold transition-colors',
-                              active
-                                ? changed ? 'bg-blue-500 text-white ring-2 ring-blue-300' : 'bg-blue-600 text-white'
-                                : changed ? 'bg-red-100 text-red-400 ring-2 ring-red-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                            )}
-                          >
-                            {active ? '✓' : ''}
-                          </button>
+                  <Fragment key={row.key}>
+                    <tr className={cn('border-b border-gray-100', isCurrent && 'bg-yellow-50', isExpanded && 'bg-blue-50')}>
+                      <td
+                        className={cn(
+                          'px-3 py-1.5 font-semibold cursor-pointer select-none',
+                          isCurrent ? 'text-yellow-700' : isExpanded ? 'text-blue-600' : 'text-gray-700'
+                        )}
+                        onClick={() => handleWeekClick(week)}
+                      >
+                        <span className="flex items-center gap-1">
+                          {isExpanded
+                            ? <ChevronDown size={11} className="shrink-0" />
+                            : <ChevronRight size={11} className="shrink-0 text-gray-300" />
+                          }
+                          {week}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1.5 text-gray-500">{fmtShort(start)} – {fmtShort(end)}</td>
+                      {INTERVALS.map((iv) => {
+                        const key = cellKey(year, week, iv);
+                        const active = !!currentSet[key];
+                        const changed = !!currentSet[key] !== !!savedSet[key];
+                        return (
+                          <td key={iv} className="px-1 py-1.5 text-center">
+                            <button
+                              onClick={() => canUpdate('interval-planner') && toggleCell(year, week, iv)}
+                              className={cn(
+                                'w-8 h-6 rounded text-[10px] font-semibold transition-colors',
+                                active
+                                  ? changed ? 'bg-blue-500 text-white ring-2 ring-blue-300' : 'bg-blue-600 text-white'
+                                  : changed ? 'bg-red-100 text-red-400 ring-2 ring-red-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                              )}
+                            >
+                              {active ? '✓' : ''}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`${row.key}-spk`} className="border-b border-blue-100 bg-blue-50/40">
+                        <td colSpan={2 + INTERVALS.length} className="px-6 py-2">
+                          {spkLoadingThis ? (
+                            <span className="text-xs text-gray-400">Memuat SPK...</span>
+                          ) : !spkList || spkList.length === 0 ? (
+                            <span className="text-xs text-gray-400">Tidak ada SPK minggu ini</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide self-center mr-1">
+                                {spkList.length} SPK:
+                              </span>
+                              {spkList.map(s => {
+                                const done = s.status === 'approved';
+                                return (
+                                  <a
+                                    key={s.spkNumber}
+                                    href={`/spk?q=${encodeURIComponent(s.spkNumber)}`}
+                                    className={done
+                                      ? 'px-2 py-0.5 bg-white border border-green-300 rounded text-[11px] font-mono text-green-700 hover:bg-green-600 hover:text-white hover:border-green-600 transition-colors'
+                                      : 'px-2 py-0.5 bg-white border border-blue-200 rounded text-[11px] font-mono text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-colors'
+                                    }
+                                  >
+                                    {s.spkNumber}
+                                  </a>
+                                );
+                              })}
+                            </div>
+                          )}
                         </td>
-                      );
-                    })}
-                  </tr>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>
           </table>
         </div>
       )}
+
+      {/* Coverage side panel */}
+      {selectedInterval && (
+        <div className="w-72 shrink-0 border border-gray-200 rounded-xl bg-white shadow-sm p-4 sticky top-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-800">
+              Interval <span className="font-mono text-blue-600">{selectedInterval}</span>
+            </p>
+            <button
+              onClick={() => setSelectedInterval(null)}
+              className="text-gray-400 hover:text-gray-600 text-xs"
+            >
+              ✕
+            </button>
+          </div>
+
+          {(() => {
+            const filtered = mappings.filter(m => m.interval === selectedInterval);
+            if (filtered.length === 0) {
+              return (
+                <p className="text-xs text-gray-400 text-center py-6">
+                  Belum ada equipment yang dipetakan ke interval ini.
+                </p>
+              );
+            }
+            return (
+              <ul className="space-y-2">
+                {filtered.map(m => (
+                  <li key={m.id} className="bg-gray-50 rounded-lg px-3 py-2">
+                    <p className="text-xs font-semibold text-gray-800 truncate">{m.equipmentName}</p>
+                    <p className="text-[11px] text-gray-400 font-mono truncate">{m.equipmentId}</p>
+                    {m.taskListName && (
+                      <p className="text-[11px] text-blue-600 mt-0.5 truncate">
+                        {m.taskListId} — {m.taskListName}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
+
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <a
+              href="/equipment/mappings"
+              className="block text-center text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              Kelola Mapping →
+            </a>
+          </div>
+
+          <p className="mt-2 text-[10px] text-gray-400 text-center">
+            {mappings.filter(m => m.interval === selectedInterval).length} equipment terpetakan
+          </p>
+        </div>
+      )}
+      </div>
     </div>
   );
 }

@@ -10,14 +10,45 @@ const EquipmentIntervalMapping = require('../../models/EquipmentIntervalMapping'
 const { GeneralTaskList } = require('../../models/GeneralTaskList');
 const User = require('../../models/User');
 
+// Used for paginated getAll (Submissions Log page) — only approved SPKs
 const INCLUDE_FULL = [
   { model: SubmissionPhoto, as: 'photos', attributes: ['photoPath'] },
   { model: SubmissionActivityResult, as: 'activityResults', attributes: ['activityNumber', 'resultComment', 'isNormal', 'isVerified', 'measurementValue'] },
   {
     model: Spk,
     as: 'spk',
-    attributes: ['category', 'description', 'submittedBy', 'scheduledDate'],
-    include: [{ model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan', 'measurementUnit'] }],
+    attributes: [
+      'category', 'description', 'submittedBy', 'scheduledDate', 'intervalPeriod',
+      'kasieApprovedBy', 'kasieApprovedAt',
+      'kadisPerawatanApprovedBy', 'kadisPerawatanApprovedAt',
+      'kadisApprovedBy', 'kadisApprovedAt',
+    ],
+    where: { status: 'approved' },
+    include: [
+      { model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan', 'measurementUnit'] },
+      { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId', 'equipmentName', 'functionalLocation', 'plantName'] },
+    ],
+    required: true,
+  },
+];
+
+// Used for spkNumber lookup (Persetujuan SPK page) — any SPK status
+const INCLUDE_BY_SPK = [
+  { model: SubmissionPhoto, as: 'photos', attributes: ['photoPath'] },
+  { model: SubmissionActivityResult, as: 'activityResults', attributes: ['activityNumber', 'resultComment', 'isNormal', 'isVerified', 'measurementValue'] },
+  {
+    model: Spk,
+    as: 'spk',
+    attributes: [
+      'category', 'description', 'submittedBy', 'scheduledDate', 'intervalPeriod',
+      'kasieApprovedBy', 'kasieApprovedAt',
+      'kadisPerawatanApprovedBy', 'kadisPerawatanApprovedAt',
+      'kadisApprovedBy', 'kadisApprovedAt',
+    ],
+    include: [
+      { model: SpkActivity, as: 'activitiesModel', attributes: ['activityNumber', 'operationText', 'durationPlan', 'measurementUnit'] },
+      { model: SpkEquipment, as: 'equipmentModels', attributes: ['equipmentId', 'equipmentName', 'functionalLocation', 'plantName'] },
+    ],
     required: false,
   },
 ];
@@ -36,10 +67,24 @@ function fmt(sub) {
     spkDescription: spk.description || null,
     spkSubmittedBy: spk.submittedBy || null,
     spkScheduledDate: spk.scheduledDate || null,
+    spkInterval: spk.intervalPeriod || null,
+    spkEquipmentModels: (spk.equipmentModels || []).map(e => ({
+      equipmentId: e.equipmentId,
+      equipmentName: e.equipmentName || null,
+      functionalLocation: e.functionalLocation || null,
+      plantName: e.plantName || null,
+    })),
+    spkKasieApprovedBy: spk.kasieApprovedBy || null,
+    spkKasieApprovedAt: spk.kasieApprovedAt || null,
+    spkKadisPerawatanApprovedBy: spk.kadisPerawatanApprovedBy || null,
+    spkKadisPerawatanApprovedAt: spk.kadisPerawatanApprovedAt || null,
+    spkKadisApprovedBy: spk.kadisApprovedBy || null,
+    spkKadisApprovedAt: spk.kadisApprovedAt || null,
     workStart: j.workStart,
     submittedAt: j.submittedAt,
     durationActual: j.durationActual,
     evaluasi: j.evaluasi,
+    lateReason: j.lateReason ?? null,
     latitude: j.latitude,
     longitude: j.longitude,
     photoPaths: (j.photos || []).map(p => p.photoPath),
@@ -47,31 +92,78 @@ function fmt(sub) {
       activityNumber: r.activityNumber,
       operationText: actMap[r.activityNumber]?.operationText || null,
       durationPlan: actMap[r.activityNumber]?.durationPlan || null,
+      measurementUnit: actMap[r.activityNumber]?.measurementUnit || null,
       resultComment: r.resultComment,
       isNormal: r.isNormal,
       isVerified: r.isVerified,
       measurementValue: r.measurementValue ?? null,
-      measurementUnit: actMap[r.activityNumber]?.measurementUnit || null,
     })),
   };
 }
 
-
+// GET /api/submissions?page=1&limit=20&year=2026&month=5&week=20&category=Mekanik
+// GET /api/submissions?spkNumber=SPK-001  → plain array (backward compat)
 const getAll = async (req, res) => {
-  const { category, spkNumber } = req.query;
-  const where = {};
+  const { category, spkNumber, year, month, week, page: pageStr, limit: limitStr } = req.query;
 
+  // Targeted lookup — skip pagination, return plain array for Persetujuan page
   if (spkNumber) {
-    where.spkNumber = spkNumber;
-  } else if (category) {
-    const matchingSpks = await Spk.findAll({ where: { category }, attributes: ['spkNumber'] });
-    const spkNumbers = matchingSpks.map(s => s.spkNumber);
-    if (!spkNumbers.length) return res.json([]);
-    where.spkNumber = spkNumbers;
+    const data = await Submission.findAll({
+      where: { spkNumber },
+      include: INCLUDE_BY_SPK,
+      order: [['submittedAt', 'DESC']],
+    });
+    return res.json(data.map(fmt));
   }
 
-  const data = await Submission.findAll({ where, include: INCLUDE_FULL, order: [['submittedAt', 'DESC']] });
-  res.json(data.map(fmt));
+  const page  = Math.max(1, parseInt(pageStr)  || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(limitStr) || 20));
+  const offset = (page - 1) * limit;
+
+  const where = {};
+
+  // Category pre-filter: resolve approved SPK numbers for this category
+  if (category) {
+    const matchingSpks = await Spk.findAll({
+      where: { category, status: 'approved' },
+      attributes: ['spkNumber'],
+    });
+    const spkNumbers = matchingSpks.map(s => s.spkNumber);
+    if (!spkNumbers.length) {
+      return res.json({ data: [], total: 0, page, totalPages: 0, limit });
+    }
+    where.spkNumber = { [Op.in]: spkNumbers };
+  }
+
+  // Date filter on submitted_at
+  const y = parseInt(year);
+  const m = parseInt(month);
+  const w = parseInt(week);
+  if (y && w) {
+    const jan4 = new Date(y, 0, 4);
+    const monday = new Date(jan4);
+    monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (w - 1) * 7);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    where.submittedAt = { [Op.between]: [monday, sunday] };
+  } else if (y && m) {
+    where.submittedAt = { [Op.between]: [new Date(y, m - 1, 1), new Date(y, m, 0, 23, 59, 59, 999)] };
+  } else if (y) {
+    where.submittedAt = { [Op.between]: [new Date(y, 0, 1), new Date(y, 11, 31, 23, 59, 59, 999)] };
+  }
+
+  const { count, rows } = await Submission.findAndCountAll({
+    where,
+    include: INCLUDE_FULL,
+    order: [['submittedAt', 'DESC']],
+    limit,
+    offset,
+    distinct: true,
+  });
+
+  const totalPages = Math.ceil(count / limit);
+  res.json({ data: rows.map(fmt), total: count, page, totalPages, limit });
 };
 
 
@@ -124,7 +216,17 @@ function fmtTimeSAP(ts) {
   return `${hours}:${minutes}:00`;
 }
 
+// SAP expects dates as DD.MM.YYYY with dot separators (not the slashes id-ID uses)
+function fmtDateSAP(ts) {
+  if (!ts) return '';
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric',
+  }).formatToParts(new Date(ts));
+  const get = (t) => parts.find(p => p.type === t)?.value;
+  return `${get('day')}.${get('month')}.${get('year')}`;
+}
 
+// Shared border style
 const BORDER_THIN = {
   top: { style: 'thin' },
   left: { style: 'thin' },
@@ -340,8 +442,8 @@ const exportExcel = async (req, res) => {
       ws.getRow(row).height = 18;
       row++;
 
-      
-      const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF99' } };
+      // ── Row 2: Column headers — SAP-style yellow ──────────────────────────
+      const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC107' } };
       const headerFont = { bold: true, color: { argb: 'FF000000' }, size: 10 };
       const headers = ['Order / No. Aktivitas', 'Deskripsi / Uraian Pekerjaan', 'Interval', 'Equipment', 'Lokasi', 'Result Comment', 'Durasi Aktual (mnt)', 'Durasi Rencana (mnt)', 'Work Start', 'Work Finish', 'Start Time', 'Finish Time', 'Verifikasi'];
       for (let c = 1; c <= LAST_COL; c++) {
@@ -378,23 +480,28 @@ const exportExcel = async (req, res) => {
         ws.getRow(row).height = 18;
         row++;
 
-
-        for (const ar of grp.acts) {
-          const spkAct = activityMap.get(ar.activityNumber);
+        // Activity rows — loop over ALL SPK activities (incl. 0010 Opt Text),
+        // attach submission result where available.
+        const resultMap = new Map(grp.acts.map(ar => [ar.activityNumber, ar]));
+        const activityRows = [...activityMap.values()].filter(a =>
+          !a.equipmentId || a.equipmentId === grp.id
+        );
+        for (const spkAct of activityRows) {
+          const ar = resultMap.get(spkAct.activityNumber);
           const rowData = [
-            ar.activityNumber,
-            spkAct?.operationText || '-',
+            spkAct.activityNumber,
+            spkAct.operationText || '-',
             spk.intervalPeriod || '-',
             grp.name,
             grp.funcLocName,
-            ar.resultComment || '',
-            sj.durationActual ?? '-',
-            spkAct?.durationPlan ?? '-',
+            ar?.resultComment || '',
+            ar ? (sj.durationActual ?? '-') : '-',
+            spkAct.durationPlan ?? '-',
             fmtDate(sj.workStart),
             fmtDate(sj.submittedAt),
             fmtTime(sj.workStart),
             fmtTime(sj.submittedAt),
-            ar.isNormal ? '✓' : '✗',
+            ar ? (ar.isNormal ? '✓' : '✗') : '',
           ];
           for (let c = 1; c <= LAST_COL; c++) {
             const cell = ws.getCell(row, c);
@@ -403,7 +510,7 @@ const exportExcel = async (req, res) => {
             cell.border = BORDER_THIN;
             cell.alignment = { vertical: 'middle', wrapText: c === COL.DESC || c === COL.RESULT };
             if (c === COL.VERIFY) {
-              cell.font = { size: 12, bold: true, color: { argb: ar.isNormal ? 'FF16A34A' : 'FFDC2626' } };
+              cell.font = { size: 12, bold: true, color: { argb: ar?.isNormal ? 'FF16A34A' : 'FFDC2626' } };
               cell.alignment = { horizontal: 'center', vertical: 'middle' };
             }
           }
@@ -411,8 +518,8 @@ const exportExcel = async (req, res) => {
           row++;
         }
 
-
-        if (!grp.acts.length) {
+        // Empty row if no activities
+        if (!activityRows.length) {
           for (let c = 1; c <= LAST_COL; c++) ws.getCell(row, c).border = BORDER_THIN;
           ws.getRow(row).height = 16;
           row++;
@@ -475,15 +582,13 @@ const exportExcel = async (req, res) => {
       ws.getRow(row).height = 18;
       row++;
 
-
-      for (let i = 0; i < 1; i++) {
-        borderRange(ws, row, row, 1, 2, BORDER_THIN);
-        borderRange(ws, row, row, 3, 4, BORDER_THIN);
-        borderRange(ws, row, row, 5, 6, BORDER_THIN);
-        borderRange(ws, row, row, 7, LAST_COL, BORDER_THIN);
-        ws.getRow(row).height = 18;
-        row++;
-      }
+      // Signature space row
+      borderRange(ws, row, row, 1, 2, BORDER_THIN);
+      borderRange(ws, row, row, 3, 4, BORDER_THIN);
+      borderRange(ws, row, row, 5, 6, BORDER_THIN);
+      borderRange(ws, row, row, 7, LAST_COL, BORDER_THIN);
+      ws.getRow(row).height = 18;
+      row++;
 
 
       ws.mergeCells(row, 1, row, 2);
@@ -543,16 +648,12 @@ const exportIW49 = async (req, res) => {
   try {
     const { from, to, month, year, week, category } = req.query;
 
-    
-    const where = {};
+    // ── Compute shared ISO date range ──────────────────────────────────────
+    let isoFrom = null;
+    let isoTo   = null;
     if (from || to) {
-      where.submittedAt = {};
-      if (from) where.submittedAt[Op.gte] = new Date(from);
-      if (to) {
-        const toDate = new Date(to);
-        toDate.setHours(23, 59, 59, 999);
-        where.submittedAt[Op.lte] = toDate;
-      }
+      isoFrom = from || null;
+      isoTo   = to   || null;
     } else if (week) {
       const y = parseInt(year) || new Date().getFullYear();
       const w = parseInt(week);
@@ -561,51 +662,79 @@ const exportIW49 = async (req, res) => {
       monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (w - 1) * 7);
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
-      sunday.setHours(23, 59, 59, 999);
-      where.submittedAt = { [Op.between]: [monday, sunday] };
+      isoFrom = monday.toISOString().slice(0, 10);
+      isoTo   = sunday.toISOString().slice(0, 10);
     } else if (month || year) {
       const y = parseInt(year) || new Date().getFullYear();
       if (month) {
         const m = parseInt(month);
-        where.submittedAt = { [Op.between]: [new Date(y, m - 1, 1), new Date(y, m, 0, 23, 59, 59, 999)] };
+        const first = new Date(y, m - 1, 1);
+        const last  = new Date(y, m, 0);
+        isoFrom = first.toISOString().slice(0, 10);
+        isoTo   = last.toISOString().slice(0, 10);
       } else {
-        where.submittedAt = { [Op.between]: [new Date(y, 0, 1), new Date(y, 11, 31, 23, 59, 59, 999)] };
+        isoFrom = `${y}-01-01`;
+        isoTo   = `${y}-12-31`;
       }
     }
 
-    const submissions = await Submission.findAll({
-      where,
-      include: [{
-        model: SubmissionActivityResult, as: 'activityResults',
-        attributes: ['activityNumber', 'resultComment'],
-      }],
-      order: [['submittedAt', 'ASC']],
-    });
-    if (!submissions.length) {
+    // ── Submission date filter ─────────────────────────────────────────────
+    const subWhere = {};
+    if (isoFrom || isoTo) {
+      subWhere.submittedAt = {};
+      if (isoFrom) { const d = new Date(isoFrom); subWhere.submittedAt[Op.gte] = d; }
+      if (isoTo)   { const d = new Date(isoTo); d.setHours(23, 59, 59, 999); subWhere.submittedAt[Op.lte] = d; }
+    }
+
+    // ── Historical SPK filter (scheduledDate, source=manual_import) ───────
+    const histWhere = { source: 'manual_import', status: 'approved' };
+    if (category) histWhere.category = category;
+    if (isoFrom) histWhere.scheduledDate = { ...(histWhere.scheduledDate || {}), [Op.gte]: isoFrom };
+    if (isoTo)   histWhere.scheduledDate = { ...(histWhere.scheduledDate || {}), [Op.lte]: isoTo };
+
+    // ── Fetch both sources in parallel ─────────────────────────────────────
+    const [submissions, historicalSpks] = await Promise.all([
+      Submission.findAll({
+        where: subWhere,
+        include: [{
+          model: SubmissionActivityResult, as: 'activityResults',
+          attributes: ['activityNumber', 'resultComment'],
+        }],
+        order: [['submittedAt', 'ASC']],
+      }),
+      Spk.findAll({
+        where: histWhere,
+        attributes: ['spkNumber', 'description', 'systemStatus', 'costCenter', 'operWorkCtr', 'scheduledDate', 'evaluasi'],
+        include: [{
+          model: SpkActivity, as: 'activitiesModel',
+          attributes: ['activityNumber', 'controlKey', 'operationText', 'durationPlan'],
+        }],
+        order: [['scheduledDate', 'ASC']],
+      }),
+    ]);
+
+    if (!submissions.length && !historicalSpks.length) {
       return res.status(404).json({ error: 'Tidak ada data untuk filter yang dipilih' });
     }
 
-    
-    const spkNumbers = [...new Set(submissions.map(s => s.spkNumber))];
-    const approvedSpks = await Spk.findAll({
-      where: { spkNumber: spkNumbers, status: 'approved', ...(category ? { category } : {}) },
-      attributes: ['spkNumber', 'description', 'systemStatus', 'costCenter', 'operWorkCtr'],
-      include: [{
-        model: SpkActivity, as: 'activitiesModel',
-        attributes: ['activityNumber', 'controlKey', 'operationText', 'durationPlan'],
-      }],
-    });
-    const spkMap = new Map(approvedSpks.map(s => {
-      const j = s.toJSON();
-      const actMap = new Map((j.activitiesModel || []).map(a => [a.activityNumber, a]));
-      return [j.spkNumber, {
-        description:  j.description,
-        systemStatus: j.systemStatus,
-        costCenter:   j.costCenter,
-        operWorkCtr:  j.operWorkCtr,
-        actMap,
-      }];
-    }));
+    // ── Fetch approved SPKs for submissions ───────────────────────────────
+    const spkMap = new Map();
+    if (submissions.length) {
+      const spkNumbers = [...new Set(submissions.map(s => s.spkNumber))];
+      const approvedSpks = await Spk.findAll({
+        where: { spkNumber: spkNumbers, status: 'approved', ...(category ? { category } : {}) },
+        attributes: ['spkNumber', 'description', 'systemStatus', 'costCenter', 'operWorkCtr'],
+        include: [{
+          model: SpkActivity, as: 'activitiesModel',
+          attributes: ['activityNumber', 'controlKey', 'operationText', 'durationPlan'],
+        }],
+      });
+      for (const s of approvedSpks) {
+        const j = s.toJSON();
+        const actMap = new Map((j.activitiesModel || []).map(a => [a.activityNumber, a]));
+        spkMap.set(j.spkNumber, { description: j.description, systemStatus: j.systemStatus, costCenter: j.costCenter, operWorkCtr: j.operWorkCtr, actMap });
+      }
+    }
 
     
     const wb = new ExcelJS.Workbook();
@@ -646,8 +775,8 @@ const exportIW49 = async (req, res) => {
       'Work Start', 'Work Finish', 'Start Time', 'Finish Time',
     ];
 
-    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B3A5C' } };
-    const headerFont = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC107' } };
+    const headerFont = { bold: true, color: { argb: 'FF000000' }, size: 10 };
     const headerRow = ws.getRow(1);
     IW49_HEADERS.forEach((h, i) => {
       const cell = headerRow.getCell(i + 1);
@@ -670,9 +799,9 @@ const exportIW49 = async (req, res) => {
         ? Math.round((sj.durationActual / 60) * 100) / 100
         : null;
 
-      const postingDate   = fmtDate(sj.submittedAt);
-      const workStartDate = fmtDate(sj.workStart);
-      const workFinishDate = fmtDate(sj.submittedAt);
+      const postingDate   = fmtDateSAP(sj.submittedAt);
+      const workStartDate = fmtDateSAP(sj.workStart);
+      const workFinishDate = fmtDateSAP(sj.submittedAt);
       const startTime     = fmtTimeSAP(sj.workStart);
       const finishTime    = fmtTimeSAP(sj.submittedAt);
 
@@ -720,6 +849,58 @@ const exportIW49 = async (req, res) => {
           cell.font = { size: 10 };
           cell.border = BORDER_THIN;
           cell.alignment = { vertical: 'middle' };
+        });
+        wsRow.height = 16;
+        dataRow++;
+      }
+    }
+
+    // ── Historical manual_import rows (light-blue background) ────────────
+    for (const spk of historicalSpks) {
+      const sj = spk.toJSON();
+      const activities = sj.activitiesModel || [];
+      const postingDate = fmtDateSAP(sj.scheduledDate);
+      const rows = activities.length
+        ? activities
+        : [{ activityNumber: '', controlKey: '', operationText: '', durationPlan: null }];
+
+      for (const act of rows) {
+        const durationPlanHr = act.durationPlan != null
+          ? Math.round((act.durationPlan / 60) * 100) / 100
+          : null;
+
+        const vals = [
+          sj.spkNumber,
+          sj.description || '',
+          sj.systemStatus || '',
+          sj.costCenter || '',
+          act.controlKey || '',
+          sj.operWorkCtr || '',
+          act.activityNumber || '',
+          act.operationText || '',
+          durationPlanHr,
+          durationPlanHr != null ? 'HR' : '',
+          durationPlanHr,
+          durationPlanHr != null ? 'HR' : '',
+          postingDate,
+          null,
+          null,
+          sj.evaluasi || 'Dikerjakan secara manual sebelum sistem MANTIS',
+          '',
+          postingDate,
+          postingDate,
+          '',
+          '',
+        ];
+
+        const wsRow = ws.getRow(dataRow);
+        vals.forEach((v, i) => {
+          const cell = wsRow.getCell(i + 1);
+          cell.value = v ?? '';
+          cell.font = { size: 10 };
+          cell.border = BORDER_THIN;
+          cell.alignment = { vertical: 'middle' };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
         });
         wsRow.height = 16;
         dataRow++;

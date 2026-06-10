@@ -4,175 +4,200 @@
     "name": "Pump Station I",
     "taskListId": "KTI_0021",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A1-01-006-001",
     "name": "Gedung Aula Cidanau",
     "taskListId": "KTI_0021",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A1-01-006-002",
     "name": "Pos Keamanan Cidanau",
     "taskListId": "KTI_0021",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A1-01-004-003",
     "name": "Ruang Capasitor Bank",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A1-01-005-001",
     "name": "MV Drive",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A1-01-005-002",
     "name": "MCC PS I (Cubical)",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A1-01-005-003",
     "name": "Control Room",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A1-01-005-004",
     "name": "Area Pompa",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A1-01-005-005",
     "name": "Sodium Hypoclorit",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A1-01-005-006",
     "name": "Ruang Chlorinator",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "PS I CIDANAU"
+    "location": "PS I CIDANAU",
+    "plantId": "I-22L001"
   },
   {
     "funcLocId": "A-A2-01-010-001",
     "name": "Bangunan Decanter",
     "taskListId": "KTI_0021",
     "interval": "1wk",
-    "location": "DECANTER"
+    "location": "DECANTER",
+    "plantId": "I-22L002"
   },
   {
     "funcLocId": "A-A1-03-004-001",
     "name": "Pos Keamanan 1",
     "taskListId": "KTI_0021",
     "interval": "1wk",
-    "location": "PS II Waduk"
+    "location": "PS II Waduk",
+    "plantId": "I-22L003"
   },
   {
     "funcLocId": "A-A1-03-004-002",
     "name": "Pos Keamanan 2",
     "taskListId": "KTI_0021",
     "interval": "1wk",
-    "location": "PS II Waduk"
+    "location": "PS II Waduk",
+    "plantId": "I-22L003"
   },
   {
     "funcLocId": "A-A1-03-002",
     "name": "Pump Station II",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "PS II Waduk"
+    "location": "PS II Waduk",
+    "plantId": "I-22L003"
   },
   {
     "funcLocId": "A-A1-02-003-001",
     "name": "Control Room Cipasauran",
     "taskListId": "KTI_0021",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-006-001",
     "name": "Pos Keamanan",
     "taskListId": "KTI_0021",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-003-002",
     "name": "Ruang Capasitor Bank 6 kV Cipasauran",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-003-003",
     "name": "Ruang Transformator Cipasauran",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-003-004",
     "name": "Ruang Genset Cipasauran",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-003-005",
     "name": "Ruang Panel TM Cipasauran",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-003-006",
     "name": "Ruang Capasitor Bank TR Cipasauran",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-003-007",
     "name": "Ruang Chemical Cipasauran",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-003-008",
     "name": "Ruang Genset 800 KVA",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-003-009",
     "name": "Ruang Panel Listrik",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A1-02-004",
     "name": "Rumah Pompa PS VII",
     "taskListId": "KTI_0037",
     "interval": "1wk",
-    "location": "CIPASAURAN"
+    "location": "CIPASAURAN",
+    "plantId": "I-22L004"
   },
   {
     "funcLocId": "A-A2-03-006-002",

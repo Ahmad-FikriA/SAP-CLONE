@@ -6,10 +6,25 @@ const sequelize = require('../../config/database');
 const { Op } = require('sequelize');
 const NotificationService = require('../../services/notificationService');
 
+function safeParseArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      if (val.startsWith('[')) return [];
+      return [val];
+    }
+  }
+  return [];
+}
+
 exports.createReport = async (req, res, next) => {
   try {
-    const { kategori, deskripsi } = req.body;
-
+    const { kategori, deskripsi, lokasiTemuan } = req.body;
+    // user ID from verifyToken, mapped differently: userId could be in req.user.userId
     const userId = req.user.userId || req.user.id;
 
 
@@ -48,7 +63,8 @@ exports.createReport = async (req, res, next) => {
       reportNumber: reportNumber,
       kategori,
       deskripsi,
-      foto: fotos,
+      lokasiTemuan,
+      foto: fotos, // Sequelize will stringify array to JSON
       dilaporkanOleh: userId,
       status: 'menunggu_validasi_kadis_hse',
     });
@@ -108,7 +124,9 @@ exports.getAll = async (req, res, next) => {
 
     let whereClause = {};
 
-    if (role.includes('admin') || role === 'superadmin') {
+    if (role === 'hse_reporter') {
+      whereClause.dilaporkanOleh = req.user.userId || req.user.id;
+    } else if (role.includes('admin') || role === 'superadmin') {
       whereClause = {};
     } else if (divisi.includes('pphse') || divisi.includes('hse') || dinas.includes('hse')) {
       if (role.includes('kadiv') || role.includes('kepala divisi') || role.includes('kadis') || role.includes('kepala dinas')) {
@@ -273,7 +291,8 @@ exports.actionPerbaikan = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
     }
 
-    let fotos = report.fotoPerbaikan || [];
+    // Handle foto perbaikan
+    let fotos = safeParseArray(report.fotoPerbaikan);
     if (req.files && req.files.length > 0) {
       const newPhotos = req.files.map(file => `uploads/k3_safety/${file.filename}`);
       fotos = fotos.concat(newPhotos);
@@ -493,8 +512,104 @@ exports.validasiAkhir = async (req, res, next) => {
 };
 
 
+/**
+ * PUT /api/k3-safety/:id/revert-step
+ * Memundurkan status laporan yang sedang dalam proses investigasi
+ * kembali ke tahap 'menunggu_tindakan_hse'. Hanya untuk Admin/Kadiv.
+ */
+exports.revertStep = async (req, res, next) => {
+  try {
+    const reportId = req.params.id;
+    const role = (req.user.role || '').toLowerCase();
+    const dinas = (req.user.dinas || '').toLowerCase();
+    
+    // Auth Check: Cuma Admin, Developer, atau Kadis HSE
+    let allowed = false;
+    if (role.includes('admin') || role.includes('developer')) {
+      allowed = true;
+    } else if (role.includes('kadis') && dinas.includes('hse') && !dinas.includes('pphse')) {
+      allowed = true;
+    }
 
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin dan Kadis HSE yang dapat memundurkan tahapan' });
+    }
 
+    const report = await K3Report.findByPk(reportId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
+    }
+
+    if (report.status === 'selesai') {
+      return res.status(400).json({ success: false, message: 'Laporan yang sudah selesai tidak dapat dimundurkan tahapan' });
+    }
+
+    const currentStatus = report.status;
+    const statusPrevStepMap = {
+      // --- Validasi Awal / Tindakan ---
+      'menunggu_tindakan_hse': 'menunggu_validasi_kadis_hse',
+
+      // --- Perbaikan Langsung Flow ---
+      'menunggu_validasi_hasil_kadis_hse': 'menunggu_tindakan_hse',
+      'perbaikan_ditolak_pphse': 'menunggu_tindakan_hse',
+      'perbaikan_ditolak_kadis_hse': 'menunggu_validasi_hasil_kadis_hse', // membatalkan ditolak
+      'menunggu_validasi_akhir_kadiv_pphse': 'menunggu_validasi_hasil_kadis_hse',
+      'perbaikan_ditolak_kadiv_pphse': 'menunggu_validasi_akhir_kadiv_pphse',
+
+      // --- Investigasi Flow ---
+      'menunggu_verifikasi_investigasi': 'menunggu_tindakan_hse',
+      'investigasi_ditolak_kadis_hse': 'menunggu_verifikasi_investigasi',
+      'menunggu_validasi_kadiv': 'menunggu_verifikasi_investigasi',
+      'investigasi_ditolak_kadiv': 'menunggu_validasi_kadiv',
+    };
+
+    const targetStatus = statusPrevStepMap[currentStatus];
+
+    if (!targetStatus) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Status saat ini (${currentStatus}) adalah tahap paling awal atau tidak dapat dimundurkan.` 
+      });
+    }
+
+    // --- Clean up fields based on target status ---
+    if (targetStatus === 'menunggu_validasi_kadis_hse') {
+      // Kembali ke awal: hapus penugasan & jenis tindakan
+      report.ditugaskanKepada = null;
+      report.jenisTindakan = null;
+    } else if (targetStatus === 'menunggu_tindakan_hse') {
+      // Kembali ke pengerjaan staf HSE: hapus input hasil tindakan/investigasi
+      if (report.jenisTindakan === 'investigasi') {
+        report.investigasiCategory = null;
+        report.investigasiData = null;
+        report.fotoInvestigasi = null;
+        report.dokumenInvestigasi = null;
+        report.isDraftInvestigasi = false;
+      } else {
+        report.fotoPerbaikan = null;
+        report.tindakanPerbaikan = null;
+      }
+    }
+
+    // Update status
+    report.status = targetStatus;
+    await report.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: `Status berhasil dimundurkan ke "${targetStatus}"`,
+      data: report 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/k3-safety/:id/investigasi
+ * HSE Staff submits investigation data (multipart/form-data).
+ * Supports draft saving and final submission.
+ */
 exports.submitInvestigasi = async (req, res, next) => {
   try {
     const reportId = req.params.id;
@@ -534,7 +649,8 @@ exports.submitInvestigasi = async (req, res, next) => {
 
     const isDraft = isDraftInvestigasi === true || isDraftInvestigasi === 'true';
 
-    let fotos = report.fotoInvestigasi || [];
+    // Handle foto investigasi
+    let fotos = safeParseArray(report.fotoInvestigasi);
     if (req.files) {
       const fotoFiles = Array.isArray(req.files) 
         ? req.files.filter(f => f.fieldname === 'fotoInvestigasi')
@@ -835,10 +951,18 @@ exports.deleteReport = async (req, res, next) => {
   try {
     const reportId = req.params.id;
     const role = (req.user.role || '').toLowerCase();
+    const dinas = (req.user.dinas || '').toLowerCase();
     
+    let allowed = false;
+    if (role.includes('admin') || role.includes('developer')) {
+      allowed = true;
+    } else if (role.includes('kadis') && dinas.includes('hse') && !dinas.includes('pphse')) {
+      allowed = true;
+    }
 
-    if (!role.includes('admin') && !role.includes('developer')) {
-      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin yang dapat menghapus data' });
+    // Auth Check: Cuma Admin, Developer, dan Kadis HSE yang boleh
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin dan Kadis HSE yang dapat menghapus data' });
     }
 
     const report = await K3Report.findByPk(reportId);
@@ -858,10 +982,18 @@ exports.deleteReport = async (req, res, next) => {
 exports.deleteAllReports = async (req, res, next) => {
   try {
     const role = (req.user.role || '').toLowerCase();
+    const dinas = (req.user.dinas || '').toLowerCase();
     
+    let allowed = false;
+    if (role.includes('admin') || role.includes('developer')) {
+      allowed = true;
+    } else if (role.includes('kadis') && dinas.includes('hse') && !dinas.includes('pphse')) {
+      allowed = true;
+    }
 
-    if (!role.includes('admin') && !role.includes('developer')) {
-      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin yang dapat melakukan hapus semua data' });
+    // Auth Check
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Akses Ditolak: Hanya Admin dan Kadis HSE yang dapat melakukan hapus semua data' });
     }
 
     const count = await K3Report.destroy({
@@ -870,6 +1002,146 @@ exports.deleteAllReports = async (req, res, next) => {
     });
     
     res.status(200).json({ success: true, message: `Berhasil menghapus ${count} laporan K3 Safety secara permanen` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// -- Track Record / Stats ----------------------------------------------------------
+
+/**
+ * GET /api/k3-safety/stats
+ * Menghasilkan statistik agregat K3 untuk fitur Track Record / Leaderboard.
+ * - reporters: ranking user berdasarkan jumlah laporan yang dibuat
+ * - hseOfficers: ranking petugas HSE berdasarkan jumlah penugasan (breakdown investigasi/perbaikan)
+ * - categories: distribusi laporan per kategori
+ */
+exports.getStats = async (req, res, next) => {
+  try {
+    const reports = await K3Report.findAll({
+      attributes: ['id', 'kategori', 'status', 'jenisTindakan', 'dilaporkanOleh', 'ditugaskanKepada'],
+      include: [
+        {
+          model: User,
+          as: 'pelapor',
+          attributes: ['id', 'name', 'role', 'dinas', 'divisi'],
+        },
+        {
+          model: User,
+          as: 'petugasHse',
+          attributes: ['id', 'name', 'role', 'dinas', 'divisi'],
+        },
+      ],
+    });
+
+    // Filter laporan untuk mengecualikan yang ditolak (semua status yang mengandung 'ditolak')
+    const activeReports = reports.filter(r => {
+      const status = r.status || '';
+      return !status.toLowerCase().includes('ditolak');
+    });
+
+    const totalReports = activeReports.length;
+    const totalSelesai = activeReports.filter(r => r.status === 'selesai' || r.status === 'disetujui').length;
+    const totalInvestigasi = activeReports.filter(r => r.jenisTindakan === 'investigasi').length;
+    const totalPerbaikanLangsung = activeReports.filter(r => r.jenisTindakan === 'perbaikan_langsung').length;
+
+    // ── Reporters: siapa yang paling sering membuat laporan ────────────────
+    const reporterMap = {};
+    for (const r of activeReports) {
+      const uid = r.dilaporkanOleh;
+      if (!uid) continue;
+      if (!reporterMap[uid]) {
+        const p = r.pelapor;
+        reporterMap[uid] = {
+          id: uid,
+          name: p?.name || uid,
+          dinas: p?.dinas || '-',
+          divisi: p?.divisi || '-',
+          count: 0,
+          selesai: 0,
+        };
+      }
+      reporterMap[uid].count++;
+      if (r.status === 'selesai' || r.status === 'disetujui') {
+        reporterMap[uid].selesai++;
+      }
+    }
+    const reporters = Object.values(reporterMap).sort((a, b) => b.count - a.count);
+
+    // ── HSE Officers: siapa di Dinas HSE yang paling sering ditugaskan ────
+    // Pertama, kumpulkan semua user HSE dari penugasan di K3Report
+    const hseOfficerMap = {};
+    for (const r of activeReports) {
+      const uid = r.ditugaskanKepada;
+      if (!uid) continue;
+      if (!hseOfficerMap[uid]) {
+        const p = r.petugasHse;
+        hseOfficerMap[uid] = {
+          id: uid,
+          name: p?.name || uid,
+          dinas: p?.dinas || '-',
+          divisi: p?.divisi || '-',
+          count: 0,
+          investigasi: 0,
+          perbaikan: 0,
+          selesai: 0,
+        };
+      }
+      hseOfficerMap[uid].count++;
+      if (r.jenisTindakan === 'investigasi') {
+        hseOfficerMap[uid].investigasi++;
+      } else if (r.jenisTindakan === 'perbaikan_langsung') {
+        hseOfficerMap[uid].perbaikan++;
+      }
+      if (r.status === 'selesai' || r.status === 'disetujui') {
+        hseOfficerMap[uid].selesai++;
+      }
+    }
+
+    // Juga ambil user HSE yang belum pernah ditugaskan agar tetap muncul di leaderboard
+    const allHseUsers = await User.findAll({
+      where: { dinas: { [Op.like]: '%hse%' } },
+      attributes: ['id', 'name', 'role', 'dinas', 'divisi'],
+    });
+
+    for (const u of allHseUsers) {
+      if (!hseOfficerMap[u.id]) {
+        hseOfficerMap[u.id] = {
+          id: u.id,
+          name: u.name,
+          dinas: u.dinas || '-',
+          divisi: u.divisi || '-',
+          count: 0,
+          investigasi: 0,
+          perbaikan: 0,
+          selesai: 0,
+        };
+      }
+    }
+    const hseOfficers = Object.values(hseOfficerMap).sort((a, b) => b.count - a.count);
+
+    // ── Categories: distribusi laporan per kategori ────────────────────────
+    const categoryMap = {};
+    for (const r of activeReports) {
+      const cat = r.kategori || 'Lainnya';
+      categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+    }
+    const categories = Object.entries(categoryMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalReports,
+        totalSelesai,
+        totalInvestigasi,
+        totalPerbaikanLangsung,
+        reporters,
+        hseOfficers,
+        categories,
+      },
+    });
   } catch (error) {
     next(error);
   }

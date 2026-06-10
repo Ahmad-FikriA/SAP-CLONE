@@ -29,8 +29,8 @@ const storage = multer.diskStorage({
 const uploadK3Photos = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 2,
+    fileSize: 600 * 1024, // 600KB limit per photo (client compresses to 500KB, 600KB margin)
+    files: 3, // Max 3 files
   },
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) {
@@ -77,14 +77,17 @@ const uploadInvestigasi = multer({
 router.post(
   '/', 
   verifyToken, 
-  uploadK3Photos.array('foto', 2), 
+  uploadK3Photos.array('foto', 3), 
   (req, res, next) => {
     next();
   },
   k3SafetyCtrl.createReport
 );
 
+// GET /api/k3-safety/stats (track record / leaderboard)
+router.get('/stats', verifyToken, k3SafetyCtrl.getStats);
 
+// GET /api/k3-safety
 router.get('/', verifyToken, k3SafetyCtrl.getAll);
 
 
@@ -104,8 +107,11 @@ router.delete('/:id', verifyToken, k3SafetyCtrl.deleteReport);
 router.delete('/', verifyToken, k3SafetyCtrl.deleteAllReports);
 
 
+// PUT /api/k3-safety/:id/revert-step
+router.put('/:id/revert-step', verifyToken, k3SafetyCtrl.revertStep);
 
-
+// PUT /api/k3-safety/:id/investigasi
+// Multipart: fotoInvestigasi (max 2 images) + dokumenInvestigasi (max 1 doc)
 router.put(
   '/:id/investigasi',
   verifyToken,

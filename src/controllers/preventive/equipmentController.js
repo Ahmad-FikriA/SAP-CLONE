@@ -3,6 +3,7 @@
 const path = require('path');
 const fs   = require('fs');
 const { Op } = require('sequelize');
+const sequelize = require('../../config/database');
 const Equipment = require('../../models/Equipment');
 const Plant = require('../../models/Plant');
 const { Spk, SpkEquipment, SpkActivity } = require('../../models/Spk');
@@ -12,11 +13,45 @@ const User = require('../../models/User');
 const MAPS_DIR = path.join(__dirname, '..', '..', '..', 'data', 'maps');
 const SIPIL_FUNCLOC_JSON = path.join(__dirname, '..', '..', '..', 'data', 'sipil_funcloc_mappings.json');
 const SipilFunclocMapping = require('../../models/SipilFunclocMapping');
+const FunctionalLocation = require('../../models/FunctionalLocation');
+
+const GROUP_TO_CATEGORY = {
+  Mekanik:  'Mekanik',
+  Elektrik: 'Listrik',
+  Sipil:    'Sipil',
+  Otomasi:  'Otomasi',
+};
 
 
 const getAll = async (req, res) => {
+  const VALID_CAT = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
   const where = {};
-  if (req.query.category) where.category = req.query.category;
+
+  // Server-enforced category scope for kasie and kadis (except Kadis Pusat Perawatan)
+  const userRole = req.user?.role;
+  const isPusatPerawatan = userRole === 'kadis' && req.user?.dinas?.toLowerCase().includes('pusat perawatan');
+  let scopedCategory = null;
+  if (userRole === 'kasie' || (userRole === 'kadis' && !isPusatPerawatan)) {
+    scopedCategory = GROUP_TO_CATEGORY[req.user?.group] ?? null;
+  }
+
+  const requestedCat = req.query.category;
+  if (requestedCat) {
+    if (!VALID_CAT.includes(requestedCat)) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
+    // If user is scoped, ignore client's category param and enforce their own
+    const cat = scopedCategory ?? requestedCat;
+    where[Op.or] = [
+      { category: cat },
+      sequelize.literal(`JSON_CONTAINS(extra_categories, '"${cat}"')`),
+    ];
+  } else if (scopedCategory) {
+    where[Op.or] = [
+      { category: scopedCategory },
+      sequelize.literal(`JSON_CONTAINS(extra_categories, '"${scopedCategory}"')`),
+    ];
+  }
   if (req.query.plantId) where.plantId = req.query.plantId;
   if (req.query.funcLocId) where.funcLocId = { [Op.like]: `${req.query.funcLocId}%` };
   if (req.query.search) {
@@ -45,10 +80,13 @@ const create = async (req, res) => {
   if (exists) return res.status(409).json({ error: 'equipmentId already exists' });
 
   const body = { ...req.body };
+  if (!body.plantId) body.plantId = null;
+
   if (body.plantId && !body.plantName) {
     const plant = await Plant.findByPk(body.plantId);
     if (plant) body.plantName = plant.plantName;
   }
+  if (!body.plantId) body.plantName = null;
 
   const eq = await Equipment.create(body);
   res.status(201).json(eq);
@@ -88,17 +126,27 @@ const getOne = async (req, res) => {
 
 
 const update = async (req, res) => {
-  const eq = await Equipment.findByPk(req.params.equipmentId);
-  if (!eq) return res.status(404).json({ error: 'Equipment not found' });
+  try {
+    const eq = await Equipment.findByPk(req.params.equipmentId);
+    if (!eq) return res.status(404).json({ error: 'Equipment not found' });
 
-  const body = { ...req.body, equipmentId: eq.equipmentId };
-  if (body.plantId && !body.plantName) {
-    const plant = await Plant.findByPk(body.plantId);
-    if (plant) body.plantName = plant.plantName;
+    const body = { ...req.body, equipmentId: eq.equipmentId };
+
+    // Coerce empty-string plantId to null to avoid FK violation.
+    if (!body.plantId) body.plantId = null;
+
+    if (body.plantId && !body.plantName) {
+      const plant = await Plant.findByPk(body.plantId);
+      if (plant) body.plantName = plant.plantName;
+    }
+    if (!body.plantId) body.plantName = null;
+
+    await eq.update(body);
+    res.json(eq);
+  } catch (err) {
+    console.error('[equipment.update]', err.message);
+    res.status(500).json({ error: err.message });
   }
-
-  await eq.update(body);
-  res.json(eq);
 };
 
 
@@ -324,10 +372,40 @@ const syncSipilFuncloc = async (req, res) => {
     return res.status(400).json({ error: 'JSON file is empty or not an array' });
   }
 
+  // Build level-2 funcLoc prefix → plantId map from the DB hierarchy.
+  // Level-2 descriptions (e.g. "WTP Krenceng") are matched against plant names
+  // using case-insensitive substring matching in both directions.
+  // JSON entry's explicit plantId overrides this if provided.
+  const [level2Rows] = await FunctionalLocation.sequelize.query(
+    'SELECT func_loc_id, description FROM functional_locations WHERE level = 2'
+  );
+  const allPlants = await Plant.findAll({ attributes: ['plantId', 'plantName'] });
+  const plantNameById = Object.fromEntries(allPlants.map(p => [p.plantId, p.plantName]));
+
+  const prefixPlantMap = {}; // e.g. { 'A-A2-01': 'P-22L007' }
+  for (const fl of level2Rows) {
+    const desc = fl.description.toLowerCase();
+    const match = allPlants.find(p => {
+      const pName = p.plantName.toLowerCase();
+      return desc.includes(pName) || pName.includes(desc);
+    });
+    if (match) prefixPlantMap[fl.func_loc_id] = match.plantId;
+  }
+
   let synced = 0;
+  const unresolved = [];
+
   for (const entry of entries) {
     const { funcLocId, name, taskListId, interval, location } = entry;
     if (!funcLocId || !name) continue;
+
+    // Derive plant from funcLoc prefix (level-2 ancestor).
+    // JSON may still carry an explicit plantId as override — kept for backward compat.
+    const level2Prefix = funcLocId.split('-').slice(0, 3).join('-');
+    const plantId   = entry.plantId || prefixPlantMap[level2Prefix] || null;
+    const plantName = plantId ? (plantNameById[plantId] || null) : null;
+
+    if (!plantId) unresolved.push(funcLocId);
 
     await Equipment.upsert({
       equipmentId:        funcLocId,
@@ -335,6 +413,8 @@ const syncSipilFuncloc = async (req, res) => {
       category:           'Sipil',
       functionalLocation: location || null,
       funcLocId:          funcLocId,
+      plantId,
+      plantName,
     });
 
     await SipilFunclocMapping.upsert({
@@ -343,12 +423,17 @@ const syncSipilFuncloc = async (req, res) => {
       taskListId: taskListId || null,
       interval:   interval || '1wk',
       location:   location || null,
+      plantId,
     });
 
     synced++;
   }
 
-  res.json({ message: `${synced} funcloc Sipil berhasil disinkronisasi ke equipment`, synced });
+  res.json({
+    message: `${synced} funcloc Sipil berhasil disinkronisasi ke equipment`,
+    synced,
+    ...(unresolved.length ? { unresolved, warning: `${unresolved.length} funcLoc tidak dapat ditemukan plantId-nya` } : {}),
+  });
 };
 
 module.exports = { getAll, getOne, create, update, renameId, bulkDelete, bulkUpdate, remove, importExcel, getMeasurementHistory, syncSipilFuncloc };

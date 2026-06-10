@@ -12,6 +12,9 @@ const {
   resolveSupportedStatus,
   invalidateStatusEnumCache,
 } = require("../../services/inspectionStatusSupport");
+const {
+  updateScheduleStatusFromReports,
+} = require("../../services/inspectionScheduleStatus");
 const { notify } = require("../../services/notificationService");
 
 
@@ -91,19 +94,20 @@ function buildReportRejectionNotification(finalStatus, notes) {
 
 function canViewAllReports(user) {
   const profile = buildAccessProfile(user || {});
-  const appRole = profile?.appRole;
   const flags = profile?.flags || {};
 
-  return (
-    appRole === "kasie" ||
-    appRole === "kadis" ||
-    appRole === "kadiv" ||
-    Boolean(
-      flags.isInspectionPlanner ||
-        flags.isInspectionApprover ||
-        flags.isInspectionMonitor,
-    )
+  return Boolean(
+    flags.isInspectionPlanner ||
+      flags.isInspectionApprover ||
+      flags.isInspectionMonitor,
   );
+}
+
+function canReviewReports(user) {
+  const profile = buildAccessProfile(user || {});
+  const flags = profile?.flags || {};
+
+  return Boolean(flags.isInspectionApprover || flags.isInspectionPlanner);
 }
 
 function normalizeReportStatus(status, fallback = "draft") {
@@ -158,6 +162,15 @@ function parsePhotoRecords(photos, reportId) {
     .filter(Boolean);
 }
 
+/**
+ * Parse raw attachment paths into a clean array of non-empty strings.
+ */
+function parseAttachmentPaths(attachments) {
+  if (!Array.isArray(attachments)) return [];
+  return attachments
+    .map((a) => String(a || "").trim())
+    .filter((a) => a.length > 0);
+}
 
 
 
@@ -170,6 +183,11 @@ async function listReports(req, res) {
 
     if (req.query.status) where.status = req.query.status;
 
+    // Filter per jadwal (dipakai oleh web modal detail)
+    if (req.query.scheduleId) {
+      where.scheduleId = Number(req.query.scheduleId);
+    }
+
     if (requestedSubmittedBy) {
       if (!hasGlobalAccess && requestedSubmittedBy !== requesterNik) {
         return res.status(403).json({
@@ -178,7 +196,9 @@ async function listReports(req, res) {
         });
       }
       where.submittedBy = requestedSubmittedBy;
-    } else if (!hasGlobalAccess) {
+    } else if (!hasGlobalAccess && !req.query.scheduleId) {
+      // Jika bukan akses global & tidak filter per scheduleId,
+      // batasi hanya ke laporan milik sendiri
       if (!requesterNik) {
         return res.status(403).json({
           success: false,
@@ -307,6 +327,7 @@ async function createReport(req, res) {
         kriteria,
         kategoriK3: kategoriK3 || null,
         signaturePath: signaturePath || null,
+        attachments: parseAttachmentPaths(req.body.attachments),
         status: reportStatus,
         submittedBy: req.user.nik,
         submittedAt: isSubmitted ? new Date() : null,
@@ -320,8 +341,9 @@ async function createReport(req, res) {
       await InspectionReportPhoto.bulkCreate(photoRecords, { transaction: t });
     }
 
+    // Update schedule status according to report coverage in the schedule range.
     if (isSubmitted) {
-      await schedule.update({ status: "completed" }, { transaction: t });
+      await updateScheduleStatusFromReports(schedule, t);
     } else if (["scheduled", "in_progress"].includes(schedule.status)) {
       await schedule.update({ status: "in_progress" }, { transaction: t });
     }
@@ -342,7 +364,7 @@ async function createReport(req, res) {
 
 
     if (isSubmitted) {
-      notify({
+      await notify({
         module: 'inspection',
         type: 'report_submitted',
         title: 'Laporan Inspeksi Baru',
@@ -433,6 +455,10 @@ async function updateReport(req, res) {
         ? report.submittedAt || new Date()
         : null;
 
+    if (req.body.attachments !== undefined) {
+      updatePayload.attachments = parseAttachmentPaths(req.body.attachments);
+    }
+
     await report.update(updatePayload, { transaction: t });
 
     if (req.body.photos !== undefined) {
@@ -451,7 +477,7 @@ async function updateReport(req, res) {
 
     if (report.schedule) {
       if (nextStatus === "submitted") {
-        await report.schedule.update({ status: "completed" }, { transaction: t });
+        await updateScheduleStatusFromReports(report.schedule, t);
       } else if (["scheduled", "in_progress"].includes(report.schedule.status)) {
         await report.schedule.update({ status: "in_progress" }, { transaction: t });
       }
@@ -464,7 +490,7 @@ async function updateReport(req, res) {
     });
 
     if (nextStatus === "submitted" && report.status !== "submitted") {
-      notify({
+      await notify({
         module: 'inspection',
         type: 'report_submitted',
         title: 'Laporan Inspeksi Baru',
@@ -496,6 +522,14 @@ async function approveReport(req, res) {
   const t = await sequelize.transaction();
 
   try {
+    if (!canReviewReports(req.user)) {
+      await t.rollback();
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses untuk meninjau laporan inspeksi.",
+      });
+    }
+
     const report = await InspectionReport.findByPk(req.params.id, {
       include: [{ association: "schedule" }],
       transaction: t,
@@ -518,7 +552,10 @@ async function approveReport(req, res) {
       { transaction: t },
     );
 
+    await updateScheduleStatusFromReports(report.schedule, t);
 
+    // If kerusakan found → auto-create follow-up
+    // Branching: manusia → assign ke Dinas HSE, selain itu → assign ke Dinas Perawatan
     if (report.hasKerusakan) {
       const kategori = report.kategoriK3 || req.body.kategoriK3;
       const isManusia = kategori === "manusia";
@@ -590,6 +627,14 @@ async function rejectReport(req, res) {
   const t = await sequelize.transaction();
 
   try {
+    if (!canReviewReports(req.user)) {
+      await t.rollback();
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses untuk meninjau laporan inspeksi.",
+      });
+    }
+
     const report = await InspectionReport.findByPk(req.params.id, {
       include: [{ association: "schedule" }],
       transaction: t,

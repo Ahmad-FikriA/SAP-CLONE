@@ -57,15 +57,17 @@ router.put('/requests/:id', verifyToken, canViewNotification, reqCtrl.update);
 
 router.delete('/requests', verifyToken, requirePlanner, reqCtrl.deleteAll);
 
-router.delete('/requests/:id', verifyToken, canViewNotification, reqCtrl.remove);
+// DELETE /api/corrective/requests/:id
+router.delete('/requests/:id', verifyToken, requirePlanner, reqCtrl.remove);
 
-
-router.post('/requests/bulk-delete', verifyToken, reqCtrl.bulkDelete);
+// POST /api/corrective/requests/bulk-delete
+router.post('/requests/bulk-delete', verifyToken, requirePlanner, reqCtrl.bulkDelete);
 
 
 router.post("/requests/:id/approve-planner", verifyToken, requirePlanner, reqCtrl.approvePlanner);
 router.post("/requests/:id/reject-planner", verifyToken, requirePlanner, reqCtrl.rejectPlanner);
 router.post("/requests/:id/update-sap-number", verifyToken, requirePlanner, reqCtrl.updateSapNumber);
+router.patch("/requests/:id/admin-status", verifyToken, reqCtrl.adminUpdateStatus);
 
 
 router.post('/requests/:id/approve', verifyToken, reqCtrl.approveKadisPusat);

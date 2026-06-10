@@ -1,0 +1,330 @@
+"use client";
+
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { toast } from "sonner";
+import { apiGet, apiPost, apiDelete, apiUpload, apiPatch } from "@/lib/api";
+
+export function useCorrective() {
+  const [requests, setRequests] = useState([]);
+  const [spks, setSpks] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [equipment, setEquipment] = useState([]);
+  const [functionalLocations, setFunctionalLocations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterApprovalStatus, setFilterApprovalStatus] = useState("");
+  const [filterSpkStatus, setFilterSpkStatus] = useState("");
+  const initialLoadDone = useRef(false);
+
+  const loadAll = useCallback(async () => {
+    // Only show loading skeleton on the very first load
+    if (!initialLoadDone.current) setLoading(true);
+    try {
+      const [reqData, sapSpkRes, eqRes, flRes] = await Promise.all([
+        apiGet("/corrective/requests"),
+        apiGet("/corrective/sap-spk"),
+        apiGet("/equipment?limit=10000"),
+        apiGet("/functional-locations?limit=10000"),
+      ]);
+      // Hide from Notifikasi tab only when the SPK is already matched with SAP import
+      const matchedStatuses = ["spk_issued", "spk_masuk", "eksekusi", "menunggu_review_kadis_pp", "menunggu_review_kadis_pelapor", "selesai"];
+      setRequests(Array.isArray(reqData) ? reqData.filter(r => !matchedStatuses.includes(r.approvalStatus)) : []);
+
+      const allSpks = Array.isArray(sapSpkRes?.data) ? sapSpkRes.data : [];
+      let filteredSpks = allSpks;
+      if (filterSpkStatus) {
+        filteredSpks = allSpks.filter((s) => s.status === filterSpkStatus);
+      }
+
+      setSpks(
+        filteredSpks.filter(
+          (s) => s.status !== "selesai" && s.status !== "ditolak",
+        ),
+      );
+      setHistory(
+        allSpks.filter((s) => s.status === "selesai" || s.status === "ditolak"),
+      );
+
+      // Store equipment and functional location data for mapping
+      setEquipment(Array.isArray(eqRes?.data) ? eqRes.data : (Array.isArray(eqRes) ? eqRes : []));
+      setFunctionalLocations(Array.isArray(flRes?.data) ? flRes.data : (Array.isArray(flRes) ? flRes : []));
+
+    } catch (e) {
+      toast.error("Gagal memuat data: " + e.message);
+    } finally {
+      setLoading(false);
+      initialLoadDone.current = true;
+    }
+  }, [filterSpkStatus]);
+
+  useEffect(() => {
+    loadAll();
+    const interval = setInterval(loadAll, 5000);
+    return () => clearInterval(interval);
+  }, [loadAll]);
+
+  const filteredRequests = useMemo(() => {
+    const filtered = filterApprovalStatus
+      ? requests.filter((r) => r.approvalStatus === filterApprovalStatus)
+      : requests;
+
+    return [...filtered].sort((a, b) => {
+      if (a.approvalStatus === "pending" && b.approvalStatus !== "pending") return -1;
+      if (a.approvalStatus !== "pending" && b.approvalStatus === "pending") return 1;
+      return (
+        new Date(b.notificationDate || b.submittedAt || 0) -
+        new Date(a.notificationDate || a.submittedAt || 0)
+      );
+    });
+  }, [requests, filterApprovalStatus]);
+
+  // ── Actions ──────────────────────────────────────────────────────────────
+
+  async function uploadExcel(file) {
+    const formData = new FormData();
+    formData.append("excelFile", file);
+    const resData = await apiUpload("/corrective/sap-spk/upload-excel", formData);
+    if (resData.status === "success") {
+      toast.success(resData.message);
+      return resData.data;
+    }
+    throw new Error(resData.message || "Gagal mengupload file");
+  }
+
+  async function confirmBulkInsert(spkRows) {
+    const data = await apiPost("/corrective/sap-spk/bulk-insert", { spks: spkRows });
+    if (data.status === "success") {
+      toast.success(data.message);
+      await loadAll();
+      return data;
+    }
+    throw new Error(data.message || "Gagal menyimpan data");
+  }
+
+  async function submitManualSpk(formData) {
+    await apiPost("/corrective/sap-spk/manual", formData);
+    toast.success("SPK Manual berhasil dibuat");
+    await loadAll();
+  }
+
+  async function approvePlannerAction(id, sapOrderNumber) {
+    await apiPost(`/corrective/requests/${id}/approve-planner`, { sapOrderNumber });
+    toast.success("Laporan berhasil diterima");
+    await loadAll();
+  }
+
+  async function rejectPlannerAction(id, rejectionReason) {
+    await apiPost(`/corrective/requests/${id}/reject-planner`, { rejectionReason });
+    toast.success("Laporan berhasil ditolak");
+    await loadAll();
+  }
+
+  async function updateSapNumberAction(id, sapOrderNumber) {
+    await apiPost(`/corrective/requests/${id}/update-sap-number`, { sapOrderNumber });
+    toast.success("Nomor SAP berhasil diperbarui");
+    await loadAll();
+  }
+
+  async function approveKadisPpAction(orderNumber) {
+    await apiPost(`/corrective/sap-spk/${orderNumber}/approve-kadis-pp`, {});
+    toast.success("Berhasil disetujui");
+    await loadAll();
+  }
+
+  async function rejectKadisPpAction(orderNumber, rejectionNote) {
+    await apiPost(`/corrective/sap-spk/${orderNumber}/reject-kadis-pp`, { rejection_note: rejectionNote });
+    toast.success("Berhasil ditolak");
+    await loadAll();
+  }
+
+  async function approveKadisPelaporAction(orderNumber) {
+    await apiPost(`/corrective/sap-spk/${orderNumber}/approve-kadis-pelapor`, {});
+    toast.success("Berhasil disetujui oleh Pelapor");
+    await loadAll();
+  }
+
+  async function rejectKadisPelaporAction(orderNumber, rejectionNote) {
+    await apiPost(`/corrective/sap-spk/${orderNumber}/reject-kadis-pelapor`, { rejection_note: rejectionNote });
+    toast.success("Berhasil ditolak oleh Pelapor");
+    await loadAll();
+  }
+
+  async function deleteRequestAction(id) {
+    await apiDelete(`/corrective/requests/${id}`);
+    toast.success("Berhasil dihapus");
+    await loadAll();
+  }
+
+  async function deleteAllRequestsAction() {
+    await apiDelete("/corrective/requests");
+    toast.success("Berhasil dihapus");
+    await loadAll();
+  }
+
+  async function deleteSpkAction(orderNumber) {
+    const data = await apiDelete(`/corrective/sap-spk/${orderNumber}`);
+    toast.success(data?.message || "Berhasil dihapus");
+    await loadAll();
+  }
+
+  async function deleteAllSpksAction() {
+    const data = await apiDelete("/corrective/sap-spk");
+    toast.success(data?.message || "Berhasil dihapus");
+    await loadAll();
+  }
+
+  async function uploadHistoryExcelAction(file) {
+    const formData = new FormData();
+    formData.append("excelFile", file);
+    const resData = await apiUpload("/corrective/sap-spk/upload-history", formData);
+    if (resData.status === "success") {
+      toast.success(resData.message);
+
+      // Show warning for skipped rows (active status in system)
+      if (resData.data?.skipped > 0) {
+        const details = resData.data.skippedDetail || [];
+        const STATUS_LABELS = {
+          baru_import: "Tugas Baru",
+          eksekusi: "Eksekusi",
+          menunggu_review_kadis_pp: "Review Kadis PP",
+          menunggu_review_kadis_pelapor: "Review Kadis Pelapor",
+          ditolak: "Ditolak",
+        };
+        const list = details
+          .slice(0, 5)
+          .map((d) => `• ${d.order_number} (${STATUS_LABELS[d.current_status] || d.current_status})`)
+          .join("\n");
+        const extra = details.length > 5 ? `\n...dan ${details.length - 5} lainnya` : "";
+        toast.warning(`${resData.data.skipped} SPK dilewati karena masih aktif:\n${list}${extra}`, {
+          duration: 10000,
+        });
+      }
+
+      await loadAll();
+      return resData.data;
+    }
+    throw new Error(resData.message || "Gagal mengupload file history");
+  }
+
+  async function adminUpdateStatusAction(id, payload) {
+    const res = await apiPatch(`/corrective/requests/${id}/admin-status`, payload);
+    if (res.success) {
+      toast.success("Status berhasil diperbarui (Force Update)");
+      await loadAll();
+    } else {
+      throw new Error(res.error || "Gagal memperbarui status");
+    }
+  }
+
+  async function updateSapSpkAction(orderNumber, payload) {
+    const res = await apiPatch(`/corrective/sap-spk/${orderNumber}`, payload);
+    if (res.status === "success") {
+      toast.success("Data SPK berhasil diperbarui");
+      await loadAll();
+    } else {
+      throw new Error(res.message || "Gagal memperbarui data SPK");
+    }
+  }
+
+  async function exportHistoryAction(ids) {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const res = await fetch(`${baseUrl}/api/corrective/sap-spk/export-history`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ids }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Gagal mengexport file");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `History_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error("Gagal export: " + e.message);
+      throw e;
+    }
+  }
+
+  // ── Material Management ────────────────────────────────────────────────────
+
+  async function searchMaterials(query) {
+    if (!query || query.length < 1) return [];
+    try {
+      const res = await apiGet(`/materials?search=${encodeURIComponent(query)}`);
+      return Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+    } catch {
+      return [];
+    }
+  }
+
+  async function addMaterialToSpkAction(orderNumber, materialId, quantityUsed) {
+    const res = await apiPost(`/corrective/sap-spk/${orderNumber}/materials`, {
+      materialId,
+      quantityUsed,
+    });
+    if (res.status === 'success') {
+      toast.success('Material berhasil ditambahkan ke SPK');
+      await loadAll();
+      return res.data;
+    }
+    throw new Error(res.message || 'Gagal menambahkan material');
+  }
+
+  async function removeMaterialFromSpkAction(orderNumber, materialRecordId) {
+    const res = await apiDelete(`/corrective/sap-spk/${orderNumber}/materials/${materialRecordId}`);
+    if (res.status === 'success') {
+      toast.success('Material dihapus dari SPK, stok dikembalikan');
+      await loadAll();
+    } else {
+      throw new Error(res.message || 'Gagal menghapus material');
+    }
+  }
+
+  return {
+    requests,
+    spks,
+    history,
+    equipment,
+    functionalLocations,
+    loading,
+    filteredRequests,
+    filterApprovalStatus,
+    setFilterApprovalStatus,
+    filterSpkStatus,
+    setFilterSpkStatus,
+    loadAll,
+    uploadExcel,
+    confirmBulkInsert,
+    submitManualSpk,
+    approvePlannerAction,
+    rejectPlannerAction,
+    updateSapNumberAction,
+    approveKadisPpAction,
+    rejectKadisPpAction,
+    approveKadisPelaporAction,
+    rejectKadisPelaporAction,
+    deleteRequestAction,
+    deleteAllRequestsAction,
+    deleteSpkAction,
+    deleteAllSpksAction,
+    uploadHistoryExcelAction,
+    adminUpdateStatusAction,
+    updateSapSpkAction,
+    exportHistoryAction,
+    searchMaterials,
+    addMaterialToSpkAction,
+    removeMaterialFromSpkAction,
+  };
+}

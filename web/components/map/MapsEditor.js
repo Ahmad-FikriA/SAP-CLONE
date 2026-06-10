@@ -72,7 +72,15 @@ export default function MapsEditor({ onMapReady, className = 'h-96 w-full', cent
 
     return () => {
       if (mapRef.current) {
-        mapRef.current.remove();
+        const currentMap = mapRef.current;
+        if (containerRef.current) {
+          const animatedEl = containerRef.current.querySelectorAll('.leaflet-zoom-animated');
+          animatedEl.forEach((el) => {
+            el.style.transition = 'none';
+            el.style.webkitTransition = 'none';
+          });
+        }
+        currentMap.remove();
         mapRef.current = null;
       }
     };

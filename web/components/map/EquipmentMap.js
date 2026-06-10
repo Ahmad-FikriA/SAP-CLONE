@@ -202,7 +202,18 @@ export default function EquipmentMap({ equipment, plants, plantId, onMapReady, o
     init();
 
     return () => {
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+      if (mapRef.current) {
+        const currentMap = mapRef.current;
+        if (containerRef.current) {
+          const animatedEl = containerRef.current.querySelectorAll('.leaflet-zoom-animated');
+          animatedEl.forEach((el) => {
+            el.style.transition = 'none';
+            el.style.webkitTransition = 'none';
+          });
+        }
+        currentMap.remove();
+        mapRef.current = null;
+      }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

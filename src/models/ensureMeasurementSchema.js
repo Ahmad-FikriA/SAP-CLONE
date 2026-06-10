@@ -57,6 +57,7 @@ async function ensureInspectionScheduleRecurringSchema() {
     await qi.addColumn(table, 'recurringInstance', { type: DataTypes.INTEGER, allowNull: true });
 }
 
+
 module.exports = {
   ensureGeneralTaskListActivitySchema,
   ensureSpkActivitySchema,

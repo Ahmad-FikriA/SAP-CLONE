@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { apiGet, apiPut, apiDelete } from '@/lib/api';
-import { getUser, canDelete } from '@/lib/auth';
-import { toast } from 'sonner';
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { apiGet, apiPut, apiDelete, apiFetch } from "@/lib/api";
+import { getUser, canDelete } from "@/lib/auth";
+import { toast } from "sonner";
+
 import {
   Dialog,
   DialogContent,
@@ -19,13 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  ShieldCheck, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Clock, 
-  FileText, 
-  LayoutDashboard, 
+import {
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  FileText,
+  LayoutDashboard,
   RefreshCw,
   Search,
   Filter,
@@ -38,153 +40,493 @@ import {
   Zap,
   Award,
   ChevronRight,
+  ChevronLeft,
   MoreVertical,
   ExternalLink,
   ClipboardCheck,
+  ClipboardList,
+  Loader2,
   AlertOctagon,
   HeartPulse,
   Flame,
   Stethoscope,
   Wrench,
-  Trash2
+  Trash2,
+  Camera,
+  MapPin,
+  XCircle,
+  Plus,
+  SwitchCamera,
+  Ban,
+  Crosshair,
+  Cross,
+  Timer,
+  Accessibility,
+  Skull,
+  Lightbulb,
+  ListChecks,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, getMediaUrl } from "@/lib/utils";
 
 const TABS = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { key: 'active', label: 'Laporan Aktif', icon: Activity },
-  { key: 'history', label: 'Riwayat', icon: CheckCircle2 },
-];
-
-const METRICS = [
-  { 
-    id: 'nmrr', 
-    title: 'NMRR', 
-    subtitle: 'Near Miss Reporting Rate', 
-    value: '12.5%', 
-    icon: AlertTriangle, 
-    color: 'bg-blue-500', 
-    light: 'bg-blue-50',
-    text: 'text-blue-600'
-  },
-  { 
-    id: 'sor', 
-    title: 'SOR', 
-    subtitle: 'Safety Observation Rate', 
-    value: '45.2%', 
-    icon: Eye, 
-    color: 'bg-emerald-500', 
-    light: 'bg-emerald-50',
-    text: 'text-emerald-600'
-  },
-  { 
-    id: 'cacr', 
-    title: 'CACR', 
-    subtitle: 'Corrective Action Closure', 
-    value: '88.0%', 
-    icon: ClipboardCheck, 
-    color: 'bg-violet-500', 
-    light: 'bg-violet-50',
-    text: 'text-violet-600'
-  },
-  { 
-    id: 'trir', 
-    title: 'TRIR', 
-    subtitle: 'Total Recordable Incident Rate', 
-    value: '0.42', 
-    icon: HeartPulse, 
-    color: 'bg-amber-500', 
-    light: 'bg-amber-50',
-    text: 'text-amber-600'
-  },
-  { 
-    id: 'ltifr', 
-    title: 'LTIFR', 
-    subtitle: 'Loss Time Injury Frequency', 
-    value: '0.00', 
-    icon: Stethoscope, 
-    color: 'bg-indigo-500', 
-    light: 'bg-indigo-50',
-    text: 'text-indigo-600'
-  },
-  { 
-    id: 'fatality', 
-    title: 'Fatality Rate', 
-    subtitle: 'Kematian Akibat Kerja', 
-    value: '0', 
-    icon: AlertOctagon, 
-    color: 'bg-rose-500', 
-    light: 'bg-rose-50',
-    text: 'text-rose-600'
-  },
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "active", label: "Laporan Aktif", icon: Activity },
+  { key: "history", label: "Riwayat", icon: CheckCircle2 },
 ];
 
 const STATUS_CONFIG = {
-  menunggu_review_kadiv_pelapor: { label: 'Review Pelapor', color: 'bg-amber-100 text-amber-700' },
-  menunggu_review_kadiv_pphse: { label: 'Review Kadiv', color: 'bg-amber-100 text-amber-700' },
-  menunggu_validasi_kadiv_pphse: { label: 'Validasi PPHSE', color: 'bg-blue-100 text-blue-700' },
-  menunggu_validasi_kadis_hse: { label: 'Validasi HSE', color: 'bg-amber-100 text-amber-700' },
-  menunggu_tindakan_hse: { label: 'Tindakan HSE', color: 'bg-blue-100 text-blue-700' },
-  menunggu_verifikasi_investigasi: { label: 'Verifikasi Investigasi', color: 'bg-indigo-100 text-indigo-700' },
-  menunggu_validasi_kadiv: { label: 'Validasi Kadiv', color: 'bg-purple-100 text-purple-700' },
-  menunggu_validasi_hasil_kadis_hse: { label: 'Validasi Hasil', color: 'bg-indigo-100 text-indigo-700' },
-  menunggu_validasi_akhir_kadiv_pphse: { label: 'Verifikasi Akhir', color: 'bg-purple-100 text-purple-700' },
-  selesai: { label: 'Selesai', color: 'bg-emerald-100 text-emerald-700' },
-  disetujui: { label: 'Disetujui', color: 'bg-emerald-100 text-emerald-700' },
-  ditolak: { label: 'Ditolak', color: 'bg-rose-100 text-rose-700' },
-  ditolak_kadiv_pphse: { label: 'Ditolak Kadiv', color: 'bg-rose-100 text-rose-700' },
-  ditolak_kadis_hse: { label: 'Ditolak HSE', color: 'bg-rose-100 text-rose-700' },
-  investigasi_ditolak_kadis_hse: { label: 'Investigasi Ditolak', color: 'bg-rose-100 text-rose-700' },
-  investigasi_ditolak_kadiv: { label: 'Investigasi Ditolak', color: 'bg-rose-100 text-rose-700' },
-  perbaikan_ditolak_pphse: { label: 'Perbaikan Ditolak', color: 'bg-rose-100 text-rose-700' },
+  menunggu_review_kadiv_pelapor: {
+    label: "Review Pelapor",
+    color: "bg-amber-100 text-amber-700",
+  },
+  menunggu_review_kadiv_pphse: {
+    label: "Review Kadiv",
+    color: "bg-amber-100 text-amber-700",
+  },
+  menunggu_validasi_kadiv_pphse: {
+    label: "Validasi PPHSE",
+    color: "bg-blue-100 text-blue-700",
+  },
+  menunggu_validasi_kadis_hse: {
+    label: "Validasi HSE",
+    color: "bg-amber-100 text-amber-700",
+  },
+  menunggu_tindakan_hse: {
+    label: "Tindakan HSE",
+    color: "bg-blue-100 text-blue-700",
+  },
+  menunggu_verifikasi_investigasi: {
+    label: "Verifikasi Investigasi",
+    color: "bg-indigo-100 text-indigo-700",
+  },
+  menunggu_validasi_kadiv: {
+    label: "Validasi Kadiv",
+    color: "bg-purple-100 text-purple-700",
+  },
+  menunggu_validasi_hasil_kadis_hse: {
+    label: "Validasi Hasil",
+    color: "bg-indigo-100 text-indigo-700",
+  },
+  menunggu_validasi_akhir_kadiv_pphse: {
+    label: "Verifikasi Akhir",
+    color: "bg-purple-100 text-purple-700",
+  },
+  selesai: { label: "Selesai", color: "bg-emerald-100 text-emerald-700" },
+  disetujui: { label: "Disetujui", color: "bg-emerald-100 text-emerald-700" },
+  ditolak: { label: "Ditolak", color: "bg-rose-100 text-rose-700" },
+  ditolak_kadiv_pphse: {
+    label: "Ditolak Kadiv",
+    color: "bg-rose-100 text-rose-700",
+  },
+  ditolak_kadis_hse: {
+    label: "Ditolak HSE",
+    color: "bg-rose-100 text-rose-700",
+  },
+  investigasi_ditolak_kadis_hse: {
+    label: "Investigasi Ditolak",
+    color: "bg-rose-100 text-rose-700",
+  },
+  investigasi_ditolak_kadiv: {
+    label: "Investigasi Ditolak",
+    color: "bg-rose-100 text-rose-700",
+  },
+  perbaikan_ditolak_pphse: {
+    label: "Perbaikan Ditolak",
+    color: "bg-rose-100 text-rose-700",
+  },
 };
 
 function formatStatus(status) {
-  if (!status) return { label: '-', color: 'bg-slate-100 text-slate-600' };
+  if (!status) return { label: "-", color: "bg-slate-100 text-slate-600" };
   const config = STATUS_CONFIG[status];
   if (config) return config;
-  
+
   // Fallback formatting
-  const label = status.replace(/_/g, ' ')
-    .replace(/\b\w/g, l => l.toUpperCase())
-    .replace('Hse', 'HSE')
-    .replace('Pphse', 'PPHSE');
-    
-  return { label, color: 'bg-slate-100 text-slate-600' };
+  const label = status
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase())
+    .replace("Hse", "HSE")
+    .replace("Pphse", "PPHSE");
+
+  return { label, color: "bg-slate-100 text-slate-600" };
 }
 
+function getMetricClassification(id, valueNum) {
+  const key = id.toLowerCase();
+  if (key === "nmrr") {
+    if (valueNum >= 2)
+      return { label: "Baik", color: "bg-emerald-100 text-emerald-700" };
+    if (valueNum >= 1)
+      return { label: "Cukup", color: "bg-amber-100 text-amber-700" };
+    return { label: "Kurang", color: "bg-rose-100 text-rose-700" };
+  }
+  if (key === "sor") {
+    if (valueNum >= 5)
+      return { label: "Baik Sekali", color: "bg-indigo-100 text-indigo-700" };
+    if (valueNum >= 4)
+      return { label: "Baik", color: "bg-emerald-100 text-emerald-700" };
+    if (valueNum >= 3)
+      return { label: "Cukup", color: "bg-amber-100 text-amber-700" };
+    if (valueNum >= 2)
+      return { label: "Kurang", color: "bg-orange-100 text-orange-700" };
+    return { label: "Buruk", color: "bg-rose-100 text-rose-700" };
+  }
+  if (key === "cacr") {
+    if (valueNum >= 90)
+      return { label: "Baik Sekali", color: "bg-indigo-100 text-indigo-700" };
+    if (valueNum >= 70)
+      return { label: "Baik", color: "bg-emerald-100 text-emerald-700" };
+    if (valueNum >= 50)
+      return { label: "Cukup", color: "bg-amber-100 text-amber-700" };
+    if (valueNum >= 30)
+      return { label: "Kurang", color: "bg-orange-100 text-orange-700" };
+    return { label: "Buruk", color: "bg-rose-100 text-rose-700" };
+  }
+  if (key === "trir") {
+    if (valueNum <= 4.0)
+      return { label: "Baik Sekali", color: "bg-indigo-100 text-indigo-700" };
+    if (valueNum <= 8.0)
+      return { label: "Baik", color: "bg-emerald-100 text-emerald-700" };
+    if (valueNum <= 12.0)
+      return { label: "Cukup", color: "bg-amber-100 text-amber-700" };
+    if (valueNum <= 16.0)
+      return { label: "Kurang", color: "bg-orange-100 text-orange-700" };
+    return { label: "Buruk", color: "bg-rose-100 text-rose-700" };
+  }
+  if (key === "ltifr") {
+    if (valueNum <= 1.0)
+      return { label: "Baik Sekali", color: "bg-indigo-100 text-indigo-700" };
+    if (valueNum <= 2.0)
+      return { label: "Baik", color: "bg-emerald-100 text-emerald-700" };
+    if (valueNum <= 3.0)
+      return { label: "Cukup", color: "bg-amber-100 text-amber-700" };
+    if (valueNum <= 4.0)
+      return { label: "Kurang", color: "bg-orange-100 text-orange-700" };
+    return { label: "Buruk", color: "bg-rose-100 text-rose-700" };
+  }
+  return null;
+}
+
+const BANNER_SLIDES = [
+  {
+    id: 1,
+    url: "https://picsum.photos/seed/k3safety1/800/600",
+    title: "Safety Briefing Harian",
+    subtitle: "Komitmen keselamatan dimulai dari awal hari kerja",
+  },
+  {
+    id: 2,
+    url: "https://picsum.photos/seed/k3safety2/800/600",
+    title: "Inspeksi Alat Pelindung Diri",
+    subtitle: "Pemeriksaan kelengkapan APD sebelum bekerja",
+  },
+  {
+    id: 3,
+    url: "https://picsum.photos/seed/k3safety3/800/600",
+    title: "Pelatihan Tanggap Darurat",
+    subtitle: "Simulasi evakuasi dan penanganan keadaan darurat",
+  },
+  {
+    id: 4,
+    url: "https://picsum.photos/seed/k3safety4/800/600",
+    title: "Audit Keselamatan Kerja",
+    subtitle: "Evaluasi berkala sistem manajemen K3",
+  },
+  {
+    id: 5,
+    url: "https://picsum.photos/seed/k3safety5/800/600",
+    title: "Zero Accident Achievement",
+    subtitle: "Target nihil kecelakaan kerja tercapai",
+  },
+];
+
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+const INITIAL_FORM_DATA = {
+  kecelakaan: {
+    title: "Form Investigasi Kecelakaan",
+    description:
+      "Form ini digunakan untuk melengkapi data investigasi insiden kecelakaan kerja. Isi semua pertanyaan dengan lengkap dan akurat.",
+    questions: [],
+  },
+  penyakit_kerja: {
+    title: "Form Investigasi Penyakit Akibat Kerja",
+    description:
+      "Form ini digunakan untuk investigasi kasus penyakit yang disebabkan oleh kondisi kerja.",
+    questions: [],
+  },
+  kebakaran: {
+    title: "Form Investigasi Kebakaran",
+    description:
+      "Form ini digunakan untuk investigasi insiden kebakaran di area kerja.",
+    questions: [],
+  },
+};
+
 export default function HseDashboardPage() {
-  const [tab, setTab] = useState('dashboard');
+  const [tab, setTab] = useState("dashboard");
+  const [bannerSlide, setBannerSlide] = useState(0);
+  const [cameraSource, setCameraSource] = useState("create"); // "create" or "action"
+
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterKategori, setFilterKategori] = useState("semua");
+  const [filterStatus, setFilterStatus] = useState("semua");
+  const [k3Settings, setK3Settings] = useState(null);
+
+  const activeSlides = useMemo(() => {
+    if (k3Settings?.bannerSlides) {
+      try {
+        const parsed = typeof k3Settings.bannerSlides === 'string'
+          ? JSON.parse(k3Settings.bannerSlides)
+          : k3Settings.bannerSlides;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error("Error parsing bannerSlides", e);
+      }
+    }
+    return BANNER_SLIDES;
+  }, [k3Settings]);
+
+  const bannerTitle1 = k3Settings?.bannerTitle1 || "Zero Accident Strategy";
+  const bannerTitle2 = k3Settings?.bannerTitle2 || "Safety First, Always.";
+  const displayDescription = k3Settings?.bannerDescription || "Data kinerja keselamatan kerja yang diagregasi berdasarkan standar formulasi pelaporan insiden internasional.";
 
   const [selectedReport, setSelectedReport] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [isValidationOpen, setIsValidationOpen] = useState(false);
   const [validationAction, setValidationAction] = useState(null);
   const [staffList, setStaffList] = useState([]);
-  
-  const [jenisTindakan, setJenisTindakan] = useState('perbaikan_langsung');
-  const [assignedTo, setAssignedTo] = useState('');
-  const [catatanValidasi, setCatatanValidasi] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const currentUser = getUser();
-  const role = (currentUser?.role || '').toLowerCase();
-  const divisi = (currentUser?.divisi || '').toLowerCase();
+  const [jenisTindakan, setJenisTindakan] = useState("perbaikan_langsung");
+  const [assignedTo, setAssignedTo] = useState("");
+  const [catatanValidasi, setCatatanValidasi] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const isKadisHse = (role.includes('kadis') || role.includes('kepala dinas')) && (divisi.includes('pphse') || divisi.includes('hse'));
-  const isKadivPphse = (role.includes('kadiv') || role.includes('kepala divisi')) && (divisi.includes('pphse') || divisi.includes('hse'));
+  // ── States for Action / Investigation Form ──
+  const [isActionOpen, setIsActionOpen] = useState(false);
+  const [actionCategory, setActionCategory] = useState("kecelakaan");
+  const [actionAnswers, setActionAnswers] = useState({});
+  const [actionPhotos, setActionPhotos] = useState([]); // array of { file, preview }
+  const [existingPhotos, setExistingPhotos] = useState([]);
+  const [actionDoc, setActionDoc] = useState(null); // { file, name }
+  const [existingDoc, setExistingDoc] = useState(null);
+  const [tindakanLangsungText, setTindakanLangsungText] = useState("");
+
+  // Create Report States
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createData, setCreateData] = useState({
+    kategori: "",
+    deskripsi: "",
+    lokasiTemuan: "",
+  });
+  const [createPhotos, setCreatePhotos] = useState([]);       // Array of { file, preview }
+  const MAX_PHOTOS = 3;
+  const MAX_SIZE_KB = 500;
+
+  // Camera States
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const videoRef = useRef(null);
+  const [stream, setStream] = useState(null);
+  const [facingMode, setFacingMode] = useState("environment");
+
+  const currentUser = useMemo(() => getUser(), []);
+  const role = useMemo(() => (currentUser?.role || "").toLowerCase(), [currentUser]);
+  const divisi = useMemo(() => (currentUser?.divisi || "").toLowerCase(), [currentUser]);
+
+  const isKadisHse = useMemo(() => {
+    const dinas = (currentUser?.dinas || '').toLowerCase();
+    return (role.includes("kadis") || role.includes("kepala dinas")) &&
+           dinas.includes("hse") && !dinas.includes("pphse");
+  }, [role, currentUser]);
+  const isKadivPphse = useMemo(() =>
+    (role.includes("kadiv") || role.includes("kepala divisi")) &&
+    (divisi.includes("pphse") || divisi.includes("hse")), [role, divisi]);
+
+  const openActionForm = () => {
+    const repCat = selectedReport?.kategori?.toLowerCase() || "";
+    let defaultCat = "kecelakaan";
+    if (repCat.includes("penyakit") || repCat.includes("sakit")) {
+      defaultCat = "penyakit_kerja";
+    } else if (repCat.includes("kebakaran") || repCat.includes("api")) {
+      defaultCat = "kebakaran";
+    }
+    setActionCategory(defaultCat);
+    
+    let initialAnswers = {};
+    if (selectedReport?.investigasiData) {
+      try {
+        initialAnswers = typeof selectedReport.investigasiData === "string"
+          ? JSON.parse(selectedReport.investigasiData)
+          : selectedReport.investigasiData;
+      } catch (e) {
+        console.error("Gagal parse investigasiData", e);
+        initialAnswers = {};
+      }
+    }
+    setActionAnswers(initialAnswers);
+
+    if (selectedReport?.tindakanPerbaikan) {
+      setTindakanLangsungText(selectedReport.tindakanPerbaikan);
+    } else {
+      setTindakanLangsungText("");
+    }
+
+    // Load existing photos from report if any
+    const prevPhotos = selectedReport?.jenisTindakan === "investigasi"
+      ? selectedReport?.fotoInvestigasi
+      : selectedReport?.fotoPerbaikan;
+
+    if (Array.isArray(prevPhotos) && prevPhotos.length > 0) {
+      setExistingPhotos(prevPhotos);
+    } else {
+      setExistingPhotos([]);
+    }
+
+    if (selectedReport?.jenisTindakan === "investigasi" && selectedReport?.dokumenInvestigasi) {
+      setExistingDoc(selectedReport.dokumenInvestigasi);
+    } else {
+      setExistingDoc(null);
+    }
+
+    setActionPhotos([]);
+    setActionDoc(null);
+    setIsActionOpen(true);
+  };
+
+  const handleActionPhotosChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const maxPhotos = selectedReport?.jenisTindakan === "investigasi" ? 2 : 2;
+    const remaining = maxPhotos - actionPhotos.length;
+    if (remaining <= 0) {
+      toast.error(`Maksimal ${maxPhotos} foto`);
+      return;
+    }
+    const toProcess = files.slice(0, remaining);
+    for (const file of toProcess) {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} bukan file gambar`);
+        continue;
+      }
+      const compressed = await compressImage(file, MAX_SIZE_KB);
+      const preview = URL.createObjectURL(compressed);
+      setActionPhotos((prev) => [...prev, { file: compressed, preview }]);
+    }
+  };
+
+  const removeActionPhoto = (index) => {
+    setActionPhotos((prev) => {
+      const copy = [...prev];
+      URL.revokeObjectURL(copy[index].preview);
+      copy.splice(index, 1);
+      return copy;
+    });
+  };
+
+  const handleActionDocChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const allowedExtensions = [".pdf", ".doc", ".docx", ".xlsx", ".xls"];
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      toast.error("Format file tidak didukung! Hanya PDF, DOC, DOCX, XLS, atau XLSX.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ukuran file maksimal 5MB.");
+      return;
+    }
+    setActionDoc({ file, name: file.name });
+  };
+
+  const removeActionDoc = () => {
+    setActionDoc(null);
+  };
+
+  const submitAction = async (isDraft = false) => {
+    if (!selectedReport) return;
+
+    if (!isDraft) {
+      if (selectedReport.jenisTindakan === "perbaikan_langsung") {
+        if (!tindakanLangsungText.trim()) {
+          toast.error("Tindakan perbaikan wajib diisi.");
+          return;
+        }
+        if (actionPhotos.length === 0) {
+          toast.error("Minimal 1 foto bukti perbaikan wajib diupload.");
+          return;
+        }
+      } else {
+        const formConfig = k3Settings?.formInvestigasi?.[actionCategory] || INITIAL_FORM_DATA[actionCategory];
+        const questions = formConfig?.questions || [];
+        for (const q of questions) {
+          if (q.type === "section") continue;
+          if (q.required) {
+            const ans = actionAnswers[q.id];
+            if (ans === undefined || ans === null || ans === "" || (Array.isArray(ans) && ans.length === 0)) {
+              toast.error(`Pertanyaan "${q.label}" wajib diisi.`);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    setIsSubmitting(true);
+    try {
+      const fd = new FormData();
+      if (selectedReport.jenisTindakan === "perbaikan_langsung") {
+        fd.append("tindakanPerbaikan", tindakanLangsungText);
+        actionPhotos.forEach((p) => fd.append("fotoPerbaikan", p.file));
+        
+        await apiFetch(`/k3-safety/${selectedReport.id}/perbaikan`, { method: 'PUT', body: fd });
+      } else {
+        fd.append("investigasiCategory", actionCategory);
+        fd.append("isDraftInvestigasi", isDraft ? "true" : "false");
+        fd.append("investigasiData", JSON.stringify(actionAnswers));
+        
+        actionPhotos.forEach((p) => fd.append("fotoInvestigasi", p.file));
+        if (actionDoc) {
+          fd.append("dokumenInvestigasi", actionDoc.file);
+        }
+
+        await apiFetch(`/k3-safety/${selectedReport.id}/investigasi`, { method: 'PUT', body: fd });
+      }
+
+      toast.success(
+        isDraft 
+          ? "Draft investigasi berhasil disimpan" 
+          : "Tindakan berhasil dikirim"
+      );
+      
+      setIsActionOpen(false);
+      setIsDetailOpen(false);
+      loadData();
+    } catch (e) {
+      toast.error(e.message || "Gagal mengirim tindakan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const openDetail = (report) => {
     setSelectedReport(report);
-    setJenisTindakan('perbaikan_langsung');
-    setAssignedTo('');
-    setCatatanValidasi('');
+    setJenisTindakan("perbaikan_langsung");
+    setAssignedTo("");
+    setCatatanValidasi("");
     setIsDetailOpen(true);
   };
 
@@ -195,11 +537,14 @@ export default function HseDashboardPage() {
 
   const submitValidation = async () => {
     if (!selectedReport || !validationAction) return;
-    
+
     setIsSubmitting(true);
     try {
-      if (selectedReport.status === 'menunggu_validasi_kadis_hse' || selectedReport.status === 'menunggu_validasi_kadiv_pphse') {
-        if (validationAction === 'approve' && !assignedTo) {
+      if (
+        selectedReport.status === "menunggu_validasi_kadis_hse" ||
+        selectedReport.status === "menunggu_validasi_kadiv_pphse"
+      ) {
+        if (validationAction === "approve" && !assignedTo) {
           toast.error("Silakan pilih staf yang ditugaskan");
           setIsSubmitting(false);
           return;
@@ -208,32 +553,41 @@ export default function HseDashboardPage() {
           action: validationAction,
           catatanValidasi,
           assignedTo,
-          jenisTindakan
+          jenisTindakan,
         });
-      } else if (selectedReport.status === 'menunggu_validasi_akhir_kadiv_pphse') {
+      } else if (
+        selectedReport.status === "menunggu_validasi_akhir_kadiv_pphse"
+      ) {
         await apiPut(`/k3-safety/${selectedReport.id}/validasi-akhir`, {
           action: validationAction,
-          catatan: catatanValidasi
+          catatan: catatanValidasi,
         });
-      } else if (selectedReport.status === 'menunggu_validasi_hasil_kadis_hse') {
+      } else if (
+        selectedReport.status === "menunggu_validasi_hasil_kadis_hse"
+      ) {
         await apiPut(`/k3-safety/${selectedReport.id}/validasi-hasil`, {
           action: validationAction,
-          catatan: catatanValidasi
+          catatan: catatanValidasi,
         });
-      } else if (selectedReport.status === 'menunggu_verifikasi_investigasi') {
+      } else if (selectedReport.status === "menunggu_verifikasi_investigasi") {
         await apiPut(`/k3-safety/${selectedReport.id}/verifikasi-investigasi`, {
           action: validationAction,
-          catatan: catatanValidasi
+          catatan: catatanValidasi,
         });
-      } else if (selectedReport.status === 'menunggu_validasi_kadiv') {
-        await apiPut(`/k3-safety/${selectedReport.id}/validasi-investigasi-kadiv`, {
-          action: validationAction,
-          kadivType: 'pphse',
-          catatan: catatanValidasi
-        });
+      } else if (selectedReport.status === "menunggu_validasi_kadiv") {
+        await apiPut(
+          `/k3-safety/${selectedReport.id}/validasi-investigasi-kadiv`,
+          {
+            action: validationAction,
+            kadivType: "pphse",
+            catatan: catatanValidasi,
+          },
+        );
       }
-      
-      toast.success(`Laporan berhasil di${validationAction === 'approve' ? 'setujui' : 'tolak'}`);
+
+      toast.success(
+        `Laporan berhasil di${validationAction === "approve" ? "setujui" : "tolak"}`,
+      );
       setIsValidationOpen(false);
       setIsDetailOpen(false);
       loadReports();
@@ -247,8 +601,10 @@ export default function HseDashboardPage() {
   async function loadReports() {
     setLoading(true);
     try {
-      const res = await apiGet('/k3-safety');
-      setReports(Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []));
+      const res = await apiGet("/k3-safety");
+      setReports(
+        Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : [],
+      );
     } catch (e) {
       console.error(e);
     } finally {
@@ -257,8 +613,13 @@ export default function HseDashboardPage() {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.")) return;
-    
+    if (
+      !window.confirm(
+        "Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.",
+      )
+    )
+      return;
+
     setIsSubmitting(true);
     try {
       await apiDelete(`/k3-safety/${id}`);
@@ -273,11 +634,16 @@ export default function HseDashboardPage() {
   }
 
   async function handleBulkDelete() {
-    if (!window.confirm("PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA laporan K3 Safety? Tindakan ini akan menghapus seluruh data secara permanen!")) return;
-    
+    if (
+      !window.confirm(
+        "PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA laporan K3 Safety? Tindakan ini akan menghapus seluruh data secara permanen!",
+      )
+    )
+      return;
+
     setIsSubmitting(true);
     try {
-      await apiDelete('/k3-safety');
+      await apiDelete("/k3-safety");
       toast.success("Semua laporan berhasil dihapus");
       loadReports();
     } catch (e) {
@@ -289,12 +655,17 @@ export default function HseDashboardPage() {
 
   async function loadStaff() {
     try {
-      const res = await apiGet('/users');
-      const usersArray = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
-      const hseStaff = usersArray.filter(u => 
-        u.dinas?.toLowerCase().includes('hse') && 
-        !u.role?.toLowerCase().includes('kadis') &&
-        !u.role?.toLowerCase().includes('kadiv')
+      const res = await apiGet("/users");
+      const usersArray = Array.isArray(res)
+        ? res
+        : res?.data && Array.isArray(res.data)
+          ? res.data
+          : [];
+      const hseStaff = usersArray.filter(
+        (u) =>
+          u.dinas?.toLowerCase().includes("hse") &&
+          !u.role?.toLowerCase().includes("kadis") &&
+          !u.role?.toLowerCase().includes("kadiv"),
       );
       setStaffList(hseStaff);
     } catch (e) {
@@ -302,70 +673,609 @@ export default function HseDashboardPage() {
     }
   }
 
+  // ── dynamicTabs ──
+  const userDinasVal = useMemo(() => currentUser?.dinas?.toLowerCase() || '', [currentUser]);
+  const isAdminVal = useMemo(() => currentUser?.role === 'admin', [currentUser]);
+
+  const isHseDinas = useMemo(() => {
+    return userDinasVal.includes("hse") && !userDinasVal.includes("pphse");
+  }, [userDinasVal]);
+
+  const hasAccessToTugasku = useMemo(() => {
+    return isHseDinas || isAdminVal || currentUser?.role === 'developer';
+  }, [isHseDinas, isAdminVal, currentUser]);
+
+  const dynamicTabs = useMemo(() => {
+    const tabs = [
+      { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { key: "active", label: "Laporan Aktif", icon: Activity },
+    ];
+
+    if (currentUser && hasAccessToTugasku) {
+      tabs.push({ key: "tugasku", label: "Tugas Saya", icon: ListChecks });
+    }
+
+    tabs.push({ key: "history", label: "Riwayat", icon: CheckCircle2 });
+    return tabs;
+  }, [currentUser, hasAccessToTugasku]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab");
+      if (urlTab) {
+        if (urlTab === "tugasku" && !hasAccessToTugasku) {
+          setTab("dashboard");
+        } else {
+          setTab(urlTab);
+        }
+      }
+    }
+  }, [hasAccessToTugasku]);
+
   useEffect(() => {
     loadReports();
     loadStaff();
+    return () => {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+    };
   }, []);
 
-  const filteredReports = reports.filter(r => {
-    const matchesSearch = 
+  // --- Image compression utility ---
+  const compressImage = (file, maxSizeKB = 500) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+
+        // Scale down if very large
+        const MAX_DIM = 1920;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Try decreasing quality until under maxSizeKB
+        const tryCompress = (quality) => {
+          canvas.toBlob(
+            (blob) => {
+              if (blob.size > maxSizeKB * 1024 && quality > 0.1) {
+                tryCompress(quality - 0.1);
+              } else {
+                const compressed = new File([blob], file.name, { type: "image/jpeg" });
+                resolve(compressed);
+              }
+            },
+            "image/jpeg",
+            quality,
+          );
+        };
+
+        // If already small enough, resolve immediately
+        if (file.size <= maxSizeKB * 1024) {
+          canvas.toBlob(
+            (blob) => resolve(new File([blob], file.name, { type: "image/jpeg" })),
+            "image/jpeg",
+            0.92,
+          );
+        } else {
+          tryCompress(0.8);
+        }
+      };
+      img.src = url;
+    });
+  };
+
+  // --- Create Report Handlers ---
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remaining = MAX_PHOTOS - createPhotos.length;
+    if (remaining <= 0) {
+      toast.error(`Maksimal ${MAX_PHOTOS} foto`);
+      return;
+    }
+
+    const toProcess = files.slice(0, remaining);
+    if (files.length > remaining) {
+      toast.info(`Hanya ${remaining} foto lagi yang bisa ditambahkan`);
+    }
+
+    for (const file of toProcess) {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} bukan file gambar`);
+        continue;
+      }
+      const compressed = await compressImage(file, MAX_SIZE_KB);
+      const preview = URL.createObjectURL(compressed);
+      setCreatePhotos((prev) => [...prev, { file: compressed, preview }]);
+    }
+  };
+
+  const openCamera = async (source = "create", customFacingMode) => {
+    setCameraSource(source);
+    const mode = customFacingMode || facingMode;
+    try {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: mode },
+      });
+      setStream(mediaStream);
+      setIsCameraOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.play();
+        }
+      }, 100);
+    } catch (err) {
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError"
+      ) {
+        toast.error(
+          "Kamera diblokir! Silakan klik ikon gembok (🔒) di kiri atas (sebelah link web) dan izinkan akses kamera, lalu coba lagi.",
+          { duration: 6000 },
+        );
+      } else {
+        toast.error("Gagal mengakses kamera: " + err.message);
+      }
+    }
+  };
+
+  const switchCamera = () => {
+    const nextMode = facingMode === "environment" ? "user" : "environment";
+    setFacingMode(nextMode);
+    openCamera(cameraSource, nextMode);
+  };
+
+  const closeCamera = () => {
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    setStream(null);
+    setIsCameraOpen(false);
+  };
+
+  const takePhoto = async () => {
+    if (!videoRef.current) return;
+    
+    const limit = cameraSource === "action" ? 2 : MAX_PHOTOS;
+    const currentPhotos = cameraSource === "action" ? actionPhotos : createPhotos;
+
+    if (currentPhotos.length >= limit) {
+      toast.error(`Maksimal ${limit} foto`);
+      closeCamera();
+      return;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext("2d");
+
+    // Gambar foto dari video
+    ctx.drawImage(videoRef.current, 0, 0);
+
+    // Persiapan Watermark
+    const dateStr = new Date().toLocaleString("id-ID", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const watermarkLines = [
+      `MANTIS PPHSE - PT KTI`,
+      `Waktu: ${dateStr}`,
+    ];
+
+    // Ukuran font proporsional dengan tinggi gambar
+    const fontSize = Math.max(14, Math.floor(canvas.height * 0.025));
+    ctx.font = `bold ${fontSize}px sans-serif`;
+
+    const padding = fontSize * 0.6;
+    const lineHeight = fontSize * 1.4;
+
+    // Cari text yang paling panjang untuk kotak background
+    let maxTextWidth = 0;
+    watermarkLines.forEach((line) => {
+      const w = ctx.measureText(line).width;
+      if (w > maxTextWidth) maxTextWidth = w;
+    });
+
+    const boxWidth = maxTextWidth + padding * 2;
+    const boxHeight = watermarkLines.length * lineHeight + padding;
+
+    // Posisi di pojok kiri bawah
+    const x = Math.max(10, canvas.width * 0.02);
+    const y = canvas.height - boxHeight - Math.max(10, canvas.height * 0.02);
+
+    // Gambar background watermark (hitam transparan)
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.roundRect
+      ? ctx.roundRect(x, y, boxWidth, boxHeight, 8)
+      : ctx.fillRect(x, y, boxWidth, boxHeight);
+    if (ctx.roundRect) ctx.fill();
+
+    // Gambar text warna putih
+    ctx.fillStyle = "#FFFFFF";
+    ctx.textBaseline = "top";
+    watermarkLines.forEach((line, index) => {
+      ctx.fillText(line, x + padding, y + padding + index * lineHeight);
+    });
+
+    // Convert canvas to blob, then compress
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.92)
+    );
+    const rawFile = new File([blob], `camera_${Date.now()}.jpg`, { type: "image/jpeg" });
+    const compressed = await compressImage(rawFile, MAX_SIZE_KB);
+    const preview = URL.createObjectURL(compressed);
+    
+    if (cameraSource === "action") {
+      setActionPhotos((prev) => [...prev, { file: compressed, preview }]);
+    } else {
+      setCreatePhotos((prev) => [...prev, { file: compressed, preview }]);
+    }
+    closeCamera();
+  };
+
+  const removePhoto = (index) => {
+    setCreatePhotos((prev) => {
+      const copy = [...prev];
+      URL.revokeObjectURL(copy[index].preview);
+      copy.splice(index, 1);
+      return copy;
+    });
+  };
+
+  const submitCreate = async () => {
+    if (!createData.kategori || !createData.deskripsi) {
+      toast.error("Kategori dan Deskripsi wajib diisi");
+      return;
+    }
+    if (createPhotos.length === 0) {
+      toast.error("Minimal 1 foto bukti wajib dilampirkan");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const fd = new FormData();
+      fd.append("kategori", createData.kategori);
+      fd.append("deskripsi", createData.deskripsi);
+      if (createData.lokasiTemuan)
+        fd.append("lokasiTemuan", createData.lokasiTemuan);
+      createPhotos.forEach((p) => fd.append("foto", p.file));
+
+      await apiFetch("/k3-safety", { method: 'POST', body: fd });
+      toast.success("Laporan K3 berhasil dikirim");
+      setIsCreateOpen(false);
+      setCreateData({ kategori: "", deskripsi: "", lokasiTemuan: "" });
+      setCreatePhotos([]);
+      loadData();
+    } catch (e) {
+      toast.error(e.message || "Gagal membuat laporan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [reportsRes, settingsRes] = await Promise.all([
+        apiGet("/k3-safety"),
+        apiGet("/k3-settings").catch(() => null)
+      ]);
+      setReports(reportsRes.data || []);
+      if (settingsRes?.data) {
+        setK3Settings(settingsRes.data);
+      }
+    } catch (e) {
+      toast.error(e.message || "Gagal memuat data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  useEffect(() => {
+    loadData();
+    loadStaff();
+    return () => {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  // ── Banner auto-slide ──
+  useEffect(() => {
+    if (tab !== "dashboard" || activeSlides.length === 0) return;
+    const timer = setInterval(() => {
+      setBannerSlide((prev) => (prev + 1) % activeSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [tab, activeSlides]);
+
+  // ── Konfigurasi Safety Performance Standard KS Group ──────────────────────
+  const TOTAL_KARYAWAN = k3Settings?.totalKaryawan || 280;
+  const JAM_KERJA_PER_BULAN = (k3Settings?.jamKerjaPerHari || 8) * (k3Settings?.hariKerjaPerBulan || 20);
+  const KONSTANTA_OSHA = k3Settings?.konstantaOsha || 200_000;
+  const TOTAL_JAM_KERJA = TOTAL_KARYAWAN * JAM_KERJA_PER_BULAN * 12;
+
+  // ── Data dasar ───────────────────────────────────────────────────────────────
+  const approvedReports = reports.filter(
+    (r) => r.status === "selesai" || r.status === "disetujui",
+  );
+
+  // 1. NMRR = (Jumlah kejadian Near Miss / Total Karyawan) × 100
+  const nearMissCount = approvedReports.filter(
+    (r) => r.kategori === "Near Miss",
+  ).length;
+  const nmrrNum = (nearMissCount / TOTAL_KARYAWAN) * 100;
+  const nmrrValue = nmrrNum.toFixed(1) + "%";
+
+  // 2. SOR = (Jumlah total observasi / Total Karyawan) × 100
+  const observationCount = approvedReports.filter(
+    (r) =>
+      r.kategori === "Kondisi Tidak Aman" ||
+      r.kategori === "Tindakan Tidak Aman",
+  ).length;
+  const sorNum = (observationCount / TOTAL_KARYAWAN) * 100;
+  const sorValue = sorNum.toFixed(1) + "%";
+
+  // 3. CACR = (Jumlah tindakan korektif ditutup / Total temuan NMRR+SOR) × 100%
+  const totalTemuanNmrrSor = nearMissCount + observationCount;
+  const solvedTemuanCount = approvedReports.filter(
+    (r) =>
+      (r.status === "selesai" || r.status === "disetujui") &&
+      (r.kategori === "Near Miss" ||
+        r.kategori === "Kondisi Tidak Aman" ||
+        r.kategori === "Tindakan Tidak Aman"),
+  ).length;
+  const cacrNum =
+    totalTemuanNmrrSor > 0
+      ? (solvedTemuanCount / totalTemuanNmrrSor) * 100
+      : 0;
+  const cacrValue = cacrNum.toFixed(1) + "%";
+
+  // 4. TRIR = (Jumlah insiden tercatat / Total Jam Kerja) × Konstanta × 1/12
+  const recordableCategories = [
+    "First Aid Case",
+    "Medical Treatment",
+    "Lost Time Injury",
+    "Permanent Disability",
+    "Fatality",
+  ];
+  const trirCount = approvedReports.filter((r) =>
+    recordableCategories.includes(r.kategori),
+  ).length;
+  const trirNum =
+    TOTAL_JAM_KERJA > 0
+      ? (trirCount / TOTAL_JAM_KERJA) * KONSTANTA_OSHA * (1 / 12)
+      : 0;
+  const trirValue = trirNum.toFixed(2);
+
+  // 5. LTIFR = (Jumlah LTI tercatat / Total Jam Kerja) × Konstanta × 1/12
+  const ltiCount = approvedReports.filter(
+    (r) => r.kategori === "Lost Time Injury",
+  ).length;
+  const ltifrNum =
+    TOTAL_JAM_KERJA > 0
+      ? (ltiCount / TOTAL_JAM_KERJA) * KONSTANTA_OSHA * (1 / 12)
+      : 0;
+  const ltifrValue = ltifrNum.toFixed(2);
+
+  // 6. Fatality Rate = Manual input dari Admin K3 (jumlahFatality di settings)
+  const fatalityCount = k3Settings?.jumlahFatality || 0;
+  const fatalityExists = fatalityCount > 0;
+  const fatalityValue = fatalityExists ? `${fatalityCount} (Ada)` : "Tidak Ada";
+
+  const dynamicMetrics = [
+    {
+      id: "nmrr",
+      title: "NMRR",
+      subtitle: "Near Miss Reporting Rate",
+      value: nmrrValue,
+      classObj: getMetricClassification("nmrr", nmrrNum),
+      icon: AlertTriangle,
+      color: "bg-blue-500",
+      light: "bg-blue-50",
+      text: "text-blue-600",
+    },
+    {
+      id: "sor",
+      title: "SOR",
+      subtitle: "Safety Observation Rate",
+      value: sorValue,
+      classObj: getMetricClassification("sor", sorNum),
+      icon: Eye,
+      color: "bg-emerald-500",
+      light: "bg-emerald-50",
+      text: "text-emerald-600",
+    },
+    {
+      id: "cacr",
+      title: "CACR",
+      subtitle: "Corrective Action Closure",
+      value: cacrValue,
+      classObj: getMetricClassification("cacr", cacrNum),
+      icon: ClipboardCheck,
+      color: "bg-violet-500",
+      light: "bg-violet-50",
+      text: "text-violet-600",
+    },
+    {
+      id: "trir",
+      title: "TRIR",
+      subtitle: "Total Recordable Incident Rate",
+      value: trirValue,
+      classObj: getMetricClassification("trir", trirNum),
+      icon: HeartPulse,
+      color: "bg-amber-500",
+      light: "bg-amber-50",
+      text: "text-amber-600",
+    },
+    {
+      id: "ltifr",
+      title: "LTIFR",
+      subtitle: "Loss Time Injury Frequency",
+      value: ltifrValue,
+      classObj: getMetricClassification("ltifr", ltifrNum),
+      icon: Stethoscope,
+      color: "bg-indigo-500",
+      light: "bg-indigo-50",
+      text: "text-indigo-600",
+    },
+    {
+      id: "fatality",
+      title: "Fatality Rate",
+      subtitle: "Kematian Akibat Kerja",
+      value: fatalityValue,
+      classObj: fatalityExists
+        ? { label: "Bahaya", color: "bg-rose-100 text-rose-700" }
+        : { label: "Aman", color: "bg-emerald-100 text-emerald-700" },
+      icon: AlertOctagon,
+      color: "bg-rose-500",
+      light: "bg-rose-50",
+      text: "text-rose-600",
+    },
+  ];
+
+  const hasActiveFilters = searchQuery !== "" || filterKategori !== "semua" || filterStatus !== "semua";
+  const resetFilters = () => {
+    setSearchQuery("");
+    setFilterKategori("semua");
+    setFilterStatus("semua");
+  };
+
+  const filteredReports = reports.filter((r) => {
+    const matchesSearch =
       r.reportNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.kategori?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.deskripsi?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (tab === 'active') return matchesSearch && r.status !== 'selesai' && !r.status.includes('ditolak');
-    if (tab === 'history') return matchesSearch && (r.status === 'selesai' || r.status.includes('ditolak'));
-    return matchesSearch;
+
+    const matchesKategori =
+      filterKategori === "semua" ||
+      r.kategori?.toLowerCase() === filterKategori.toLowerCase();
+
+    const matchesStatus =
+      filterStatus === "semua" ||
+      r.status?.toLowerCase() === filterStatus.toLowerCase();
+
+    if (tab === "active")
+      return (
+        matchesSearch && matchesKategori && matchesStatus && r.status !== "selesai" && !r.status.includes("ditolak")
+      );
+    if (tab === "tugasku") {
+      const isPowerUser =
+        isAdminVal ||
+        role.includes("admin") ||
+        role.includes("developer");
+
+      const isHseMemberOnly = userDinasVal.includes("hse") && !userDinasVal.includes("pphse");
+      const canSeeAllAssigned = isPowerUser && !isHseMemberOnly;
+
+      const isAssigned =
+        (currentUser?.nik && r.ditugaskanKepada === currentUser.nik) ||
+        (currentUser?.id && r.ditugaskanKepada === currentUser.id) ||
+        (canSeeAllAssigned && r.ditugaskanKepada);
+
+      const isNotClosed =
+        r.status !== "selesai" &&
+        r.status !== "disetujui" &&
+        r.status !== "ditolak" &&
+        r.status !== "ditolak_kadiv_pphse" &&
+        r.status !== "ditolak_kadis_hse";
+
+      return matchesSearch && matchesKategori && matchesStatus && isAssigned && isNotClosed;
+    }
+    if (tab === "history")
+      return (
+        matchesSearch && matchesKategori && matchesStatus &&
+        (r.status === "selesai" || r.status.includes("ditolak"))
+      );
+    return matchesSearch && matchesKategori && matchesStatus;
   });
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-5 sm:space-y-8">
       {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-rose-600 rounded-xl shadow-lg shadow-rose-200">
-              <ShieldCheck size={20} className="text-white" />
+      <div className="flex flex-col gap-4 sm:gap-6">
+        <div className="flex items-start sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2.5 sm:gap-3 mb-1">
+              <div className="p-1.5 sm:p-2 bg-rose-600 rounded-lg sm:rounded-xl shadow-lg shadow-rose-200">
+                <ShieldCheck size={18} className="text-white sm:w-5 sm:h-5" />
+              </div>
+              <h2 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
+                HSE Command Center
+              </h2>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-              HSE Command Center
-            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm ml-9 sm:ml-12 hidden sm:block">
+              Monitoring kinerja K3 dan manajemen insiden secara real-time.
+            </p>
           </div>
-          <p className="text-slate-500 text-sm ml-12">
-            Monitoring kinerja K3 dan manajemen insiden secara real-time.
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            onClick={loadReports} 
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={loadReports}
             disabled={loading}
-            className="bg-white shadow-sm"
+            className="bg-white shadow-sm rounded-lg sm:hidden flex-shrink-0"
           >
-            <RefreshCw size={16} className={cn("mr-2", loading && "animate-spin")} />
+            <RefreshCw size={14} className={cn(loading && "animate-spin")} />
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
+          <Button
+            variant="outline"
+            onClick={loadReports}
+            disabled={loading}
+            className="bg-white shadow-sm hidden sm:flex"
+          >
+            <RefreshCw
+              size={16}
+              className={cn("mr-2", loading && "animate-spin")}
+            />
             Segarkan
           </Button>
-          {canDelete('hse') && (
-            <Button 
+          {(canDelete("hse") || isKadisHse) && (
+            <Button
               variant="destructive"
+              size="sm"
               onClick={handleBulkDelete}
               disabled={loading || isSubmitting || reports.length === 0}
-              className="shadow-md shadow-rose-100"
+              className="shadow-md shadow-rose-100 text-xs sm:text-sm"
             >
-              <Trash2 size={16} className="mr-2" />
-              Hapus Semua
+              <Trash2 size={14} className="mr-1.5 sm:mr-2" />
+              <span className="hidden sm:inline">Hapus Semua</span>
+              <span className="sm:hidden">Hapus</span>
             </Button>
           )}
-          <Button className="bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-100">
-            Export Report
+          <Button
+            size="sm"
+            className="bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-100 text-xs sm:text-sm ml-auto"
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus size={14} className="mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">Buat Laporan</span>
+            <span className="sm:hidden">Lapor</span>
           </Button>
         </div>
       </div>
 
       {/* Tabs Switcher */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-2xl w-fit">
-        {TABS.map(t => {
+      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl sm:rounded-2xl w-full sm:w-fit overflow-x-auto">
+        {dynamicTabs.map((t) => {
           const Icon = t.icon;
           const isActive = tab === t.key;
           return (
@@ -373,79 +1283,205 @@ export default function HseDashboardPage() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                "flex items-center gap-2 px-6 py-2.5 text-sm font-semibold transition-all rounded-xl",
-                isActive 
-                  ? "bg-white text-slate-900 shadow-sm" 
-                  : "text-slate-500 hover:text-slate-700"
+                "flex items-center justify-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition-all rounded-lg sm:rounded-xl whitespace-nowrap",
+                isActive
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700",
               )}
             >
-              <Icon size={16} className={isActive ? "text-rose-600" : "text-slate-400"} />
+              <Icon
+                size={14}
+                className={cn("sm:w-4 sm:h-4", isActive ? "text-rose-600" : "text-slate-400")}
+              />
               {t.label}
             </button>
           );
         })}
       </div>
 
-      {tab === 'dashboard' && (
+      {tab === "dashboard" && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Performance Banner */}
-          <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-8 md:p-10 text-white shadow-2xl">
-            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          <div className="relative overflow-hidden bg-slate-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-10 text-white shadow-2xl">
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-center">
               <div>
-                <Badge className="mb-4 bg-rose-500/20 text-rose-300 border-none px-3 py-1 text-[10px] uppercase tracking-widest font-bold">
+                <Badge className="mb-3 sm:mb-4 bg-rose-500/20 text-rose-300 border-none px-2.5 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] uppercase tracking-widest font-bold">
                   HSE Performance
                 </Badge>
-                <h1 className="text-3xl md:text-4xl font-extrabold mb-4 tracking-tight leading-tight">
-                  Zero Accident Strategy <br />
-                  <span className="text-rose-500">Safety First, Always.</span>
+                <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold mb-3 sm:mb-4 tracking-tight leading-tight">
+                  {bannerTitle1}
+                  {bannerTitle2 && (
+                    <>
+                      <br />
+                      <span className="text-rose-500">{bannerTitle2}</span>
+                    </>
+                  )}
                 </h1>
-                <p className="text-slate-400 text-sm md:text-base max-w-md leading-relaxed mb-8">
-                  Data kinerja keselamatan kerja yang diagregasi berdasarkan standar formulasi pelaporan insiden internasional.
+                <p className="text-slate-400 text-xs sm:text-sm md:text-base max-w-md leading-relaxed mb-5 sm:mb-8">
+                  {displayDescription}
                 </p>
-                <div className="flex gap-6">
+                <div className="flex gap-5 sm:gap-6">
                   <div>
-                    <p className="text-2xl font-bold text-white">284</p>
-                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Hari Tanpa Insiden</p>
-                  </div>
-                  <div className="w-px h-10 bg-slate-800" />
-                  <div>
-                    <p className="text-2xl font-bold text-rose-500">98%</p>
-                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Kepatuhan Prosedur</p>
+                    <p className="text-xl sm:text-2xl font-bold text-white">
+                      {k3Settings?.jamKerjaTanpaKecelakaan?.toLocaleString() || 0}
+                    </p>
+                    <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                      Jam Kerja Tanpa Kecelakaan
+                    </p>
                   </div>
                 </div>
               </div>
-              <div className="hidden md:flex justify-end">
-                <div className="w-64 h-64 bg-rose-600/10 rounded-full flex items-center justify-center relative">
-                   <div className="absolute inset-0 animate-pulse bg-rose-500/20 rounded-full blur-3xl" />
-                   <TrendingUp size={120} className="text-rose-500 relative z-10" />
+              <div className="hidden md:block">
+                <div className="relative w-full max-w-sm ml-auto">
+                  {/* Glow effect */}
+                  <div className="absolute -inset-3 bg-gradient-to-br from-rose-500/20 via-transparent to-indigo-500/10 rounded-3xl blur-2xl" />
+
+                  {/* Carousel */}
+                  <div className="relative rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl aspect-[4/3] group cursor-pointer">
+                    {activeSlides.map((slide, idx) => (
+                      <div
+                        key={slide.id || idx}
+                        className={cn(
+                          "absolute inset-0 transition-all duration-700 ease-in-out",
+                          idx === bannerSlide
+                            ? "opacity-100 scale-100"
+                            : "opacity-0 scale-105"
+                        )}
+                      >
+                        <img
+                          src={getMediaUrl(slide.path || slide.url)}
+                          alt={slide.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-black/20" />
+                      </div>
+                    ))}
+
+                    {/* Caption */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 z-10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-1 h-4 bg-rose-500 rounded-full flex-shrink-0" />
+                        <p className="text-white font-bold text-sm leading-snug line-clamp-1">
+                          {activeSlides[bannerSlide]?.title}
+                        </p>
+                      </div>
+                      <p className="text-white/50 text-[11px] ml-3 leading-relaxed line-clamp-1">
+                        {activeSlides[bannerSlide]?.subtitle}
+                      </p>
+                    </div>
+
+                    {/* Arrows */}
+                    <button
+                      onClick={() =>
+                        setBannerSlide(
+                          (p) =>
+                            (p - 1 + activeSlides.length) %
+                            activeSlides.length
+                        )
+                      }
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white/80 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white/20 hover:text-white z-20"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setBannerSlide(
+                          (p) => (p + 1) % activeSlides.length
+                        )
+                      }
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white/80 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white/20 hover:text-white z-20"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+
+                    {/* Dot indicators */}
+                    <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+                      {activeSlides.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setBannerSlide(idx)}
+                          className={cn(
+                            "rounded-full transition-all duration-300",
+                            idx === bannerSlide
+                              ? "w-5 h-1.5 bg-rose-500"
+                              : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Slide counter */}
+                  <div className="flex justify-between items-center mt-3">
+                    <p className="text-[10px] text-white/30 font-semibold tracking-widest uppercase">
+                      Galeri K3
+                    </p>
+                    <p className="text-[10px] text-white/40 font-mono">
+                      {String(bannerSlide + 1).padStart(2, "0")} /{" "}
+                      {String(activeSlides.length).padStart(2, "0")}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-            
+
             {/* Background elements */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-rose-600/10 blur-[100px] -mr-48 -mt-48 rounded-full" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-600/10 blur-[100px] -ml-32 -mb-32 rounded-full" />
           </div>
 
           {/* Metrics Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {METRICS.map((m) => {
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+            {dynamicMetrics.map((m) => {
               const Icon = m.icon;
               return (
-                <div key={m.id} className="group bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className={cn("p-3 rounded-2xl transition-colors", m.light)}>
-                      <Icon size={24} className={m.text} />
+                <div
+                  key={m.id}
+                  className="group bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                >
+                  <div className="flex justify-between items-start mb-3 sm:mb-6">
+                    <div
+                      className={cn(
+                        "p-2 sm:p-3 rounded-xl sm:rounded-2xl transition-colors",
+                        m.light,
+                      )}
+                    >
+                      <Icon size={18} className={cn("sm:w-6 sm:h-6", m.text)} />
                     </div>
-                    <p className={cn("text-xs font-bold uppercase tracking-widest", m.text)}>{m.id}</p>
+                    <div className="flex flex-col items-end gap-1 sm:gap-2">
+                      <p
+                        className={cn(
+                          "text-[10px] sm:text-xs font-bold uppercase tracking-widest",
+                          m.text,
+                        )}
+                      >
+                        {m.id}
+                      </p>
+                      {m.classObj && (
+                        <Badge
+                          className={cn(
+                            "border-none px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[10px] font-bold uppercase",
+                            m.classObj.color,
+                          )}
+                        >
+                          {m.classObj.label}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div>
-                    <p className="text-3xl font-black text-slate-900 mb-1">{m.value}</p>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{m.subtitle}</p>
+                    <p className="text-xl sm:text-3xl font-black text-slate-900 mb-0.5 sm:mb-1">
+                      {m.value}
+                    </p>
+                    <p className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider leading-tight">
+                      {m.subtitle}
+                    </p>
                   </div>
-                  <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
+                  <div className="mt-4 sm:mt-6 pt-3 sm:pt-6 border-t border-slate-50 hidden sm:flex items-center justify-between">
                     <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                      <TrendingUp size={10} className="text-emerald-500" /> +2.4% vs last month
+                      <TrendingUp size={10} className="text-emerald-500" />{" "}
+                      +2.4% vs last month
                     </span>
                     <button className="text-slate-400 hover:text-rose-600 transition-colors">
                       <ExternalLink size={14} />
@@ -458,26 +1494,71 @@ export default function HseDashboardPage() {
         </div>
       )}
 
-      {(tab === 'active' || tab === 'history') && (
+      {(tab === "active" || tab === "history" || tab === "tugasku") && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Filters & Search */}
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input 
-                placeholder="Cari nomor laporan, kategori, atau deskripsi..." 
-                className="pl-10 h-11 rounded-xl border-slate-200 bg-slate-50/50"
+          <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm transition-all">
+            <div className="flex-1 relative w-full max-w-md">
+              <Search
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                size={16}
+              />
+              <Input
+                placeholder="Cari report number, kategori, deskripsi..."
+                className="pl-10 pr-4 h-11 rounded-xl border-slate-200 bg-slate-50/50 text-sm focus-visible:ring-rose-500 focus-visible:border-rose-500 placeholder-slate-400"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex gap-2 w-full md:w-auto">
-              <Button variant="outline" className="rounded-xl h-11 px-4">
-                <Filter size={16} className="mr-2" /> Filter
-              </Button>
-              <Button variant="outline" className="rounded-xl h-11 px-4">
-                <Calendar size={16} className="mr-2" /> Semua Waktu
-              </Button>
+            
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <Select value={filterKategori} onValueChange={setFilterKategori}>
+                <SelectTrigger className="w-full sm:w-44 h-11 rounded-xl border-slate-200 bg-white text-xs font-bold text-slate-700 focus:ring-rose-500 focus:border-rose-500 transition-all hover:bg-slate-50/50">
+                  <div className="flex items-center gap-2">
+                    <Filter size={13} className="text-slate-400 flex-shrink-0" />
+                    <span>{filterKategori === "semua" ? "Semua Kategori" : filterKategori}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="semua">Semua Kategori</SelectItem>
+                  <SelectItem value="Near Miss">Near Miss</SelectItem>
+                  <SelectItem value="Kondisi Tidak Aman">Kondisi Tidak Aman</SelectItem>
+                  <SelectItem value="Tindakan Tidak Aman">Tindakan Tidak Aman</SelectItem>
+                  <SelectItem value="First Aid Case">First Aid Case</SelectItem>
+                  <SelectItem value="Medical Treatment">Medical Treatment</SelectItem>
+                  <SelectItem value="Lost Time Injury">Lost Time Injury</SelectItem>
+                  <SelectItem value="Permanent Disability">Permanent Disability</SelectItem>
+                  <SelectItem value="Fatality">Fatality</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full sm:w-44 h-11 rounded-xl border-slate-200 bg-white text-xs font-bold text-slate-700 focus:ring-rose-500 focus:border-rose-500 transition-all hover:bg-slate-50/50">
+                  <div className="flex items-center gap-2">
+                    <Activity size={13} className="text-slate-400 flex-shrink-0" />
+                    <span>{filterStatus === "semua" ? "Semua Status" : (STATUS_CONFIG[filterStatus]?.label || filterStatus)}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="semua">Semua Status</SelectItem>
+                  <SelectItem value="menunggu_validasi_kadis_hse">Validasi HSE</SelectItem>
+                  <SelectItem value="menunggu_tindakan_hse">Tindakan HSE</SelectItem>
+                  <SelectItem value="menunggu_verifikasi_investigasi">Verifikasi Investigasi</SelectItem>
+                  <SelectItem value="menunggu_validasi_akhir_kadiv_pphse">Verifikasi Akhir</SelectItem>
+                  <SelectItem value="perbaikan_ditolak_pphse">Perbaikan Ditolak</SelectItem>
+                  <SelectItem value="investigasi_ditolak_kadis_hse">Investigasi Ditolak</SelectItem>
+                </SelectContent>
+              </Select>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  onClick={resetFilters}
+                  className="h-11 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl text-xs font-bold gap-1.5 px-4 shadow-sm border border-rose-100 bg-rose-50/10 transition-all"
+                >
+                  <RefreshCw size={13} className="text-rose-600" />
+                  Reset
+                </Button>
+              )}
             </div>
           </div>
 
@@ -485,97 +1566,267 @@ export default function HseDashboardPage() {
           {loading ? (
             <div className="py-20 flex flex-col items-center gap-4">
               <RefreshCw className="animate-spin text-rose-600" size={32} />
-              <p className="text-slate-500 font-medium">Memuat data laporan...</p>
+              <p className="text-slate-500 font-medium">
+                Memuat data laporan...
+              </p>
             </div>
           ) : filteredReports.length === 0 ? (
             <div className="bg-white py-20 rounded-3xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-center px-6">
               <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
                 <FileText size={40} className="text-slate-300" />
               </div>
-              <h3 className="text-lg font-bold text-slate-800 mb-2">Tidak Ada Data</h3>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">
+                {tab === "tugasku" ? "Tidak Ada Tugas" : "Tidak Ada Data"}
+              </h3>
               <p className="text-slate-500 max-w-sm text-sm">
-                Belum ada data laporan K3 yang ditemukan untuk kriteria ini.
+                {tab === "tugasku"
+                  ? "Belum ada tugas penanganan K3 yang ditugaskan kepada Anda saat ini."
+                  : "Belum ada data laporan K3 yang ditemukan untuk kriteria ini."}
               </p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          ) : tab === "tugasku" ? (
+            <div className="space-y-3">
               {filteredReports.map((report) => {
                 const status = formatStatus(report.status);
                 const hasPhotos = report.foto && report.foto.length > 0;
-                
+                const isActionRequired =
+                  report.status === "menunggu_tindakan_hse" ||
+                  report.status === "perbaikan_ditolak_pphse" ||
+                  report.status === "perbaikan_ditolak_kadis_hse" ||
+                  report.status === "perbaikan_ditolak_kadiv_pphse" ||
+                  report.status === "investigasi_ditolak_kadis_hse" ||
+                  report.status === "investigasi_ditolak_kadiv";
+
                 return (
-                  <div 
-                    key={report.id} 
-                    className="group bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-rose-100 transition-all duration-300 flex flex-col"
+                  <div
+                    key={report.id}
+                    onClick={() => openDetail(report)}
+                    className="group bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md hover:border-rose-100 transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer"
                   >
-                    <div className="p-6 space-y-5 flex-1">
-                      {/* Header Card */}
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black text-rose-600 uppercase tracking-[0.2em]">
-                            {report.kategori || 'K3 INCIDENT'}
-                          </p>
-                          <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                    {/* Left: Thumbnail & Info */}
+                    <div className="flex items-center gap-4 min-w-0 flex-1 w-full">
+                      {/* Photo Thumbnail */}
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-100 group-hover:border-rose-200 transition-colors">
+                        {hasPhotos ? (
+                          <img
+                            src={`${process.env.NEXT_PUBLIC_API_URL}/${report.foto[0]}`}
+                            alt="K3"
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <FileText size={16} className="text-slate-300" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Text details */}
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <span className="text-[9px] font-black text-rose-600 uppercase tracking-wider bg-rose-50 px-1.5 py-0.5 rounded">
+                            {report.kategori || "K3 INCIDENT"}
+                          </span>
+                          <span className="text-xs text-slate-300 hidden sm:inline">•</span>
+                          <span className="text-xs font-bold text-slate-800">
                             {report.reportNumber}
-                            <ExternalLink size={12} className="text-slate-300 group-hover:text-rose-500 transition-colors" />
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 line-clamp-1 italic">
+                          "{report.deskripsi || "Tidak ada deskripsi"}"
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-400 font-semibold">
+                          <span className="flex items-center gap-1">
+                            <User size={10} className="text-slate-300" />
+                            Pelapor: {report.pelapor?.name || "Unknown"}
+                          </span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="flex items-center gap-1">
+                            <Calendar size={10} className="text-slate-300" />
+                            {report.createdAt
+                              ? new Date(report.createdAt).toLocaleDateString(
+                                  "id-ID",
+                                  { day: "2-digit", month: "short", year: "numeric" }
+                                )
+                              : "-"}
+                          </span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="text-[9px] text-slate-400 font-normal">
+                            Update: {(() => {
+                              if (!report.updatedAt) return "-";
+                              const dateObj = new Date(report.updatedAt);
+                              const timeStr = dateObj.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                              const dateStr = dateObj.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" });
+                              return `${timeStr} | ${dateStr}`;
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Status & Action Button */}
+                    <div className="flex items-center gap-4 sm:self-center self-stretch justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
+                      <div className="flex flex-col items-start sm:items-end gap-1">
+                        <Badge className={cn("border-none px-2.5 py-0.5 text-[9px] font-bold uppercase rounded-md", status.color)}>
+                          {status.label}
+                        </Badge>
+                        <span className="text-[9px] text-slate-400 font-bold flex items-center gap-1">
+                          {isActionRequired ? (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                              Perlu Tindakan
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                              Verifikasi
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      
+                      <Button
+                        size="sm"
+                        className={cn(
+                          "h-8 text-xs font-bold rounded-xl px-4 flex-shrink-0 transition-all flex items-center gap-1",
+                          isActionRequired
+                            ? "bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-100"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/50"
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDetail(report);
+                        }}
+                      >
+                        {isActionRequired ? "Laksanakan" : "Detail"}
+                        <ChevronRight size={13} />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              {filteredReports.map((report) => {
+                const status = formatStatus(report.status);
+                const hasPhotos = report.foto && report.foto.length > 0;
+                const isActionRequired =
+                  report.status === "menunggu_tindakan_hse" ||
+                  report.status === "perbaikan_ditolak_pphse" ||
+                  report.status === "perbaikan_ditolak_kadis_hse" ||
+                  report.status === "perbaikan_ditolak_kadiv_pphse" ||
+                  report.status === "investigasi_ditolak_kadis_hse" ||
+                  report.status === "investigasi_ditolak_kadiv";
+
+                return (
+                  <div
+                    key={report.id}
+                    className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-rose-100 transition-all duration-300 flex flex-col"
+                  >
+                    <div className="p-4 sm:p-6 space-y-3 sm:space-y-5 flex-1">
+                      {/* Header Card */}
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <p className="text-[9px] sm:text-[10px] font-black text-rose-600 uppercase tracking-[0.15em] sm:tracking-[0.2em] truncate">
+                              {report.kategori || "K3 INCIDENT"}
+                            </p>
+                          </div>
+                          <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                            {report.reportNumber}
                           </h3>
                         </div>
-                        <Badge className={cn("border-none px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg", status.color)}>
+                        <Badge
+                          className={cn(
+                            "border-none px-2 sm:px-3 py-0.5 sm:py-1 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider rounded-md sm:rounded-lg flex-shrink-0",
+                            status.color,
+                          )}
+                        >
                           {status.label}
                         </Badge>
                       </div>
 
                       {/* Content */}
-                      <div className="flex gap-4">
-                        <div className="w-20 h-20 rounded-2xl bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-100 group-hover:border-rose-100 transition-colors">
+                      <div className="flex gap-3 sm:gap-4">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-100 group-hover:border-rose-100 transition-colors">
                           {hasPhotos ? (
-                            <img 
-                              src={`${process.env.NEXT_PUBLIC_API_URL}/${report.foto[0]}`} 
-                              alt="K3 Report" 
+                            <img
+                              src={`${process.env.NEXT_PUBLIC_API_URL}/${report.foto[0]}`}
+                              alt="K3 Report"
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <FileText size={24} className="text-slate-300" />
+                              <FileText size={20} className="text-slate-300 sm:w-6 sm:h-6" />
                             </div>
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed italic">
-                            "{report.deskripsi || 'Tidak ada deskripsi'}"
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 leading-relaxed italic">
+                            "{report.deskripsi || "Tidak ada deskripsi"}"
                           </p>
-                          <div className="mt-3 flex flex-wrap gap-y-2 gap-x-4 items-center">
-                            <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                              <User size={12} className="text-slate-300" />
-                              {report.pelapor?.name || 'Unknown'}
+                          <div className="mt-2 sm:mt-3 flex flex-wrap gap-y-1.5 gap-x-3 sm:gap-x-4 items-center">
+                            <div className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs text-slate-400 font-medium">
+                              <User size={11} className="text-slate-300" />
+                              <span className="truncate max-w-[100px] sm:max-w-none">{report.pelapor?.name || "Unknown"}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                              <Calendar size={12} className="text-slate-300" />
-                              {report.createdAt ? new Date(report.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                            <div className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs text-slate-400 font-medium">
+                              <Calendar size={11} className="text-slate-300" />
+                              {report.createdAt
+                                ? new Date(report.createdAt).toLocaleDateString(
+                                    "id-ID",
+                                    {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric",
+                                    },
+                                  )
+                                : "-"}
                             </div>
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Task Info */}
                       {report.petugasHse && (
                         <div className="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/50 flex items-center gap-3">
-                           <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white">
-                              <Wrench size={14} />
-                           </div>
-                           <div className="min-w-0">
-                              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Ditugaskan</p>
-                              <p className="text-xs font-bold text-slate-700 truncate">{report.petugasHse.name}</p>
-                           </div>
+                          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white">
+                            <Wrench size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                              Ditugaskan
+                            </p>
+                            <p className="text-xs font-bold text-slate-700 truncate">
+                              {report.petugasHse.name}
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>
 
                     {/* Footer Card */}
-                    <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center group-hover:bg-rose-50/20 transition-colors">
-                      <p className="text-[10px] font-bold text-slate-400">Terakhir Update: {report.updatedAt ? new Date(report.updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}</p>
-                      <Button variant="ghost" size="sm" onClick={() => openDetail(report)} className="h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-bold text-xs gap-2">
-                        Detail Laporan <ChevronRight size={14} />
+                    <div className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center group-hover:bg-rose-50/20 transition-colors">
+                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400">
+                        <span className="hidden sm:inline">Terakhir Update: </span>
+                        <span className="sm:hidden">Update: </span>
+                        {(() => {
+                          if (!report.updatedAt) return "-";
+                          const dateObj = new Date(report.updatedAt);
+                          const timeStr = dateObj.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                          const dateStr = dateObj.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" });
+                          return `${timeStr} | ${dateStr}`;
+                        })()}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDetail(report)}
+                        className="h-7 sm:h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-bold text-[11px] sm:text-xs gap-1.5 sm:gap-2 px-2 sm:px-3"
+                      >
+                        <span className="hidden sm:inline">Detail Laporan</span>
+                        <span className="sm:hidden">Detail</span>
+                        <ChevronRight size={13} />
                       </Button>
                     </div>
                   </div>
@@ -586,40 +1837,67 @@ export default function HseDashboardPage() {
         </div>
       )}
 
+
+
       {/* Detail & Action Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detail Laporan K3</DialogTitle>
-            <DialogDescription>
-              {selectedReport?.reportNumber} - Dilaporkan pada {selectedReport?.createdAt ? new Date(selectedReport.createdAt).toLocaleDateString('id-ID') : '-'}
-            </DialogDescription>
-          </DialogHeader>
-          
+        <DialogContent className="max-w-2xl h-[95vh] sm:h-auto sm:max-h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-t-3xl sm:rounded-3xl">
+          {/* Styled Header */}
+          <div className="px-4 sm:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4 border-b border-slate-100 bg-white flex-shrink-0">
+            <div className="flex items-center gap-2 text-rose-600 mb-1">
+              <ShieldCheck size={16} />
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em]">K3 Safety Report</span>
+            </div>
+            <DialogHeader className="p-0">
+              <DialogTitle className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">Detail Laporan K3</DialogTitle>
+              <DialogDescription className="text-[11px] sm:text-xs font-medium text-slate-500">
+                {selectedReport?.reportNumber} • Dilaporkan pada{" "}
+                {selectedReport?.createdAt
+                  ? new Date(selectedReport.createdAt).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })
+                  : "-"}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
           {selectedReport && (
-            <div className="space-y-6 py-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-6 py-4 space-y-4 sm:space-y-6">
               {/* Header Info */}
-              <div className="flex flex-col md:flex-row justify-between items-start gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 font-bold flex-shrink-0">
-                    {selectedReport.pelapor?.name ? selectedReport.pelapor.name.charAt(0).toUpperCase() : '?'}
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 bg-slate-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-100">
+                <div className="flex items-start gap-2.5 sm:gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 font-bold flex-shrink-0 text-sm sm:text-base">
+                    {selectedReport.pelapor?.name
+                      ? selectedReport.pelapor.name.charAt(0).toUpperCase()
+                      : "?"}
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-rose-600 uppercase tracking-widest mb-1">{selectedReport.kategori}</p>
-                    <p className="text-sm font-bold text-slate-900">{selectedReport.pelapor?.name || 'Unknown'}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 uppercase tracking-wider font-medium">
-                      {selectedReport.pelapor?.role || '-'} • {selectedReport.pelapor?.dinas || '-'} • {selectedReport.pelapor?.divisi || '-'}
+                  <div className="min-w-0">
+                    <p className="text-[9px] sm:text-xs font-bold text-rose-600 uppercase tracking-widest mb-0.5 sm:mb-1">
+                      {selectedReport.kategori}
+                    </p>
+                    <p className="text-sm font-bold text-slate-900">
+                      {selectedReport.pelapor?.name || "Unknown"}
+                    </p>
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 uppercase tracking-wider font-medium truncate">
+                      {selectedReport.pelapor?.role || "-"} •{" "}
+                      {selectedReport.pelapor?.dinas || "-"} •{" "}
+                      {selectedReport.pelapor?.divisi || "-"}
                     </p>
                   </div>
                 </div>
-                <Badge className={cn("border-none px-3 py-1 text-xs", formatStatus(selectedReport.status).color)}>
+                <Badge
+                  className={cn(
+                    "border-none px-2.5 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs flex-shrink-0",
+                    formatStatus(selectedReport.status).color,
+                  )}
+                >
                   {formatStatus(selectedReport.status).label}
                 </Badge>
               </div>
 
               {/* Deskripsi */}
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Deskripsi Laporan</h4>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Deskripsi Laporan
+                </h4>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
                   <p className="text-sm text-slate-700 leading-relaxed pl-2">
@@ -631,16 +1909,24 @@ export default function HseDashboardPage() {
               {/* Dokumentasi Laporan Awal */}
               {selectedReport.foto && selectedReport.foto.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Foto Temuan Awal</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h4 className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Foto Temuan Awal
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     {selectedReport.foto.map((f, i) => (
-                      <div key={i} className="group relative rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-                        <img 
-                          src={`${process.env.NEXT_PUBLIC_API_URL}/${f}`} 
-                          alt={`Foto Awal ${i+1}`} 
-                          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" 
+                      <div
+                        key={i}
+                        className="group relative rounded-xl overflow-hidden border border-slate-200 shadow-sm cursor-pointer"
+                        onClick={() => setSelectedImage(`${process.env.NEXT_PUBLIC_API_URL}/${f}`)}
+                      >
+                        <img
+                          src={`${process.env.NEXT_PUBLIC_API_URL}/${f}`}
+                          alt={`Foto Awal ${i + 1}`}
+                          className="w-full h-32 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300"></div>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                          <Eye className="w-8 h-8 text-white drop-shadow-md" />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -648,10 +1934,14 @@ export default function HseDashboardPage() {
               )}
 
               {/* Hasil Perbaikan (Jika Ada) */}
-              {(selectedReport.tindakanPerbaikan || (selectedReport.fotoPerbaikan && selectedReport.fotoPerbaikan.length > 0)) && (
+              {(selectedReport.tindakanPerbaikan ||
+                (selectedReport.fotoPerbaikan &&
+                  selectedReport.fotoPerbaikan.length > 0)) && (
                 <div className="space-y-4 pt-4 border-t border-slate-100 mt-4">
-                  <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Hasil Perbaikan / Tindakan</h4>
-                  
+                  <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
+                    Hasil Perbaikan / Tindakan
+                  </h4>
+
                   {selectedReport.tindakanPerbaikan && (
                     <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
@@ -661,27 +1951,36 @@ export default function HseDashboardPage() {
                     </div>
                   )}
 
-                  {selectedReport.fotoPerbaikan && selectedReport.fotoPerbaikan.length > 0 && (
-                    <div className="grid grid-cols-2 gap-4 mt-2">
-                      {selectedReport.fotoPerbaikan.map((f, i) => (
-                        <div key={i} className="group relative rounded-xl overflow-hidden border border-emerald-200 shadow-sm">
-                          <img 
-                            src={`${process.env.NEXT_PUBLIC_API_URL}/${f}`} 
-                            alt={`Foto Perbaikan ${i+1}`} 
-                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" 
-                          />
-                          <div className="absolute inset-0 bg-emerald-900/10 group-hover:bg-transparent transition-colors duration-300"></div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {selectedReport.fotoPerbaikan &&
+                    selectedReport.fotoPerbaikan.length > 0 && (
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        {selectedReport.fotoPerbaikan.map((f, i) => (
+                          <div
+                            key={i}
+                            className="group relative rounded-xl overflow-hidden border border-emerald-200 shadow-sm cursor-pointer"
+                            onClick={() => setSelectedImage(`${process.env.NEXT_PUBLIC_API_URL}/${f}`)}
+                          >
+                            <img
+                              src={`${process.env.NEXT_PUBLIC_API_URL}/${f}`}
+                              alt={`Foto Perbaikan ${i + 1}`}
+                              className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <Eye className="w-8 h-8 text-white drop-shadow-md" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
               )}
 
               {/* Catatan Penolakan / Validasi */}
               {selectedReport.catatanKadivPphse && (
                 <div className="space-y-2 pt-4 border-t border-slate-100">
-                  <h4 className="text-xs font-bold text-rose-500 uppercase tracking-wider">Catatan Validasi / Penolakan</h4>
+                  <h4 className="text-xs font-bold text-rose-500 uppercase tracking-wider">
+                    Catatan Validasi / Penolakan
+                  </h4>
                   <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
                     <p className="text-sm text-rose-700 leading-relaxed pl-2 font-medium">
@@ -695,149 +1994,511 @@ export default function HseDashboardPage() {
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0 mt-4 border-t pt-4 border-slate-100 flex items-center justify-between w-full">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
-                Tutup
-              </Button>
-              {canDelete('hse') && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleDelete(selectedReport.id)}
-                  disabled={isSubmitting}
-                  className="text-rose-600 border-rose-200 hover:bg-rose-50"
-                >
-                  <Trash2 size={16} className="mr-2" />
-                  Hapus
+          <div className="border-t border-slate-100 px-4 sm:px-6 py-3 sm:py-4 bg-slate-50/50 flex-shrink-0">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-0 w-full">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="rounded-lg sm:rounded-xl" onClick={() => setIsDetailOpen(false)}>
+                  Tutup
                 </Button>
-              )}
+                {(canDelete("hse") || isKadisHse) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(selectedReport.id)}
+                    disabled={isSubmitting}
+                    className="text-rose-600 border-rose-200 hover:bg-rose-50 rounded-lg sm:rounded-xl"
+                  >
+                    <Trash2 size={14} className="mr-1.5" />
+                    Hapus
+                  </Button>
+                )}
+              </div>
+
+              {/* Action Buttons for Staf HSE to execute task */}
+              {(selectedReport?.status === "menunggu_tindakan_hse" ||
+                selectedReport?.status === "perbaikan_ditolak_pphse" ||
+                selectedReport?.status === "perbaikan_ditolak_kadis_hse" ||
+                selectedReport?.status === "perbaikan_ditolak_kadiv_pphse" ||
+                selectedReport?.status === "investigasi_ditolak_kadis_hse" ||
+                selectedReport?.status === "investigasi_ditolak_kadiv") &&
+                (currentUser?.nik === selectedReport?.ditugaskanKepada || 
+                 currentUser?.id === selectedReport?.ditugaskanKepada ||
+                 isAdminVal || role.includes("admin") || role.includes("developer") || 
+                 userDinasVal.includes("hse") || userDinasVal.includes("pphse")) && (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg sm:rounded-xl gap-1.5"
+                      onClick={openActionForm}
+                    >
+                      <Wrench size={14} />
+                      {selectedReport?.jenisTindakan === "investigasi"
+                        ? "Isi Form Investigasi"
+                        : "Isi Tindakan Perbaikan"}
+                    </Button>
+                  </div>
+                )}
+
+              {/* Action Buttons for Validasi Awal */}
+              {(isKadisHse || isKadivPphse) &&
+                (selectedReport?.status === "menunggu_validasi_kadis_hse" ||
+                  selectedReport?.status === "menunggu_validasi_kadiv_pphse") && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1 sm:flex-initial rounded-lg sm:rounded-xl"
+                      onClick={() => openValidation("reject")}
+                    >
+                      Tolak
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-initial rounded-lg sm:rounded-xl"
+                      onClick={() => openValidation("approve")}
+                    >
+                      Setujui
+                    </Button>
+                  </div>
+                )}
+
+              {/* Action Buttons for Validasi Hasil */}
+              {isKadisHse &&
+                (selectedReport?.status === "menunggu_validasi_hasil_kadis_hse" ||
+                  selectedReport?.status ===
+                    "menunggu_verifikasi_investigasi") && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1 sm:flex-initial rounded-lg sm:rounded-xl"
+                      onClick={() => openValidation("reject")}
+                    >
+                      Tolak
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-initial rounded-lg sm:rounded-xl"
+                      onClick={() => openValidation("approve")}
+                    >
+                      Validasi
+                    </Button>
+                  </div>
+                )}
+
+              {/* Action Buttons for Validasi Akhir */}
+              {isKadivPphse &&
+                (selectedReport?.status ===
+                  "menunggu_validasi_akhir_kadiv_pphse" ||
+                  selectedReport?.status === "menunggu_validasi_kadiv") && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1 sm:flex-initial rounded-lg sm:rounded-xl"
+                      onClick={() => openValidation("reject")}
+                    >
+                      Tolak
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-initial rounded-lg sm:rounded-xl"
+                      onClick={() => openValidation("approve")}
+                    >
+                      Selesai
+                    </Button>
+                  </div>
+                )}
             </div>
-            
-            {/* Action Buttons for Validasi Awal */}
-            {(isKadisHse || isKadivPphse) && (selectedReport?.status === 'menunggu_validasi_kadis_hse' || selectedReport?.status === 'menunggu_validasi_kadiv_pphse') && (
-              <div className="flex gap-2">
-                <Button 
-                  variant="destructive" 
-                  onClick={() => openValidation('reject')} 
-                >
-                  Tolak Laporan
-                </Button>
-                <Button 
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white" 
-                  onClick={() => openValidation('approve')} 
-                >
-                  Setujui & Tugaskan
-                </Button>
-              </div>
-            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
-            {/* Action Buttons for Validasi Hasil Perbaikan & Investigasi (Kadis HSE) */}
-            {isKadisHse && (selectedReport?.status === 'menunggu_validasi_hasil_kadis_hse' || selectedReport?.status === 'menunggu_verifikasi_investigasi') && (
-              <div className="flex gap-2">
-                <Button 
-                  variant="destructive" 
-                  onClick={() => openValidation('reject')} 
-                >
-                  Tolak Hasil
-                </Button>
-                <Button 
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white" 
-                  onClick={() => openValidation('approve')} 
-                >
-                  Terima & Validasi
-                </Button>
-              </div>
-            )}
+      {/* Dialog Buat Laporan */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+          {/* Styled Header */}
+          <div className="px-6 pt-6 pb-4 border-b border-slate-100 bg-white">
+            <div className="flex items-center gap-2 text-rose-600 mb-1">
+              <ShieldCheck size={18} />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">K3 Safety Report</span>
+            </div>
+            <DialogHeader className="p-0">
+              <DialogTitle className="text-xl font-black text-slate-900 tracking-tight">Buat Laporan K3</DialogTitle>
+              <DialogDescription className="text-xs font-medium text-slate-500">
+                Laporkan temuan K3 di lapangan. Isi semua informasi yang diperlukan.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-            {/* Action Buttons for Validasi Akhir (Kadiv PPHSE) */}
-            {isKadivPphse && (selectedReport?.status === 'menunggu_validasi_akhir_kadiv_pphse' || selectedReport?.status === 'menunggu_validasi_kadiv') && (
-              <div className="flex gap-2">
-                <Button 
-                  variant="destructive" 
-                  onClick={() => openValidation('reject')} 
-                >
-                  Tolak
-                </Button>
-                <Button 
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white" 
-                  onClick={() => openValidation('approve')} 
-                >
-                  Setujui Selesai
-                </Button>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5">
+            {!isCameraOpen ? (
+              <div className="space-y-5">
+                {/* Kategori */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-slate-500 mb-1">
+                    <AlertTriangle size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Kategori Insiden</span>
+                  </label>
+                  <Select
+                    value={createData.kategori}
+                    onValueChange={(val) =>
+                      setCreateData({ ...createData, kategori: val })
+                    }
+                  >
+                    <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors font-medium">
+                      <SelectValue placeholder="Pilih Kategori Temuan" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl shadow-xl border-slate-200">
+                      {/* Group: Observasi */}
+                      <div className="px-3 py-1.5 text-[10px] font-black text-amber-600 uppercase tracking-widest bg-amber-50/50">
+                        Temuan Observasi
+                      </div>
+                      <SelectItem value="Kondisi Tidak Aman" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><ShieldAlert size={14} className="text-amber-500" /> Kondisi Tidak Aman</span>
+                      </SelectItem>
+                      <SelectItem value="Tindakan Tidak Aman" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><Ban size={14} className="text-orange-500" /> Tindakan Tidak Aman</span>
+                      </SelectItem>
+                      <SelectItem value="Near Miss" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><Crosshair size={14} className="text-red-500" /> Near Miss</span>
+                      </SelectItem>
+                      {/* Group: Insiden/Kecelakaan */}
+                      <div className="px-3 py-1.5 text-[10px] font-black text-rose-600 uppercase tracking-widest bg-rose-50/50 mt-1">
+                        Insiden / Kecelakaan
+                      </div>
+                      <SelectItem value="First Aid Case" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><Cross size={14} className="text-blue-500" /> First Aid Case</span>
+                      </SelectItem>
+                      <SelectItem value="Medical Treatment" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><Stethoscope size={14} className="text-indigo-500" /> Medical Treatment</span>
+                      </SelectItem>
+                      <SelectItem value="Lost Time Injury" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><Timer size={14} className="text-rose-500" /> Lost Time Injury</span>
+                      </SelectItem>
+                      <SelectItem value="Permanent Disability" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><Accessibility size={14} className="text-purple-500" /> Permanent Disability</span>
+                      </SelectItem>
+                      <SelectItem value="Fatality" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><Skull size={14} className="text-rose-700" /> Fatality</span>
+                      </SelectItem>
+                      {/* Group: Lainnya */}
+                      <div className="px-3 py-1.5 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50/50 mt-1">
+                        Lainnya
+                      </div>
+                      <SelectItem value="Ide perbaikan K3" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><Lightbulb size={14} className="text-emerald-500" /> Ide Perbaikan K3</span>
+                      </SelectItem>
+                      <SelectItem value="Lainnya" className="py-2.5 pl-4 font-medium">
+                        <span className="flex items-center gap-2"><ListChecks size={14} className="text-slate-500" /> Lainnya</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Deskripsi */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-slate-500 mb-1">
+                    <ClipboardCheck size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Deskripsi Kejadian</span>
+                  </label>
+                  <Textarea
+                    placeholder="Ceritakan dengan detail apa yang terjadi, di mana, dan bagaimana..."
+                    value={createData.deskripsi}
+                    onChange={(e) =>
+                      setCreateData({ ...createData, deskripsi: e.target.value })
+                    }
+                    className="resize-none h-28 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors focus:bg-white"
+                  />
+                </div>
+
+                {/* Lokasi Temuan */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-slate-500 mb-1">
+                    <MapPin size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Lokasi Temuan</span>
+                  </label>
+                  <Input
+                    placeholder="Misal: Area Pump Station IV"
+                    value={createData.lokasiTemuan}
+                    onChange={(e) =>
+                      setCreateData({
+                        ...createData,
+                        lokasiTemuan: e.target.value,
+                      })
+                    }
+                    className="h-11 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors focus:bg-white"
+                  />
+                </div>
+
+                {/* Foto Bukti */}
+                <div className="space-y-2">
+                  <label className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <Camera size={14} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">
+                        Foto Bukti ({createPhotos.length}/{MAX_PHOTOS})
+                      </span>
+                    </div>
+                    {createPhotos.length < MAX_PHOTOS && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-rose-600 px-2 rounded-lg hover:bg-rose-50"
+                        onClick={openCamera}
+                      >
+                        <Camera size={12} className="mr-1" /> Buka Kamera
+                      </Button>
+                    )}
+                  </label>
+
+                  {/* Photo grid preview */}
+                  {createPhotos.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {createPhotos.map((p, i) => (
+                        <div key={i} className="relative border border-slate-200 rounded-xl overflow-hidden aspect-square group shadow-sm">
+                          <img
+                            src={p.preview}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            alt={`Foto ${i + 1}`}
+                          />
+                          <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-300" />
+                          <button
+                            className="absolute top-1.5 right-1.5 bg-black/50 text-white p-1 rounded-full hover:bg-rose-600 transition-colors backdrop-blur-sm"
+                            onClick={() => removePhoto(i)}
+                          >
+                            <XCircle size={14} />
+                          </button>
+                          <span className="absolute bottom-1.5 left-1.5 bg-black/50 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                            {(p.file.size / 1024).toFixed(0)}KB
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add more photos area */}
+                  {createPhotos.length < MAX_PHOTOS && (
+                    <div
+                      className="border-2 border-dashed border-slate-200 rounded-2xl h-24 flex items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group"
+                      onClick={openCamera}
+                    >
+                      <div className="text-slate-400 group-hover:text-rose-500 flex flex-col items-center gap-1.5 transition-colors">
+                        <Camera size={22} />
+                        <span className="text-[11px] font-medium">
+                          {createPhotos.length === 0
+                            ? "Wajib ambil foto dari kamera (min. 1)"
+                            : `Tambah foto (maks. ${MAX_PHOTOS - createPhotos.length} lagi)`}
+                        </span>
+                        <span className="text-[9px] text-slate-400">Maks. 500KB per foto (otomatis dikompres)</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info hint */}
+                <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                  <AlertTriangle size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Pastikan kategori, deskripsi, dan minimal 1 foto (maks. 3) sudah terisi sebelum mengirim laporan. Foto akan otomatis dikompres ke maks. 500KB.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 py-2 flex flex-col items-center">
+                <div className="relative w-full aspect-[3/4] bg-black rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    playsInline
+                    autoPlay
+                    muted
+                  />
+                  <button
+                    className="absolute top-3 right-3 bg-black/50 text-white p-2 rounded-full hover:bg-white/20 transition-colors backdrop-blur-md"
+                    onClick={switchCamera}
+                    title="Ganti Kamera"
+                  >
+                    <SwitchCamera size={18} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    className="rounded-full w-12 h-12 p-0"
+                    onClick={closeCamera}
+                  >
+                    <XCircle size={20} className="text-gray-500" />
+                  </Button>
+                  <Button
+                    className="rounded-full w-16 h-16 bg-white border-4 border-rose-500 hover:bg-gray-100 shadow-xl p-0"
+                    onClick={takePhoto}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-rose-600" />
+                  </Button>
+                  <div className="w-12 h-12" /> {/* Empty div for balance */}
+                </div>
               </div>
             )}
-          </DialogFooter>
+          </div>
+
+          {!isCameraOpen && (
+            <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50 flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 font-semibold px-6"
+                onClick={() => setIsCreateOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                className="bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md shadow-rose-100 font-semibold px-6"
+                onClick={submitCreate}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <RefreshCw size={16} className="mr-2 animate-spin" />
+                ) : (
+                  <ShieldCheck size={16} className="mr-2" />
+                )}
+                Kirim Laporan
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
       {/* Validation Dialog (Nested/Secondary Popup) */}
       <Dialog open={isValidationOpen} onOpenChange={setIsValidationOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader className={validationAction === 'approve' ? "text-emerald-700" : "text-rose-700"}>
-            <DialogTitle>{validationAction === 'approve' ? 'Setujui Laporan' : 'Tolak Laporan'}</DialogTitle>
-            <DialogDescription>
-              {validationAction === 'approve' 
-                ? 'Pilih tindak lanjut dan tugaskan staf untuk menyelesaikan masalah ini.' 
-                : 'Berikan alasan mengapa laporan ini ditolak.'}
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl border-none shadow-2xl p-4 sm:p-6">
+          <DialogHeader
+            className={
+              validationAction === "approve"
+                ? "text-emerald-700"
+                : "text-rose-700"
+            }
+          >
+            <DialogTitle className="text-lg sm:text-xl font-black">
+              {validationAction === "approve"
+                ? "Setujui Laporan"
+                : "Tolak Laporan"}
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              {validationAction === "approve"
+                ? "Pilih tindak lanjut dan tugaskan staf untuk menyelesaikan masalah ini."
+                : "Berikan alasan mengapa laporan ini ditolak."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4 space-y-5">
-            {validationAction === 'approve' && (selectedReport?.status === 'menunggu_validasi_kadis_hse' || selectedReport?.status === 'menunggu_validasi_kadiv_pphse') && (
-              <>
-                <div className="space-y-3">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pilih Jenis Tindakan</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className={cn(
-                      "cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center text-center gap-2",
-                      jenisTindakan === 'perbaikan_langsung' ? "border-emerald-500 bg-emerald-50" : "border-slate-200 hover:border-emerald-200 hover:bg-slate-50"
-                    )}>
-                      <input 
-                        type="radio" 
-                        className="sr-only" 
-                        name="jenisTindakan" 
-                        value="perbaikan_langsung" 
-                        checked={jenisTindakan === 'perbaikan_langsung'} 
-                        onChange={(e) => setJenisTindakan(e.target.value)} 
-                      />
-                      <ShieldCheck size={28} className={jenisTindakan === 'perbaikan_langsung' ? "text-emerald-600" : "text-slate-400"} />
-                      <span className={cn("text-xs font-bold", jenisTindakan === 'perbaikan_langsung' ? "text-emerald-700" : "text-slate-600")}>Perbaikan<br/>Langsung</span>
+            {validationAction === "approve" &&
+              (selectedReport?.status === "menunggu_validasi_kadis_hse" ||
+                selectedReport?.status === "menunggu_validasi_kadiv_pphse") && (
+                <>
+                  <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Pilih Jenis Tindakan
                     </label>
-                    <label className={cn(
-                      "cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center text-center gap-2",
-                      jenisTindakan === 'investigasi' ? "border-amber-500 bg-amber-50" : "border-slate-200 hover:border-amber-200 hover:bg-slate-50"
-                    )}>
-                      <input 
-                        type="radio" 
-                        className="sr-only" 
-                        name="jenisTindakan" 
-                        value="investigasi" 
-                        checked={jenisTindakan === 'investigasi'} 
-                        onChange={(e) => setJenisTindakan(e.target.value)} 
-                      />
-                      <Search size={28} className={jenisTindakan === 'investigasi' ? "text-amber-600" : "text-slate-400"} />
-                      <span className={cn("text-xs font-bold", jenisTindakan === 'investigasi' ? "text-amber-700" : "text-slate-600")}>Investigasi<br/>Lanjut</span>
-                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label
+                        className={cn(
+                          "cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center text-center gap-2",
+                          jenisTindakan === "perbaikan_langsung"
+                            ? "border-emerald-500 bg-emerald-50"
+                            : "border-slate-200 hover:border-emerald-200 hover:bg-slate-50",
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          className="sr-only"
+                          name="jenisTindakan"
+                          value="perbaikan_langsung"
+                          checked={jenisTindakan === "perbaikan_langsung"}
+                          onChange={(e) => setJenisTindakan(e.target.value)}
+                        />
+                        <ShieldCheck
+                          size={28}
+                          className={
+                            jenisTindakan === "perbaikan_langsung"
+                              ? "text-emerald-600"
+                              : "text-slate-400"
+                          }
+                        />
+                        <span
+                          className={cn(
+                            "text-xs font-bold",
+                            jenisTindakan === "perbaikan_langsung"
+                              ? "text-emerald-700"
+                              : "text-slate-600",
+                          )}
+                        >
+                          Perbaikan
+                          <br />
+                          Langsung
+                        </span>
+                      </label>
+                      <label
+                        className={cn(
+                          "cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center text-center gap-2",
+                          jenisTindakan === "investigasi"
+                            ? "border-amber-500 bg-amber-50"
+                            : "border-slate-200 hover:border-amber-200 hover:bg-slate-50",
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          className="sr-only"
+                          name="jenisTindakan"
+                          value="investigasi"
+                          checked={jenisTindakan === "investigasi"}
+                          onChange={(e) => setJenisTindakan(e.target.value)}
+                        />
+                        <Search
+                          size={28}
+                          className={
+                            jenisTindakan === "investigasi"
+                              ? "text-amber-600"
+                              : "text-slate-400"
+                          }
+                        />
+                        <span
+                          className={cn(
+                            "text-xs font-bold",
+                            jenisTindakan === "investigasi"
+                              ? "text-amber-700"
+                              : "text-slate-600",
+                          )}
+                        >
+                          Investigasi
+                          <br />
+                          Lanjut
+                        </span>
+                      </label>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-3">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tugaskan Ke (Staf HSE)</label>
-                  <Select value={assignedTo} onValueChange={setAssignedTo}>
-                    <SelectTrigger className="w-full h-12 rounded-xl">
-                      <SelectValue placeholder="Pilih staf yang bertugas..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staffList.map(staff => (
-                        <SelectItem key={staff.id} value={staff.id}>{staff.name} - {staff.role}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
+                  <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Tugaskan Ke (Staf HSE)
+                    </label>
+                    <Select value={assignedTo} onValueChange={setAssignedTo}>
+                      <SelectTrigger className="w-full h-12 rounded-xl">
+                        <SelectValue placeholder="Pilih staf yang bertugas..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staffList.map((staff) => (
+                          <SelectItem key={staff.id} value={staff.id}>
+                            {staff.name} - {staff.role}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
-            {validationAction === 'reject' && (
+            {validationAction === "reject" && (
               <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Catatan (Wajib)
@@ -853,24 +2514,547 @@ export default function HseDashboardPage() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0 border-t pt-4 border-slate-100">
-            <Button variant="ghost" onClick={() => setIsValidationOpen(false)} disabled={isSubmitting}>
+            <Button
+              variant="ghost"
+              onClick={() => setIsValidationOpen(false)}
+              disabled={isSubmitting}
+            >
               Batal
             </Button>
-            <Button 
+            <Button
               className={cn(
                 "text-white",
-                validationAction === 'approve' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+                validationAction === "approve"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-rose-600 hover:bg-rose-700",
               )}
               onClick={submitValidation}
               disabled={
-                isSubmitting || 
-                (validationAction === 'approve' && !assignedTo && (selectedReport?.status === 'menunggu_validasi_kadis_hse' || selectedReport?.status === 'menunggu_validasi_kadiv_pphse')) || 
-                (validationAction === 'reject' && !catatanValidasi.trim())
+                isSubmitting ||
+                (validationAction === "approve" &&
+                  !assignedTo &&
+                  (selectedReport?.status === "menunggu_validasi_kadis_hse" ||
+                    selectedReport?.status ===
+                      "menunggu_validasi_kadiv_pphse")) ||
+                (validationAction === "reject" && !catatanValidasi.trim())
               }
             >
-              {isSubmitting ? 'Memproses...' : 'Konfirmasi'}
+              {isSubmitting ? "Memproses..." : "Konfirmasi"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Isi Tindakan / Investigasi Staf HSE */}
+      <Dialog open={isActionOpen} onOpenChange={setIsActionOpen}>
+        <DialogContent className="max-w-2xl max-h-[92vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+          {/* Styled Header */}
+          <div className="px-6 pt-6 pb-4 border-b border-slate-100 bg-white">
+            <div className="flex items-center gap-2 text-rose-600 mb-1">
+              <Wrench size={18} />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">HSE Action Execution</span>
+            </div>
+            <DialogHeader className="p-0">
+              <DialogTitle className="text-xl font-black text-slate-900 tracking-tight">
+                {selectedReport?.jenisTindakan === "investigasi"
+                  ? "Form Investigasi Insiden K3"
+                  : "Input Tindakan Perbaikan Langsung"}
+              </DialogTitle>
+              <DialogDescription className="text-xs font-medium text-slate-500">
+                Lengkapi seluruh data tindakan penanganan K3 Safety.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5 space-y-6">
+            {isCameraOpen && cameraSource === "action" ? (
+              <div className="space-y-4 py-2 flex flex-col items-center">
+                <div className="relative w-full aspect-[3/4] bg-black rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    playsInline
+                    autoPlay
+                    muted
+                  />
+                  <button
+                    className="absolute top-3 right-3 bg-black/50 text-white p-2 rounded-full hover:bg-white/20 transition-colors backdrop-blur-md"
+                    onClick={switchCamera}
+                    title="Ganti Kamera"
+                  >
+                    <SwitchCamera size={18} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    className="rounded-full w-12 h-12 p-0"
+                    onClick={closeCamera}
+                  >
+                    <XCircle size={20} className="text-gray-500" />
+                  </Button>
+                  <Button
+                    className="rounded-full w-16 h-16 bg-white border-4 border-rose-500 hover:bg-gray-100 shadow-xl p-0"
+                    onClick={takePhoto}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-rose-600" />
+                  </Button>
+                  <div className="w-12 h-12" />
+                </div>
+              </div>
+            ) : selectedReport?.jenisTindakan === "perbaikan_langsung" ? (
+              /* perbaikan_langsung UI */
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText size={14} />
+                    Tindakan Perbaikan Yang Dilakukan
+                  </label>
+                  <Textarea
+                    placeholder="Sebutkan tindakan perbaikan yang telah dilakukan secara lengkap..."
+                    value={tindakanLangsungText}
+                    onChange={(e) => setTindakanLangsungText(e.target.value)}
+                    className="min-h-[120px] rounded-xl border-slate-200 resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Camera size={14} />
+                    Foto Bukti Perbaikan (Maks 2)
+                  </label>
+
+                  {/* Existing Photos (Uploaded previously) */}
+                  {existingPhotos.length > 0 && actionPhotos.length === 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Foto Terunggah Sebelumnya:</p>
+                      <div className="grid grid-cols-2 gap-3 mb-2">
+                        {existingPhotos.map((url, i) => (
+                          <div key={i} className="relative border border-slate-200 rounded-xl overflow-hidden aspect-video shadow-sm">
+                            <img src={`${process.env.NEXT_PUBLIC_API_URL || ""}/${url}`} className="w-full h-full object-cover" alt={`Foto Lama ${i + 1}`} />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-amber-600 font-semibold italic">*Mengunggah foto baru di bawah ini akan menggantikan foto sebelumnya.</p>
+                    </div>
+                  )}
+                  
+                  {/* Photo grid preview */}
+                  {actionPhotos.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3 mb-2">
+                      {actionPhotos.map((p, i) => (
+                        <div key={i} className="relative border border-slate-200 rounded-xl overflow-hidden aspect-video group shadow-sm">
+                          <img src={p.preview} className="w-full h-full object-cover" alt={`Foto Perbaikan ${i + 1}`} />
+                          <button
+                            className="absolute top-1.5 right-1.5 bg-black/60 text-white p-1 rounded-full hover:bg-rose-600 transition-colors backdrop-blur-sm"
+                            onClick={() => removeActionPhoto(i)}
+                          >
+                            <XCircle size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {actionPhotos.length < 2 && (
+                    <div
+                      onClick={() => openCamera("action")}
+                      className="border-2 border-dashed border-slate-200 rounded-2xl h-28 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group"
+                    >
+                      <Camera size={24} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
+                      <span className="text-xs font-medium text-slate-500 mt-1.5">Ambil Foto Perbaikan (Kamera)</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">Wajib ambil gambar langsung dari kamera</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* investigasi UI */
+              <div className="space-y-6">
+                {/* Category Selection */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Kategori Investigasi
+                  </label>
+                  <Select value={actionCategory} onValueChange={setActionCategory}>
+                    <SelectTrigger className="w-full h-11 rounded-xl">
+                      <SelectValue placeholder="Pilih Kategori Investigasi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kecelakaan">Kecelakaan Kerja</SelectItem>
+                      <SelectItem value="penyakit_kerja">Penyakit Akibat Kerja</SelectItem>
+                      <SelectItem value="kebakaran">Kebakaran</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Dynamic Questions Form */}
+                <div className="space-y-4">
+                  {(() => {
+                    const formConfig = k3Settings?.formInvestigasi?.[actionCategory] || INITIAL_FORM_DATA[actionCategory];
+                    const questions = formConfig?.questions || [];
+                    let qNum = 0;
+
+                    return questions.map((q) => {
+                      if (q.type === "section") {
+                        return (
+                          <div key={q.id} className="rounded-xl overflow-hidden border border-slate-150 shadow-sm mt-4">
+                            <div className="h-1.5 bg-rose-500" />
+                            <div className="p-4 bg-slate-50/50">
+                              <h3 className="text-sm font-bold text-slate-800">{q.label}</h3>
+                              {q.description && <p className="text-xs text-slate-400 mt-0.5">{q.description}</p>}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      qNum++;
+                      return (
+                        <div key={q.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm">
+                          <div>
+                            <label className="text-xs sm:text-sm font-bold text-slate-700">
+                              {qNum}. {q.label || "Pertanyaan tanpa judul"}
+                              {q.required && <span className="text-rose-500 ml-1">*</span>}
+                            </label>
+                            {q.description && <p className="text-[11px] text-slate-400 mt-0.5">{q.description}</p>}
+                          </div>
+
+                          {/* Dynamic Inputs */}
+                          {q.type === "short_text" && (
+                            <Input
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              placeholder="Ketik jawaban singkat..."
+                              className="h-10 rounded-lg"
+                            />
+                          )}
+                          {q.type === "long_text" && (
+                            <Textarea
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              placeholder="Ketik jawaban lengkap..."
+                              className="min-h-[80px] rounded-lg resize-none"
+                            />
+                          )}
+                          {q.type === "number" && (
+                            <Input
+                              type="number"
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              placeholder="Ketik angka..."
+                              min={q.config?.min}
+                              max={q.config?.max}
+                              className="h-10 w-40 rounded-lg"
+                            />
+                          )}
+                          {q.type === "yes_no" && (
+                            <div className="flex gap-4">
+                              {["Ya", "Tidak"].map((opt) => (
+                                <label key={opt} className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={q.id}
+                                    value={opt}
+                                    checked={actionAnswers[q.id] === opt}
+                                    onChange={() => setActionAnswers({ ...actionAnswers, [q.id]: opt })}
+                                    className="w-4 h-4 text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                                  />
+                                  {opt}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                          {q.type === "multiple_choice" && (
+                            <div className="space-y-2">
+                              {q.options.map((opt, i) => (
+                                <label key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={q.id}
+                                    value={opt}
+                                    checked={actionAnswers[q.id] === opt}
+                                    onChange={() => setActionAnswers({ ...actionAnswers, [q.id]: opt })}
+                                    className="w-4 h-4 text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                                  />
+                                  {opt}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                          {q.type === "checkbox" && (
+                            <div className="space-y-2">
+                              {q.options.map((opt, i) => {
+                                const currentVal = actionAnswers[q.id] || [];
+                                const isChecked = currentVal.includes(opt);
+                                return (
+                                  <label key={i} className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setActionAnswers({ ...actionAnswers, [q.id]: [...currentVal, opt] });
+                                        } else {
+                                          setActionAnswers({ ...actionAnswers, [q.id]: currentVal.filter((x) => x !== opt) });
+                                        }
+                                      }}
+                                      className="w-4 h-4 text-rose-600 border-slate-300 rounded focus:ring-rose-500 cursor-pointer"
+                                    />
+                                    {opt}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {q.type === "dropdown" && (
+                            <Select
+                              value={actionAnswers[q.id] || ""}
+                              onValueChange={(val) => setActionAnswers({ ...actionAnswers, [q.id]: val })}
+                            >
+                              <SelectTrigger className="h-10 w-full sm:w-60">
+                                <SelectValue placeholder="Pilih opsi..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {q.options.map((opt, i) => (
+                                  <SelectItem key={i} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {q.type === "linear_scale" && (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1 px-1 max-w-xs">
+                                <span>{q.config?.labelMin || "1"}</span>
+                                <span>{q.config?.labelMax || "5"}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {Array.from(
+                                  { length: (q.config?.scaleMax || 5) - (q.config?.scaleMin || 1) + 1 },
+                                  (_, i) => (q.config?.scaleMin || 1) + i
+                                ).map((n) => (
+                                  <label key={n} className="flex flex-col items-center gap-1 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name={q.id}
+                                      value={n}
+                                      checked={Number(actionAnswers[q.id]) === n}
+                                      onChange={() => setActionAnswers({ ...actionAnswers, [q.id]: n })}
+                                      className="sr-only"
+                                    />
+                                    <span
+                                      className={cn(
+                                        "w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all",
+                                        Number(actionAnswers[q.id]) === n
+                                          ? "border-rose-500 bg-rose-50 text-rose-600 scale-110"
+                                          : "border-slate-200 text-slate-500 hover:border-rose-300"
+                                      )}
+                                    >
+                                      {n}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {q.type === "date" && (
+                            <Input
+                              type="date"
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              className="h-10 w-48 rounded-lg"
+                            />
+                          )}
+                          {q.type === "time" && (
+                            <Input
+                              type="time"
+                              value={actionAnswers[q.id] || ""}
+                              onChange={(e) => setActionAnswers({ ...actionAnswers, [q.id]: e.target.value })}
+                              className="h-10 w-36 rounded-lg"
+                            />
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* Upload Foto Investigasi (Maks 2) */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Camera size={14} />
+                    Foto Investigasi (Maks 2 Gambar)
+                  </label>
+
+                  {/* Existing Photos (Uploaded previously) */}
+                  {existingPhotos.length > 0 && actionPhotos.length === 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Foto Terunggah Sebelumnya:</p>
+                      <div className="grid grid-cols-2 gap-3 mb-2">
+                        {existingPhotos.map((url, i) => (
+                          <div key={i} className="relative border border-slate-200 rounded-xl overflow-hidden aspect-video shadow-sm">
+                            <img src={`${process.env.NEXT_PUBLIC_API_URL || ""}/${url}`} className="w-full h-full object-cover" alt={`Foto Lama ${i + 1}`} />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-amber-600 font-semibold italic">*Mengunggah foto baru di bawah ini akan menggantikan foto sebelumnya.</p>
+                    </div>
+                  )}
+ 
+                  {/* Photo grid preview */}
+                  {actionPhotos.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3 mb-2">
+                      {actionPhotos.map((p, i) => (
+                        <div key={i} className="relative border border-slate-200 rounded-xl overflow-hidden aspect-video group shadow-sm">
+                          <img src={p.preview} className="w-full h-full object-cover" alt={`Foto Investigasi ${i + 1}`} />
+                          <button
+                            className="absolute top-1.5 right-1.5 bg-black/60 text-white p-1 rounded-full hover:bg-rose-600 transition-colors backdrop-blur-sm"
+                            onClick={() => removeActionPhoto(i)}
+                          >
+                            <XCircle size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {actionPhotos.length < 2 && (
+                    <div
+                      onClick={() => openCamera("action")}
+                      className="border-2 border-dashed border-slate-200 rounded-2xl h-24 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group"
+                    >
+                      <Camera size={22} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
+                      <span className="text-xs font-medium text-slate-500 mt-1">Ambil Foto Investigasi (Kamera)</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">Wajib ambil gambar langsung dari kamera</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Dokumen Investigasi (Maks 1) */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText size={14} />
+                    Dokumen Pendukung (Maks 1 File - PDF, Word, Excel)
+                  </label>
+
+                  {/* Existing Document (Uploaded previously) */}
+                  {existingDoc && !actionDoc && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                            <FileText size={16} />
+                          </div>
+                          <span className="text-xs font-semibold text-slate-700 truncate max-w-xs">
+                            {existingDoc.split("/").pop()}
+                          </span>
+                        </div>
+                        <a
+                          href={`${process.env.NEXT_PUBLIC_API_URL || ""}/${existingDoc}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline px-2"
+                        >
+                          Lihat Dokumen
+                        </a>
+                      </div>
+                      <p className="text-[10px] text-amber-600 font-semibold italic">*Mengunggah dokumen baru di bawah ini akan menggantikan dokumen sebelumnya.</p>
+                    </div>
+                  )}
+ 
+                  {actionDoc ? (
+                    <div className="flex items-center justify-between bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-red-50 text-rose-600 flex items-center justify-center shrink-0">
+                          <FileText size={16} />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 truncate max-w-xs">{actionDoc.name}</span>
+                      </div>
+                      <button
+                        className="text-slate-400 hover:text-rose-600 transition-colors"
+                        onClick={removeActionDoc}
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="border-2 border-dashed border-slate-200 rounded-2xl h-24 flex flex-col items-center justify-center bg-slate-50/50 hover:bg-slate-100 hover:border-rose-300 cursor-pointer transition-all duration-300 group">
+                      <FileText size={22} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
+                      <span className="text-xs font-medium text-slate-500 mt-1">Pilih Dokumen Pendukung</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx"
+                        className="sr-only"
+                        onChange={handleActionDocChange}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Dialog Footer */}
+          {!(isCameraOpen && cameraSource === "action") && (
+            <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50 flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 font-semibold px-6"
+                onClick={() => setIsActionOpen(false)}
+              >
+                Batal
+              </Button>
+              
+              {selectedReport?.jenisTindakan === "investigasi" && (
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold px-6"
+                  onClick={() => submitAction(true)}
+                  disabled={isSubmitting}
+                >
+                  Simpan Draft
+                </Button>
+              )}
+
+              <Button
+                className="bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md shadow-rose-100 font-semibold px-6 text-white"
+                onClick={() => submitAction(false)}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <RefreshCw size={16} className="mr-2 animate-spin" />
+                ) : (
+                  <ShieldCheck size={16} className="mr-2" />
+                )}
+                Kirim Tindakan
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-fit w-auto p-0 bg-transparent border-none shadow-none [&>button]:hidden flex justify-center items-center">
+          <div className="relative flex justify-center items-center">
+            {selectedImage && (
+              <img
+                src={selectedImage}
+                alt="Preview"
+                className="max-h-[85vh] w-auto max-w-[95vw] rounded-xl object-contain shadow-2xl"
+              />
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-3 -right-3 bg-black/60 hover:bg-black/80 text-white rounded-full w-8 h-8 flex items-center justify-center p-0 backdrop-blur-sm"
+              onClick={() => setSelectedImage(null)}
+            >
+              <XCircle className="w-6 h-6" />
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

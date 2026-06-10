@@ -131,7 +131,10 @@ function fmtRequest(notif, sapSpk) {
     executionName: sap?.execution_name || null,
     executionNik: sap?.execution_nik || null,
     executionWorkCenter: sap?.work_center || null,
-
+    actualWorkStart: sap?.work_start || spk.actualStartDate,
+    actualWorkFinish: sap?.work_finish || null,
+    actualStartTime: sap?.start_time || null,
+    actualFinishTime: sap?.finish_time || null,
     actualMaterials: sap?.actual_materials ? sap.actual_materials.split(', ').filter(Boolean) : [],
     actualTools: sap?.actual_tools ? sap.actual_tools.split(', ').filter(Boolean) : [],
   };
@@ -145,7 +148,8 @@ const getAll = async (req, res) => {
 
     if (req.query.status) where.status = req.query.status;
 
-    if (role === KADIS_ROLE) {
+    const userRole = (role || "").toLowerCase();
+    if (userRole === "kadis") {
       const { dinas } = req.user;
       const isKadisPusat =
         dinas && dinas.toLowerCase().includes("pusat perawatan");
@@ -425,6 +429,11 @@ const rejectKadisPusat = async (req, res) => {
 
 const remove = async (req, res) => {
   try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      return res.status(403).json({ error: 'Access denied. Only Admin and Planner can delete.' });
+    }
     const notification = await Notification.findByPk(req.params.id);
     if (!notification)
       return res.status(404).json({ error: "Notification not found" });
@@ -445,6 +454,12 @@ const remove = async (req, res) => {
 
 const bulkDelete = async (req, res) => {
   try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      return res.status(403).json({ error: 'Access denied. Only Admin and Planner can delete.' });
+    }
+
     const { ids } = req.body;
     if (!Array.isArray(ids) || !ids.length) {
       return res.status(400).json({ error: "ids array required" });
@@ -465,6 +480,12 @@ const bulkDelete = async (req, res) => {
 
 const deleteAll = async (req, res) => {
   try {
+    const { role, group } = req.user;
+    const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
+    if (role !== 'admin' && !isPlannerGroup) {
+      return res.status(403).json({ error: 'Access denied. Only Admin and Planner can delete.' });
+    }
+
     const count = await Notification.destroy({
       where: {
         status: { [Op.ne]: "spk_created" },
@@ -496,7 +517,10 @@ const updateSapNumber = async (req, res) => {
 
     const spkExists = await SapSpkCorrective.findByPk(sapOrderNumber);
     if (spkExists) {
-      await notification.update({ approvalStatus: "spk_issued" });
+      await notification.update({ 
+        status: "spk_created",
+        approvalStatus: "spk_issued" 
+      });
 
       if (notification.kadisPelaporId) {
         const pelaporUser = await User.findByPk(notification.kadisPelaporId, {
@@ -546,7 +570,7 @@ const approvePlanner = async (req, res) => {
       return res.status(404).json({ error: "Notification not found" });
 
     if (
-      notification.status !== "submitted" &&
+      notification.status !== "submitted" ||
       notification.approvalStatus !== "pending"
     ) {
       return res
@@ -561,8 +585,12 @@ const approvePlanner = async (req, res) => {
     });
 
     const spkExists = await SapSpkCorrective.findByPk(sapOrderNumber);
+
     if (spkExists) {
-      await notification.update({ approvalStatus: "spk_issued" });
+      await notification.update({ 
+        status: "spk_created",
+        approvalStatus: "spk_issued" 
+      });
     }
 
     const fresh = await Notification.findByPk(
@@ -575,11 +603,15 @@ const approvePlanner = async (req, res) => {
         attributes: ["nik"],
       });
       if (pelaporUser?.nik) {
+        const bodyText = spkExists 
+          ? `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah disetujui dan SPK (${sapOrderNumber}) sudah tersedia.`
+          : `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah disetujui oleh Planner. Proses selanjutnya menunggu pembuatan SPK.`;
+
         await NotificationService.notify({
           module: "corrective",
           type: "request_approved_for_reporter",
           title: "Laporan Anda Telah Disetujui",
-          body: `Laporan corrective ${notification.notificationId} (${notification.description || ""}) telah disetujui oleh Planner. Proses selanjutnya menunggu pembuatan SPK.`,
+          body: bodyText,
           data: {
             requestId: notification.notificationId,
             deepLink: "corrective/request-detail",
@@ -646,6 +678,35 @@ const rejectPlanner = async (req, res) => {
   }
 };
 
+/**
+ * Admin Only: Force update notification status and approval status
+ */
+const adminUpdateStatus = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Only admin can force update status" });
+    }
+
+    const { status, approvalStatus } = req.body;
+    const notification = await Notification.findByPk(req.params.id);
+
+    if (!notification) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+
+    const updates = {};
+    if (status) updates.status = status;
+    if (approvalStatus) updates.approvalStatus = approvalStatus;
+
+    await notification.update(updates);
+
+    const fresh = await Notification.findByPk(notification.notificationId || notification.id);
+    res.json({ success: true, data: fmtRequest(fresh) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getAll,
   getOne,
@@ -659,4 +720,5 @@ module.exports = {
   approvePlanner,
   rejectPlanner,
   updateSapNumber,
+  adminUpdateStatus,
 };

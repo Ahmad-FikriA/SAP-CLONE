@@ -5,10 +5,10 @@ import { toast } from 'sonner';
 import { apiGet, apiPost } from '@/lib/api';
 import { getUser, canUpdate } from '@/lib/auth';
 import { formatDate } from '@/lib/date-utils';
-import { STATUS_LABELS, CATEGORY_COLORS } from '@/lib/constants';
+import { STATUS_LABELS, CATEGORY_COLORS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS, KADIS_AREAS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { RefreshCw, CheckCircle, Clock, ChevronRight, ImageIcon, X } from 'lucide-react';
+import { RefreshCw, CheckCircle, Clock, ChevronRight, ImageIcon, X, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -71,8 +71,19 @@ function approveEndpoint(status) {
   return null;
 }
 
-function StatusBadge({ status }) {
-  const label = STATUS_LABELS[status] || status;
+function rejectEndpoint(status) {
+  if (status === 'awaiting_kasie')           return 'reject-kasie';
+  if (status === 'awaiting_kadis_perawatan') return 'reject-kadis-perawatan';
+  if (status === 'awaiting_kadis')           return 'reject-kadis';
+  return null;
+}
+
+function StatusBadge({ status, kadisArea }) {
+  let label = STATUS_LABELS[status] || status;
+  if (status === 'awaiting_kadis' && kadisArea) {
+    const area = KADIS_AREAS.find(a => a.id === kadisArea);
+    if (area) label = `Menunggu ${area.label}`;
+  }
   const color = STATUS_COLORS[status] || 'bg-gray-100 text-gray-600';
   return <span className={`px-2 py-0.5 rounded text-xs font-semibold ${color}`}>{label}</span>;
 }
@@ -102,6 +113,12 @@ export default function SpkApprovalPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [approving, setApproving] = useState(false);
   const [lightbox, setLightbox] = useState(null);      // photo path string
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [hasAbnormal, setHasAbnormal] = useState(false);
+  const [rejectOpen, setRejectOpen]             = useState(false);
+  const [rejecting, setRejecting]               = useState(false);
+  const [rejectionReason, setRejectionReason]   = useState('');
+  const [viewMode, setViewMode]                 = useState('pending'); // 'pending' | 'rejected'
 
   useEffect(() => { setUser(getUser()); }, []);
 
@@ -111,10 +128,39 @@ export default function SpkApprovalPage() {
     }).catch(() => {});
   }, []);
 
-  const load = useCallback(async (u) => {
+  const load = useCallback(async (u, mode = 'pending') => {
     const role = u?.role;
-    const statuses = PENDING_STATUSES[role];
+
+    // ── Rejected view ──────────────────────────────────────────────────────────
+    if (mode === 'rejected') {
+      setLoading(true);
+      try {
+        let url = '/spk?status=rejected';
+        if (KASIE_ROLES.has(role)) {
+          const cat = GROUP_TO_CATEGORY[String(u?.group || '').trim()];
+          if (cat) url += `&category=${encodeURIComponent(cat)}`;
+        }
+        const data = await apiGet(url);
+        setCategoryFilter('');
+        setSpks(data.sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0)));
+      } catch (e) {
+        toast.error('Gagal memuat daftar SPK: ' + e.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // ── Pending view ───────────────────────────────────────────────────────────
+    let statuses = PENDING_STATUSES[role];
     if (!statuses) { setSpks([]); setLoading(false); return; }
+
+    // Kadis Pusat Perawatan only sees their own queue (awaiting_kadis_perawatan).
+    // Area Kadis (Krenceng, Air Baku, etc.) only sees awaiting_kadis.
+    if (role === 'kadis') {
+      const isPusatPerawatan = (u?.dinas || '').toLowerCase().includes('pusat perawatan');
+      statuses = isPusatPerawatan ? ['awaiting_kadis_perawatan'] : ['awaiting_kadis'];
+    }
 
     // Kasie: only fetch SPKs matching their discipline
     if (KASIE_ROLES.has(role)) {
@@ -124,6 +170,7 @@ export default function SpkApprovalPage() {
       setLoading(true);
       try {
         const data = await apiGet(`/spk?status=awaiting_kasie&category=${encodeURIComponent(category)}`);
+        setCategoryFilter('');
         setSpks(data.sort((a, b) => new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0)));
       } catch (e) {
         toast.error('Gagal memuat daftar SPK: ' + e.message);
@@ -141,6 +188,7 @@ export default function SpkApprovalPage() {
       const merged = results.flat().sort((a, b) =>
         new Date(a.submittedAt || 0) - new Date(b.submittedAt || 0)
       );
+      setCategoryFilter('');
       setSpks(merged);
     } catch (e) {
       toast.error('Gagal memuat daftar SPK: ' + e.message);
@@ -150,8 +198,8 @@ export default function SpkApprovalPage() {
   }, []);
 
   useEffect(() => {
-    if (user) load(user);
-  }, [user, load]);
+    if (user) load(user, viewMode);
+  }, [user, viewMode, load]);
 
   async function selectSpk(spk) {
     setSelected(spk);
@@ -182,7 +230,7 @@ export default function SpkApprovalPage() {
       setConfirmOpen(false);
       setSelected(null);
       setDetail(null);
-      await load(user);
+      await load(user, viewMode);
     } catch (e) {
       toast.error('Gagal menyetujui: ' + e.message);
     } finally {
@@ -191,6 +239,40 @@ export default function SpkApprovalPage() {
   }
 
   const canApprove = detail && !!approveEndpoint(detail.spk.status);
+
+  async function handleReject() {
+    if (!detail) return;
+    const endpoint = rejectEndpoint(detail.spk.status);
+    if (!endpoint) { toast.error('Status tidak valid untuk penolakan'); return; }
+    if (rejectionReason.trim().length < 10) {
+      toast.error('Alasan penolakan minimal 10 karakter');
+      return;
+    }
+    setRejecting(true);
+    try {
+      await apiPost(`/spk/${encodeURIComponent(detail.spk.spkNumber)}/${endpoint}`, {
+        rejectionReason: rejectionReason.trim(),
+      });
+      toast.success('SPK berhasil ditolak');
+      setRejectOpen(false);
+      setRejectionReason('');
+      setSelected(null);
+      setDetail(null);
+      await load(user, viewMode);
+    } catch (e) {
+      toast.error('Gagal menolak: ' + e.message);
+    } finally {
+      setRejecting(false);
+    }
+  }
+
+  const canReject = detail && !!rejectEndpoint(detail.spk.status);
+
+  const uniqueCategories = [...new Set(spks.map(s => s.category).filter(Boolean))].sort();
+  const showCategoryChips = !KASIE_ROLES.has(user?.role) && uniqueCategories.length > 1;
+  const filteredSpks = spks
+    .filter(s => !categoryFilter || s.category === categoryFilter)
+    .filter(s => !hasAbnormal || s.abnormalCount > 0);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -209,10 +291,12 @@ export default function SpkApprovalPage() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <div>
             <h2 className="text-sm font-semibold text-gray-800">Persetujuan SPK</h2>
-            <p className="text-xs text-gray-400">{spks.length} SPK menunggu</p>
+            <p className="text-xs text-gray-400">
+              {filteredSpks.length}{filteredSpks.length !== spks.length ? ` / ${spks.length}` : ''} SPK {viewMode === 'rejected' ? 'ditolak' : 'menunggu'}
+            </p>
           </div>
           <button
-            onClick={() => load(user)}
+            onClick={() => load(user, viewMode)}
             disabled={loading}
             className="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition-colors"
             title="Refresh"
@@ -221,32 +305,123 @@ export default function SpkApprovalPage() {
           </button>
         </div>
 
+        {/* View mode tabs */}
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => { setViewMode('pending'); setSelected(null); setDetail(null); setCategoryFilter(''); }}
+            className={cn(
+              'flex-1 py-2 text-xs font-semibold transition-colors',
+              viewMode === 'pending'
+                ? 'text-blue-600 border-b-2 border-blue-500 bg-blue-50/50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            )}
+          >
+            Menunggu
+          </button>
+          <button
+            onClick={() => { setViewMode('rejected'); setSelected(null); setDetail(null); setCategoryFilter(''); }}
+            className={cn(
+              'flex-1 py-2 text-xs font-semibold transition-colors',
+              viewMode === 'rejected'
+                ? 'text-red-600 border-b-2 border-red-500 bg-red-50/50'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            )}
+          >
+            Ditolak
+          </button>
+        </div>
+
+        {/* Abnormal filter chip */}
+        {!loading && spks.length > 0 && (
+          <div className="px-3 py-2 border-b border-gray-200">
+            <button
+              onClick={() => setHasAbnormal(v => !v)}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                hasAbnormal
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              <span>⚠</span>
+              <span>Ada Hasil Abnormal</span>
+            </button>
+          </div>
+        )}
+
+        {/* Category filter chips — Kadis/Admin only, when multiple categories present */}
+        {showCategoryChips && !loading && spks.length > 0 && (
+          <div className="px-3 py-2 border-b border-gray-200 flex gap-1.5 flex-wrap">
+            <button
+              onClick={() => setCategoryFilter('')}
+              className={cn(
+                'px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                categoryFilter === ''
+                  ? 'bg-gray-800 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              Semua ({spks.length})
+            </button>
+            {uniqueCategories.map(cat => {
+              const style = CATEGORY_COLORS[cat] || {};
+              const count = spks.filter(s => s.category === cat).length;
+              const isSelected = categoryFilter === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(isSelected ? '' : cat)}
+                  style={isSelected ? { backgroundColor: style.bg, color: style.text, outline: `1.5px solid ${style.text}` } : {}}
+                  className={cn(
+                    'px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                    !isSelected && 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  )}
+                >
+                  {cat} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
           {loading ? (
             <div className="p-6 text-center text-gray-400 text-sm">Memuat...</div>
           ) : spks.length === 0 ? (
             <div className="p-8 text-center">
-              <CheckCircle size={32} className="mx-auto text-green-400 mb-2" />
-              {KASIE_ROLES.has(user?.role) && !GROUP_TO_CATEGORY[String(user?.group || '').trim()] ? (
+              {viewMode === 'rejected'
+                ? <XCircle size={32} className="mx-auto text-gray-300 mb-2" />
+                : <CheckCircle size={32} className="mx-auto text-green-400 mb-2" />
+              }
+              {viewMode === 'pending' && KASIE_ROLES.has(user?.role) && !GROUP_TO_CATEGORY[String(user?.group || '').trim()] ? (
                 <p className="text-sm text-gray-500">
                   Grup Anda belum dikonfigurasi.<br />
                   <span className="text-gray-400">Hubungi admin untuk mengatur grup Anda.</span>
                 </p>
               ) : (
-                <p className="text-sm text-gray-400">Tidak ada SPK yang perlu disetujui</p>
+                <p className="text-sm text-gray-400">
+                  {viewMode === 'rejected' ? 'Tidak ada SPK yang ditolak' : 'Tidak ada SPK yang perlu disetujui'}
+                </p>
               )}
             </div>
+          ) : filteredSpks.length === 0 ? (
+            <div className="p-8 text-center text-gray-400 text-sm">
+              Tidak ada SPK {categoryFilter} yang {viewMode === 'rejected' ? 'ditolak' : 'menunggu persetujuan'}
+            </div>
           ) : (
-            spks.map(spk => (
+            filteredSpks.map(spk => (
               <button
                 key={spk.spkNumber}
                 onClick={() => selectSpk(spk)}
                 className={cn(
                   'w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-start gap-3',
-                  selected?.spkNumber === spk.spkNumber && 'bg-blue-50 border-l-2 border-blue-500'
+                  selected?.spkNumber === spk.spkNumber && (viewMode === 'rejected' ? 'bg-red-50 border-l-2 border-red-400' : 'bg-blue-50 border-l-2 border-blue-500')
                 )}
               >
-                <Clock size={15} className="mt-0.5 shrink-0 text-amber-500" />
+                {viewMode === 'rejected'
+                  ? <XCircle size={15} className="mt-0.5 shrink-0 text-red-400" />
+                  : <Clock size={15} className="mt-0.5 shrink-0 text-amber-500" />
+                }
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-mono font-semibold text-gray-700 truncate">
@@ -257,8 +432,13 @@ export default function SpkApprovalPage() {
                   <p className="text-xs text-gray-500 truncate mb-1">
                     {spk.equipmentModels?.[0]?.equipmentName || '—'}
                   </p>
+                  {spk.abnormalCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700 mb-1">
+                      ⚠ {spk.abnormalCount} abnormal
+                    </span>
+                  )}
                   <div className="flex items-center justify-between">
-                    <StatusBadge status={spk.status} />
+                    <StatusBadge status={spk.status} kadisArea={spk.kadisArea} />
                     <span className="text-[10px] text-gray-400">
                       {spk.submittedAt ? formatDate(spk.submittedAt) : '—'}
                     </span>
@@ -289,6 +469,8 @@ export default function SpkApprovalPage() {
             detail={detail}
             canApprove={canApprove}
             onApprove={() => setConfirmOpen(true)}
+            canReject={canReject}
+            onReject={() => { setRejectionReason(''); setRejectOpen(true); }}
             onPhotoClick={(path) => setLightbox(path)}
             userMap={userMap}
           />
@@ -311,6 +493,45 @@ export default function SpkApprovalPage() {
             </Button>
             <Button onClick={handleApprove} disabled={approving || !canUpdate('spk-approval')}>
               {approving ? 'Menyetujui...' : 'Setujui'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reject dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={rejectOpen} onOpenChange={(open) => { setRejectOpen(open); if (!open) setRejectionReason(''); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Tolak SPK</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            Tolak SPK <span className="font-semibold font-mono">{detail?.spk?.spkNumber}</span>?
+          </p>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+              Alasan Penolakan <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Tuliskan alasan penolakan (min. 10 karakter)..."
+              rows={3}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+            {rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10 && (
+              <p className="text-xs text-red-500 mt-1">Minimal 10 karakter</p>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setRejectOpen(false)} disabled={rejecting}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={rejecting || rejectionReason.trim().length < 10 || !canUpdate('spk-approval')}
+            >
+              {rejecting ? 'Menolak...' : 'Tolak SPK'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -342,7 +563,7 @@ export default function SpkApprovalPage() {
 
 // ── Detail Panel ──────────────────────────────────────────────────────────────
 
-function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {} }) {
+function DetailPanel({ detail, canApprove, onApprove, canReject, onReject, onPhotoClick, userMap = {} }) {
   const { spk, submission } = detail;
   const activities = spk.activitiesModel || [];
   const results    = submission?.activityResultsModel || [];
@@ -360,22 +581,40 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {}
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-lg font-semibold font-mono text-gray-900">{spk.spkNumber}</h3>
               <CategoryBadge category={spk.category} />
-              <StatusBadge status={spk.status} />
+              <StatusBadge status={spk.status} kadisArea={spk.kadisArea} />
             </div>
             <p className="text-sm text-gray-500">{spk.description || '—'}</p>
           </div>
-          {canApprove && canUpdate('spk-approval') && (
-            <Button onClick={onApprove} className="gap-2 shrink-0">
-              <CheckCircle size={15} />
-              Setujui SPK
-            </Button>
+          {canUpdate('spk-approval') && (canApprove || canReject) && (
+            <div className="flex gap-2 shrink-0">
+              {canReject && (
+                <Button
+                  variant="outline"
+                  onClick={onReject}
+                  className="gap-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                >
+                  <XCircle size={15} />
+                  Tolak SPK
+                </Button>
+              )}
+              {canApprove && (
+                <Button onClick={onApprove} className="gap-2">
+                  <CheckCircle size={15} />
+                  Setujui SPK
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-4 gap-4 text-sm">
           <Info label="Interval" value={spk.interval || '—'} />
-          <Info label="Disubmit oleh" value={userMap[spk.submittedBy] || spk.submittedBy || '—'} />
+          <Info label="Disubmit oleh" value={userMap[spk.submittedBy] || spk.submittedByName || spk.submittedBy || '—'} />
           <Info label="Waktu Submit" value={formatDate(spk.submittedAt)} />
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Status Peralatan</p>
+            <EquipmentStatusBadge status={spk.equipmentStatus} />
+          </div>
         </div>
       </div>
 
@@ -522,6 +761,38 @@ function DetailPanel({ detail, canApprove, onApprove, onPhotoClick, userMap = {}
           />
         </div>
       </Section>
+
+      {/* Rejection history */}
+      {(spk.rejectionLogs || []).length > 0 && (
+        <div className="bg-white rounded-xl border border-red-100 p-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Riwayat Penolakan</p>
+          <div className="space-y-3">
+            {(spk.rejectionLogs || []).map((log, i) => {
+              const levelLabel = log.rejectedLevel === 'kasie' ? 'Kasie'
+                : log.rejectedLevel === 'kadis_perawatan' ? 'Kadis Perawatan'
+                : 'Kadis';
+              return (
+                <div key={i} className="bg-red-50 border border-red-100 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded uppercase">
+                      {levelLabel}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {log.rejectedBy} &middot; {formatDate(log.rejectedAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-red-800">{log.rejectionReason}</p>
+                  {log.resubmittedAt && (
+                    <p className="text-xs text-green-600 mt-1 italic">
+                      Teknisi kirim ulang: {formatDate(log.resubmittedAt)}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -543,6 +814,19 @@ function Info({ label, value }) {
       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
       <p className="text-sm text-gray-700 break-words">{value}</p>
     </div>
+  );
+}
+
+function EquipmentStatusBadge({ status }) {
+  const label = EQUIPMENT_STATUS_LABELS[status] || status || 'Running';
+  const colors = EQUIPMENT_STATUS_COLORS[status] || EQUIPMENT_STATUS_COLORS['Running'];
+  return (
+    <span
+      className="px-2 py-0.5 rounded text-xs font-semibold"
+      style={{ backgroundColor: colors.bg, color: colors.text }}
+    >
+      {label}
+    </span>
   );
 }
 

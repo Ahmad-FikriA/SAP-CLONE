@@ -33,6 +33,20 @@ export const KADIS_AREAS = [
 ];
 
 
+// Maps backend equipmentStatus values → display labels.
+// Backend stores 'Breakdown'; UI shows 'Under Maintenance'.
+export const EQUIPMENT_STATUS_LABELS = {
+  Running:   'Running',
+  Standby:   'Standby',
+  Breakdown: 'Under Maintenance',
+};
+
+export const EQUIPMENT_STATUS_COLORS = {
+  Running:   { bg: '#DCFCE7', text: '#16A34A' },
+  Standby:   { bg: '#FEF3C7', text: '#D97706' },
+  Breakdown: { bg: '#FEE2E2', text: '#DC2626' },
+};
+
 export const CATEGORY_COLORS = {
   Mekanik: { bg: '#0070D222', text: '#0070D2' },
   Listrik: { bg: '#E67E2222', text: '#E67E22' },
@@ -49,19 +63,19 @@ export const CATEGORY_MARKER_COLORS = {
 
 export const INTERVALS = ['1wk', '2wk', '4wk', '8wk', '12wk', '16wk', '24wk'];
 
-export const ROLES = ['teknisi', 'planner', 'kasie', 'kadis', 'admin'];
+export const ROLES = ['teknisi', 'petugas', 'kasie', 'kadis', 'kadiv', 'admin'];
 
 export const ROLE_COLORS = {
   teknisi:    '#0070D2',
-  planner:    '#6610f2',
+  petugas:    '#0284C7',
   kasie:      '#0891B2',
   kadis:      '#0D9488',
-
+  kadiv:      '#7C3AED',
   admin:      '#BB0000',
 };
 
 export const STATUS_LABELS = {
-  pending: 'Pending',
+  pending: 'Sedang Dikerjakan',
   in_progress: 'On Progress',
   completed: 'Selesai',
   approved: 'Disetujui',
@@ -107,8 +121,9 @@ export const STATUS_VARIANTS = {
 export const ALL_PAGES = [
   { key: 'dashboard',        label: 'Dashboard' },
   { key: 'spk',              label: 'SPK / Preventive' },
-  { key: 'spk-approval',     label: 'Persetujuan SPK' },
+  { key: 'spk-approval',     label: 'Persetujuan Preventive' },
   { key: 'corrective',       label: 'Corrective Planner' },
+  { key: 'corrective-approval', label: 'Persetujuan Corrective' },
   { key: 'hse',              label: 'HSE Command Center' },
   { key: 'spk-import',       label: 'Import SAP' },
   { key: 'equipment',        label: 'Equipment' },
@@ -120,6 +135,7 @@ export const ALL_PAGES = [
   { key: 'task-mapping',     label: 'Task Mapping' },
   { key: 'interval-planner', label: 'Interval Planner' },
   { key: 'submissions',      label: 'Submissions' },
+  { key: 'inspeksi-k3',      label: 'Inspeksi K3' },
   { key: 'inspeksi',         label: 'Inspeksi' },
   { key: 'supervisi',        label: 'Supervisi' },
   { key: 'kalender',         label: 'Kalender Jadwal' },
@@ -128,7 +144,11 @@ export const ALL_PAGES = [
 export const TEMPLATE_ROLES = ['teknisi', 'petugas', 'kasie', 'kadis', 'kadiv'];
 
 export const TEMPLATE_ROLE_LABELS = {
-  teknisi: 'Teknisi', petugas: 'Petugas', kasie: 'Kasie', kadis: 'Kadis', kadiv: 'Kadiv',
+  teknisi: 'Teknisi',
+  petugas: 'Petugas',
+  kasie:   'Kasie',
+  kadis:   'Kadis',
+  kadiv:   'Kadiv',
 };
 
 export const GEOJSON_FEATURE_COLORS = {

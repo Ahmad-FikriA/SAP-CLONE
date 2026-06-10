@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiPut, apiDelete, apiUpload } from '@/lib/api';
 import { CategoryBadge } from '@/components/shared/StatusBadge';
@@ -8,8 +9,8 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { MapPin, Plus, RefreshCw, Upload, BarChart2, Download, QrCode } from 'lucide-react';
-import { canCreate, canUpdate, canDelete } from '@/lib/auth';
+import { MapPin, Plus, RefreshCw, Upload, BarChart2, Download, QrCode, ChevronDown, ChevronUp } from 'lucide-react';
+import { canCreate, canUpdate, canDelete, getUserCategory } from '@/lib/auth';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -17,14 +18,22 @@ const MapWithMarkers = dynamic(() => import('@/components/map/EquipmentMap'), { 
 const QRCode = dynamic(() => import('react-qr-code'), { ssr: false });
 
 const PAGE_SIZE = 20;
-const EMPTY_FORM = { equipmentId: '', equipmentName: '', functionalLocation: '', funcLocId: '', category: '', plantId: '', latitude: '', longitude: '' };
+const EMPTY_FORM = { equipmentId: '', equipmentName: '', functionalLocation: '', funcLocId: '', category: '', plantId: '', latitude: '', longitude: '', extraCategories: [] };
 
 export default function EquipmentPage() {
+  return <Suspense><EquipmentPageInner /></Suspense>;
+}
+
+function EquipmentPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [equipment, setEquipment]   = useState([]);
   const [plants, setPlants]         = useState([]);
   const [total, setTotal]           = useState(0);
-  const [page, setPage]             = useState(0);
+  const [page, setPage]             = useState(() => Math.max(0, parseInt(searchParams.get('page') || '0', 10)));
   const [loading, setLoading]       = useState(true);
+  const [userCategory, setUserCategory] = useState(null);
+  const [mapOpen, setMapOpen] = useState(false);
   const [search, setSearch]         = useState('');
   const [category, setCategory]     = useState('');
   const [plantFilter, setPlantFilter] = useState('');
@@ -39,9 +48,17 @@ export default function EquipmentPage() {
   const filterFnRef = useRef(null);     // applies category/plant filter to markers
 
   useEffect(() => {
+    const cat = getUserCategory();
+    setUserCategory(cat);
+    if (cat) setCategory(cat);
     apiGet('/maps').then(setPlants).catch(() => {});
     loadMapMarkers();
   }, []);
+
+  useEffect(() => {
+    const p = page === 0 ? '' : `?page=${page}`;
+    router.replace(`/equipment${p}`, { scroll: false });
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     load(0);
@@ -96,6 +113,7 @@ export default function EquipmentPage() {
       plantId: eq.plantId || '',
       latitude: eq.latitude ?? '',
       longitude: eq.longitude ?? '',
+      extraCategories: Array.isArray(eq.extraCategories) ? eq.extraCategories : [],
     });
     setPanelOpen(true);
   }
@@ -119,6 +137,7 @@ export default function EquipmentPage() {
       ...form,
       latitude: form.latitude !== '' ? parseFloat(form.latitude) : null,
       longitude: form.longitude !== '' ? parseFloat(form.longitude) : null,
+      extraCategories: form.extraCategories?.length ? form.extraCategories : null,
     };
     try {
       if (editingId) {
@@ -133,7 +152,7 @@ export default function EquipmentPage() {
         toast.success(`Equipment ${equipmentId} ditambahkan`);
       }
       setPanelOpen(false);
-      load(0);
+      load(page);
       loadMapMarkers();
     } catch (e) { toast.error(e.message); }
   }
@@ -143,7 +162,7 @@ export default function EquipmentPage() {
       await apiDelete(`/equipment/${deleteTarget.equipmentId}`);
       toast.success('Equipment dihapus');
       setDeleteTarget(null);
-      load(0);
+      load(page);
       loadMapMarkers();
     } catch (e) { toast.error(e.message); }
   }
@@ -198,10 +217,10 @@ export default function EquipmentPage() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Equipment</h2>
-          <p className="text-sm text-gray-500">{total} equipment</p>
+          <p className="text-sm text-gray-500">{total} equipment{userCategory ? ` · ${userCategory}` : ''}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => load(0)}><RefreshCw size={13} /></Button>
+          <Button variant="outline" size="sm" onClick={() => load(page)}><RefreshCw size={13} /></Button>
           <Button variant="outline" size="sm" onClick={exportCoordinates} className="gap-1.5">
             <Download size={13} /> Export Koordinat
           </Button>
@@ -218,14 +237,20 @@ export default function EquipmentPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-center">
         <input value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Cari ID, nama, atau funcloc..." className="flex-1 max-w-sm px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-        <select value={category} onChange={(e) => setCategory(e.target.value)}
-          className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-          <option value="">Semua Kategori</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        {userCategory ? (
+          <span className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium">
+            {userCategory}
+          </span>
+        ) : (
+          <select value={category} onChange={(e) => setCategory(e.target.value)}
+            className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+            <option value="">Semua Kategori</option>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
         <select value={plantFilter} onChange={(e) => setPlantFilter(e.target.value)}
           className="px-2.5 py-2 border border-gray-200 rounded-lg text-sm bg-white">
           <option value="">Semua Plant</option>
@@ -233,20 +258,34 @@ export default function EquipmentPage() {
         </select>
       </div>
 
-      {/* Map — isolated stacking context so Leaflet z-index doesn't bleed over Dialog */}
-      <div className="relative z-0 bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <MapWithMarkers
-          equipment={equipment}
-          plants={plants}
-          plantId={plantFilter}
-          onMapReady={(updateFn, flyToFn, filterFn) => {
-            mapCallbackRef.current = updateFn;
-            flyToRef.current = flyToFn;
-            filterFnRef.current = filterFn;
-          }}
-          onClickCoord={panelOpen ? onMapCoord : null}
-          className="h-[26rem] w-full"
-        />
+      {/* Map — collapsible, hidden by default */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <button
+          onClick={() => setMapOpen((o) => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <MapPin size={15} className="text-gray-400" />
+            <span>Peta Equipment</span>
+          </div>
+          {mapOpen ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
+        </button>
+        {mapOpen && (
+          <div className="relative z-0 border-t border-gray-100">
+            <MapWithMarkers
+              equipment={equipment}
+              plants={plants}
+              plantId={plantFilter}
+              onMapReady={(updateFn, flyToFn, filterFn) => {
+                mapCallbackRef.current = updateFn;
+                flyToRef.current = flyToFn;
+                filterFnRef.current = filterFn;
+              }}
+              onClickCoord={panelOpen ? onMapCoord : null}
+              className="h-[26rem] w-full"
+            />
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -271,7 +310,14 @@ export default function EquipmentPage() {
                 <td className="px-4 py-3 text-gray-500 text-xs">
                   {eq.functionalLocation || eq.funcLocId || '—'}
                 </td>
-                <td className="px-4 py-3"><CategoryBadge category={eq.category} /></td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    <CategoryBadge category={eq.category} />
+                    {Array.isArray(eq.extraCategories) && eq.extraCategories.map(c => (
+                      <CategoryBadge key={c} category={c} />
+                    ))}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-gray-500 text-xs">{eq.plantId || '—'}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1.5">
@@ -346,6 +392,34 @@ export default function EquipmentPage() {
                 </select>
               </div>
             </div>
+            {/* Secondary categories — all disciplines except the primary one */}
+            {form.category && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Kategori Tambahan</label>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.filter(c => c !== form.category).map(c => {
+                    const checked = (form.extraCategories || []).includes(c);
+                    return (
+                      <label key={c} className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            const prev = form.extraCategories || [];
+                            setForm({
+                              ...form,
+                              extraCategories: checked ? prev.filter(x => x !== c) : [...prev, c],
+                            });
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-xs text-gray-700">{c}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Latitude" value={form.latitude} onChange={(v) => setForm({ ...form, latitude: v })} placeholder="e.g. -6.2000" />
               <Field label="Longitude" value={form.longitude} onChange={(v) => setForm({ ...form, longitude: v })} placeholder="e.g. 106.8000" />

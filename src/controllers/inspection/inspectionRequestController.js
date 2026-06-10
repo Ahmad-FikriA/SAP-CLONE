@@ -31,20 +31,18 @@ function buildRequestRejectionNotification(request, notes) {
 
 function canViewAllRequests(user) {
   const profile = buildAccessProfile(user || {});
-  const appRole = profile?.appRole;
   const flags = profile?.flags || {};
 
-  return (
-    appRole === "kasie" ||
-    Boolean(
-      flags.isInspectionPlanner ||
-      flags.isPlanner ||
-      flags.isInspectionApprover,
-    )
+  return Boolean(
+    flags.isInspectionPlanner ||
+      flags.isInspectionApprover ||
+      flags.isInspectionMonitor,
   );
 }
 
-
+function canReviewRequests(user) {
+  return canViewAllRequests(user);
+}
 async function listRequests(req, res) {
   try {
     const where = {};
@@ -52,10 +50,7 @@ async function listRequests(req, res) {
     const hasGlobalAccess = canViewAllRequests(req.user);
     const requestedByQuery = normalizeNik(req.query.requestedBy);
 
-
     console.log(`[listRequests] nik=${requesterNik} hasGlobalAccess=${hasGlobalAccess} requestedByQuery="${requestedByQuery}" status="${req.query.status || ''}"`);
-
-
     if (req.query.status) where.status = req.query.status;
 
 
@@ -82,7 +77,6 @@ async function listRequests(req, res) {
       order: [["createdAt", "DESC"]],
     });
 
-    console.log(`[listRequests] returning ${data.length} records, where=${JSON.stringify(where)}`);
     res.json({ success: true, message: "Requests retrieved.", data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -201,6 +195,13 @@ async function createRequest(req, res) {
 
 async function approveRequest(req, res) {
   try {
+    if (!canReviewRequests(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses untuk meninjau permintaan inspeksi.",
+      });
+    }
+
     const request = await InspectionRequest.findByPk(req.params.id);
 
     if (!request) {
@@ -279,6 +280,13 @@ async function approveRequest(req, res) {
 
 async function rejectRequest(req, res) {
   try {
+    if (!canReviewRequests(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki akses untuk meninjau permintaan inspeksi.",
+      });
+    }
+
     const request = await InspectionRequest.findByPk(req.params.id);
 
     if (!request) {

@@ -1,0 +1,28 @@
+
+  KTI SAP Mock Server
+  ───────────────────────────────
+  API:      http://localhost:3000/api
+  Admin UI: http://localhost:3000
+
+Connection to database has been established successfully.
+Supervisi job schema ensured.
+Supervisi visit schema ensured.
+General task list activity measurement schema ensured.
+SPK activity measurement schema ensured.
+Submission activity result measurement schema ensured.
+Inspection schedule recurring schema ensured.
+[1/2] Patching inspection_requests.status ENUM...
+      ✅ inspection_requests.status patched.
+
+[2/2] Patching inspection_reports.status ENUM...
+      ✅ inspection_reports.status patched.
+
+[migrate_inspection_enums] Done. You can now delete this script if desired.
+Inspection enum schema ensured.
+[db-sync] Running sequelize.sync in "safe" mode during server startup.
+Database models synced successfully.
+[Supervisi Cron] Running missed-visit check at 2026-04-30T09:11:25.736Z
+[Supervisi Cron] Scheduled daily missed-visit check at 00:01 Asia/Jakarta.
+[Inspection Cron] Scheduled daily reminders at 07:00 Asia/Jakarta.
+[Supervisi Cron] Done. Created 0 pelanggaran record(s).
+[Inspection Cron] Sent reminders: 0 today, 6 overdue.

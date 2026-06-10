@@ -244,11 +244,18 @@ const bulkDelete = async (req, res) => {
     return res.status(400).json({ error: 'ids array required' });
   }
 
-  const count = await SpkCorrective.destroy({
-    where: { spkId: { [Op.in]: ids } },
-  });
-
-  res.json({ message: `Deleted ${count} SPK(s)` });
+  const t = await sequelize.transaction();
+  try {
+    const count = await SpkCorrective.destroy({
+      where: { spkId: { [Op.in]: ids } },
+      transaction: t,
+    });
+    await t.commit();
+    res.json({ message: `Deleted ${count} SPK(s)` });
+  } catch (err) {
+    await t.rollback();
+    res.status(500).json({ error: err.message });
+  }
 };
 
 

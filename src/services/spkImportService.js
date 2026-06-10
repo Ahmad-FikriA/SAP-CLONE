@@ -51,8 +51,38 @@ function normaliseHeader(h) {
   return String(h ?? '').toLowerCase().trim();
 }
 
+// ── Duration Plan header aliases (SAP exports vary: "Duration Plan" / "Duration P") ──
+const DURATION_PLAN_HEADERS = ['duration plan', 'duration p', 'dur. plan', 'dur plan'];
 
+// ── Parse a duration cell — may be a number, numeric string, or empty ─────────
+// Returns null when empty/absent (the fallback) so the column is optional.
+function parseDuration(val) {
+  if (val === null || val === undefined || val === '') return null;
+  const n = typeof val === 'number' ? val : parseFloat(String(val).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
 
+// ── FuncLoc prefix → Kadis area ID (per-order, handles mixed-plant files) ────
+// Longer prefixes (kadis_keamanan) must come first — A-A1-01-006 would otherwise
+// match the shorter A-A1-01 prefix of kadis_airbaku before being checked.
+const FUNCLOC_KADIS_MAP = [
+  { id: 'kadis_keamanan',           prefixes: ['A-A1-01-006', 'A-A1-02-006', 'A-A1-03-004'] },
+  { id: 'kadis_krenceng',           prefixes: ['A-A2-01'] },
+  { id: 'kadis_airbaku',            prefixes: ['A-A1-01', 'A-A1-03'] },
+  { id: 'kadis_cipasauran_cidanau', prefixes: ['A-A1-02', 'A-A2-09'] },
+];
+
+function detectKadisFromFuncLoc(functionalLocation) {
+  if (!functionalLocation) return null;
+  for (const area of FUNCLOC_KADIS_MAP) {
+    if (area.prefixes.some(p => functionalLocation.startsWith(p))) return area.id;
+  }
+  return null;
+}
+
+// ── SAP Location code → Kadis area ID ────────────────────────────────────────
+// The "Location" column in SAP IW38 exports contains site codes like P-22L006.
+// These are direct KTI plant section codes — map them explicitly.
 const LOCATION_CODE_KADIS_MAP = {
   'P-22L006': 'kadis_cipasauran_cidanau',
   'P-22L007': 'kadis_krenceng',
@@ -96,7 +126,16 @@ function parseExcelBuffer(buffer) {
     return orig !== undefined ? row[orig] : '';
   };
 
+  // Helper to pull a value by the first matching header from a list of aliases
+  const getAny = (row, normKeys) => {
+    for (const nk of normKeys) {
+      const orig = keyMap[nk];
+      if (orig !== undefined) return row[orig];
+    }
+    return '';
+  };
 
+  // Read the Location code from the first data row (same value on every row in a file)
   const locationCode  = String(get(rows[0], 'location') ?? '').trim() || null;
   const detectedKadisId = detectKadisFromLocationCode(locationCode);
 
@@ -109,9 +148,7 @@ function parseExcelBuffer(buffer) {
 
     const activityRaw = String(get(row, 'activity') ?? '').trim();
 
-
     if (activityRaw === '0010') continue;
-
     if (!orderMap.has(orderNumber)) {
 
       const dateRaw = get(row, 'bas. start date');
@@ -139,6 +176,9 @@ function parseExcelBuffer(buffer) {
       const isSipil      = !rawEquipmentId && !!rawFuncLoc;
       const equipmentId  = isSipil ? null : (rawEquipmentId || null);
 
+      // Read Location per-order row — Sipil files mix multiple plants in one file
+      const rowLocationCode = String(get(row, 'location') ?? '').trim() || null;
+
       orderMap.set(orderNumber, {
         orderNumber,
         description: String(get(row, 'description') ?? '').trim(),
@@ -146,7 +186,7 @@ function parseExcelBuffer(buffer) {
         category,
         equipmentId,
         functionalLocation: rawFuncLoc,
-        locationCode,
+        locationCode: rowLocationCode,
         isSipil,
         systemStatus: String(get(row, 'system status') ?? '').trim() || null,
         costCenter:   String(get(row, 'cost center') ?? '').trim() || null,
@@ -157,11 +197,13 @@ function parseExcelBuffer(buffer) {
 
     const operationText = String(get(row, 'op. short text') ?? '').trim();
     const controlKey    = String(get(row, 'control key') ?? '').trim() || null;
+    const durationPlan  = parseDuration(getAny(row, DURATION_PLAN_HEADERS));
     if (activityRaw) {
       orderMap.get(orderNumber).activitiesModel.push({
         activityNumber: activityRaw,
         operationText,
         controlKey,
+        durationPlan,
       });
     }
   }
@@ -176,7 +218,7 @@ async function resolveIntervals(orders) {
   
   const sipilFuncLocs = [...new Set(orders.filter(o => o.isSipil).map(o => o.functionalLocation).filter(Boolean))];
   const sipilRows = sipilFuncLocs.length
-    ? await SipilFunclocMapping.findAll({ where: { funcLocId: { [Op.in]: sipilFuncLocs } }, attributes: ['funcLocId', 'interval', 'taskListId'] })
+    ? await SipilFunclocMapping.findAll({ where: { funcLocId: { [Op.in]: sipilFuncLocs } }, attributes: ['funcLocId', 'interval', 'taskListId', 'plantId'] })
     : [];
   const sipilMap = Object.fromEntries(sipilRows.map(s => [s.funcLocId, s]));
 
@@ -184,6 +226,7 @@ async function resolveIntervals(orders) {
     const sipil = sipilMap[order.functionalLocation];
     order.interval           = sipil?.interval || '1wk';
     order.taskListId         = sipil?.taskListId || null;
+    order.plantId            = sipil?.plantId || null;    // plant from mapping table
     order.intervalResolution = 'auto';
     order.intervalOptions    = [order.interval];
   }
@@ -407,4 +450,4 @@ async function enrichOrders(orders) {
   }
 }
 
-module.exports = { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders, detectKadisFromLocationCode };
+module.exports = { parseExcelBuffer, resolveIntervals, flagExisting, enrichOrders, detectKadisFromLocationCode, detectKadisFromFuncLoc };

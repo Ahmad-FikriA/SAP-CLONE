@@ -2,6 +2,10 @@
 
 require("dotenv").config();
 const express = require("express");
+// Patches Express so rejected promises from async route handlers are forwarded
+// to the error-handling middleware instead of becoming unhandledRejections.
+// Must be required before any routes are defined.
+require("express-async-errors");
 const cors = require("cors");
 const path = require("path");
 const multer = require("multer");
@@ -24,6 +28,8 @@ const sapSpkRoutes = require("./routes/sapSpkRoutes");
 const inspectionRoutes = require("./routes/inspection");
 const notificationRoutes = require("./routes/notification");
 const k3SafetyRoutes = require("./routes/k3_safety");
+const k3SettingsRoutes = require("./routes/k3_settings");
+const materialRoutes = require("./routes/material");
 const errorHandler = require("./middleware/errorHandler");
 const { syncDatabase } = require("./config/syncMode");
 const { ensureSupervisiJobSchema } = require("./models/SupervisiJob");
@@ -48,15 +54,15 @@ require("./models/associations");
 const app = express();
 const PORT = process.env.PORT || 8200;
 
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("UNHANDLED PROMISE REJECTION DETECTED!");
-  console.error("Promise:", promise);
-  console.error("Reason:", reason);
-  console.error(
-    "Stack Trace:",
-    reason && reason.stack ? reason.stack : "No stack",
-  );
-  process.exit(1);
+// Log unhandled promise rejections, but DO NOT kill the server — a single bad
+// request must never take the whole API down for every other user. With
+// express-async-errors wired in above, rejected route handlers now flow to the
+// error middleware, so anything reaching here is a genuine background bug to log.
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 UNHANDLED PROMISE REJECTION (logged, server kept alive)');
+  console.error('Promise:', promise);
+  console.error('Reason:', reason);
+  console.error('Stack Trace:', reason && reason.stack ? reason.stack : 'No stack');
 });
 
 const corsOptions = {
@@ -141,7 +147,7 @@ const inspectionStorage = multer.diskStorage({
 
 const INSPECTION_MEDIA_MAX_SIZE_MB = 50;
 const INSPECTION_MEDIA_MAX_SIZE = INSPECTION_MEDIA_MAX_SIZE_MB * 1024 * 1024;
-const INSPECTION_MEDIA_MAX_COUNT = 5;
+const INSPECTION_MEDIA_MAX_COUNT = 10;
 const INSPECTION_MEDIA_ALLOWED_EXTENSIONS = new Set([
   ".jpg",
   ".jpeg",
@@ -161,6 +167,12 @@ const INSPECTION_MEDIA_ALLOWED_EXTENSIONS = new Set([
   ".avi",
   ".mkv",
   ".webm",
+  // Document extensions — for inspection report attachments
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
 ]);
 
 function isInspectionMediaAllowed(file) {
@@ -173,10 +185,15 @@ function isInspectionMediaAllowed(file) {
     INSPECTION_MEDIA_ALLOWED_EXTENSIONS.has(extension);
   const looksLikeBlobUpload =
     mimeType === "application/octet-stream" &&
-    (originalName.toLowerCase() === "blob" ||
-      originalName.toLowerCase().startsWith("image_picker"));
+    (originalName.toLowerCase() === "blob" || originalName.toLowerCase().startsWith("image_picker"));
+  // Accept document MIME types (PDF, Word, Excel) for inspection attachments
+  const isDocumentMime =
+    mimeType === "application/pdf" ||
+    mimeType === "application/msword" ||
+    mimeType.includes("officedocument") ||
+    mimeType === "application/vnd.ms-excel";
 
-  return hasAllowedMimePrefix || hasAllowedExtension || looksLikeBlobUpload;
+  return hasAllowedMimePrefix || hasAllowedExtension || looksLikeBlobUpload || isDocumentMime;
 }
 
 const uploadInspectionMedia = multer({
@@ -291,6 +308,8 @@ app.use("/api/equipment-mappings", mappingRouter);
 app.use("/api/preventive-schedule", scheduleRouter);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/k3-safety", k3SafetyRoutes);
+app.use("/api/k3-settings", k3SettingsRoutes);
+app.use("/api/materials", materialRoutes);
 
 const settingsController = require("./controllers/settings/settingsController");
 app.get(
@@ -310,10 +329,23 @@ app.get("/", (req, res) => {
 
 app.use(errorHandler);
 
+// ── Database Connection (with startup retry) ─────────────────────────────────
 const sequelize = require("./config/database");
 
-sequelize
-  .authenticate()
+async function connectWithRetry(retries = 10, delayMs = 3000) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      await sequelize.authenticate();
+      return;
+    } catch (err) {
+      if (i === retries) throw err;
+      console.warn(`[DB] Connection attempt ${i}/${retries} failed (${err.message}). Retrying in ${delayMs / 1000}s…`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
+connectWithRetry()
   .then(() => {
     console.log("Connection to database has been established successfully.");
     return ensureSupervisiJobSchema();
@@ -348,21 +380,23 @@ sequelize
   })
   .then(() => {
     console.log("Database models synced successfully.");
-    markMissedVisitsAsPelanggaran();
-    cron.schedule("1 0 * * *", markMissedVisitsAsPelanggaran, {
-      timezone: "Asia/Jakarta",
-    });
-    console.log(
-      "[Supervisi Cron] Scheduled daily missed-visit check at 00:01 Asia/Jakarta.",
-    );
+    // ── Supervisi: Cron job — tandai kunjungan yang terlewat sebagai Pelanggaran
+    const runMissedVisits = () =>
+      Promise.resolve(markMissedVisitsAsPelanggaran()).catch((err) =>
+        console.error("[Supervisi Cron] Error:", err.message)
+      );
+    runMissedVisits();
+    cron.schedule("1 0 * * *", runMissedVisits, { timezone: "Asia/Jakarta" });
+    console.log("[Supervisi Cron] Scheduled daily missed-visit check at 00:01 Asia/Jakarta.");
 
-    sendInspectionReminders();
-    cron.schedule("0 7 * * *", sendInspectionReminders, {
-      timezone: "Asia/Jakarta",
-    });
-    console.log(
-      "[Inspection Cron] Scheduled daily reminders at 07:00 Asia/Jakarta.",
-    );
+    // ── Inspeksi: Cron job — kirim pengingat jadwal hari ini dan overdue
+    const runInspectionReminders = () =>
+      Promise.resolve(sendInspectionReminders()).catch((err) =>
+        console.error("[Inspection Cron] Error:", err.message)
+      );
+    runInspectionReminders();
+    cron.schedule("0 7 * * *", runInspectionReminders, { timezone: "Asia/Jakarta" });
+    console.log("[Inspection Cron] Scheduled daily reminders at 07:00 Asia/Jakarta.");
   })
   .catch((err) => {
     console.error("Unable to connect to the database:", err);
