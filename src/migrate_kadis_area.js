@@ -1,20 +1,25 @@
 'use strict';
 
 const sequelize = require('./config/database');
+const { DataTypes } = require('sequelize');
 const { detectKadisFromFuncLoc } = require('./services/spkImportService');
 
 async function migrate() {
   try {
-    // 1. Add the column (safe to run if already exists — catches the error)
-    try {
-      await sequelize.query('ALTER TABLE spk ADD COLUMN kadis_area VARCHAR(50) NULL');
+    await sequelize.authenticate();
+    const qi = sequelize.getQueryInterface();
+
+    // 1. Add the column (safe — checks existence first)
+    const tableDesc = await qi.describeTable('spk');
+
+    if (tableDesc.kadis_area) {
+      console.log('ℹ️  Kolom kadis_area sudah ada, skip ALTER TABLE');
+    } else {
+      await qi.addColumn('spk', 'kadis_area', {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      });
       console.log('✅ Kolom kadis_area ditambahkan ke tabel spk');
-    } catch (e) {
-      if (e.message.includes('Duplicate column')) {
-        console.log('ℹ️  Kolom kadis_area sudah ada, skip ALTER TABLE');
-      } else {
-        throw e;
-      }
     }
 
     // 2. Backfill: join spk → spk_equipment, take the first functional_location per spk
@@ -39,8 +44,8 @@ async function migrate() {
       const kadisArea = detectKadisFromFuncLoc(row.functional_location);
       if (kadisArea) {
         await sequelize.query(
-          'UPDATE spk SET kadis_area = ? WHERE spk_number = ?',
-          { replacements: [kadisArea, row.spk_number] }
+          'UPDATE spk SET kadis_area = :kadisArea WHERE spk_number = :spkNumber',
+          { replacements: { kadisArea, spkNumber: row.spk_number } }
         );
         counts[kadisArea] = (counts[kadisArea] || 0) + 1;
       } else {

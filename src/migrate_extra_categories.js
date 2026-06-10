@@ -1,19 +1,26 @@
 'use strict';
 
 const sequelize = require('./config/database');
+const { DataTypes } = require('sequelize');
 
 async function migrate() {
   try {
-    try {
-      await sequelize.query('ALTER TABLE equipment ADD COLUMN extra_categories JSON NULL');
+    await sequelize.authenticate();
+    const qi = sequelize.getQueryInterface();
+
+    const tableDesc = await qi.describeTable('equipment');
+
+    if (tableDesc.extra_categories) {
+      console.log('ℹ️  Kolom extra_categories sudah ada, skip ALTER TABLE');
+    } else {
+      await qi.addColumn('equipment', 'extra_categories', {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null,
+      });
       console.log('✅ Kolom extra_categories ditambahkan ke tabel equipment');
-    } catch (e) {
-      if (e.message.includes('Duplicate column')) {
-        console.log('ℹ️  Kolom extra_categories sudah ada, skip ALTER TABLE');
-      } else {
-        throw e;
-      }
     }
+
     console.log('✅ Migrasi selesai. Tidak ada backfill — kolom default NULL untuk baris lama.');
   } catch (e) {
     console.error('❌ Migrasi gagal:', e.message);

@@ -36,11 +36,32 @@ const migrate = async () => {
       console.log("Admin user already exists.");
     }
 
-    console.log("Running manual schema updates...");
-    execSync("node src/migrate_users.js", { stdio: "inherit" });
-    execSync("node src/migrate_corrective_spk.js", { stdio: "inherit" });
-    execSync("node src/migrate_k3_safety.js", { stdio: "inherit" });
-    execSync("node src/migrate_inspection_enums.js", { stdio: "inherit" });
+    console.log("\nRunning manual schema updates...\n");
+
+    const migrations = [
+      "src/migrate_users.js",
+      "src/migrate_corrective_spk.js",
+      "src/migrate_k3_safety.js",
+      "src/migrate_inspection_enums.js",
+      "src/migrate_extra_categories.js",
+      "src/migrate_inspection_attachments.js",
+      "src/migrate_k3_investigasi.js",
+      "src/migrate_kadis_area.js",
+      "src/migrate_recurring.js",
+      "src/migrate_rejection.js",
+      "src/migrate_spk_source.js",
+      "src/migrate_indexes.js",
+    ];
+
+    for (const script of migrations) {
+      try {
+        console.log(`── Running: ${script} ──`);
+        execSync(`node ${script}`, { stdio: "inherit" });
+        console.log(`── Done: ${script} ──\n`);
+      } catch (err) {
+        console.error(`⚠️  Warning: ${script} exited with error (continuing...)\n`);
+      }
+    }
 
     console.log("Bulk migration completed successfully.");
     process.exit(0);
