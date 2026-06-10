@@ -26,9 +26,7 @@ export function SpkTable({
           <TableHead>Equipment & Lokasi</TableHead>
           <TableHead>Jam / Pekerja</TableHead>
           <TableHead>Status Sistem</TableHead>
-          <TableHead className="pr-6">
-            <div className="text-right">Aksi</div>
-          </TableHead>
+          <TableHead className="w-[180px]">Aksi</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -134,10 +132,10 @@ export function SpkTable({
                   />
                 </TableCell>
                 <TableCell
-                  className="text-right pr-6"
+                  className="w-[180px]"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex justify-end items-center gap-1">
+                  <div className="flex justify-start items-center gap-1.5">
                     {canReviewPp ? (
                       <Button
                         size="sm"

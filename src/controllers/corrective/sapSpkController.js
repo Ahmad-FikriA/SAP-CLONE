@@ -601,32 +601,80 @@ const rejectKadisPelapor = async (req, res) => {
 
 const exportHistory = async (req, res) => {
   try {
-    const { ids } = req.body || {};
+    const { ids, format } = req.body || {};
     const whereClause = { status: { [Op.in]: ["selesai", "ditolak"] } };
     if (ids && Array.isArray(ids) && ids.length > 0) whereClause.order_number = { [Op.in]: ids };
 
     const spks = await SapSpkCorrective.findAll({ where: whereClause, order: [["created_at", "DESC"]] });
     const workbook = new exceljs.Workbook();
     const ws = workbook.addWorksheet("Confirmation");
-    const headers = [
-      "Order", "Description", "System status", "Cost Center", "Control Key", "Confirmation", "Oper.Work Center", "Activity", "Op. Short Text",
-      "Normal duration", "Norm.duratn un.", "Duration Plan", "Unit for Work", "Duration Actual", "Actual work", "Posting Date", "Confirmation Text",
-      "Reason of Variance", "Work Start", "Work Finish", "Start Time", "Finish Time", "MaintActivType", "Location", "Functional Loc.", "Equipment", "numofwork",
-    ];
+
+    const isCsv = format === "csv";
+
+    const formatCsvDate = (dateStr) => {
+      if (!dateStr) return "";
+      if (typeof dateStr === "string") {
+        const parts = dateStr.split("-");
+        if (parts.length === 3 && parts[0].length === 4) {
+          return `${parts[2]}.${parts[1]}.${parts[0]}`;
+        }
+      }
+      try {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear();
+          return `${day}.${month}.${year}`;
+        }
+      } catch (e) {}
+      return dateStr;
+    };
+
+    const headers = isCsv
+      ? [
+          "Order", "Description", "System status", "Cost Center", "Control Key", "Confirmation", "Oper.Work Center", "Activity", "Op. Short Text",
+          "Normal duration", "Norm.duratn un.", "Duration Plan", "Unit for Work", "Duration Actual", "Actual work", "Posting Date", "Confirmation Text",
+          "Reason of Variance", "Work Start", "Work Finish", "Start Time", "Finish Time", "Equipment",
+        ]
+      : [
+          "Order", "Description", "System status", "Cost Center", "Control Key", "Confirmation", "Oper.Work Center", "Activity", "Op. Short Text",
+          "Normal duration", "Norm.duratn un.", "Duration Plan", "Unit for Work", "Duration Actual", "Actual work", "Posting Date", "Confirmation Text",
+          "Reason of Variance", "Work Start", "Work Finish", "Start Time", "Finish Time", "MaintActivType", "Location", "Functional Loc.", "Equipment", "numofwork",
+        ];
+
     ws.addRow(headers);
+
     for (const s of spks) {
-      ws.addRow([
-        s.order_number, s.description, s.sys_status, s.cost_center, s.ctrl_key, s.confirm_number, s.work_center, s.activity, s.short_text || s.description,
-        s.normal_dur, s.normal_dur_un, s.dur_plan, s.unit_for_work, s.dur_act, s.actual_work || s.total_actual_hour, s.posting_date, s.conf_text,
-        s.reason_of_var, s.work_start, s.work_finish, s.start_time, s.finish_time, s.maint_activ_type, s.location, s.functional_location, s.equipment_name, s.num_of_work,
-      ]);
+      if (isCsv) {
+        ws.addRow([
+          s.order_number, s.description, s.sys_status, s.cost_center, s.ctrl_key, s.confirm_number, s.work_center, s.activity, s.short_text || s.description,
+          s.normal_dur, "STD", s.dur_plan, "STD", s.dur_act, s.actual_work || s.total_actual_hour, formatCsvDate(s.work_start), s.conf_text,
+          s.reason_of_var, formatCsvDate(s.work_start), formatCsvDate(s.work_finish), s.start_time, s.finish_time, s.equipment_name
+        ]);
+      } else {
+        ws.addRow([
+          s.order_number, s.description, s.sys_status, s.cost_center, s.ctrl_key, s.confirm_number, s.work_center, s.activity, s.short_text || s.description,
+          s.normal_dur, s.normal_dur_un, s.dur_plan, s.unit_for_work, s.dur_act, s.actual_work || s.total_actual_hour, s.posting_date, s.conf_text,
+          s.reason_of_var, s.work_start, s.work_finish, s.start_time, s.finish_time, s.maint_activ_type, s.location, s.functional_location, s.equipment_name, s.num_of_work,
+        ]);
+      }
     }
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="IW49_History.xlsx"`);
-    await workbook.xlsx.write(res);
-    res.end();
+
+    if (isCsv) {
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="IW49_History.csv"`);
+      await workbook.csv.write(res);
+    } else {
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="IW49_History.xlsx"`);
+      await workbook.xlsx.write(res);
+    }
   } catch (error) {
-    res.status(500).json({ status: "error", message: error.message });
+    console.error("Export error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ status: "error", message: error.message });
+    }
   }
 };
 

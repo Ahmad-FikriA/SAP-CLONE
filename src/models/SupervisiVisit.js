@@ -70,7 +70,8 @@ const SupervisiVisit = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: "true jika tidak hadir ke-3 beruntun atau lebih per job + lokasi",
+      comment:
+        "true jika tidak hadir ke-3 beruntun atau lebih per job + lokasi",
     },
     visitLatitude: {
       type: DataTypes.DECIMAL(10, 7),
@@ -90,13 +91,15 @@ const SupervisiVisit = sequelize.define(
     jarakDariPusat: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
-      comment: "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
+      comment:
+        "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
     },
     isDraft: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: "true = disimpan sebagai draft (belum final). Draft lewat hari dikonversi ke tidak_hadir lalu pelanggaran dihitung ulang.",
+      comment:
+        "true = disimpan sebagai draft (belum final). Draft lewat hari dikonversi ke tidak_hadir lalu pelanggaran dihitung ulang.",
     },
   },
   {
@@ -171,7 +174,8 @@ async function ensureSupervisiVisitSchema() {
     await queryInterface.addColumn(tableName, "jarakDariPusat", {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
-      comment: "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
+      comment:
+        "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
     });
   }
 
@@ -180,7 +184,8 @@ async function ensureSupervisiVisitSchema() {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: "true = disimpan sebagai draft (belum final). Draft yang melewati hari akan dikonversi ke tidak_hadir.",
+      comment:
+        "true = disimpan sebagai draft (belum final). Draft yang melewati hari akan dikonversi ke tidak_hadir.",
     });
   }
 
@@ -196,7 +201,7 @@ async function ensureSupervisiVisitSchema() {
   // Jika index lama masih ada, hapus dulu, lalu buat yang baru.
   try {
     const [indexes] = await sequelize.query(
-      `SHOW INDEX FROM \`${tableName}\` WHERE Key_name != 'PRIMARY'`
+      `SHOW INDEX FROM \`${tableName}\` WHERE Key_name != 'PRIMARY'`,
     );
 
     // Cari index dengan kolom (jobId, visitDate) tapi TIDAK punya locationId
@@ -219,7 +224,9 @@ async function ensureSupervisiVisitSchema() {
 
     for (const name of oldIndexNames) {
       console.log(`[SupervisiVisit] Dropping old index: ${name}`);
-      await sequelize.query(`ALTER TABLE \`${tableName}\` DROP INDEX \`${name}\``);
+      await sequelize.query(
+        `ALTER TABLE \`${tableName}\` DROP INDEX \`${name}\``,
+      );
     }
 
     // Cek apakah index baru sudah ada
@@ -234,7 +241,7 @@ async function ensureSupervisiVisitSchema() {
     if (!newIndexExists) {
       console.log(`[SupervisiVisit] Creating new multi-location unique index.`);
       await sequelize.query(
-        `ALTER TABLE \`${tableName}\` ADD UNIQUE INDEX \`supervisi_visits_job_date_location_unique\` (\`jobId\`, \`visitDate\`, \`locationId\`)`
+        `ALTER TABLE \`${tableName}\` ADD UNIQUE INDEX \`supervisi_visits_job_date_location_unique\` (\`jobId\`, \`visitDate\`, \`locationId\`)`,
       );
     }
   } catch (idxErr) {

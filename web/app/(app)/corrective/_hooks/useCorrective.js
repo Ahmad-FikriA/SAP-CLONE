@@ -225,7 +225,7 @@ export function useCorrective() {
     }
   }
 
-  async function exportHistoryAction(ids) {
+  async function exportHistoryAction(ids, format = "xlsx") {
     try {
       const token = localStorage.getItem("token");
       const headers = { "Content-Type": "application/json" };
@@ -235,7 +235,7 @@ export function useCorrective() {
       const res = await fetch(`${baseUrl}/api/corrective/sap-spk/export-history`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ ids }),
+        body: JSON.stringify({ ids, format }),
       });
 
       if (!res.ok) {
@@ -246,7 +246,8 @@ export function useCorrective() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `History_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const fileExt = format === "csv" ? "csv" : "xlsx";
+      a.download = `History_Export_${new Date().toISOString().slice(0, 10)}.${fileExt}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
