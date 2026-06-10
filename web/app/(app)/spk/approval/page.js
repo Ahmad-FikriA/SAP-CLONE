@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/date-utils';
 import { STATUS_LABELS, CATEGORY_COLORS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS, KADIS_AREAS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { RefreshCw, CheckCircle, Clock, ChevronRight, ImageIcon, X, XCircle } from 'lucide-react';
+import { RefreshCw, CheckCircle, Clock, ChevronRight, ChevronLeft, ImageIcon, X, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -285,9 +285,12 @@ export default function SpkApprovalPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-56px)] overflow-hidden">
+    <div className="flex h-[calc(100dvh-56px)] overflow-hidden">
       {/* ── Left: SPK list ────────────────────────────────────────────────── */}
-      <div className="w-96 shrink-0 border-r border-gray-200 flex flex-col bg-white">
+      <div className={cn(
+        'w-full md:w-96 shrink-0 border-r border-gray-200 flex-col bg-white',
+        selected ? 'hidden md:flex' : 'flex'
+      )}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <div>
             <h2 className="text-sm font-semibold text-gray-800">Persetujuan SPK</h2>
@@ -452,7 +455,18 @@ export default function SpkApprovalPage() {
       </div>
 
       {/* ── Right: Detail panel ───────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className={cn(
+        'flex-1 overflow-y-auto bg-gray-50',
+        selected ? 'block' : 'hidden md:block'
+      )}>
+        {selected && (
+          <button
+            onClick={() => { setSelected(null); setDetail(null); }}
+            className="md:hidden sticky top-0 z-10 flex w-full items-center gap-2 border-b border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-600"
+          >
+            <ChevronLeft size={16} /> Kembali ke daftar
+          </button>
+        )}
         {!selected ? (
           <div className="h-full flex items-center justify-center text-gray-400">
             <div className="text-center">
@@ -607,7 +621,7 @@ function DetailPanel({ detail, canApprove, onApprove, canReject, onReject, onPho
           )}
         </div>
 
-        <div className="grid grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
           <Info label="Interval" value={spk.interval || '—'} />
           <Info label="Disubmit oleh" value={userMap[spk.submittedBy] || spk.submittedByName || spk.submittedBy || '—'} />
           <Info label="Waktu Submit" value={formatDate(spk.submittedAt)} />
@@ -693,7 +707,7 @@ function DetailPanel({ detail, canApprove, onApprove, canReject, onReject, onPho
       {/* Field Notes */}
       {submission && (
         <Section title="Catatan Lapangan">
-          <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
             <Info label="Durasi Aktual" value={submission.durationActual != null ? `${submission.durationActual} menit` : '—'} />
             <Info
               label="Lokasi GPS"
@@ -713,7 +727,7 @@ function DetailPanel({ detail, canApprove, onApprove, canReject, onReject, onPho
             <ImageIcon size={16} /> Tidak ada foto
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {photos.map((path, i) => (
               <button
                 key={i}

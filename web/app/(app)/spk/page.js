@@ -562,8 +562,70 @@ function SpkPageInner() {
           </div>
         )}
 
+        {/* Mobile card list */}
+        <div className="md:hidden space-y-2.5">
+          {loading ? (
+            <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">Memuat...</div>
+          ) : displayed.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">Tidak ada data</div>
+          ) : displayed.map((s) => (
+            <div key={s.spkNumber} onClick={() => openDetail(s)}
+              className="rounded-xl border border-gray-200 bg-white p-4 active:bg-gray-50">
+              <div className="flex items-start gap-3">
+                <input type="checkbox" checked={selected.includes(s.spkNumber)} onChange={() => toggleSelect(s.spkNumber)}
+                  onClick={(e) => e.stopPropagation()} className="mt-1 shrink-0 rounded border-gray-300" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate font-mono text-xs font-semibold text-gray-800">{s.spkNumber}</p>
+                    <CategoryBadge category={s.category} />
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-sm text-gray-700">{s.description}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <StatusBadge status={s.status} label={
+                      s.status === 'awaiting_kasie' && s.category ? `Menunggu Kasie ${s.category}`
+                      : s.status === 'awaiting_kadis' ? kadisStatusLabel(s.kadisArea)
+                      : undefined
+                    } />
+                    {s.abnormalCount > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
+                        ⚠ {s.abnormalCount} abnormal
+                      </span>
+                    )}
+                    {s.interval && <span className="text-[11px] text-gray-400">{s.interval}</span>}
+                  </div>
+                  {(s.equipmentModels || []).length > 0 && (
+                    <p className="mt-2 truncate text-[11px] text-gray-500">
+                      <span className="font-mono">{s.equipmentModels[0].equipmentId}</span>
+                      {s.equipmentModels[0].equipmentName ? ` — ${s.equipmentModels[0].equipmentName}` : ''}
+                      {s.equipmentModels.length > 1 ? ` +${s.equipmentModels.length - 1} lainnya` : ''}
+                    </p>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => openDetail(s)}>
+                      <Eye size={11} /> Detail
+                    </Button>
+                    {canUpdate('spk') && (
+                      <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => openEdit(s)}>
+                        <Pencil size={11} /> Edit
+                      </Button>
+                    )}
+                    {canUpdate('spk') && s.status === 'completed' && (
+                      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-amber-600 hover:bg-amber-50" onClick={() => handleReset(s)}>
+                        <RotateCcw size={11} /> Reset
+                      </Button>
+                    )}
+                    {canDelete('spk') && (
+                      <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTarget(s)}>Hapus</Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* Table */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -648,8 +710,8 @@ function SpkPageInner() {
               ))}
             </tbody>
           </table>
-          <Pagination page={page} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </div>
+        <Pagination page={page} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Side panel */}
@@ -857,7 +919,7 @@ function SpkPageInner() {
 
               {/* Material list table */}
               {editingSpk?.spkMaterials?.length > 0 ? (
-                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                <div className="border border-gray-200 rounded-lg overflow-x-auto bg-white">
                   <table className="w-full text-left text-[11px]">
                     <thead className="bg-gray-50 border-b border-gray-200 text-[10px] font-semibold text-gray-500 uppercase">
                       <tr>
@@ -1197,7 +1259,7 @@ function SpkPageInner() {
                 ) : detailSubs.length === 0 ? (
                   <p className="text-xs text-gray-400 py-3">Belum ada submission untuk SPK ini.</p>
                 ) : (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="border border-gray-200 rounded-lg overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>

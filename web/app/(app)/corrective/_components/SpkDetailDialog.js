@@ -1212,7 +1212,7 @@ export function SpkDetailDialog({
 
               {/* Material list */}
               {selectedSpk?.spkMaterials?.length > 0 ? (
-                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <div className="border border-slate-200 rounded-lg overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50/80 border-b border-slate-200">
                       <tr>

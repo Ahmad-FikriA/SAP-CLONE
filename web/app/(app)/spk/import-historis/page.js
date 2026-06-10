@@ -222,7 +222,7 @@ export default function ImportHistorisPage() {
 
           {/* Per-file breakdown */}
           {preview.files.length > 1 && (
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 text-gray-600">
                   <tr>

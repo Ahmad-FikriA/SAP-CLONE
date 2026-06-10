@@ -270,7 +270,7 @@ export default function MappingsPage() {
             <span className="text-xs text-gray-400">{filteredMappings.length} dari {mappings.length}</span>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -333,7 +333,7 @@ export default function MappingsPage() {
               </>
             )}
           </div>
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>

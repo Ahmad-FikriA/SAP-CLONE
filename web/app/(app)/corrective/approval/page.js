@@ -782,7 +782,7 @@ export default function CorrectiveApprovalPage() {
               </h4>
               
               {selectedSpk.spkMaterials?.length > 0 ? (
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="border border-slate-200 rounded-xl overflow-x-auto">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase text-slate-500 tracking-wider">
                       <tr>
