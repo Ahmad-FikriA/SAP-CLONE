@@ -20,10 +20,10 @@ const STATUS_META = {
 };
 
 const WORK_CENTER_GROUPS = {
-  E: { name: 'Elektrik', color: '#E67E22' },
-  O: { name: 'Otomasi', color: '#8E44AD' },
   M: { name: 'Mekanik', color: '#0070D2' },
+  E: { name: 'Listrik', color: '#E67E22' },
   S: { name: 'Sipil', color: '#27AE60' },
+  O: { name: 'Otomasi', color: '#8E44AD' },
 };
 
 export function WidgetCorrective() {

@@ -748,7 +748,7 @@ export default function CorrectivePage() {
                     className="shadow-md bg-white hover:bg-green-50 border-green-200 text-green-700"
                     onClick={() => setIsExportMode(true)}
                   >
-                    <Download size={16} className="mr-2" /> Mode Export Excel
+                    <Download size={16} className="mr-2" /> Mode Export
                   </Button>
                 </>
               )}
@@ -821,6 +821,7 @@ export default function CorrectivePage() {
               history={histPag.paginatedItems}
               fullHistory={history}
               equipment={equipment}
+              functionalLocations={functionalLocations}
               onSelectSpk={(spk) => {
                 setOpenSpkInEditMode(false);
                 setSelectedSpk(spk);

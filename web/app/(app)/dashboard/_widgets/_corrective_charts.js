@@ -28,7 +28,7 @@ export default function CorrectiveCharts({ statusData, groupData, total }) {
         {/* Status donut */}
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-            Status Perbaikan
+            Status
           </p>
           {statusData.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-8">Belum ada data</p>
@@ -70,7 +70,7 @@ export default function CorrectiveCharts({ statusData, groupData, total }) {
         {/* Group bar */}
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-            Grup Kerja
+            Kategori
           </p>
           {groupData.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-8">Belum ada data</p>

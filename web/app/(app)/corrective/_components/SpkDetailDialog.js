@@ -136,6 +136,7 @@ export function SpkDetailDialog({
   const [loading, setLoading] = useState(false);
   const [highlightButtons, setHighlightButtons] = useState(false);
   const highlightTimeout = useRef(null);
+  const prevOrderNumberRef = useRef(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showTecoWarning, setShowTecoWarning] = useState(false);
   const [showTecoSaveWarning, setShowTecoSaveWarning] = useState(false);
@@ -176,7 +177,14 @@ export function SpkDetailDialog({
   const matDropdownRef = useRef(null);
 
   useEffect(() => {
-    if (selectedSpk) {
+    if (!selectedSpk) {
+      prevOrderNumberRef.current = null;
+      return;
+    }
+
+    const isNewSpk = selectedSpk.order_number !== prevOrderNumberRef.current;
+
+    if (isNewSpk) {
       setEditData({
         sys_status: selectedSpk.sys_status || "",
         description: selectedSpk.description || "",
@@ -206,8 +214,35 @@ export function SpkDetailDialog({
       setMatResults([]);
       setMatSelected(null);
       setMatQty(1);
+      prevOrderNumberRef.current = selectedSpk.order_number;
+    } else {
+      // If same SPK, only update editData if user is NOT actively editing
+      // to avoid overwriting typed changes during background polling
+      if (!isEditing) {
+        setEditData({
+          sys_status: selectedSpk.sys_status || "",
+          description: selectedSpk.description || "",
+          short_text: selectedSpk.short_text || "",
+          num_of_work: selectedSpk.num_of_work || 0,
+          dur_plan: selectedSpk.dur_plan || 0,
+          normal_dur: selectedSpk.normal_dur || 0,
+          normal_dur_un: selectedSpk.normal_dur_un || "",
+          unit_for_work: selectedSpk.unit_for_work || "",
+          activity: selectedSpk.activity || "",
+          maint_activ_type: selectedSpk.maint_activ_type || "",
+          work_start: selectedSpk.work_start || "",
+          work_finish: selectedSpk.work_finish || "",
+          start_time: selectedSpk.start_time || "",
+          finish_time: selectedSpk.finish_time || "",
+          conf_text: selectedSpk.conf_text || "",
+          confirm_number: selectedSpk.confirm_number || "",
+          reason_of_var: selectedSpk.reason_of_var || "",
+          dur_act: selectedSpk.dur_act || 0,
+          actual_work: selectedSpk.actual_work || 0,
+        });
+      }
     }
-  }, [selectedSpk, initialEditMode]);
+  }, [selectedSpk, initialEditMode, isEditing]);
 
   const triggerHighlight = () => {
     setHighlightButtons(true);
@@ -526,7 +561,7 @@ export function SpkDetailDialog({
                   </div>
                 </div>
 
-                {!(editData.sys_status || selectedSpk.sys_status)?.toUpperCase().includes("TECO") && (
+                {selectedSpk?.status === "selesai" && !(editData.sys_status || selectedSpk.sys_status)?.toUpperCase().includes("TECO") && (
                   <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center justify-between gap-6 shadow-sm lg:max-w-md w-full">
                     <div className="space-y-1">
                       <h4 className="text-emerald-800 font-bold text-sm flex items-center gap-1.5">

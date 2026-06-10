@@ -21,11 +21,11 @@ export function SpkTable({
     <Table>
       <TableHeader className="bg-slate-50/80">
         <TableRow>
-          <TableHead>Order Number</TableHead>
+          <TableHead className="w-[120px] max-w-[120px] pr-3">Order No.</TableHead>
+          <TableHead>Deskripsi</TableHead>
           <TableHead>Equipment & Lokasi</TableHead>
           <TableHead>Jam / Pekerja</TableHead>
           <TableHead>Status Sistem</TableHead>
-          <TableHead>Status SAP</TableHead>
           <TableHead className="text-right pr-16">Aksi</TableHead>
         </TableRow>
       </TableHeader>
@@ -70,7 +70,7 @@ export function SpkTable({
                 )}
                 onClick={() => onSelectSpk(spk)}
               >
-                <TableCell className="font-mono text-xs font-semibold text-slate-800">
+                <TableCell className="font-mono text-xs font-semibold text-slate-800 w-[120px] max-w-[120px] pr-3">
                   <div className="flex items-center gap-2">
                     {spk.order_number}
                     {(isNeedReviewPp || isNeedReviewPelapor) && (
@@ -79,6 +79,14 @@ export function SpkTable({
                         isNeedReviewPelapor ? "bg-purple-500" : "bg-amber-500"
                       )} title={isNeedReviewPelapor ? "Butuh Approval Pelapor" : "Butuh Approval Kadis PP"} />
                     )}
+                  </div>
+                </TableCell>
+                <TableCell className="max-w-[150px] pr-6">
+                  <div
+                    className="text-xs text-slate-600 line-clamp-2 whitespace-normal break-words"
+                    title={spk.description}
+                  >
+                    {spk.description || "—"}
                   </div>
                 </TableCell>
                 <TableCell className="max-w-[200px]">
@@ -96,7 +104,7 @@ export function SpkTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  {spk.actual_work || spk.actual_personnel ? (
+                  {["menunggu_review_kadis_pelapor", "selesai"].includes(spk.status) ? (
                     <>
                       <div className="text-xs font-bold text-blue-700">
                         {spk.actual_work || 0} Jam / {spk.actual_personnel || 0} Orang
@@ -122,16 +130,6 @@ export function SpkTable({
                     colorMap={SAP_STATUS_COLORS}
                     labelMap={SAP_STATUS_LABELS}
                   />
-                </TableCell>
-                <TableCell>
-                  {spk.sys_status ? (
-                    <span className={cn(
-                      "text-[10px] font-bold font-mono tracking-tight px-1.5 py-0.5 rounded border",
-                    isNeedReviewPp ? "bg-amber-100 border-amber-200 text-amber-700" : isNeedReviewPelapor ? "bg-purple-100 border-purple-200 text-purple-700" : "bg-slate-100 border-slate-200 text-slate-500"
-                    )} title={spk.sys_status}>
-                      {spk.sys_status.length > 9 ? spk.sys_status.substring(0, 9) + "....." : spk.sys_status}
-                    </span>
-                  ) : "—"}
                 </TableCell>
                 <TableCell
                   className="text-right"

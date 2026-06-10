@@ -10,7 +10,7 @@ import { SAP_STATUS_COLORS, SAP_STATUS_LABELS } from "./constants";
 import { CorrectiveStatusBadge, EmptyState, fmtDate, SkeletonRows } from "./ui-primitives";
 import { cn } from "@/lib/utils";
 
-export function HistoryTable({ loading, history, fullHistory, equipment = [], onSelectSpk, onDeleteSpk, isExportMode, selectedExportIds, setSelectedExportIds, highlightCheckboxes, isPlanner, onEditSpk }) {
+export function HistoryTable({ loading, history, fullHistory, equipment = [], functionalLocations = [], onSelectSpk, onDeleteSpk, isExportMode, selectedExportIds, setSelectedExportIds, highlightCheckboxes, isPlanner, onEditSpk }) {
   const datasetToSelect = fullHistory || history;
   const allSelected = datasetToSelect.length > 0 && selectedExportIds?.length === datasetToSelect.length;
 
@@ -46,12 +46,12 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
               </div>
             </TableHead>
           )}
-          <TableHead>Order Number</TableHead>
-          <TableHead>Equipment</TableHead>
-          <TableHead>Work Start</TableHead>
-          <TableHead>Status Sistem</TableHead>
-          <TableHead>Status SAP</TableHead>
-          <TableHead className="text-right">Aksi</TableHead>
+          <TableHead className="w-[130px] max-w-[130px] pr-4">Order No.</TableHead>
+          <TableHead>Deskripsi</TableHead>
+          <TableHead>Equipment & Lokasi</TableHead>
+          <TableHead className="w-[140px] max-w-[140px]">Work Start</TableHead>
+          <TableHead className="w-[160px] max-w-[160px] pr-4">Status SAP</TableHead>
+          <TableHead className="text-right w-[190px] max-w-[190px] pr-4">Aksi</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -72,6 +72,16 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
               ? (equipmentItem.equipmentName || equipmentItem.equipment_name) 
               : spk.equipment_name;
 
+            const flItem = functionalLocations.find(f => 
+              String(f.funcLocId || f.func_loc_id).trim() === String(spk.functional_location).trim()
+            );
+            const flDisplayName = flItem ? flItem.description : spk.functional_location;
+
+            const sysStatusParts = spk.sys_status ? spk.sys_status.trim().split(/\s+/) : [];
+            const sysStatusFormatted = sysStatusParts.length > 3
+              ? sysStatusParts.slice(0, 3).join(" ") + " ..."
+              : spk.sys_status;
+
             return (
               <TableRow
                 key={spk.order_number}
@@ -88,31 +98,43 @@ export function HistoryTable({ loading, history, fullHistory, equipment = [], on
                     />
                   </TableCell>
                 )}
-                <TableCell className="font-mono text-xs font-semibold text-slate-800">
+                <TableCell className="font-mono text-xs font-semibold text-slate-800 w-[130px] max-w-[130px] pr-4">
                   {spk.order_number}
                 </TableCell>
-                <TableCell className="text-slate-600 truncate max-w-[200px]" title={equipmentDisplayName}>
-                  {equipmentDisplayName || "—"}
+                <TableCell className="max-w-[150px] pr-6">
+                  <div
+                    className="text-xs text-slate-600 line-clamp-2 whitespace-normal break-words"
+                    title={spk.description}
+                  >
+                    {spk.description || "—"}
+                  </div>
                 </TableCell>
-                <TableCell className="text-slate-600 font-medium text-xs">
+                <TableCell className="max-w-[200px]">
+                  <div
+                    className="font-medium text-slate-800 truncate"
+                    title={equipmentDisplayName}
+                  >
+                    {equipmentDisplayName || "—"}
+                  </div>
+                  <div
+                    className="text-[11px] text-slate-500 truncate"
+                    title={flDisplayName}
+                  >
+                    {flDisplayName || "—"}
+                  </div>
+                </TableCell>
+                <TableCell className="text-slate-600 font-medium text-xs w-[140px] max-w-[140px]">
                   {spk.work_start ? fmtDate(spk.work_start) : "—"}
                 </TableCell>
-              <TableCell>
-                <CorrectiveStatusBadge
-                  value={spk.status}
-                  colorMap={SAP_STATUS_COLORS}
-                  labelMap={SAP_STATUS_LABELS}
-                />
-              </TableCell>
-              <TableCell>
+              <TableCell className="w-[160px] max-w-[160px] pr-4">
                 {spk.sys_status ? (
                   <span className="text-[10px] font-bold font-mono tracking-tight px-1.5 py-0.5 rounded border bg-slate-100 border-slate-200 text-slate-500" title={spk.sys_status}>
-                    {spk.sys_status.length > 9 ? spk.sys_status.substring(0, 9) + "....." : spk.sys_status}
+                    {sysStatusFormatted}
                   </span>
                 ) : "—"}
               </TableCell>
               <TableCell
-                className="text-right"
+                className="text-right w-[190px] max-w-[190px] pr-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex justify-end items-center gap-1">
