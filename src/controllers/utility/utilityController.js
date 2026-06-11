@@ -64,6 +64,9 @@ const MODULE_MODELS = {
     { name: 'SupervisiVisit', model: associations.SupervisiVisit },
     { name: 'SupervisiAmend', model: associations.SupervisiAmend },
     { name: 'SupervisiJob', model: associations.SupervisiJob }
+  ],
+  users: [
+    { name: 'User', model: User }
   ]
 };
 
@@ -462,7 +465,16 @@ const exportModuleData = async (req, res) => {
     // Standard models export
     for (const item of MODULE_MODELS[moduleName]) {
       try {
-        payload[item.name] = await item.model.findAll({ raw: true });
+        const rows = await item.model.findAll({ raw: true });
+        // Strip sensitive fields (passwords) from User exports
+        if (moduleName === 'users' && item.name === 'User') {
+          payload[item.name] = rows.map(row => {
+            const { password, ...safe } = row;
+            return safe;
+          });
+        } else {
+          payload[item.name] = rows;
+        }
       } catch (err) {
         logger.addLog('ERROR', 'UTILITY', `Gagal fetch data model ${item.name} pada export: ${err.message}`);
         payload[item.name] = [];
@@ -526,14 +538,23 @@ const importModuleData = async (req, res) => {
     // For corrective & preventive, we also need to import SpkMaterial.
     const isCorrective = moduleName === 'corrective';
     const isPreventive = moduleName === 'preventive';
+    const isUsers = moduleName === 'users';
     let spkMaterialRecords = null;
     if ((isCorrective || isPreventive) && data['SpkMaterial'] && Array.isArray(data['SpkMaterial'])) {
       spkMaterialRecords = data['SpkMaterial'];
     }
 
     for (const item of models) {
-      const records = data[item.name];
+      let records = data[item.name];
       if (records && Array.isArray(records) && records.length > 0) {
+        // For users module: ensure every imported record has a default password
+        if (isUsers && item.name === 'User') {
+          records = records.map(row => ({
+            ...row,
+            password: 'password123',
+          }));
+        }
+
         // Use updateOnDuplicate for all fields to gracefully handle re-imports
         const modelAttrs = Object.keys(item.model.rawAttributes);
         const updateFields = modelAttrs.filter(a => {

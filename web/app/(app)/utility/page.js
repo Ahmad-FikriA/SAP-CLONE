@@ -21,6 +21,7 @@ import {
   Eye,
   Settings,
   ArrowDown,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
@@ -64,6 +65,7 @@ export default function UtilityPage() {
     k3_hse: false,
     inspeksi: false,
     supervisi: false,
+    users: false,
   });
 
   const [dbHealth, setDbHealth] = useState({
@@ -478,6 +480,7 @@ export default function UtilityPage() {
             { id: "k3_hse", label: "K3 / HSE", icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50 border-emerald-100" },
             { id: "inspeksi", label: "Inspeksi", icon: Layers, color: "text-purple-600 bg-purple-50 border-purple-100" },
             { id: "supervisi", label: "Supervisi", icon: Cpu, color: "text-amber-600 bg-amber-50 border-amber-100" },
+            { id: "users", label: "Users", icon: Users, color: "text-rose-600 bg-rose-50 border-rose-100" },
           ].map((tab) => {
             const active = activeModuleTab === tab.id;
             const Icon = tab.icon;

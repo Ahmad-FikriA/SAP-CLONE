@@ -183,4 +183,132 @@ describe('Admin Utility API Endpoints', () => {
       expect(res.body.message).toContain('Berhasil mengimpor');
     });
   });
+
+  describe('Users Module Bulk Operations', () => {
+    const testUsers = [
+      {
+        id: 'USR-BULK-001',
+        nik: 'BULK001',
+        name: 'Bulk Test User 1',
+        role: 'teknisi',
+        divisi: 'Engineering',
+        dinas: 'Mekanik',
+        group: 'mekanik',
+      },
+      {
+        id: 'USR-BULK-002',
+        nik: 'BULK002',
+        name: 'Bulk Test User 2',
+        role: 'teknisi',
+        divisi: 'Engineering',
+        dinas: 'Listrik',
+        group: 'listrik',
+      },
+    ];
+
+    // Cleanup test users after all tests
+    afterAll(async () => {
+      await User.destroy({ where: { id: ['USR-BULK-001', 'USR-BULK-002'] } });
+    });
+
+    it('should export users module data as JSON', async () => {
+      const res = await request(app)
+        .get('/api/utility/module/export?module=users')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('application/json');
+      expect(res.body).toHaveProperty('User');
+      expect(Array.isArray(res.body.User)).toBe(true);
+    });
+
+    it('should strip password field from exported users', async () => {
+      const res = await request(app)
+        .get('/api/utility/module/export?module=users')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      // Verify no user record has a password field
+      for (const user of res.body.User) {
+        expect(user).not.toHaveProperty('password');
+      }
+    });
+
+    it('should import users module data with default password', async () => {
+      const payload = {
+        User: testUsers, // no password field → should default to 'password123'
+      };
+
+      const res = await request(app)
+        .post('/api/utility/module/import')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ module: 'users', data: payload });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain('Berhasil mengimpor');
+
+      // Verify users actually exist in DB
+      const u1 = await User.findByPk('USR-BULK-001');
+      expect(u1).not.toBeNull();
+      expect(u1.name).toBe('Bulk Test User 1');
+
+      const u2 = await User.findByPk('USR-BULK-002');
+      expect(u2).not.toBeNull();
+      expect(u2.name).toBe('Bulk Test User 2');
+    });
+
+    it('should re-import (upsert) users without error', async () => {
+      const updatedUsers = testUsers.map(u => ({
+        ...u,
+        name: u.name + ' Updated',
+      }));
+
+      const res = await request(app)
+        .post('/api/utility/module/import')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ module: 'users', data: { User: updatedUsers } });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      // Verify name was updated (upsert)
+      const u1 = await User.findByPk('USR-BULK-001');
+      expect(u1.name).toBe('Bulk Test User 1 Updated');
+    });
+
+    it('should import with empty User array without error', async () => {
+      const res = await request(app)
+        .post('/api/utility/module/import')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ module: 'users', data: { User: [] } });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('should clear (delete) all users module data', async () => {
+      // First insert a test user specifically for deletion
+      await User.create({
+        id: 'USR-DELETE-TEST',
+        nik: 'DELTEST99',
+        name: 'Delete Test',
+        password: 'password123',
+        role: 'teknisi',
+        divisi: 'Test',
+      });
+
+      const res = await request(app)
+        .delete('/api/utility/module/clear?module=users')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain('Berhasil menghapus');
+
+      // Verify the user is gone
+      const deleted = await User.findByPk('USR-DELETE-TEST');
+      expect(deleted).toBeNull();
+    });
+  });
 });
