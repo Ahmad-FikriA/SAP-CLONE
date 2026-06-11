@@ -30,6 +30,27 @@ describe('Inspection and Supervisi regressions', () => {
     k3_safety: true,
   };
 
+  beforeAll(async () => {
+    const existing = await User.findOne({ where: { name: 'Deni Yuniardi' } });
+    if (!existing) {
+      await User.create({
+        id: 'codex-deni-id',
+        nik: 'codex-deni',
+        password: 'password123',
+        name: 'Deni Yuniardi',
+        role: 'staff',
+        dinas: 'Inpeksi & Supervisi',
+        divisi: 'PPHSE',
+        group: 'Supervisi Sipil & Perpipaan',
+        permissions: { _app: appAccess, supervisi: ['R'] },
+      });
+    }
+  });
+
+  afterAll(async () => {
+    await User.destroy({ where: { id: 'codex-deni-id' } });
+  });
+
   const plannerToken = jwt.sign(
     {
       userId: '10000262',
@@ -715,6 +736,9 @@ describe('Inspection and Supervisi regressions', () => {
         radiusExemptionReason: 'Unit test exemption',
       });
 
+    if (exemptionUpdateResponse.status !== 200) {
+      console.log('DIAGNOSTIC - Exemption update failed:', exemptionUpdateResponse.status, exemptionUpdateResponse.body);
+    }
     expect(exemptionUpdateResponse.status).toBe(200);
     expect(exemptionUpdateResponse.body.success).toBe(true);
     expect(exemptionUpdateResponse.body.data.radiusExemptionStartDate).toBe(today);

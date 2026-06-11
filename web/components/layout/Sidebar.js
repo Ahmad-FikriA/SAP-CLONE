@@ -7,7 +7,7 @@ import {
   LayoutDashboard, FileText, Wrench, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
   ChevronLeft, ChevronRight, ClipboardCheck, BarChart2, ClipboardList,
-  MapPin, CalendarRange, ShieldCheck, Settings, Package, Menu, X,
+  MapPin, CalendarRange, ShieldCheck, Settings, Package, Menu, X, Terminal,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser, canRead } from '@/lib/auth';
@@ -47,6 +47,7 @@ const NAV = [
 
   { divider: true },
   { key: 'settings', href: '/settings', label: 'Pengaturan Akses', Icon: Settings },
+  { key: 'utility', href: '/utility', label: 'Admin Utility', Icon: Terminal },
 
 ];
 
@@ -107,8 +108,9 @@ export default function Sidebar() {
 
       // Planner override: always show material menu for planner users
       const isPlanner = user?.role === 'admin' || user?.role === 'planner' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
-      if (item.key === 'material' && !canRead(item.key) && !isPlanner) return null;
-      else if (item.key !== 'material' && !canRead(item.key)) return null;
+      if (item.key === 'utility' && user?.role !== 'admin') return null;
+      else if (item.key === 'material' && !canRead(item.key) && !isPlanner) return null;
+      else if (item.key !== 'material' && item.key !== 'utility' && !canRead(item.key)) return null;
 
       if (item.key === 'inspeksi' && user?.dinas?.toLowerCase().includes('hse') && !user?.dinas?.toLowerCase().includes('pphse')) return null;
       const { href, Icon } = item;

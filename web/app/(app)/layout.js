@@ -27,6 +27,7 @@ const ROUTE_ACCESS = [
   { prefix: '/kalender', key: 'kalender' },
   { prefix: '/settings', key: 'settings' },
   { prefix: '/material', key: 'material' },
+  { prefix: '/utility', key: 'utility' },
 ];
 
 function accessKeyForPath(pathname) {
@@ -65,7 +66,9 @@ export default function AppLayout({ children }) {
   const accessKey = accessKeyForPath(pathname);
   const user = getUser();
   const isPlanner = user?.role === 'admin' || user?.role === 'planner' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
-  const hasAccess = canRead(accessKey) || (accessKey === 'material' && isPlanner);
+  const hasAccess = accessKey === 'utility'
+    ? user?.role === 'admin'
+    : (canRead(accessKey) || (accessKey === 'material' && isPlanner));
   const denied = isReady && accessKey && !hasAccess;
 
   useEffect(() => {
