@@ -75,10 +75,11 @@ const SupervisiJob = sequelize.define(
       get() {
         const raw = this.getDataValue('amendDocuments');
         if (!raw) return [];
+        if (typeof raw !== 'string') return raw;
         try { return JSON.parse(raw); } catch { return []; }
       },
       set(val) {
-        this.setDataValue('amendDocuments', val ? JSON.stringify(val) : '[]');
+        this.setDataValue('amendDocuments', val ? (typeof val === 'string' ? val : JSON.stringify(val)) : '[]');
       },
     },
     status: {
@@ -120,10 +121,11 @@ const SupervisiJob = sequelize.define(
       get() {
         const raw = this.getDataValue('locations');
         if (!raw) return [];
+        if (typeof raw !== 'string') return raw;
         try { return JSON.parse(raw); } catch { return []; }
       },
       set(val) {
-        this.setDataValue('locations', val ? JSON.stringify(val) : '[]');
+        this.setDataValue('locations', val ? (typeof val === 'string' ? val : JSON.stringify(val)) : '[]');
       },
     },
     radiusExemptionStartDate: {

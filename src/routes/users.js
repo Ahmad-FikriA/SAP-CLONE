@@ -60,6 +60,9 @@ router.get('/', verifyToken, usersController.getAll);
 
 router.get('/stats', verifyToken, usersController.getStats);
 
+// POST /api/users/bulk-delete
+router.post('/bulk-delete', verifyToken, usersController.bulkDelete);
+
 
 // Multer config for Excel uploads
 const uploadExcelDir = path.join(__dirname, '../../uploads');

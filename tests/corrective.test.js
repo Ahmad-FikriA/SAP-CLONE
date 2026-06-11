@@ -25,7 +25,6 @@ describe('🔧 Corrective Maintenance API Tests', () => {
       it('should create new corrective request', async () => {
         const timestamp = Date.now();
         const newRequest = {
-          id: `CR-${timestamp}`,
           notificationDate: '2026-03-12',
           notificationType: 'Maintenance',
           description: 'Test corrective request',
@@ -41,7 +40,8 @@ describe('🔧 Corrective Maintenance API Tests', () => {
         const response = await authRequest('post', '/corrective/requests').send(newRequest);
         const body = expectObject(response, 201);
         
-        expect(body.id).toBe(newRequest.id);
+        expect(typeof body.id).toBe('string');
+        expect(body.id).toMatch(/^NOTIF-/);
         expect(body.status).toBe('submitted');
         
         testNotificationId = body.id;
@@ -75,182 +75,80 @@ describe('🔧 Corrective Maintenance API Tests', () => {
   });
 
   describe('SPK Corrective', () => {
-    describe('GET /api/corrective/spk', () => {
+    describe('GET /api/corrective/sap-spk', () => {
       it('should list all corrective SPKs', async () => {
-        const response = await authRequest('get', '/corrective/spk');
+        const response = await authRequest('get', '/corrective/sap-spk');
         const spks = expectArray(response);
         
         if (spks.length > 0) {
           spks.forEach(spk => {
-            expect(spk).toHaveProperty('spkId');
-            expect(spk).toHaveProperty('spkNumber');
+            expect(spk).toHaveProperty('order_number');
             expect(spk).toHaveProperty('status');
-            expect(spk).toHaveProperty('items');
-            expect(spk).toHaveProperty('photos');
-            expect(Array.isArray(spk.items)).toBe(true);
-            expect(Array.isArray(spk.photos)).toBe(true);
           });
         }
         
         console.log(`  ✓ Listed ${spks.length} corrective SPKs`);
       });
-
-      it('should filter by status', async () => {
-        const response = await authRequest('get', '/corrective/spk?status=draft');
-        expectArray(response);
-        console.log('  ✓ Filtered corrective SPKs by status');
-      });
-
-      it('should filter by priority', async () => {
-        const response = await authRequest('get', '/corrective/spk?priority=high');
-        expectArray(response);
-        console.log('  ✓ Filtered corrective SPKs by priority');
-      });
     });
 
-    describe('GET /api/corrective/spk/:spkId', () => {
-      it('should get single corrective SPK', async () => {
-        const listResponse = await authRequest('get', '/corrective/spk');
-        const spks = expectArray(listResponse);
-        
-        if (spks.length === 0) {
-          console.log('  ⚠ Skipping: No corrective SPKs available');
+    describe('POST /api/corrective/sap-spk/manual', () => {
+      it('should create new corrective SPK and link to notification', async () => {
+        if (!testNotificationId) {
+          console.log('  ⚠ Skipping: No test request created');
           return;
         }
 
-        const spkId = spks[0].spkId;
-        const response = await authRequest('get', `/corrective/spk/${spkId}`);
-        const body = expectObject(response);
-        
-        expect(body.spkId).toBe(spkId);
-        expect(body).toHaveProperty('items');
-        expect(body).toHaveProperty('photos');
-        
-        console.log('  ✓ Retrieved corrective SPK:', spkId);
-      });
-
-      it('should return 404 for non-existent SPK', async () => {
-        const response = await authRequest('get', '/corrective/spk/SPK-NONEXISTENT');
-        expect(response.status).toBe(404);
-        console.log('  ✓ Non-existent corrective SPK returns 404');
-      });
-    });
-
-    describe('POST /api/corrective/spk', () => {
-      it('should create new corrective SPK', async () => {
-        // First create a notification
-        const timestamp = Date.now();
-        const notificationId = `NOTIF-${timestamp}`;
-        
-        const notification = {
-          id: notificationId,
-          notificationDate: '2026-03-12',
-          notificationType: 'Maintenance',
-          description: 'Test notification for SPK creation',
-          functionalLocation: 'Test Location',
-          equipment: 'Test Equipment',
-          equipmentId: 'EQ-001',
-          status: 'submitted',
-        };
-
-        // Create notification first
-        await authRequest('post', '/corrective/requests').send(notification);
-
+        const orderNumber = String(Math.floor(1000000000 + Math.random() * 9000000000));
         const newSpk = {
-          notificationId: notificationId,
-          spkNumber: `SPK-C-${timestamp}`,
-          orderNumber: `ORD-${timestamp}`,
-          priority: 'high',
-          equipmentId: 'EQ-001',
-          location: 'Test Location',
-          requestedFinishDate: '2026-03-20',
-          damageClassification: 'Mechanical Failure',
-          jobDescription: 'Repair broken pump',
-          workCenter: 'MECH-01',
-          ctrlKey: 'PM01',
-          unit: 'Hours',
-          plannedWorker: 2,
-          plannedHourPerWorker: 4.0,
-          items: [
-            {
-              itemType: 'material',
-              itemName: 'Bearing SKF 6204',
-              quantity: 2,
-              uom: 'pcs',
-            },
-            {
-              itemType: 'service',
-              itemName: 'Mechanic Service',
-              quantity: 1,
-              uom: 'lot',
-            },
-          ],
+          order_number: orderNumber,
+          description: 'Repair broken pump',
+          functional_location: 'Test Location',
+          equipment_name: 'Test Equipment',
+          work_center: 'MECH-01',
+          status: 'baru_import',
         };
 
-        const response = await authRequest('post', '/corrective/spk').send(newSpk);
+        const response = await authRequest('post', '/corrective/sap-spk/manual').send(newSpk);
+        const body = expectObject(response, 201);
         
-        if (response.status === 201) {
-          const body = expectObject(response, 201);
-          expect(body.spkNumber).toBe(newSpk.spkNumber);
-          expect(body.status).toBe('draft');
-          expect(body.items).toHaveLength(2);
-          
-          testSpkCorrectiveId = body.spkId;
-          console.log('  ✓ Created corrective SPK:', testSpkCorrectiveId);
-        } else {
-          console.log('  ⚠ Could not create corrective SPK:', response.body.error);
-        }
+        expect(body.order_number).toBe(newSpk.order_number);
+        expect(body.status).toBe('baru_import');
+        
+        testSpkCorrectiveId = body.order_number;
+        console.log('  ✓ Created corrective SPK:', testSpkCorrectiveId);
+
+        // Now link it to the notification
+        const linkRes = await authRequest('post', `/corrective/requests/${testNotificationId}/update-sap-number`)
+          .send({ sapOrderNumber: testSpkCorrectiveId });
+        expect(linkRes.status).toBe(200);
+        console.log('  ✓ Linked SPK to notification');
       });
 
-      it('should reject SPK without notification', async () => {
-        const response = await authRequest('post', '/corrective/spk').send({
-          spkNumber: 'SPK-C-NOTIF-MISSING',
-          notificationId: 'NONEXISTENT-NOTIFICATION',
+      it('should reject linking SPK with non-existent notification', async () => {
+        const response = await authRequest('post', '/corrective/requests/NOTIF-NONEXISTENT/update-sap-number').send({
+          sapOrderNumber: testSpkCorrectiveId || '1000000001',
         });
 
         expect(response.status).toBe(404);
-        console.log('  ✓ Missing notification rejected');
-      });
-
-      it('should reject duplicate notification SPK', async () => {
-        if (!testSpkCorrectiveId) {
-          console.log('  ⚠ Skipping: No test SPK created');
-          return;
-        }
-
-        // Get the SPK to find its notificationId
-        const getResponse = await authRequest('get', `/corrective/spk/${testSpkCorrectiveId}`);
-        if (getResponse.status !== 200) {
-          console.log('  ⚠ Skipping: Could not retrieve test SPK');
-          return;
-        }
-
-        const response = await authRequest('post', '/corrective/spk').send({
-          notificationId: getResponse.body.notificationId,
-          spkNumber: 'SPK-C-DUPLICATE',
-        });
-
-        expect(response.status).toBe(409);
-        console.log('  ✓ Duplicate notification SPK rejected');
+        console.log('  ✓ Non-existent notification rejected');
       });
     });
 
-    describe('PUT /api/corrective/spk/:spkId', () => {
+    describe('PATCH /api/corrective/sap-spk/:orderNumber', () => {
       it('should update corrective SPK', async () => {
         if (!testSpkCorrectiveId) {
           console.log('  ⚠ Skipping: No test SPK created');
           return;
         }
 
-        const response = await authRequest('put', `/corrective/spk/${testSpkCorrectiveId}`)
+        const response = await authRequest('patch', `/corrective/sap-spk/${testSpkCorrectiveId}`)
           .send({
-            priority: 'urgent',
-            jobDescription: 'Updated job description',
+            description: 'Updated job description',
           });
 
         if (response.status === 200) {
           const body = expectObject(response);
-          expect(body.priority).toBe('urgent');
+          expect(body.description).toBe('Updated job description');
           console.log('  ✓ Updated corrective SPK:', testSpkCorrectiveId);
         } else {
           console.log('  ⚠ Could not update:', response.body.error);
@@ -258,46 +156,55 @@ describe('🔧 Corrective Maintenance API Tests', () => {
       });
     });
 
-    describe('Workflow: Start Work', () => {
-      it('should start work on SPK', async () => {
+    describe('Workflow: Claim SPK (Start Work)', () => {
+      it('should claim SPK', async () => {
         if (!testSpkCorrectiveId) {
           console.log('  ⚠ Skipping: No test SPK created');
           return;
         }
 
-        const response = await authRequest('post', `/corrective/spk/${testSpkCorrectiveId}/start-work`);
+        const response = await authRequest('post', `/corrective/sap-spk/${testSpkCorrectiveId}/claim`);
         
         if (response.status === 200) {
-          expect(response.body.status).toBe('in_progress');
-          expect(response.body).toHaveProperty('actualStartDate');
-          console.log('  ✓ Started work on SPK:', testSpkCorrectiveId);
+          const body = expectObject(response);
+          expect(body.status).toBe('eksekusi');
+          expect(body).toHaveProperty('claimed_at');
+          console.log('  ✓ Claimed SPK:', testSpkCorrectiveId);
         } else {
-          console.log('  ℹ Could not start work:', response.body.error);
+          console.log('  ℹ Could not claim SPK:', response.body.error);
         }
       });
     });
 
-    describe('Workflow: Complete Work', () => {
-      it('should complete work on SPK', async () => {
+    describe('Workflow: Execute SPK (Complete Work)', () => {
+      it('should execute SPK', async () => {
         if (!testSpkCorrectiveId) {
           console.log('  ⚠ Skipping: No test SPK created');
           return;
         }
 
-        const response = await authRequest('post', `/corrective/spk/${testSpkCorrectiveId}/complete-work`)
+        const response = await authRequest('put', `/corrective/sap-spk/${testSpkCorrectiveId}/execute`)
           .send({
-            actualWorker: 2,
-            actualHourPerWorker: 3.5,
-            jobResultDescription: 'Pump repaired successfully',
-            photos: [],
+            conf_text: 'Done Repairing',
+            reason_of_var: '0001',
+            work_start: '2026-03-12',
+            work_finish: '2026-03-12',
+            start_time: '08:00:00',
+            finish_time: '12:00:00',
+            actual_materials: 'Bearing',
+            actual_tools: 'Wrench',
+            actual_personnel: 2,
+            actual_work: 3.5,
+            job_result_description: 'Pump repaired successfully',
           });
 
         if (response.status === 200) {
-          expect(response.body.status).toBe('awaiting_kadis_pusat');
-          expect(response.body.totalActualHour).toBe(7.0);
-          console.log('  ✓ Completed work on SPK:', testSpkCorrectiveId);
+          const body = expectObject(response);
+          expect(body.status).toBe('menunggu_review_kadis_pp');
+          expect(Number(body.total_actual_hour)).toBe(7.0);
+          console.log('  ✓ Executed SPK:', testSpkCorrectiveId);
         } else {
-          console.log('  ℹ Could not complete work:', response.body.error);
+          console.log('  ℹ Could not execute SPK:', response.body.error);
         }
       });
     });
@@ -309,11 +216,10 @@ describe('🔧 Corrective Maintenance API Tests', () => {
           return;
         }
 
-        const response = await authRequest('post', `/corrective/spk/${testSpkCorrectiveId}/approve-kadis-pusat`);
+        const response = await authRequest('post', `/corrective/sap-spk/${testSpkCorrectiveId}/approve-kadis-pp`);
 
         if (response.status === 200) {
-          expect(response.body.status).toBe('awaiting_kadis_pelapor');
-          expect(response.body).toHaveProperty('kadisPusatApprovedBy');
+          expect(response.body.status).toBe('success');
           console.log('  ✓ Approved by Kadis Pusat:', testSpkCorrectiveId);
         } else {
           console.log('  ℹ Could not approve:', response.body.error);
@@ -328,11 +234,10 @@ describe('🔧 Corrective Maintenance API Tests', () => {
           return;
         }
 
-        const response = await authRequest('post', `/corrective/spk/${testSpkCorrectiveId}/approve-kadis-pelapor`);
+        const response = await authRequest('post', `/corrective/sap-spk/${testSpkCorrectiveId}/approve-kadis-pelapor`);
 
         if (response.status === 200) {
-          expect(response.body.status).toBe('completed');
-          expect(response.body).toHaveProperty('kadisPelaporApprovedBy');
+          expect(response.body.status).toBe('success');
           console.log('  ✓ Approved by Kadis Pelapor:', testSpkCorrectiveId);
         } else {
           console.log('  ℹ Could not approve:', response.body.error);
@@ -340,17 +245,17 @@ describe('🔧 Corrective Maintenance API Tests', () => {
       });
     });
 
-    describe('DELETE /api/corrective/spk/:spkId', () => {
+    describe('DELETE /api/corrective/sap-spk/:order_number', () => {
       it('should delete corrective SPK', async () => {
         if (!testSpkCorrectiveId) {
           console.log('  ⚠ Skipping: No test SPK created');
           return;
         }
 
-        const response = await authRequest('delete', `/corrective/spk/${testSpkCorrectiveId}`);
+        const response = await authRequest('delete', `/corrective/sap-spk/${testSpkCorrectiveId}`);
         
         if (response.status === 200) {
-          expectSuccess(response);
+          expect(response.body.status).toBe('success');
           console.log('  ✓ Deleted corrective SPK:', testSpkCorrectiveId);
         } else {
           console.log('  ℹ Could not delete:', response.body.error);
