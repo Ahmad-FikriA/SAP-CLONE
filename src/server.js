@@ -1,6 +1,7 @@
 "use strict";
 
 require("dotenv").config();
+require("./services/logger");
 const express = require("express");
 // Patches Express so rejected promises from async route handlers are forwarded
 // to the error-handling middleware instead of becoming unhandledRejections.
@@ -30,6 +31,7 @@ const notificationRoutes = require("./routes/notification");
 const k3SafetyRoutes = require("./routes/k3_safety");
 const k3SettingsRoutes = require("./routes/k3_settings");
 const materialRoutes = require("./routes/material");
+const utilityRoutes = require("./routes/utility");
 const errorHandler = require("./middleware/errorHandler");
 const { syncDatabase } = require("./config/syncMode");
 const { ensureSupervisiJobSchema } = require("./models/SupervisiJob");
@@ -310,6 +312,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/k3-safety", k3SafetyRoutes);
 app.use("/api/k3-settings", k3SettingsRoutes);
 app.use("/api/materials", materialRoutes);
+app.use("/api/utility", utilityRoutes);
 
 const settingsController = require("./controllers/settings/settingsController");
 app.get(
@@ -380,23 +383,25 @@ connectWithRetry()
   })
   .then(() => {
     console.log("Database models synced successfully.");
-    // ── Supervisi: Cron job — tandai kunjungan yang terlewat sebagai Pelanggaran
-    const runMissedVisits = () =>
-      Promise.resolve(markMissedVisitsAsPelanggaran()).catch((err) =>
-        console.error("[Supervisi Cron] Error:", err.message)
-      );
-    runMissedVisits();
-    cron.schedule("1 0 * * *", runMissedVisits, { timezone: "Asia/Jakarta" });
-    console.log("[Supervisi Cron] Scheduled daily missed-visit check at 00:01 Asia/Jakarta.");
+    if (process.env.NODE_ENV !== 'test') {
+      // ── Supervisi: Cron job — tandai kunjungan yang terlewat sebagai Pelanggaran
+      const runMissedVisits = () =>
+        Promise.resolve(markMissedVisitsAsPelanggaran()).catch((err) =>
+          console.error("[Supervisi Cron] Error:", err.message)
+        );
+      runMissedVisits();
+      cron.schedule("1 0 * * *", runMissedVisits, { timezone: "Asia/Jakarta" });
+      console.log("[Supervisi Cron] Scheduled daily missed-visit check at 00:01 Asia/Jakarta.");
 
-    // ── Inspeksi: Cron job — kirim pengingat jadwal hari ini dan overdue
-    const runInspectionReminders = () =>
-      Promise.resolve(sendInspectionReminders()).catch((err) =>
-        console.error("[Inspection Cron] Error:", err.message)
-      );
-    runInspectionReminders();
-    cron.schedule("0 7 * * *", runInspectionReminders, { timezone: "Asia/Jakarta" });
-    console.log("[Inspection Cron] Scheduled daily reminders at 07:00 Asia/Jakarta.");
+      // ── Inspeksi: Cron job — kirim pengingat jadwal hari ini dan overdue
+      const runInspectionReminders = () =>
+        Promise.resolve(sendInspectionReminders()).catch((err) =>
+          console.error("[Inspection Cron] Error:", err.message)
+        );
+      runInspectionReminders();
+      cron.schedule("0 7 * * *", runInspectionReminders, { timezone: "Asia/Jakarta" });
+      console.log("[Inspection Cron] Scheduled daily reminders at 07:00 Asia/Jakarta.");
+    }
   })
   .catch((err) => {
     console.error("Unable to connect to the database:", err);

@@ -2,6 +2,7 @@
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const logger = require('../services/logger');
 
 if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
   throw new Error('JWT_SECRET environment variable is required in production');
@@ -66,6 +67,10 @@ async function verifyToken(req, res, next) {
       dinas: decoded.dinas !== undefined ? decoded.dinas : user.dinas,
       permissions: decoded.permissions !== undefined ? decoded.permissions : (user ? user.permissions : null),
     };
+
+    // Record user activity for active metrics tracking
+    logger.recordUserActivity(req.user.userId, req.user.name);
+
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });

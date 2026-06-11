@@ -166,6 +166,7 @@ beforeAll(async () => {
       role: 'admin',
       divisi: 'Perencanaan',
       group: 'perencanaan',
+      email: 'admin@test.com',
     }
   });
 
@@ -177,7 +178,9 @@ beforeAll(async () => {
 
 // Cleanup after all tests
 afterAll(async () => {
-  await sequelize.close();
+  // Commented out to allow sequential tests in the same process to reuse the connection pool.
+  // Jest will force exit cleanly due to "forceExit": true in package.json.
+  // await sequelize.close();
   console.log('\n✅ API Tests Completed\n');
 });
 

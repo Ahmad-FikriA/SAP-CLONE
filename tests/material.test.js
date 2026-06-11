@@ -16,7 +16,7 @@ describe('Material API', () => {
     adminToken = loginRes.body.token;
 
     // Clear materials before tests
-    await Material.destroy({ where: {}, truncate: true });
+    await Material.destroy({ where: {}, truncate: false });
   });
 
   it('should create a new material', async () => {

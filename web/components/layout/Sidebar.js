@@ -7,7 +7,7 @@ import {
   LayoutDashboard, FileText, Wrench, Radio,
   Map, Users, Link2, Calendar, Activity, LogOut,
   ChevronLeft, ChevronRight, ClipboardCheck, BarChart2, ClipboardList,
-  MapPin, CalendarRange, ShieldCheck, Settings, Package, Menu, X,
+  MapPin, CalendarRange, ShieldCheck, Settings, Package, Menu, X, Terminal,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { clearAuth, getUser, canRead } from '@/lib/auth';
@@ -47,6 +47,7 @@ const NAV = [
 
   { divider: true },
   { key: 'settings', href: '/settings', label: 'Pengaturan Akses', Icon: Settings },
+  { key: 'utility', href: '/utility', label: 'Admin Utility', Icon: Terminal },
 
 ];
 
@@ -107,8 +108,9 @@ export default function Sidebar() {
 
       // Planner override: always show material menu for planner users
       const isPlanner = user?.role === 'admin' || user?.role === 'planner' || (user?.group && user.group.toLowerCase().includes('perencanaan'));
-      if (item.key === 'material' && !canRead(item.key) && !isPlanner) return null;
-      else if (item.key !== 'material' && !canRead(item.key)) return null;
+      if (item.key === 'utility' && user?.role !== 'admin') return null;
+      else if (item.key === 'material' && !canRead(item.key) && !isPlanner) return null;
+      else if (item.key !== 'material' && item.key !== 'utility' && !canRead(item.key)) return null;
 
       if (item.key === 'inspeksi' && user?.dinas?.toLowerCase().includes('hse') && !user?.dinas?.toLowerCase().includes('pphse')) return null;
       const { href, Icon } = item;
@@ -152,7 +154,6 @@ export default function Sidebar() {
         >
           <Menu size={22} />
         </button>
-        <Image src="/app_icon.jpeg" alt="Logo" width={26} height={26} className="rounded shrink-0" />
         <span className="text-sm font-semibold text-white tracking-wide">MANTIS PPHSE</span>
       </div>
 
@@ -167,7 +168,7 @@ export default function Sidebar() {
       {/* Mobile drawer */}
       <aside
         className={cn(
-          'md:hidden fixed top-0 left-0 z-50 h-screen w-64 bg-[#0a2540] text-white flex flex-col',
+          'md:hidden fixed top-0 left-0 z-50 h-[100dvh] w-64 bg-[#0a2540] text-white flex flex-col',
           'transition-transform duration-300 ease-in-out print:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -175,7 +176,6 @@ export default function Sidebar() {
         {/* Drawer header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-2">
-            <Image src="/app_icon.jpeg" alt="Logo" width={28} height={28} className="rounded" />
             <span className="text-sm font-semibold tracking-wide">MANTIS PPHSE</span>
           </div>
           <button
@@ -193,7 +193,7 @@ export default function Sidebar() {
         </nav>
 
         {isMounted && (
-          <div className="border-t border-white/10 p-3 flex items-center gap-2 shrink-0">
+          <div className="border-t border-white/10 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] flex items-center gap-2 shrink-0">
             <Link href="/profile" className="flex items-center gap-2 flex-1 min-w-0 group" onClick={() => setMobileOpen(false)}>
               <div className="w-8 h-8 rounded-full bg-white/20 group-hover:bg-white/30 flex items-center justify-center text-xs font-bold shrink-0 transition-colors overflow-hidden">
                 {user?.fotoProfil ? (
@@ -232,7 +232,7 @@ export default function Sidebar() {
           collapsed ? 'flex-col items-center gap-4 px-2' : 'items-center justify-between px-3'
         )}>
           <div className={cn('flex items-center gap-2 min-w-0', collapsed && 'justify-center')}>
-            <Image src="/app_icon.jpeg" alt="Logo" width={collapsed ? 28 : 32} height={collapsed ? 28 : 32} className="rounded shrink-0" />
+            <Image src="/icon.png" alt="Logo" width={collapsed ? 28 : 32} height={collapsed ? 28 : 32} className="rounded shrink-0" />
             {!collapsed && (
               <span className="text-sm font-semibold tracking-wide truncate">MANTIS PPHSE</span>
             )}

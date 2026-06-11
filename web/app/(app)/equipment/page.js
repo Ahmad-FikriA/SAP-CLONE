@@ -288,8 +288,49 @@ function EquipmentPageInner() {
         )}
       </div>
 
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2.5">
+        {loading ? (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">Memuat...</div>
+        ) : equipment.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">Tidak ada data</div>
+        ) : equipment.map((eq) => (
+          <div key={eq.equipmentId} className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-800 truncate">{eq.equipmentName}</p>
+                <p className="font-mono text-xs text-gray-400">{eq.equipmentId}</p>
+              </div>
+              {eq.plantId && <span className="shrink-0 text-xs text-gray-400">{eq.plantId}</span>}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1">
+              <CategoryBadge category={eq.category} />
+              {Array.isArray(eq.extraCategories) && eq.extraCategories.map((c) => <CategoryBadge key={c} category={c} />)}
+            </div>
+            <p className="mt-2 text-xs text-gray-500">{eq.functionalLocation || eq.funcLocId || '—'}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {(eq.latitude != null && eq.longitude != null) && (
+                <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => pinToMap(eq)} title="Tampilkan di peta">
+                  <MapPin size={11} /> Pin
+                </Button>
+              )}
+              <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => setQrTarget(eq)} title="Tampilkan QR Code">
+                <QrCode size={11} /> QR
+              </Button>
+              <Link href={`/equipment/history?id=${eq.equipmentId}`}>
+                <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" title="Riwayat pengukuran">
+                  <BarChart2 size={11} /> Riwayat
+                </Button>
+              </Link>
+              {canUpdate('equipment') && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(eq)}>Edit</Button>}
+              {canDelete('equipment') && <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTarget(eq)}>Hapus</Button>}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>

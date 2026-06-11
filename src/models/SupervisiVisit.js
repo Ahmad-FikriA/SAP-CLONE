@@ -87,7 +87,8 @@ const SupervisiVisit = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: "true jika tidak hadir ke-3 beruntun atau lebih per job + lokasi",
+      comment:
+        "true jika tidak hadir ke-3 beruntun atau lebih per job + lokasi",
     },
     visitLatitude: {
       type: DataTypes.DECIMAL(10, 7),
@@ -107,13 +108,15 @@ const SupervisiVisit = sequelize.define(
     jarakDariPusat: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
-      comment: "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
+      comment:
+        "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
     },
     isDraft: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: "true = disimpan sebagai draft (belum final). Draft lewat hari dikonversi ke tidak_hadir lalu pelanggaran dihitung ulang.",
+      comment:
+        "true = disimpan sebagai draft (belum final). Draft lewat hari dikonversi ke tidak_hadir lalu pelanggaran dihitung ulang.",
     },
   },
   {
@@ -178,7 +181,8 @@ async function ensureSupervisiVisitSchema() {
     await queryInterface.addColumn(tableName, "jarakDariPusat", {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
-      comment: "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
+      comment:
+        "Selisih jarak dalam meter ke titik pusat Geofence (0 jika di dalam radius)",
     });
   }
 
@@ -187,7 +191,8 @@ async function ensureSupervisiVisitSchema() {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
-      comment: "true = disimpan sebagai draft (belum final). Draft yang melewati hari akan dikonversi ke tidak_hadir.",
+      comment:
+        "true = disimpan sebagai draft (belum final). Draft yang melewati hari akan dikonversi ke tidak_hadir.",
     });
   }
 

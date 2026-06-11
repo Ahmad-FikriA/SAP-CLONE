@@ -233,7 +233,7 @@ export default function TrackRecordPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -359,6 +359,7 @@ function DrillDown({ userId, spks, loading }) {
       <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">
         Riwayat SPK — {spks.length} entri terakhir
       </p>
+      <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-200">
@@ -383,6 +384,7 @@ function DrillDown({ userId, spks, loading }) {
           ))}
         </tbody>
       </table>
+      </div>
       {spks.length >= 50 && (
         <div className="mt-3">
           <a

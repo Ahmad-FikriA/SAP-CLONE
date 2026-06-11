@@ -248,8 +248,46 @@ export default function UsersPage() {
         )}
       </div>
 
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2.5">
+        {loading ? (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">Memuat...</div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">
+            {users.length === 0 ? 'Tidak ada data' : 'Tidak ada user yang cocok dengan pencarian'}
+          </div>
+        ) : filteredUsers.map((u) => (
+          <div key={u.id} className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="flex items-start gap-3">
+              <input type="checkbox" checked={selected.includes(u.id)} onChange={() => toggleSelect(u.id)}
+                className="mt-1 rounded border-gray-300 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-800 truncate">{u.name}</p>
+                    <p className="font-mono text-xs text-gray-400">{u.nik}</p>
+                  </div>
+                  <RoleBadge role={u.role} />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                  {u.dinas && <span>{u.dinas}</span>}
+                  {u.group && <span className="inline-block bg-gray-100 text-gray-600 rounded px-1.5 py-0.5">{u.group}</span>}
+                </div>
+                {u.email && <p className="mt-1 text-xs text-gray-500 truncate">{u.email}</p>}
+                <div className="mt-2"><PageAccessBadge permissions={u.permissions} /></div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {canUpdate('users') && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(u)}>Edit</Button>}
+                  <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setResetTarget(u)}>Reset Password</Button>
+                  {canDelete('users') && <Button variant="destructive" size="sm" className="h-7 text-xs" onClick={() => setDeleteTarget(u)}>Hapus</Button>}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>

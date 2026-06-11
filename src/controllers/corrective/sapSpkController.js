@@ -152,6 +152,26 @@ const parseSapSpkExcel = (worksheet) => {
     const status = isTeco ? "selesai" : "baru_import";
     const jobResultDesc = isTeco ? "History Import (TECO)" : null;
 
+    const durPlan = parseFloat(getVal("dur_plan")) || null;
+    const numOfWork = parseInt(getVal("num_of_work")) || null;
+    let normalDur = parseFloat(getVal("normal_dur")) || null;
+    if (durPlan !== null && numOfWork !== null) {
+      normalDur = parseFloat((durPlan * numOfWork).toFixed(2));
+    }
+
+    const durAct = parseFloat(getVal("dur_act")) || null;
+    let actualWorkVal = parseFloat(getVal("actual_work")) || null;
+    let actualPersonnel = null;
+    let totalActualHour = null;
+
+    if (isTeco) {
+      actualPersonnel = numOfWork;
+      actualWorkVal = durAct !== null ? durAct : (durPlan !== null ? durPlan : null);
+      if (actualPersonnel !== null && actualWorkVal !== null) {
+        totalActualHour = parseFloat((actualPersonnel * actualWorkVal).toFixed(2));
+      }
+    }
+
     rowsToUpsert.push({
       order_number: orderNum,
       description: getVal("description"),
@@ -162,11 +182,11 @@ const parseSapSpkExcel = (worksheet) => {
       work_center: getVal("work_center"),
       activity: getVal("activity"),
       short_text: getVal("short_text"),
-      normal_dur: parseFloat(getVal("normal_dur")) || null,
+      normal_dur: normalDur,
       normal_dur_un: getVal("normal_dur_un"),
-      dur_plan: parseFloat(getVal("dur_plan")) || null,
+      dur_plan: durPlan,
       unit_for_work: getVal("unit_for_work"),
-      dur_act: parseFloat(getVal("dur_act")) || null,
+      dur_act: durAct,
       posting_date: getVal("posting_date"),
       conf_text: getVal("conf_text"),
       reason_of_var: getVal("reason_of_var"),
@@ -178,8 +198,10 @@ const parseSapSpkExcel = (worksheet) => {
       equipment_name: getVal("equipment_name"),
       functional_location: getVal("functional_location"),
       maint_activ_type: getVal("maint_activ_type"),
-      actual_work: parseFloat(getVal("actual_work")) || null,
-      num_of_work: parseInt(getVal("num_of_work")) || null,
+      actual_work: actualWorkVal,
+      actual_personnel: actualPersonnel,
+      total_actual_hour: totalActualHour,
+      num_of_work: numOfWork,
       location: getVal("location"),
       status: status,
       job_result_description: jobResultDesc,
@@ -278,7 +300,7 @@ const bulkInsertSapSpk = async (req, res) => {
         "dur_plan", "unit_for_work", "dur_act", "posting_date", "conf_text",
         "reason_of_var", "work_start", "work_finish", "start_time", "finish_time",
         "report_by", "equipment_name", "functional_location", "maint_activ_type",
-        "actual_work", "num_of_work", "location", "status", "job_result_description",
+        "actual_work", "actual_personnel", "total_actual_hour", "num_of_work", "location", "status", "job_result_description",
       ],
     });
 
@@ -351,11 +373,11 @@ const REASON_OF_VARIANCE_CODES = {
   '0001': 'Machine malfunction',
   '0002': 'Operating error',
   '0003': 'Defective material',
-  '0004': 'Object running',
-  '0005': 'Object breakdown',
-  '0006': 'Bad weather',
+  '0004': 'Object Running',
+  '0005': 'Object Breakdown',
+  '0006': 'Bad Weather',
   '0007': 'Duplicate WO',
-  '0008': 'No fault found',
+  '0008': 'No Fault Found',
   '0009': 'Others',
 };
 
@@ -484,15 +506,31 @@ const updateSapSpk = async (req, res) => {
       normal_dur, normal_dur_un, unit_for_work, activity, maint_activ_type,
       work_start, work_finish, start_time, finish_time,
       conf_text, confirm_number, reason_of_var, dur_act, actual_work,
-      job_result_description
+      actual_personnel, job_result_description
     } = req.body;
 
     const updates = {};
     if (description !== undefined) updates.description = description;
     if (short_text !== undefined) updates.short_text = short_text;
-    if (num_of_work !== undefined) updates.num_of_work = num_of_work !== null ? parseInt(num_of_work) : null;
-    if (dur_plan !== undefined) updates.dur_plan = dur_plan !== null ? parseFloat(dur_plan) : null;
-    if (normal_dur !== undefined) updates.normal_dur = normal_dur !== null ? parseFloat(normal_dur) : null;
+    let finalNumOfWork = spk.num_of_work;
+    if (num_of_work !== undefined) {
+      finalNumOfWork = num_of_work !== null ? parseInt(num_of_work) : null;
+      updates.num_of_work = finalNumOfWork;
+    }
+    let finalDurPlan = spk.dur_plan;
+    if (dur_plan !== undefined) {
+      finalDurPlan = dur_plan !== null ? parseFloat(dur_plan) : null;
+      updates.dur_plan = finalDurPlan;
+    }
+    if (dur_plan !== undefined || num_of_work !== undefined) {
+      if (finalDurPlan !== null && finalNumOfWork !== null) {
+        updates.normal_dur = parseFloat((finalDurPlan * finalNumOfWork).toFixed(2));
+      } else {
+        updates.normal_dur = null;
+      }
+    } else if (normal_dur !== undefined) {
+      updates.normal_dur = normal_dur !== null ? parseFloat(normal_dur) : null;
+    }
     if (normal_dur_un !== undefined) updates.normal_dur_un = normal_dur_un;
     if (unit_for_work !== undefined) updates.unit_for_work = unit_for_work;
     if (activity !== undefined) updates.activity = activity;
@@ -506,6 +544,18 @@ const updateSapSpk = async (req, res) => {
     if (reason_of_var !== undefined) updates.reason_of_var = reason_of_var;
     if (dur_act !== undefined) updates.dur_act = dur_act !== null ? parseFloat(dur_act) : null;
     if (actual_work !== undefined) updates.actual_work = actual_work !== null ? parseFloat(actual_work) : null;
+    if (actual_personnel !== undefined) updates.actual_personnel = actual_personnel !== null ? parseInt(actual_personnel) : null;
+
+    // Recalculate total_actual_hour if actuals are modified or exist
+    const personnel = actual_personnel !== undefined
+      ? (actual_personnel !== null ? parseInt(actual_personnel) : null)
+      : spk.actual_personnel;
+    const workHours = actual_work !== undefined
+      ? (actual_work !== null ? parseFloat(actual_work) : null)
+      : spk.actual_work;
+    const computedTotalHour = personnel && workHours ? parseFloat((personnel * workHours).toFixed(2)) : null;
+    updates.total_actual_hour = computedTotalHour;
+
     if (job_result_description !== undefined) updates.job_result_description = job_result_description;
 
     await spk.update(updates);
@@ -638,32 +688,86 @@ const rejectKadisPelapor = async (req, res) => {
 
 const exportHistory = async (req, res) => {
   try {
-    const { ids } = req.body || {};
+    const { ids, format } = req.body || {};
     const whereClause = { status: { [Op.in]: ["selesai", "ditolak"] } };
     if (ids && Array.isArray(ids) && ids.length > 0) whereClause.order_number = { [Op.in]: ids };
 
     const spks = await SapSpkCorrective.findAll({ where: whereClause, order: [["created_at", "DESC"]] });
     const workbook = new exceljs.Workbook();
     const ws = workbook.addWorksheet("Confirmation");
-    const headers = [
-      "Order", "Description", "System status", "Cost Center", "Control Key", "Confirmation", "Oper.Work Center", "Activity", "Op. Short Text",
-      "Normal duration", "Norm.duratn un.", "Duration Plan", "Unit for Work", "Duration Actual", "Actual work", "Posting Date", "Confirmation Text",
-      "Reason of Variance", "Work Start", "Work Finish", "Start Time", "Finish Time", "MaintActivType", "Location", "Functional Loc.", "Equipment", "numofwork",
-    ];
+
+    const isCsv = format === "csv";
+
+    const formatCsvDate = (dateStr) => {
+      if (!dateStr) return "";
+      if (typeof dateStr === "string") {
+        const parts = dateStr.split("-");
+        if (parts.length === 3 && parts[0].length === 4) {
+          return `${parts[2]}.${parts[1]}.${parts[0]}`;
+        }
+      }
+      try {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear();
+          return `${day}.${month}.${year}`;
+        }
+      } catch (e) {}
+      return dateStr;
+    };
+
+    const formatReasonCode = (val) => {
+      if (!val) return "";
+      const match = String(val).trim().match(/^(\d{4})/);
+      return match ? match[1] : val;
+    };
+
+    const headers = isCsv
+      ? [
+          "Order", "Description", "System status", "Cost Center", "Control Key", "Confirmation", "Oper.Work Center", "Activity", "Op. Short Text",
+          "Normal duration", "Norm.duratn un.", "Duration Plan", "Unit for Work", "Duration Actual", "Actual work", "Posting Date", "Confirmation Text",
+          "Reason of Variance", "Work Start", "Work Finish", "Start Time", "Finish Time",
+        ]
+      : [
+          "Order", "Description", "System status", "Cost Center", "Control Key", "Confirmation", "Oper.Work Center", "Activity", "Op. Short Text",
+          "Normal duration", "Norm.duratn un.", "Duration Plan", "Unit for Work", "Duration Actual", "Actual work", "Posting Date", "Confirmation Text",
+          "Reason of Variance", "Work Start", "Work Finish", "Start Time", "Finish Time", "MaintActivType", "Location", "Functional Loc.", "Equipment", "numofwork",
+        ];
+
     ws.addRow(headers);
+
     for (const s of spks) {
-      ws.addRow([
-        s.order_number, s.description, s.sys_status, s.cost_center, s.ctrl_key, s.confirm_number, s.work_center, s.activity, s.short_text || s.description,
-        s.normal_dur, s.normal_dur_un, s.dur_plan, s.unit_for_work, s.dur_act, s.actual_work || s.total_actual_hour, s.posting_date, s.conf_text,
-        s.reason_of_var, s.work_start, s.work_finish, s.start_time, s.finish_time, s.maint_activ_type, s.location, s.functional_location, s.equipment_name, s.num_of_work,
-      ]);
+      if (isCsv) {
+        ws.addRow([
+          s.order_number, s.description, s.sys_status, s.cost_center, s.ctrl_key, s.confirm_number, s.work_center, s.activity, s.short_text || s.description,
+          s.normal_dur, "STD", s.dur_plan, "STD", s.dur_act, s.actual_work || s.total_actual_hour, formatCsvDate(s.work_start), s.conf_text,
+          formatReasonCode(s.reason_of_var), formatCsvDate(s.work_start), formatCsvDate(s.work_finish), s.start_time, s.finish_time
+        ]);
+      } else {
+        ws.addRow([
+          s.order_number, s.description, s.sys_status, s.cost_center, s.ctrl_key, s.confirm_number, s.work_center, s.activity, s.short_text || s.description,
+          s.normal_dur, s.normal_dur_un, s.dur_plan, s.unit_for_work, s.dur_act, s.actual_work || s.total_actual_hour, s.posting_date, s.conf_text,
+          formatReasonCode(s.reason_of_var), s.work_start, s.work_finish, s.start_time, s.finish_time, s.maint_activ_type, s.location, s.functional_location, s.equipment_name, s.num_of_work,
+        ]);
+      }
     }
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="IW49_History.xlsx"`);
-    await workbook.xlsx.write(res);
-    res.end();
+
+    if (isCsv) {
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="IW49_History.csv"`);
+      await workbook.csv.write(res);
+    } else {
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="IW49_History.xlsx"`);
+      await workbook.xlsx.write(res);
+    }
   } catch (error) {
-    res.status(500).json({ status: "error", message: error.message });
+    console.error("Export error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ status: "error", message: error.message });
+    }
   }
 };
 
@@ -743,7 +847,7 @@ const uploadHistoryExcel = async (req, res) => {
           "dur_plan", "unit_for_work", "dur_act", "posting_date", "conf_text",
           "reason_of_var", "work_start", "work_finish", "start_time", "finish_time",
           "report_by", "equipment_name", "functional_location", "maint_activ_type",
-          "actual_work", "num_of_work", "location", "status", "job_result_description",
+          "actual_work", "actual_personnel", "total_actual_hour", "num_of_work", "location", "status", "job_result_description",
         ];
 
         for (const row of rowsToUpdate) {

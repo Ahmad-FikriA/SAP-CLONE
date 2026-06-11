@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { cn, getMediaUrl } from '@/lib/utils';
 import { useCorrective } from '../_hooks/useCorrective';
-import { SAP_STATUS_COLORS, SAP_STATUS_LABELS, SAP_SPK_STEPS } from '../_components/constants';
+import { SAP_STATUS_COLORS, SAP_STATUS_LABELS, SAP_SPK_STEPS, REASON_OF_VAR_MAP } from '../_components/constants';
 import { CorrectiveStatusBadge } from '../_components/ui-primitives';
 
 // Helper for formatting actual vs planned times
@@ -741,7 +741,13 @@ export default function CorrectiveApprovalPage() {
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Reason Variance Code</span>
-                  <span className="text-xs font-semibold text-slate-600 block font-mono">{selectedSpk.reason_of_var || '—'}</span>
+                  <span className="text-xs font-semibold text-slate-600 block font-mono">
+                    {selectedSpk.reason_of_var
+                      ? REASON_OF_VAR_MAP[selectedSpk.reason_of_var]
+                        ? `${selectedSpk.reason_of_var} - ${REASON_OF_VAR_MAP[selectedSpk.reason_of_var]}`
+                        : selectedSpk.reason_of_var
+                      : '—'}
+                  </span>
                 </div>
               </div>
               
@@ -782,7 +788,7 @@ export default function CorrectiveApprovalPage() {
               </h4>
               
               {selectedSpk.spkMaterials?.length > 0 ? (
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="border border-slate-200 rounded-xl overflow-x-auto">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase text-slate-500 tracking-wider">
                       <tr>
