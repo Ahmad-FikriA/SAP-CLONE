@@ -45,8 +45,30 @@ function clearLogs() {
   logHistory.length = 0;
 }
 
+const activeUsers = new Map();
+
+function recordUserActivity(userId, name) {
+  if (!userId) return;
+  activeUsers.set(userId, { name, timestamp: Date.now() });
+}
+
+function getActiveUserCount() {
+  const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
+  let count = 0;
+  for (const [userId, info] of activeUsers.entries()) {
+    if (info.timestamp > fifteenMinutesAgo) {
+      count++;
+    } else {
+      activeUsers.delete(userId);
+    }
+  }
+  return Math.max(1, count); // at least 1 (the user themselves)
+}
+
 module.exports = {
   getLogs,
   clearLogs,
   addLog,
+  recordUserActivity,
+  getActiveUserCount,
 };

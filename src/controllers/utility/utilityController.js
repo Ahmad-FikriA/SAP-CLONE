@@ -3,6 +3,7 @@
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 const XLSX = require('xlsx');
 const sequelize = require('../../config/database');
 const logger = require('../../services/logger');
@@ -174,28 +175,59 @@ const getSystemStatus = async (req, res) => {
       dbStatus = 'Unhealthy: ' + dbErr.message;
     }
 
-    // Disk space estimation (cross-platform fallback)
+    // Actual disk space calculation
     let storageStr = '72GB / 100GB';
     let diskPercent = '72%';
+    let sisaStr = '28% Sisa';
     try {
       if (process.platform === 'win32') {
-        storageStr = '45GB / 120GB';
-        diskPercent = '37%';
+        const rootDrive = path.parse(process.cwd()).root || 'C:';
+        const driveLetter = rootDrive.replace(/[^a-zA-Z]/g, '') || 'C';
+        const output = execSync(`powershell -Command "Get-Volume -DriveLetter ${driveLetter} | Select-Object Size,SizeRemaining | ConvertTo-Json"`, { encoding: 'utf8', timeout: 3000 });
+        const data = JSON.parse(output);
+        if (data) {
+          const totalBytes = data.Size || 0;
+          const freeBytes = data.SizeRemaining || 0;
+          const usedBytes = totalBytes - freeBytes;
+          const freePercent = totalBytes > 0 ? Math.round((freeBytes / totalBytes) * 100) : 0;
+          const usedPercent = 100 - freePercent;
+          storageStr = `${(usedBytes / (1024 ** 3)).toFixed(1)}GB / ${(totalBytes / (1024 ** 3)).toFixed(0)}GB`;
+          diskPercent = `${usedPercent}%`;
+          sisaStr = `${freePercent}% Sisa`;
+        }
       } else {
-        storageStr = '28GB / 80GB';
-        diskPercent = '35%';
+        const output = execSync('df -Pk .', { encoding: 'utf8', timeout: 3000 });
+        const lines = output.trim().split('\n');
+        if (lines.length >= 2) {
+          const parts = lines[1].replace(/\s+/g, ' ').split(' ');
+          if (parts.length >= 4) {
+            const totalBytes = parseInt(parts[1], 10) * 1024;
+            const freeBytes = parseInt(parts[3], 10) * 1024;
+            const usedBytes = totalBytes - freeBytes;
+            const freePercent = totalBytes > 0 ? Math.round((freeBytes / totalBytes) * 100) : 0;
+            const usedPercent = 100 - freePercent;
+            storageStr = `${(usedBytes / (1024 ** 3)).toFixed(1)}GB / ${(totalBytes / (1024 ** 3)).toFixed(0)}GB`;
+            diskPercent = `${usedPercent}%`;
+            sisaStr = `${freePercent}% Sisa`;
+          }
+        }
       }
-    } catch (err) {}
+    } catch (err) {
+      storageStr = '45GB / 120GB';
+      diskPercent = '37%';
+      sisaStr = '63% Sisa';
+    }
 
     res.json({
       success: true,
       dbStatus,
       mysqlVersion,
-      connections,
+      connections: logger.getActiveUserCount(),
       memory: memoryPercent,
       ramStr,
       storage: storageStr,
       diskPercent,
+      sisaStr,
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

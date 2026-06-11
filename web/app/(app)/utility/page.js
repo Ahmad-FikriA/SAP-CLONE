@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Eye,
   Settings,
+  ArrowDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiGet, apiPost, apiDelete } from "@/lib/api";
@@ -70,17 +71,39 @@ export default function UtilityPage() {
     connections: 0,
     memory: "0%",
     storage: "0GB / 0GB",
+    mysqlVersion: "8.0.36",
+    sisaStr: "63% Sisa",
   });
   const [isRefreshingHealth, setIsRefreshingHealth] = useState(false);
 
-  const logsEndRef = useRef(null);
+  const logContainerRef = useRef(null);
+  const [hasInitialScrolled, setHasInitialScrolled] = useState(false);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
 
-  // Auto-scroll logs to bottom
+  // Auto-scroll logs to bottom ONLY on initial load
   useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (logs.length > 0 && !hasInitialScrolled && logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+      setHasInitialScrolled(true);
     }
-  }, [logs]);
+  }, [logs, hasInitialScrolled]);
+
+  const handleScroll = () => {
+    if (logContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = logContainerRef.current;
+      // Show button if we are scrolled up by more than 100px
+      setShowScrollBottom(scrollHeight - scrollTop - clientHeight > 100);
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTo({
+        top: logContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  };
 
   // Fetch metrics on mount
   useEffect(() => {
@@ -136,6 +159,8 @@ export default function UtilityPage() {
           connections: res.connections,
           memory: res.memory,
           storage: res.storage,
+          mysqlVersion: res.mysqlVersion || "8.0.36",
+          sisaStr: res.sisaStr || "63% Sisa",
         });
       }
     } catch (err) {
@@ -286,16 +311,18 @@ export default function UtilityPage() {
             <span className="text-xl font-bold text-emerald-900">{dbHealth.status}</span>
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
           </div>
-          <span className="text-[10px] text-emerald-700/70 block mt-1">MySQL 8.0.36 &middot; Running</span>
+          <span className="text-[10px] text-emerald-700/70 block mt-1">
+            MySQL {dbHealth.mysqlVersion} &middot; {dbHealth.status.includes('Unhealthy') ? 'Error' : 'Running'}
+          </span>
         </div>
 
         <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/60 p-4 rounded-2xl shadow-sm relative overflow-hidden group">
           <div className="absolute right-3 top-3 opacity-10 group-hover:opacity-20 transition-opacity">
             <Cpu size={48} className="text-indigo-800" />
           </div>
-          <span className="text-[10px] font-bold text-indigo-800/80 uppercase tracking-widest block">Aktif Koneksi</span>
-          <span className="text-xl font-bold text-indigo-900 block mt-1">{dbHealth.connections} Client</span>
-          <span className="text-[10px] text-indigo-700/70 block mt-1">Pool Status &middot; Optimal</span>
+          <span className="text-[10px] font-bold text-indigo-800/80 uppercase tracking-widest block">Pengguna Aktif</span>
+          <span className="text-xl font-bold text-indigo-900 block mt-1">{dbHealth.connections} User</span>
+          <span className="text-[10px] text-indigo-700/70 block mt-1">Status Sesi &middot; Terlacak</span>
         </div>
 
         <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/60 p-4 rounded-2xl shadow-sm relative overflow-hidden group">
@@ -313,7 +340,7 @@ export default function UtilityPage() {
           </div>
           <span className="text-[10px] font-bold text-slate-800/80 uppercase tracking-widest block">Penyimpanan</span>
           <span className="text-xl font-bold text-slate-900 block mt-1">{dbHealth.storage}</span>
-          <span className="text-[10px] text-slate-700/70 block mt-1">Storage Sektor &middot; 28% Sisa</span>
+          <span className="text-[10px] text-slate-700/70 block mt-1">Storage Sektor &middot; {dbHealth.sisaStr}</span>
         </div>
       </div>
 
@@ -362,33 +389,49 @@ export default function UtilityPage() {
           </div>
         </div>
 
-        {/* Logs Output Box */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar font-mono text-xs select-text selection:bg-slate-800">
-          {filteredLogs.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-slate-500 italic text-[11px]">
-              Tidak ada log yang cocok dengan filter pencarian.
-            </div>
-          ) : (
-            filteredLogs.map((log, i) => {
-              const badgeColors = {
-                ERROR: "text-red-400 bg-red-950/40 border-red-900/40",
-                WARN: "text-amber-400 bg-amber-950/40 border-amber-900/40",
-                INFO: "text-sky-400 bg-sky-950/40 border-sky-900/40",
-                DEBUG: "text-purple-400 bg-purple-950/40 border-purple-900/40",
-              };
-              return (
-                <div key={i} className="flex items-start gap-2 text-slate-300 hover:bg-slate-900/40 py-0.5 rounded px-1 transition-colors">
-                  <span className="text-slate-500 select-none shrink-0">[{log.timestamp}]</span>
-                  <span className={`px-1.5 py-0.5 text-[8px] font-bold rounded border uppercase shrink-0 ${badgeColors[log.level]}`}>
-                    {log.level}
-                  </span>
-                  <span className="text-slate-400 font-bold shrink-0">[{log.source}]</span>
-                  <span className="break-all whitespace-pre-wrap">{log.message}</span>
-                </div>
-              );
-            })
+        {/* Logs Output Box Wrapper */}
+        <div className="flex-1 min-h-0 relative">
+          <div
+            ref={logContainerRef}
+            onScroll={handleScroll}
+            className="h-full overflow-y-auto p-4 space-y-1.5 custom-scrollbar font-mono text-xs select-text selection:bg-sky-500/30 selection:text-sky-100"
+          >
+            {filteredLogs.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-slate-500 italic text-[11px]">
+                Tidak ada log yang cocok dengan filter pencarian.
+              </div>
+            ) : (
+              filteredLogs.map((log, i) => {
+                const badgeColors = {
+                  ERROR: "text-red-400 bg-red-950/40 border-red-900/40",
+                  WARN: "text-amber-400 bg-amber-950/40 border-amber-900/40",
+                  INFO: "text-sky-400 bg-sky-950/40 border-sky-900/40",
+                  DEBUG: "text-purple-400 bg-purple-950/40 border-purple-900/40",
+                };
+                return (
+                  <div key={i} className="flex items-start gap-2 text-slate-300 hover:bg-slate-900/40 py-0.5 rounded px-1 transition-colors">
+                    <span className="text-slate-500 select-none shrink-0">[{log.timestamp}]</span>
+                    <span className={`px-1.5 py-0.5 text-[8px] font-bold rounded border uppercase shrink-0 ${badgeColors[log.level]}`}>
+                      {log.level}
+                    </span>
+                    <span className="text-slate-400 font-bold shrink-0">[{log.source}]</span>
+                    <span className="break-all whitespace-pre-wrap">{log.message}</span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Floating Scroll to Bottom Button */}
+          {showScrollBottom && (
+            <button
+              onClick={scrollToBottom}
+              className="absolute bottom-4 right-4 bg-[#0a2540] hover:bg-slate-800 text-white border border-slate-700 rounded-full p-2 shadow-lg transition-all duration-200 ease-in-out hover:scale-105 active:scale-95 flex items-center justify-center w-8 h-8"
+              title="Scroll ke bawah"
+            >
+              <ArrowDown size={16} />
+            </button>
           )}
-          <div ref={logsEndRef} />
         </div>
 
         {/* Logs Actions Footer */}
