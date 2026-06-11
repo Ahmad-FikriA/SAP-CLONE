@@ -190,8 +190,32 @@ export default function SubmissionsPage() {
         </Button>
       </div>
 
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2.5">
+        {loading ? (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">Memuat...</div>
+        ) : subs.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">Belum ada submissions</div>
+        ) : subs.map((s) => (
+          <button key={s.id} type="button" onClick={() => setDetail(s)}
+            className="w-full rounded-xl border border-gray-200 bg-white p-4 text-left active:bg-gray-50">
+            <div className="flex items-start justify-between gap-2">
+              <p className="truncate font-medium text-gray-900">{s.spkNumber}</p>
+              {s.spkCategory ? <CategoryBadge category={s.spkCategory} /> : null}
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
+              <span>Mulai: {s.workStart ? formatDate(s.workStart) : '—'}</span>
+              <span>Selesai: {s.submittedAt ? formatDate(s.submittedAt) : '—'}</span>
+              <span>Durasi: {s.durationActual ?? '—'} mnt</span>
+              <span>{(s.photoPaths || []).length} foto</span>
+            </div>
+            {s.evaluasi && <p className="mt-2 line-clamp-2 text-xs text-gray-600">{s.evaluasi}</p>}
+          </button>
+        ))}
+      </div>
+
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+      <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>

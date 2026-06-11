@@ -232,8 +232,59 @@ export default function TrackRecordPage() {
         />
       </div>
 
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2.5">
+        {loading ? (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">Memuat...</div>
+        ) : displayed.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">Tidak ada data</div>
+        ) : displayed.map((u, idx) => {
+          const pct = u.totalSpk > 0 ? Math.round((u.approvedSpk / u.totalSpk) * 100) : 0;
+          return (
+            <div key={u.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <button type="button" onClick={() => toggleRow(u.id)}
+                className={cn('w-full p-4 text-left', expandedId === u.id && 'bg-blue-50')}>
+                <div className="flex items-start gap-3">
+                  <span className={cn(
+                    'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                    idx === 0 && u.totalSpk > 0 ? 'bg-yellow-400 text-white'
+                      : idx === 1 && u.totalSpk > 0 ? 'bg-gray-300 text-gray-700'
+                      : idx === 2 && u.totalSpk > 0 ? 'bg-amber-600 text-white'
+                      : 'bg-gray-100 text-gray-400'
+                  )}>{idx + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate font-medium text-gray-900">{u.name || u.id}</span>
+                      <span className={cn('shrink-0 text-xl font-extrabold leading-none tabular-nums', u.totalSpk === 0 ? 'text-gray-300' : 'text-blue-600')}>{u.totalSpk}</span>
+                    </div>
+                    <p className="text-xs capitalize text-gray-500">{u.role || '—'}{u.group ? ` · ${u.group}` : ''}</p>
+                    {u.totalSpk > 0 && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                          <div className="h-full rounded-full bg-blue-400" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs tabular-nums text-gray-500">{pct}%</span>
+                      </div>
+                    )}
+                    <p className="mt-1 text-[11px] text-gray-400">Terakhir: {u.lastSubmittedAt ? formatDate(u.lastSubmittedAt) : '—'}</p>
+                  </div>
+                  {expandedId === u.id
+                    ? <ChevronDown size={16} className="mt-0.5 shrink-0 text-blue-500" />
+                    : <ChevronRight size={16} className="mt-0.5 shrink-0 text-gray-300" />}
+                </div>
+              </button>
+              {expandedId === u.id && (
+                <div className="border-t border-gray-200">
+                  <DrillDown userId={u.id} spks={drillData[u.id]} loading={drillLoading && !drillData[u.id]} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+      <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -350,12 +401,12 @@ export default function TrackRecordPage() {
 }
 
 function DrillDown({ userId, spks, loading }) {
-  if (loading) return <p className="px-10 py-4 text-sm text-gray-400">Memuat riwayat...</p>;
+  if (loading) return <p className="px-4 py-4 text-sm text-gray-400 md:px-10">Memuat riwayat...</p>;
   if (!spks) return null;
-  if (spks.length === 0) return <p className="px-10 py-4 text-sm text-gray-400">Belum ada SPK tercatat.</p>;
+  if (spks.length === 0) return <p className="px-4 py-4 text-sm text-gray-400 md:px-10">Belum ada SPK tercatat.</p>;
 
   return (
-    <div className="bg-gray-50 px-10 py-4">
+    <div className="bg-gray-50 px-4 py-4 md:px-10">
       <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">
         Riwayat SPK — {spks.length} entri terakhir
       </p>
