@@ -68,8 +68,14 @@ process.on('unhandledRejection', (reason, promise) => {
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, Postman)
-    // and any devlabfortirta.cloud subdomain
-    if (!origin || origin.endsWith('.devlabfortirta.cloud') || origin === 'http://localhost:3001') {
+    // and any devlabfortirta.cloud or krakatautirta.co.id subdomain
+    if (
+      !origin ||
+      origin.endsWith('.devlabfortirta.cloud') ||
+      origin.endsWith('.krakatautirta.co.id') ||
+      origin.endsWith('://krakatautirta.co.id') ||
+      origin === 'http://localhost:3001'
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

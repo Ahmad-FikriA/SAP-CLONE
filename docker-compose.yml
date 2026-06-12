@@ -50,6 +50,21 @@ services:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       timeout: 20s
       retries: 10
+  # mssql:
+  #   image: mcr.microsoft.com/mssql/server:2025-latest
+  #   container_name: kti-mssql
+  #   user: root
+  #   restart: unless-stopped
+  #   environment:
+  #     ACCEPT_EULA: "Y"
+  #     MSSQL_SA_PASSWORD: "PasswordKTI123!"
+  #   ports:
+  #     - "1433:1433"
+  #   volumes:
+  #     - mssql-data:/var/opt/mssql/data
+  #   networks:
+  #     - kti-net
+
 
   web:
     image: node:24-alpine
@@ -75,3 +90,7 @@ services:
 networks:
   kti-net:
     driver: bridge
+
+# volumes:
+#   mssql-data:
+
