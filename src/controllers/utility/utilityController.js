@@ -53,7 +53,6 @@ const MODULE_MODELS = {
     { name: 'K3Settings', model: K3Settings }
   ],
   inspeksi: [
-    { name: 'SuratPelanggaran', model: associations.SuratPelanggaran },
     { name: 'InspectionFollowUp', model: associations.InspectionFollowUp },
     { name: 'InspectionReportPhoto', model: associations.InspectionReportPhoto },
     { name: 'InspectionReport', model: associations.InspectionReport },

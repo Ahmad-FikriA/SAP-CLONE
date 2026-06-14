@@ -1,7 +1,6 @@
 "use strict";
 
 const InspectionFollowUp = require("../../models/InspectionFollowUp");
-const SuratPelanggaran = require("../../models/SuratPelanggaran");
 
 /**
  * FollowUp Controller — Teknisi tindak lanjut kerusakan.
@@ -66,9 +65,6 @@ async function getFollowUp(req, res) {
           association: "report",
           include: [{ association: "schedule" }, { association: "photos" }],
         },
-        {
-          association: "suratPelanggaran",
-        },
       ],
     });
 
@@ -95,7 +91,6 @@ async function createFollowUp(req, res) {
       reportId,
       assignedTechnician,
       kategoriTeknisi,
-      kategoriK3,
       description,
       deadline,
     } = req.body;
@@ -104,7 +99,6 @@ async function createFollowUp(req, res) {
       reportId,
       assignedTechnician,
       kategoriTeknisi,
-      kategoriK3: kategoriK3 || null,
       description,
       deadline,
       status: "pending",

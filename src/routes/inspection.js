@@ -32,13 +32,7 @@ const {
   rejectFollowUp,
 } = require("../controllers/inspection/followUpController");
 
-const {
-  listSuratPelanggaran,
-  getSuratPelanggaran,
-  createSuratPelanggaran,
-  updateSuratPelanggaran,
-  checkOverdueFollowUps,
-} = require("../controllers/inspection/suratPelanggaranController");
+
 
 const {
   listRequests,
@@ -102,12 +96,7 @@ router.put("/follow-ups/:id", updateFollowUp);
 router.put("/follow-ups/:id/approve", approveFollowUp);
 router.put("/follow-ups/:id/reject", rejectFollowUp);
 
-// ── Surat Pelanggaran ────────────────────────────────────────────────────────
-router.get("/surat-pelanggaran", listSuratPelanggaran);
-router.get("/surat-pelanggaran/:id", getSuratPelanggaran);
-router.post("/surat-pelanggaran", createSuratPelanggaran);
-router.put("/surat-pelanggaran/:id", updateSuratPelanggaran);
-router.post("/surat-pelanggaran/check-overdue", checkOverdueFollowUps);
+
 
 // ── Inspection Requests (User → Planner) ─────────────────────────────────────
 router.get("/requests", listRequests);

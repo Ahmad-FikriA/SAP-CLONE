@@ -266,18 +266,7 @@ InspectionSchedule.hasOne(InspectionRequest, {
   constraints: false,
 });
 
-// InspectionFollowUp ↔ SuratPelanggaran
-const SuratPelanggaran = require("./SuratPelanggaran");
 
-InspectionFollowUp.hasMany(SuratPelanggaran, {
-  foreignKey: "followUpId",
-  as: "suratPelanggaran",
-  onDelete: "CASCADE",
-});
-SuratPelanggaran.belongsTo(InspectionFollowUp, {
-  foreignKey: "followUpId",
-  as: "followUp",
-});
 
 // ── PushNotification ↔ User ──────────────────────────────────────────────────
 PushNotification.belongsTo(User, { foreignKey: 'recipient_id', as: 'recipient' });
@@ -355,7 +344,6 @@ module.exports = {
   InspectionReportPhoto,
   InspectionFollowUp,
   InspectionRequest,
-  SuratPelanggaran,
   FunctionalLocation,
   GeneralTaskList,
   GeneralTaskListActivity,

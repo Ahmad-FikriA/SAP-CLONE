@@ -2,7 +2,6 @@
 
 const sequelize = require('./config/database');
 const {
-  SuratPelanggaran,
   InspectionFollowUp,
   InspectionReportPhoto,
   InspectionReport,
@@ -26,8 +25,6 @@ async function clearData() {
     // 1. INSPECTION MODULE
     // ----------------------------------------------------
     console.log('--- Clearing Inspection Data ---');
-    await SuratPelanggaran.destroy({ where: {}, force: true });
-    console.log('Cleared SuratPelanggaran');
     
     await InspectionFollowUp.destroy({ where: {}, force: true });
     console.log('Cleared InspectionFollowUp');

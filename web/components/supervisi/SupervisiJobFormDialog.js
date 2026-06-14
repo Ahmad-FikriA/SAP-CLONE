@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { getMediaUrl } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -87,9 +88,7 @@ function formatRupiahInput(value) {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 function buildMediaUrl(path) {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `${API_URL}${path}`;
+  return getMediaUrl(path);
 }
 
 function filenameFromPath(path) {

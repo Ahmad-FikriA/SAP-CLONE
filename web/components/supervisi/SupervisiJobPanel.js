@@ -9,15 +9,13 @@ import {
   Download, AlertTriangle, CalendarOff,
 } from 'lucide-react';
 import { SUPERVISI_STATUS_META } from '@/lib/supervisi-service';
+import { getMediaUrl } from '@/lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function buildMediaUrl(path) {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  // path sudah dalam format /uploads/supervisi/xxx
-  return `${API_URL}${path}`;
+  return getMediaUrl(path);
 }
 
 function fmt(dateStr) {

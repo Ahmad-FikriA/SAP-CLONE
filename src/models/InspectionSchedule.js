@@ -4,11 +4,10 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
 /**
- * InspectionSchedule — jadwal inspeksi (rutin, K3, supervisi).
+ * InspectionSchedule — jadwal inspeksi (rutin, supervisi).
  *
- * Covers all three inspection flows:
- *   - 'rutin'     → Dinas Inspeksi buat jadwal sendiri
- *   - 'k3'        → Vendor request → Dinas SuperVisi jadwalkan
+ * Covers the inspection flows:
+ *   - 'rutin'     → Dinas Inspeksi buat jadwal sendiri / request vendor
  *   - 'supervisi'  → User darurat / Planner request → Dinas Inspeksi jadwalkan
  */
 const InspectionSchedule = sequelize.define(
@@ -20,7 +19,7 @@ const InspectionSchedule = sequelize.define(
       autoIncrement: true,
     },
     type: {
-      type: DataTypes.ENUM("rutin", "k3", "supervisi"),
+      type: DataTypes.ENUM("rutin", "supervisi"),
       allowNull: false,
       comment: "Jenis flow inspeksi",
     },
@@ -84,7 +83,7 @@ const InspectionSchedule = sequelize.define(
     vendorInfo: {
       type: DataTypes.TEXT,
       allowNull: true,
-      comment: "Info vendor (dari WA/lisan) — khusus flow K3",
+      comment: "Info vendor (dari WA/lisan)",
     },
     nomorPoJo: {
       type: DataTypes.STRING(50),
@@ -97,12 +96,7 @@ const InspectionSchedule = sequelize.define(
       comment:
         "Periode berulang inspeksi rutin, e.g. '2 Minggu', '1 Bulan', '3 Bulan'",
     },
-    kategoriK3: {
-      type: DataTypes.ENUM("manusia", "bangunan"),
-      allowNull: true,
-      comment:
-        "Kategori inspeksi K3: manusia (perilaku/APD) atau bangunan (struktur/fasilitas)",
-    },
+
     darurat: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

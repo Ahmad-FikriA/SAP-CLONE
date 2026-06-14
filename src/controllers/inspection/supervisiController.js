@@ -1030,13 +1030,32 @@ async function submitVisit(req, res) {
       (req.files && req.files.documents) || [],
     );
 
+    function sanitizeStoredPaths(paths) {
+      if (!Array.isArray(paths)) return paths;
+      return paths.map((path) => {
+        if (typeof path !== "string") return path;
+        if (path.startsWith("http://") || path.startsWith("https://")) {
+          try {
+            const url = new URL(path);
+            if (url.pathname.includes("/uploads/")) {
+              const index = url.pathname.indexOf("/uploads/");
+              return url.pathname.substring(index); // starts with /uploads/
+            }
+          } catch (e) {
+            // keep as-is
+          }
+        }
+        return path;
+      });
+    }
+
     // existingPhotos/existingDocuments: URL foto/dokumen yang MASIH ada di draft
     // (sudah di-filter oleh user — foto yang dihapus di UI tidak ikut dikirim).
     // Jika tidak dikirim sama sekali → fallback ke semua file lama dari server.
     const sentExistingPhotos = req.body.existingPhotos !== undefined;
     const sentExistingDocs   = req.body.existingDocuments !== undefined;
-    const existingPhotoUrls  = sentExistingPhotos ? (parseStringArray(req.body.existingPhotos) || []) : null;
-    const existingDocUrls    = sentExistingDocs   ? (parseStringArray(req.body.existingDocuments) || []) : null;
+    const existingPhotoUrls  = sentExistingPhotos ? sanitizeStoredPaths(parseStringArray(req.body.existingPhotos) || []) : null;
+    const existingDocUrls    = sentExistingDocs   ? sanitizeStoredPaths(parseStringArray(req.body.existingDocuments) || []) : null;
 
     // Konversi draft kedaluwarsa milik job ini sebelum upsert
     await convertStaleDrafts(parseInt(jobId));

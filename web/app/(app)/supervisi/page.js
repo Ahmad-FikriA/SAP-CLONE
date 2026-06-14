@@ -300,87 +300,91 @@ function SupervisiArchiveSection({
         </select>
       </div>
 
-      <div className="md:hidden divide-y divide-slate-100">
-        {loading ? (
-          <div className="flex flex-col items-center gap-2 py-10 text-slate-400">
-            <Loader2 size={24} className="animate-spin" />
-            <p className="text-sm">Memuat arsip supervisi...</p>
-          </div>
-        ) : jobs.length === 0 ? (
-          <div className="py-10 text-center text-sm text-slate-400">Tidak ada arsip supervisi</div>
-        ) : jobs.map((job) => {
-          const visits = Array.isArray(job.visits) ? job.visits : [];
-          const pelanggaran = visits.filter((visit) => visit.isPelanggaran).length;
-          return (
-            <button
-              key={job.id}
-              type="button"
-              onClick={() => onViewDetail(job)}
-              className="w-full text-left p-4 hover:bg-blue-50/40 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-slate-800 truncate">{job.namaKerja || '-'}</p>
-                  <p className="font-mono text-[11px] text-slate-400 mt-1">{job.nomorJo || '-'}</p>
+      <div className="p-4">
+        {/* Mobile View */}
+        <div className="md:hidden bg-slate-50/30 border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden">
+          {loading ? (
+            <div className="flex flex-col items-center gap-2 py-10 text-slate-400">
+              <Loader2 size={24} className="animate-spin" />
+              <p className="text-sm">Memuat arsip supervisi...</p>
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="py-10 text-center text-sm text-slate-400">Tidak ada arsip supervisi</div>
+          ) : jobs.map((job) => {
+            const visits = Array.isArray(job.visits) ? job.visits : [];
+            const pelanggaran = visits.filter((visit) => visit.isPelanggaran).length;
+            return (
+              <button
+                key={job.id}
+                type="button"
+                onClick={() => onViewDetail(job)}
+                className="w-full text-left p-4 hover:bg-blue-50/40 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-800 truncate">{job.namaKerja || '-'}</p>
+                    <p className="font-mono text-[11px] text-slate-400 mt-1">{job.nomorJo || '-'}</p>
+                  </div>
+                  <StatusBadge status={job.status} />
                 </div>
-                <StatusBadge status={job.status} />
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
-                <span>{String(job.waktuMulai || '').slice(0, 10) || '-'}</span>
-                <span className="text-right">{formatRupiah(parseFloat(job.nilaiPekerjaan) || 0)}</span>
-                <span>{visits.length} kunjungan</span>
-                <span className="text-right">{pelanggaran} pelanggaran</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                  <span>{String(job.waktuMulai || '').slice(0, 10) || '-'}</span>
+                  <span className="text-right">{formatRupiah(parseFloat(job.nilaiPekerjaan) || 0)}</span>
+                  <span>{visits.length} kunjungan</span>
+                  <span className="text-right">{pelanggaran} pelanggaran</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
-      <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-600 min-w-[1100px]">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                {['Nomor JO', 'Pekerjaan', 'PIC', 'Mulai', 'Nilai', 'Visit', 'Pelanggaran', 'Status', 'Aksi'].map((head) => (
-                  <th key={head} className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">{head}</th>
-                ))}
-              </tr>
-            </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr>
-                <td colSpan="9" className="px-6 py-10 text-center text-slate-400">
-                  <Loader2 size={24} className="animate-spin mx-auto mb-2" />
-                  Memuat arsip supervisi...
-                </td>
-              </tr>
-            ) : jobs.length === 0 ? (
-              <tr>
-                <td colSpan="9" className="px-6 py-10 text-center text-slate-400">Tidak ada arsip supervisi</td>
-              </tr>
-            ) : jobs.map((job) => {
-              const visits = Array.isArray(job.visits) ? job.visits : [];
-              const pelanggaran = visits.filter((visit) => visit.isPelanggaran).length;
-              return (
-                <tr key={job.id} className="hover:bg-blue-50/40 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-500 whitespace-nowrap">{job.nomorJo || '-'}</td>
-                  <td className="px-4 py-3 max-w-[240px]"><p className="font-semibold text-slate-800 truncate">{job.namaKerja || '-'}</p></td>
-                  <td className="px-4 py-3 max-w-[180px] truncate">{job.picSupervisi || '-'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{String(job.waktuMulai || '').slice(0, 10) || '-'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{formatRupiah(parseFloat(job.nilaiPekerjaan) || 0)}</td>
-                  <td className="px-4 py-3">{visits.length}</td>
-                  <td className="px-4 py-3">{pelanggaran}</td>
-                  <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={job.status} /></td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => onViewDetail(job)}>
-                      <Eye size={12} /> Detail
-                    </Button>
-                  </td>
+        {/* Desktop View */}
+        <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600 min-w-[1100px]">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  {['Nomor JO', 'Pekerjaan', 'PIC', 'Mulai', 'Nilai', 'Visit', 'Pelanggaran', 'Status', 'Aksi'].map((head) => (
+                    <th key={head} className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">{head}</th>
+                  ))}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan="9" className="px-6 py-10 text-center text-slate-400">
+                      <Loader2 size={24} className="animate-spin mx-auto mb-2" />
+                      Memuat arsip supervisi...
+                    </td>
+                  </tr>
+                ) : jobs.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="px-6 py-10 text-center text-slate-400">Tidak ada arsip supervisi</td>
+                  </tr>
+                ) : jobs.map((job) => {
+                  const visits = Array.isArray(job.visits) ? job.visits : [];
+                  const pelanggaran = visits.filter((visit) => visit.isPelanggaran).length;
+                  return (
+                    <tr key={job.id} className="hover:bg-blue-50/40 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-500 whitespace-nowrap">{job.nomorJo || '-'}</td>
+                      <td className="px-4 py-3 max-w-[240px]"><p className="font-semibold text-slate-800 truncate">{job.namaKerja || '-'}</p></td>
+                      <td className="px-4 py-3 max-w-[180px] truncate">{job.picSupervisi || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{String(job.waktuMulai || '').slice(0, 10) || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{formatRupiah(parseFloat(job.nilaiPekerjaan) || 0)}</td>
+                      <td className="px-4 py-3">{visits.length}</td>
+                      <td className="px-4 py-3">{pelanggaran}</td>
+                      <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={job.status} /></td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => onViewDetail(job)}>
+                          <Eye size={12} /> Detail
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

@@ -83,17 +83,7 @@ const InspectionFollowUp = sequelize.define(
       allowNull: true,
       comment: "Siapa yang assign (Kepala Dinas)",
     },
-    kategoriK3: {
-      type: DataTypes.ENUM("manusia", "bangunan"),
-      allowNull: true,
-      comment:
-        "Kategori K3: manusia → ditangani HSE, bangunan → ditangani teknisi",
-    },
-    suratPelanggaranId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      comment: "FK → SuratPelanggaran (jika deadline terlewat)",
-    },
+
   },
   {
     tableName: "inspection_follow_ups",

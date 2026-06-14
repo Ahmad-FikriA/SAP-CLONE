@@ -7,8 +7,23 @@ export function cn(...inputs) {
 
 export function getMediaUrl(path) {
   if (!path) return '';
-  if (path.startsWith('http')) return path;
+  let cleanPath = path;
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+    try {
+      const url = new URL(cleanPath);
+      if (url.pathname.includes('/uploads/')) {
+        const index = url.pathname.indexOf('/uploads/');
+        cleanPath = url.pathname.substring(index); // starts with /uploads/
+      } else {
+        return cleanPath;
+      }
+    } catch (e) {
+      return cleanPath;
+    }
+  }
+
   const base = process.env.NEXT_PUBLIC_API_URL || '';
-  if (path.startsWith('uploads/')) return `${base}/${path}`;
-  return `${base}/uploads/${path}`;
+  const relative = cleanPath.replace(/^\/+/, '');
+  if (relative.startsWith('uploads/')) return `${base}/${relative}`;
+  return `${base}/uploads/${relative}`;
 }

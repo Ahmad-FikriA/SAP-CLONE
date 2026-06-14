@@ -13,6 +13,7 @@ import {
   rejectInspeksiReport,
   resolveInspeksiTypeLabel,
 } from '@/lib/inspeksi-service';
+import { getMediaUrl } from '@/lib/utils';
 import {
   FileText, User, MapPin, Calendar, Tag, AlertCircle, CheckCircle,
   XCircle, Clock, Wrench, ClipboardList, Camera, AlertTriangle, ChevronDown, ChevronUp, Loader2,
@@ -151,9 +152,7 @@ function ReportCard({ report, index, canReview, onApproveClick, onRejectClick })
   const attachments  = Array.isArray(report.attachments)
     ? report.attachments.map((path) => String(path || '').trim()).filter(Boolean)
     : [];
-  const toFileUrl = (path) => path.startsWith('http')
-    ? path
-    : `${process.env.NEXT_PUBLIC_API_URL || ''}/${path.replace(/^\/+/, '')}`;
+  const toFileUrl = (path) => getMediaUrl(path);
   const fileName = (path) => {
     const cleanPath = path.split('?')[0];
     const segments = cleanPath.split(/[\\/]/).filter(Boolean);
@@ -281,9 +280,7 @@ function ReportCard({ report, index, canReview, onApproveClick, onRejectClick })
               ) : (
                 <div className="grid grid-cols-3 gap-2">
                   {photos.map((ph) => {
-                    const src = ph.photoPath?.startsWith('http')
-                      ? ph.photoPath
-                      : `${process.env.NEXT_PUBLIC_API_URL || ''}/${ph.photoPath}`;
+                    const src = getMediaUrl(ph.photoPath);
                     return (
                       <a
                         key={ph.id}
@@ -602,13 +599,6 @@ export function HseInspeksiDetailModal({
               />
               {schedule.kategoriTeknisi && (
                 <InfoRow icon={Tag} label="Kategori Teknisi" value={schedule.kategoriTeknisi} />
-              )}
-              {schedule.kategoriK3 && (
-                <InfoRow
-                  icon={Tag}
-                  label="Kategori K3"
-                  value={schedule.kategoriK3 === 'manusia' ? 'Manusia (Perilaku/APD)' : 'Bangunan (Struktur/Fasilitas)'}
-                />
               )}
             </div>
           </div>

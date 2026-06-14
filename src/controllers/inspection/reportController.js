@@ -20,7 +20,6 @@ const { notify } = require("../../services/notificationService");
 // NIK Approver yang menerima notifikasi laporan baru
 const INSPECTION_APPROVER_NIK = "10000262";
 
-const FOLLOW_UP_TARGET_DINAS_HSE = "dinas_hse";
 const FOLLOW_UP_TARGET_DINAS_PERAWATAN = "dinas_perawatan";
 
 function normalizeNik(value) {
@@ -280,8 +279,6 @@ async function createReport(req, res) {
       findings,
       hasKerusakan,
       kerusakanDetail,
-      kriteria,
-      kategoriK3,
       signaturePath,
       photos,
       status,
@@ -328,8 +325,6 @@ async function createReport(req, res) {
             : null,
         hasKerusakan: hasKerusakan || false,
         kerusakanDetail,
-        kriteria,
-        kategoriK3: kategoriK3 || null,
         signaturePath: signaturePath || null,
         attachments: parseAttachmentPaths(req.body.attachments),
         status: reportStatus,
@@ -428,8 +423,6 @@ async function updateReport(req, res) {
       "location",
       "findings",
       "kerusakanDetail",
-      "kriteria",
-      "kategoriK3",
       "signaturePath",
     ];
 
@@ -559,21 +552,13 @@ async function approveReport(req, res) {
     await updateScheduleStatusFromReports(report.schedule, t);
 
     // If kerusakan found → auto-create follow-up
-    // Branching: manusia → assign ke Dinas HSE, selain itu → assign ke Dinas Perawatan
     if (report.hasKerusakan) {
-      const kategori = report.kategoriK3 || req.body.kategoriK3;
-      const isManusia = kategori === "manusia";
-      const autoAssignedTarget = isManusia
-        ? FOLLOW_UP_TARGET_DINAS_HSE
-        : FOLLOW_UP_TARGET_DINAS_PERAWATAN;
-
       await InspectionFollowUp.create(
         {
           reportId: report.id,
-          assignedTechnician: req.body.assignedTechnician || autoAssignedTarget,
+          assignedTechnician: req.body.assignedTechnician || FOLLOW_UP_TARGET_DINAS_PERAWATAN,
           kategoriTeknisi:
             req.body.kategoriTeknisi || report.schedule?.kategoriTeknisi,
-          kategoriK3: kategori || null,
           description:
             report.kerusakanDetail ||
             report.findings ||

@@ -140,19 +140,11 @@ async function createRequest(req, res) {
 
     // Validate kategori based on jenis
     const validRutinKategories = ["sipil", "mekanik", "elektrik", "otomasi"];
-    const validK3Kategories = ["safety", "environment"];
     
     if (jenisInspeksi === "rutin" && !validRutinKategories.includes(kategoriInspeksi)) {
       return res.status(400).json({
         success: false,
         message: "Kategori tidak valid untuk jenis inspeksi rutin.",
-      });
-    }
-    
-    if (jenisInspeksi === "k3" && !validK3Kategories.includes(kategoriInspeksi)) {
-      return res.status(400).json({
-        success: false,
-        message: "Kategori tidak valid untuk jenis inspeksi K3.",
       });
     }
 
@@ -237,14 +229,12 @@ async function approveRequest(req, res) {
       request.tanggalDiinginkan ||
       new Date().toISOString().split("T")[0];
 
-    // Tentukan assignedTo berdasarkan jenisInspeksi
-    const finalAssignedTo =
-      assignedTo ||
-      (request.jenisInspeksi === "k3" ? "dinas_hse" : "dinas_inspeksi");
+    // Tentukan assignedTo
+    const finalAssignedTo = assignedTo || "dinas_inspeksi";
 
     // Auto-create InspectionSchedule
     const schedule = await InspectionSchedule.create({
-      type: request.jenisInspeksi === "k3" ? "k3" : "rutin",
+      type: "rutin",
       title: title || request.judul,
       location: request.lokasi,
       scheduledDate: finalDate,

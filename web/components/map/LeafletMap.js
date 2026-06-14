@@ -4,6 +4,26 @@ import { useEffect, useRef } from 'react';
 
 // Fix Leaflet's default icon path issue in Next.js/webpack
 function fixLeafletIcons(L) {
+  // Safe wrapper to prevent Leaflet crash on unmount during zoom animation
+  if (L.DomUtil && L.DomUtil.getPosition) {
+    const originalGetPosition = L.DomUtil.getPosition;
+    L.DomUtil.getPosition = function (el) {
+      if (!el) {
+        return new L.Point(0, 0);
+      }
+      return originalGetPosition(el);
+    };
+  }
+
+  // Safe wrapper to prevent transition-end events from firing on unmounted maps
+  if (L.Map && L.Map.prototype && L.Map.prototype._onZoomTransitionEnd) {
+    const originalOnZoomTransitionEnd = L.Map.prototype._onZoomTransitionEnd;
+    L.Map.prototype._onZoomTransitionEnd = function (...args) {
+      if (!this._container || !this._mapPane) return;
+      originalOnZoomTransitionEnd.apply(this, args);
+    };
+  }
+
   delete L.Icon.Default.prototype._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',

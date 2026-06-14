@@ -63,7 +63,6 @@ export function InspeksiExecutionModal({ schedule, open, onClose, onSaved }) {
   const [findings, setFindings] = useState('');
   const [statusInspeksi, setStatusInspeksi] = useState('Aman');
   const [kerusakanDetail, setKerusakanDetail] = useState('');
-  const [kategoriK3, setKategoriK3] = useState('');
   
   // File States
   const [photos, setPhotos] = useState([]); // List of File objects for photos/videos
@@ -90,7 +89,6 @@ export function InspeksiExecutionModal({ schedule, open, onClose, onSaved }) {
     setFindings('');
     setStatusInspeksi('Aman');
     setKerusakanDetail('');
-    setKategoriK3('');
     setPhotos([]);
     setDocuments([]);
     setPhotoPreviews([]);
@@ -222,10 +220,6 @@ export function InspeksiExecutionModal({ schedule, open, onClose, onSaved }) {
         toast.error('Detail kerusakan wajib diisi jika kondisi tidak aman.');
         return false;
       }
-      if (!kategoriK3) {
-        toast.error('Kategori K3 wajib dipilih jika kondisi tidak aman.');
-        return false;
-      }
     }
     if (photos.length === 0) {
       toast.error('Minimal satu foto dokumentasi wajib ditambahkan.');
@@ -278,7 +272,6 @@ export function InspeksiExecutionModal({ schedule, open, onClose, onSaved }) {
         hasKerusakan: statusInspeksi === 'Tidak Aman',
         kerusakanDetail: statusInspeksi === 'Tidak Aman' ? kerusakanDetail.trim() : null,
         kriteria: statusInspeksi, // 'Aman' atau 'Tidak Aman'
-        kategoriK3: statusInspeksi === 'Tidak Aman' ? kategoriK3 : null,
         photos: uploadedPhotoPaths,
         attachments: uploadedDocPaths,
         status: 'submitted',
@@ -313,7 +306,7 @@ export function InspeksiExecutionModal({ schedule, open, onClose, onSaved }) {
             </div>
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-lg font-bold leading-tight">
-                Pelaksanaan Inspeksi K3
+                Pelaksanaan Inspeksi
               </DialogTitle>
               <p className="text-xs text-white/70 font-mono mt-1">
                 SPK: {schedule?.nomorPoJo || `#${schedule?.id}`}
@@ -458,7 +451,7 @@ export function InspeksiExecutionModal({ schedule, open, onClose, onSaved }) {
             <textarea
               value={findings}
               onChange={(e) => setFindings(e.target.value)}
-              placeholder="Tulis detail temuan hasil inspeksi K3 di lapangan..."
+              placeholder="Tulis detail temuan hasil inspeksi di lapangan..."
               rows={4}
               required
               disabled={submitting}
@@ -527,21 +520,6 @@ export function InspeksiExecutionModal({ schedule, open, onClose, onSaved }) {
                     disabled={submitting}
                     className="w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 placeholder:text-slate-400"
                   />
-                </div>
-
-                <div className="space-y-1.5">
-                  <FormLabel required>Kategori K3</FormLabel>
-                  <select
-                    value={kategoriK3}
-                    onChange={(e) => setKategoriK3(e.target.value)}
-                    required={statusInspeksi === 'Tidak Aman'}
-                    disabled={submitting}
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-medium cursor-pointer"
-                  >
-                    <option value="">Pilih Kategori Bahaya...</option>
-                    <option value="manusia">Manusia (Perilaku / Kelalaian / APD)</option>
-                    <option value="bangunan">Bangunan (Struktur / Fasilitas / Lingkungan Fisik)</option>
-                  </select>
                 </div>
               </div>
             )}
@@ -665,7 +643,7 @@ export function InspeksiExecutionModal({ schedule, open, onClose, onSaved }) {
                   {uploading ? 'Mengupload File...' : 'Mengirim Laporan...'}
                 </>
               ) : (
-                'Kirim Laporan Hasil K3'
+                'Kirim Laporan Hasil Inspeksi'
               )}
             </Button>
           </DialogFooter>
