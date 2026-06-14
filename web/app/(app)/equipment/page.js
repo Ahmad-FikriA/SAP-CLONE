@@ -13,6 +13,7 @@ import { MapPin, Plus, RefreshCw, Upload, BarChart2, Download, QrCode, ChevronDo
 import { canCreate, canUpdate, canDelete, getUserCategory } from '@/lib/auth';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { ExcelImportTutorial } from '@/components/shared/ExcelImportTutorial';
 
 const MapWithMarkers = dynamic(() => import('@/components/map/EquipmentMap'), { ssr: false });
 const QRCode = dynamic(() => import('react-qr-code'), { ssr: false });
@@ -226,6 +227,7 @@ function EquipmentPageInner() {
           </Button>
           {canCreate('equipment') && (
             <>
+              <ExcelImportTutorial type="equipment" />
               <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
                 <Upload size={13} /> Import Excel
               </Button>

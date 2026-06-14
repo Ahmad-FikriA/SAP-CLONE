@@ -14,6 +14,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { ExcelImportTutorial } from '@/components/shared/ExcelImportTutorial';
 
 export default function MaterialPage() {
   return (
@@ -184,6 +185,7 @@ function MaterialPageInner() {
             accept=".xlsx, .xls"
             className="hidden"
           />
+          <ExcelImportTutorial type="materials" />
           <Button 
             onClick={handleImportClick} 
             disabled={isImporting}

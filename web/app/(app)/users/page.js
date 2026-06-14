@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { UserPlus, Trash2, Download, RefreshCw, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ExcelUserPreviewDialog } from './_components/ExcelUserPreviewDialog';
+import { ExcelImportTutorial } from '@/components/shared/ExcelImportTutorial';
 
 const EMPTY_FORM = { id: '', nik: '', name: '', role: '', email: '', dinas: '', divisi: '', group: '', password: 'password123', permissions: null };
 
@@ -193,16 +194,19 @@ export default function UsersPage() {
           <Button variant="outline" size="sm" onClick={load}><RefreshCw size={13} /></Button>
           <Button variant="outline" size="sm" onClick={exportExcel} className="gap-1.5"><Download size={13} /> Export</Button>
           {canCreate('users') && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="gap-1.5"
-            >
-              <Upload size={13} />
-              {uploading ? 'Uploading...' : 'Import'}
-            </Button>
+            <>
+              <ExcelImportTutorial type="users" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="gap-1.5"
+              >
+                <Upload size={13} />
+                {uploading ? 'Uploading...' : 'Import'}
+              </Button>
+            </>
           )}
           {canCreate('users') && <Button size="sm" onClick={openCreate} className="gap-1.5"><UserPlus size={14} /> Tambah User</Button>}
         </div>

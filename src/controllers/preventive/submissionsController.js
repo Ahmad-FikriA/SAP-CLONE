@@ -116,7 +116,7 @@ const getAll = async (req, res) => {
     return res.json(data.map(fmt));
   }
 
-  const page  = Math.max(1, parseInt(pageStr)  || 1);
+  const page = Math.max(1, parseInt(pageStr) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(limitStr) || 20));
   const offset = (page - 1) * limit;
 
@@ -212,7 +212,7 @@ function fmtTimeSAP(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   const pad = (n) => String(n).padStart(2, '0');
-  const hours   = pad(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false }).replace('24', '00'));
+  const hours = pad(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false }).replace('24', '00'));
   const minutes = pad(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta', minute: 'numeric' }));
   return `${hours}:${minutes}:00`;
 }
@@ -654,10 +654,10 @@ const exportIW49 = async (req, res) => {
 
     // ── Compute shared ISO date range ──────────────────────────────────────
     let isoFrom = null;
-    let isoTo   = null;
+    let isoTo = null;
     if (from || to) {
       isoFrom = from || null;
-      isoTo   = to   || null;
+      isoTo = to || null;
     } else if (week) {
       const y = parseInt(year) || new Date().getFullYear();
       const w = parseInt(week);
@@ -667,18 +667,18 @@ const exportIW49 = async (req, res) => {
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
       isoFrom = monday.toISOString().slice(0, 10);
-      isoTo   = sunday.toISOString().slice(0, 10);
+      isoTo = sunday.toISOString().slice(0, 10);
     } else if (month || year) {
       const y = parseInt(year) || new Date().getFullYear();
       if (month) {
         const m = parseInt(month);
         const first = new Date(y, m - 1, 1);
-        const last  = new Date(y, m, 0);
+        const last = new Date(y, m, 0);
         isoFrom = first.toISOString().slice(0, 10);
-        isoTo   = last.toISOString().slice(0, 10);
+        isoTo = last.toISOString().slice(0, 10);
       } else {
         isoFrom = `${y}-01-01`;
-        isoTo   = `${y}-12-31`;
+        isoTo = `${y}-12-31`;
       }
     }
 
@@ -687,14 +687,14 @@ const exportIW49 = async (req, res) => {
     if (isoFrom || isoTo) {
       subWhere.submittedAt = {};
       if (isoFrom) { const d = new Date(isoFrom); subWhere.submittedAt[Op.gte] = d; }
-      if (isoTo)   { const d = new Date(isoTo); d.setHours(23, 59, 59, 999); subWhere.submittedAt[Op.lte] = d; }
+      if (isoTo) { const d = new Date(isoTo); d.setHours(23, 59, 59, 999); subWhere.submittedAt[Op.lte] = d; }
     }
 
     // ── Historical SPK filter (scheduledDate, source=manual_import) ───────
     const histWhere = { source: 'manual_import', status: 'approved' };
     if (category) histWhere.category = category;
     if (isoFrom) histWhere.scheduledDate = { ...(histWhere.scheduledDate || {}), [Op.gte]: isoFrom };
-    if (isoTo)   histWhere.scheduledDate = { ...(histWhere.scheduledDate || {}), [Op.lte]: isoTo };
+    if (isoTo) histWhere.scheduledDate = { ...(histWhere.scheduledDate || {}), [Op.lte]: isoTo };
 
     // ── Fetch both sources in parallel ─────────────────────────────────────
     const [submissions, historicalSpks] = await Promise.all([
@@ -774,7 +774,7 @@ const exportIW49 = async (req, res) => {
       'Order', 'Description', 'System Status', 'Cost Center', 'Control Key',
       'Oper Work Ctr', 'Activity', 'Op. Short Text',
       'Normal Duration', 'Norm. Duration Unit', 'Duration Plan', 'Unit for Work',
-      'Posting Date', 'Duration Actual (hr)', 'Actual Work (hr)',
+      'Duration Actual (hr)', 'Actual Work (hr)', 'Posting Date',
       'Confirmation Text', 'Reason of Variance',
       'Work Start', 'Work Finish', 'Start Time', 'Finish Time',
     ];
@@ -803,11 +803,11 @@ const exportIW49 = async (req, res) => {
         ? Math.round((sj.durationActual / 60) * 100) / 100
         : null;
 
-      const postingDate   = fmtDateSAP(sj.submittedAt);
+      const postingDate = fmtDateSAP(sj.submittedAt);
       const workStartDate = fmtDateSAP(sj.workStart);
       const workFinishDate = fmtDateSAP(sj.submittedAt);
-      const startTime     = fmtTimeSAP(sj.workStart);
-      const finishTime    = fmtTimeSAP(sj.submittedAt);
+      const startTime = fmtTimeSAP(sj.workStart);
+      const finishTime = fmtTimeSAP(sj.submittedAt);
 
       const activities = sj.activityResults || [];
 

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api';
 import { StatusBadge, CategoryBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { ExcelImportTutorial } from '@/components/shared/ExcelImportTutorial';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CATEGORIES, STATUS_LABELS, KADIS_AREAS, EQUIPMENT_STATUS_LABELS, EQUIPMENT_STATUS_COLORS } from '@/lib/constants';
 import { formatDate, formatDateShort } from '@/lib/date-utils';
@@ -451,9 +452,12 @@ function SpkPageInner() {
           <div className="flex gap-2 flex-wrap ">
             <Button variant="outline" size="sm" onClick={load}><RefreshCw size={13} /></Button>
             {canCreate('spk') && (
-              <Link href="/spk/import">
-                <Button variant="outline" size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"><Upload size={13} /> Import SAP</Button>
-              </Link>
+              <>
+                <ExcelImportTutorial type="preventive-spk" />
+                <Link href="/spk/import">
+                  <Button variant="outline" size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"><Upload size={13} /> Import SAP</Button>
+                </Link>
+              </>
             )}
             {canCreate('spk') && (
               <Link href="/spk/import-historis">

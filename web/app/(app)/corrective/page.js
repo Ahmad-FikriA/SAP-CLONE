@@ -45,6 +45,7 @@ import { ApproveSapDialog } from "./_components/ApproveSapDialog";
 import { ExcelPreviewDialog } from "./_components/ExcelPreviewDialog";
 import { ManualCreateDialog } from "./_components/ManualCreateDialog";
 import { usePagination, PaginationControls } from "./_components/Pagination";
+import { ExcelImportTutorial } from "@/components/shared/ExcelImportTutorial";
 
 export default function CorrectivePage() {
   const [user, setUser] = useState(null);
@@ -511,6 +512,9 @@ export default function CorrectivePage() {
               <Upload size={16} className="mr-2" />
               {uploading ? "Mengunggah..." : "Import SAP"}
             </Button>
+          )}
+          {canCreate("corrective") && isPlanner && (
+            <ExcelImportTutorial type="corrective-spk" className="shadow-md bg-white border-slate-200" />
           )}
           <Button
             variant="outline"

@@ -10,6 +10,7 @@ import { CATEGORIES, INTERVALS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Upload, RefreshCw } from 'lucide-react';
+import { ExcelImportTutorial } from '@/components/shared/ExcelImportTutorial';
 
 const TABS = ['Mappings', 'Task Lists'];
 
@@ -325,6 +326,7 @@ export default function MappingsPage() {
               className="flex-1 max-w-sm px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
             {canCreate('task-mapping') && (
               <>
+                <ExcelImportTutorial type="task-list" />
                 <Button variant="outline" size="sm" onClick={() => tlFileRef.current?.click()} className="gap-1.5">
                   <Upload size={13} /> Import Excel
                 </Button>
