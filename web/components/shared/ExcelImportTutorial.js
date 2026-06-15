@@ -223,11 +223,10 @@ export function ExcelImportTutorial({ type, className = "" }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-2.5 px-4 text-xs font-semibold border-b-2 transition-all outline-none ${
-                  activeTab === tab.id
+                className={`py-2.5 px-4 text-xs font-semibold border-b-2 transition-all outline-none ${activeTab === tab.id
                     ? 'border-blue-600 text-blue-700'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -367,11 +366,10 @@ export function ExcelImportTutorial({ type, className = "" }) {
                                 {row.map((cellValue, colIdx) => (
                                   <td
                                     key={colIdx}
-                                    className={`border-r border-slate-200 px-2.5 py-1.5 leading-tight truncate max-w-[200px] ${
-                                      isHeader
+                                    className={`border-r border-slate-200 px-2.5 py-1.5 leading-tight truncate max-w-[200px] ${isHeader
                                         ? 'bg-slate-50/80 font-bold text-slate-800 text-[10px] text-center border-b-2 border-b-slate-300'
                                         : 'font-mono text-slate-600 text-[10.5px]'
-                                    }`}
+                                      }`}
                                     title={cellValue}
                                   >
                                     {cellValue}

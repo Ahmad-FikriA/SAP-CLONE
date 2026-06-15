@@ -208,12 +208,21 @@ function parseExcelBuffer(buffer) {
     const operationText = String(get(row, 'op. short text') ?? '').trim();
     const controlKey    = String(get(row, 'control key') ?? '').trim() || null;
     const durationPlan  = parseDuration(getAny(row, DURATION_PLAN_HEADERS));
+    const rawConfirmation = get(row, 'confirmation');
+    let confirmation = null;
+    if (rawConfirmation !== null && rawConfirmation !== undefined && rawConfirmation !== '') {
+      const parsed = parseInt(String(rawConfirmation).trim(), 10);
+      if (Number.isInteger(parsed)) {
+        confirmation = parsed;
+      }
+    }
     if (activityRaw) {
       orderMap.get(orderNumber).activitiesModel.push({
         activityNumber: activityRaw,
         operationText,
         controlKey,
         durationPlan,
+        confirmation,
       });
     }
   }

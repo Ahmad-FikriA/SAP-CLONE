@@ -78,6 +78,7 @@ const SpkActivity = sequelize.define('SpkActivity', {
   measurementType:  { type: DataTypes.STRING(100),   allowNull: true, field: 'measurement_type' },
   measurementUnit:  { type: DataTypes.STRING(50),    allowNull: true, field: 'measurement_unit' },
   measurementValue: { type: DataTypes.DOUBLE, allowNull: true, field: 'measurement_value' },
+  confirmation:     { type: DataTypes.INTEGER, allowNull: true, field: 'confirmation' },
 }, {
   tableName: 'spk_activities',
   underscored: true,

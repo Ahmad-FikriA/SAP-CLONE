@@ -191,6 +191,7 @@ const confirm = async (req, res) => {
             controlKey:     act.controlKey ?? null,
             operationText:  act.operationText ?? null,
             durationPlan:   act.durationPlan ?? null, // from SAP "Duration Plan" column; null when absent/empty
+            confirmation:   act.confirmation ?? null,
           }, { transaction: t });
         }
 
