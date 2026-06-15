@@ -3,13 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * InspectionFollowUp — tindak lanjut kerusakan oleh Teknisi.
- *
- * Dibuat otomatis ketika Kepala Dinas approve laporan
- * yang memiliki hasKerusakan = true.
- * Teknisi menerima perintah, mengerjakan, dan memberikan feedback.
- */
+
 const InspectionFollowUp = sequelize.define(
   "InspectionFollowUp",
   {
@@ -44,15 +38,10 @@ const InspectionFollowUp = sequelize.define(
       comment: "Deadline penyelesaian",
     },
     status: {
-      type: DataTypes.ENUM(
-        "pending",
-        "in_progress",
-        "waiting_approval",
-        "approved",
-        "rejected",
-      ),
+      type: DataTypes.STRING(30),
       allowNull: false,
       defaultValue: "pending",
+      validate: { isIn: [["pending", "in_progress", "waiting_approval", "approved", "rejected"]] },
     },
     feedback: {
       type: DataTypes.TEXT,
@@ -60,14 +49,30 @@ const InspectionFollowUp = sequelize.define(
       comment: "Feedback dari Teknisi setelah selesai",
     },
     beforePhotos: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      comment: "Array path foto sebelum perbaikan",
+      comment: "Array path foto sebelum perbaikan (JSON string)",
+      get() {
+        const raw = this.getDataValue('beforePhotos');
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch { return raw; }
+      },
+      set(val) {
+        this.setDataValue('beforePhotos', val ? JSON.stringify(val) : null);
+      },
     },
     afterPhotos: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      comment: "Array path foto sesudah perbaikan",
+      comment: "Array path foto sesudah perbaikan (JSON string)",
+      get() {
+        const raw = this.getDataValue('afterPhotos');
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch { return raw; }
+      },
+      set(val) {
+        this.setDataValue('afterPhotos', val ? JSON.stringify(val) : null);
+      },
     },
     completedDate: {
       type: DataTypes.DATE,

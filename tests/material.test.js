@@ -12,7 +12,7 @@ describe('Material API', () => {
     const admin = await User.findOne({ where: { role: 'admin' } });
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ nik: admin.nik, password: 'password' }); // Adjust if default password is different
+      .send({ nik: admin.nik, password: 'password123' }); // Adjust if default password is different
     adminToken = loginRes.body.token;
 
     // Clear materials before tests
@@ -32,7 +32,7 @@ describe('Material API', () => {
       });
 
     expectSuccess(res, 201);
-    expectObject(res, ['materialCode', 'name', 'quantity', 'price', 'cabinetCode']);
+    expectObject(res, 201, ['materialCode', 'name', 'quantity', 'price', 'cabinetCode']);
     testMaterial = res.body.data;
   });
 

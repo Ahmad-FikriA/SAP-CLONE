@@ -10,7 +10,7 @@ const { SpkCorrectiveItem, SpkCorrectivePhoto } = require('../../models/SpkCorre
 const { KADIS_ROLE, WORK_CENTER_ROLES } = require('../../middleware/correctiveAccess');
 const NotificationService = require('../../services/notificationService');
 
-// ── Eager-load config ─────────────────────────────────────────────────────────
+
 const SPK_INCLUDE = [
   {
     model: SpkCorrectiveItem,
@@ -64,8 +64,7 @@ function fmtSpk(spk) {
   };
 }
 
-// GET /api/corrective/spk - List all corrective SPKs
-// Rules: Teknisi/Kasie (own work center), Planner (all), Kadis Pusat (all), Kadis Pelapor (own)
+
 const getAll = async (req, res) => {
   const { userId, role, workCenter } = req.user;
   const where = {};
@@ -73,12 +72,12 @@ const getAll = async (req, res) => {
   if (req.query.status) where.status = req.query.status;
   if (req.query.priority) where.priority = req.query.priority;
   
-  // Teknisi/Kasie - only see their work center
+
   if (WORK_CENTER_ROLES.includes(role) && workCenter) {
     where.workCenter = workCenter;
   }
   
-  // Kadis Pelapor - only see own reports, TAPI Kadis PP bisa lihat semua
+
   if (role === KADIS_ROLE) {
     const { dinas } = req.user;
     const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
@@ -93,7 +92,7 @@ const getAll = async (req, res) => {
     }
   }
   
-  // Planner and Kadis Pusat see all
+
   
   const data = await SpkCorrective.findAll({
     where,
@@ -104,7 +103,7 @@ const getAll = async (req, res) => {
   res.json(data.map(fmtSpk));
 };
 
-// GET /api/corrective/spk/:spkId - Get single corrective SPK
+
 const getOne = async (req, res) => {
   const spk = await SpkCorrective.findByPk(req.params.spkId, {
     include: SPK_INCLUDE,
@@ -114,11 +113,7 @@ const getOne = async (req, res) => {
   res.json(fmtSpk(spk));
 };
 
-// POST /api/corrective/spk - Create new corrective SPK
-// Rules: Only Planner can create
-// Fields: order_number, created_date, priority, equipment_id, location, requested_finish_date,
-//         damage_classification, job_description, work_center, ctrl_key, unit,
-//         planned_worker, planned_hour_per_worker, total_planned_hour, items
+
 const create = async (req, res) => {
   const {
     notificationId,
@@ -136,28 +131,26 @@ const create = async (req, res) => {
     plannedWorker,
     plannedHourPerWorker,
     items = [],
-    // Support new payload from Flutter dropdowns
+
     equipment,
     functionalLocation,
     equipmentName,
   } = req.body;
 
-  // Validate notification exists
+
   const notification = await Notification.findByPk(notificationId);
   if (!notification) {
     return res.status(404).json({ error: 'Notification not found' });
   }
 
-  // Check if notification already has SPK
   const existingSpk = await SpkCorrective.findOne({ where: { notificationId } });
   if (existingSpk) {
     return res.status(409).json({ error: 'Notification already has SPK created' });
   }
 
-  // Generate spkId if not provided
+
   const spkId = req.body.spkId || `SPK-C-${uuid().slice(0, 8).toUpperCase()}`;
 
-  // Calculate total planned hour (allow 0 values)
   const totalPlannedHour = (plannedWorker !== undefined && plannedHourPerWorker !== undefined)
     ? Number(plannedWorker) * Number(plannedHourPerWorker)
     : null;
@@ -184,7 +177,6 @@ const create = async (req, res) => {
       status: 'draft',
     }, { transaction: t });
 
-    // Create items
     for (const item of items) {
       await SpkCorrectiveItem.create({
         spkId,
@@ -195,7 +187,6 @@ const create = async (req, res) => {
       }, { transaction: t });
     }
 
-    // Update notification status
     await notification.update({ 
       status: 'spk_created',
       approvalStatus: 'menunggu_review_awal_kadis_pp'
@@ -206,7 +197,7 @@ const create = async (req, res) => {
     const fresh = await SpkCorrective.findByPk(spkId, { include: SPK_INCLUDE });
     res.status(201).json(fmtSpk(fresh));
 
-    // 🔔 Notify Kadis PP about new SPK for review
+
     const kadisppUsers = await User.findAll({
       where: { role: 'kadis', dinas: { [Op.like]: '%pusat perawatan%' } },
       attributes: ['id'],
@@ -225,14 +216,12 @@ const create = async (req, res) => {
   }
 };
 
-// DELETE /api/corrective/spk/:spkId - Delete corrective SPK
 const remove = async (req, res) => {
   const spk = await SpkCorrective.findByPk(req.params.spkId);
   if (!spk) return res.status(404).json({ error: 'SPK Corrective not found' });
 
   const t = await sequelize.transaction();
   try {
-    // Update notification status back to submitted
     await Notification.update(
       { status: 'approved', approvalStatus: 'approved' },
       { where: { notificationId: spk.notificationId }, transaction: t }
@@ -248,7 +237,7 @@ const remove = async (req, res) => {
   }
 };
 
-// POST /api/corrective/spk/bulk-delete - Bulk delete
+
 const bulkDelete = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
@@ -269,8 +258,7 @@ const bulkDelete = async (req, res) => {
   }
 };
 
-// POST /api/corrective/spk/:spkId/upload-before-photos
-// Teknisi uploads before work photos (1-2 photos, max 2MB each)
+
 const uploadBeforePhotos = async (req, res) => {
   const spk = await SpkCorrective.findByPk(req.params.spkId);
   if (!spk) return res.status(404).json({ error: 'SPK Corrective not found' });
@@ -311,8 +299,7 @@ const uploadBeforePhotos = async (req, res) => {
   }
 };
 
-// POST /api/corrective/spk/:spkId/upload-after-photos
-// Teknisi uploads after work photos (1-2 photos, max 2MB each)
+
 const uploadAfterPhotos = async (req, res) => {
   const spk = await SpkCorrective.findByPk(req.params.spkId);
   if (!spk) return res.status(404).json({ error: 'SPK Corrective not found' });
@@ -347,9 +334,7 @@ const uploadAfterPhotos = async (req, res) => {
   }
 };
 
-// PUT /api/corrective/spk/:spkId/update-by-teknisi
-// Teknisi can update: actual_start_date, job_result_description, actual_worker,
-// actual_hour_per_worker, total_actual_hour, items, apd_items
+
 const updateByTeknisi = async (req, res) => {
   const spk = await SpkCorrective.findByPk(req.params.spkId);
   if (!spk) return res.status(404).json({ error: 'SPK Corrective not found' });
@@ -363,7 +348,6 @@ const updateByTeknisi = async (req, res) => {
     apdItems,
   } = req.body;
 
-  // Calculate total actual hour (allow 0 values)
   const totalActualHour = (actualWorker !== undefined && actualHourPerWorker !== undefined)
     ? Number(actualWorker) * Number(actualHourPerWorker)
     : spk.totalActualHour;
@@ -379,13 +363,11 @@ const updateByTeknisi = async (req, res) => {
       status: 'awaiting_kadis_pusat',
     }, { transaction: t });
 
-    // Update Notification status
     await Notification.update(
       { approvalStatus: 'menunggu_review_kadis_pp' },
       { where: { notificationId: spk.notificationId }, transaction: t }
     );
 
-    // Add new items if provided
     if (items && items.length > 0) {
       for (const item of items) {
         await SpkCorrectiveItem.create({
@@ -403,7 +385,7 @@ const updateByTeknisi = async (req, res) => {
     const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
     res.json(fmtSpk(fresh));
 
-    // 🔔 Notify Kadis PP about teknisi execution results
+
     const kadisppUsers = await User.findAll({
       where: { role: 'kadis', dinas: { [Op.like]: '%pusat perawatan%' } },
       attributes: ['id'],
@@ -423,7 +405,7 @@ const updateByTeknisi = async (req, res) => {
 };
 
 
-// POST /api/corrective/spk/:spkId/approve-kadis-pusat
+
 const approveKadisPusat = async (req, res) => {
   const { userId } = req.user;
   const spk = await SpkCorrective.findByPk(req.params.spkId);
@@ -446,7 +428,6 @@ const approveKadisPusat = async (req, res) => {
     kadisPusatApprovedAt: now,
   });
 
-  // Update notification approvalStatus
   await Notification.update(
     { approvalStatus: 'menunggu_review_kadis_pelapor' },
     { where: { notificationId: spk.notificationId } }
@@ -455,7 +436,7 @@ const approveKadisPusat = async (req, res) => {
   const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
   res.json(fmtSpk(fresh));
 
-  // 🔔 Notify Kadis Pelapor that work is completed and needs final review
+
   const notif = await Notification.findByPk(spk.notificationId);
   if (notif && notif.kadisPelaporId) {
     await NotificationService.notify({
@@ -469,7 +450,7 @@ const approveKadisPusat = async (req, res) => {
   }
 };
 
-// POST /api/corrective/spk/:spkId/approve-kadis-pelapor
+
 const approveKadisPelapor = async (req, res) => {
   const { userId } = req.user;
   const spk = await SpkCorrective.findByPk(req.params.spkId, {
@@ -496,7 +477,6 @@ const approveKadisPelapor = async (req, res) => {
       kadisPelaporApprovedAt: now,
     }, { transaction: t });
 
-    // Update notification status to closed
     await Notification.update(
       { status: 'closed' },
       { where: { notificationId: spk.notificationId }, transaction: t }
@@ -507,7 +487,7 @@ const approveKadisPelapor = async (req, res) => {
     const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
     res.json(fmtSpk(fresh));
 
-    // 🔔 Notify Teknisi that the job is fully approved and closed
+
     const wc = (spk.workCenter || '').toLowerCase();
     const groupMap = { 
       'mechanical': 'mekanik', 'mekanik': 'mekanik',
@@ -533,7 +513,7 @@ const approveKadisPelapor = async (req, res) => {
   }
 };
 
-// POST /api/corrective/spk/:spkId/reject
+
 const reject = async (req, res) => {
   const { userId } = req.user;
   const spk = await SpkCorrective.findByPk(req.params.spkId);
@@ -560,7 +540,7 @@ const reject = async (req, res) => {
   const fresh = await SpkCorrective.findByPk(spk.spkId, { include: SPK_INCLUDE });
   res.json(fmtSpk(fresh));
 
-  // 🔔 Notify Teknisi and Planner about rejection
+
   try {
     const wc = (spk.workCenter || '').toLowerCase();
     const groupMap = {
@@ -571,13 +551,12 @@ const reject = async (req, res) => {
     };
     const groupKeyword = groupMap[wc] || wc;
 
-    // Find technicians in this work center
     const recipients = await User.findAll({
       where: {
         [Op.or]: [
           { role: 'teknisi', group: { [Op.like]: `%${groupKeyword}%` } },
           { role: 'kasie', group: { [Op.like]: `%${groupKeyword}%` } },
-          { group: { [Op.like]: '%perencanaan%' } }, // Always notify planner
+          { group: { [Op.like]: '%perencanaan%' } },
         ]
       },
       attributes: ['id']
@@ -596,18 +575,17 @@ const reject = async (req, res) => {
   }
 };
 
-// GET /api/corrective/spk/history
-// Get completed and rejected SPK history for user's work center
+
 const getHistory = async (req, res) => {
   const { userId, role, workCenter } = req.user;
   const where = { status: { [Op.in]: ['completed', 'rejected'] } };
   
-  // Teknisi/Kasie - only see their work center history
+
   if (WORK_CENTER_ROLES.includes(role) && workCenter) {
     where.workCenter = workCenter;
   }
   
-  // Kadis Pelapor - only see own reports, TAPI Kadis PP bisa lihat semua
+
   if (role === KADIS_ROLE) {
     const { dinas } = req.user;
     const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
@@ -631,8 +609,7 @@ const getHistory = async (req, res) => {
   res.json(data.map(fmtSpk));
 };
 
-// PUT /api/corrective/spk/:spkId
-// Planner can update SPK if status is still draft
+
 const updateByPlanner = async (req, res) => {
   const spk = await SpkCorrective.findByPk(req.params.spkId);
   if (!spk) return res.status(404).json({ error: 'SPK Corrective not found' });
@@ -682,7 +659,6 @@ const updateByPlanner = async (req, res) => {
       totalPlannedHour: totalPlannedHour,
     }, { transaction: t });
 
-    // Handle items (delete existing and insert new if provided)
     if (items && Array.isArray(items)) {
       await SpkCorrectiveItem.destroy({ where: { spkId: spk.spkId }, transaction: t });
       for (const item of items) {

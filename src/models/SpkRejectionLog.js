@@ -9,7 +9,7 @@ const SpkRejectionLog = sequelize.define('SpkRejectionLog', {
   rejectedBy:      { type: DataTypes.STRING(20), allowNull: false, field: 'rejected_by' },
   rejectedAt:      { type: DataTypes.DATE,       allowNull: false, field: 'rejected_at' },
   rejectionReason: { type: DataTypes.TEXT,       allowNull: false, field: 'rejection_reason' },
-  rejectedLevel:   { type: DataTypes.ENUM('kasie','kadis_perawatan','kadis'), allowNull: false, field: 'rejected_level' },
+  rejectedLevel:   { type: DataTypes.STRING(50), allowNull: false, field: 'rejected_level', validate: { isIn: [['kasie','kadis_perawatan','kadis']] } },
   resubmittedAt:   { type: DataTypes.DATE,       allowNull: true,  field: 'resubmitted_at' },
 }, {
   tableName: 'spk_rejection_logs',

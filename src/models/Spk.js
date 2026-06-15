@@ -3,13 +3,13 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── SPK (Surat Perintah Kerja) ────────────────────────────────────────────────
+
 const Spk = sequelize.define('Spk', {
   spkNumber:      { type: DataTypes.STRING(30), primaryKey: true, field: 'spk_number' },
   description:    { type: DataTypes.STRING(500), allowNull: false },
   intervalPeriod: { type: DataTypes.STRING(30),  allowNull: true, field: 'interval_period' },
-  category:       { type: DataTypes.ENUM('Mekanik','Listrik','Sipil','Otomasi'), allowNull: true },
-  status:         { type: DataTypes.ENUM('pending','in_progress','completed','awaiting_kasie','awaiting_kadis_perawatan','awaiting_kadis','approved','rejected'), allowNull: false, defaultValue: 'pending' },
+  category:       { type: DataTypes.STRING(50), allowNull: true, validate: { isIn: [['Mekanik','Listrik','Sipil','Otomasi']] } },
+  status:         { type: DataTypes.STRING(50), allowNull: false, defaultValue: 'pending', validate: { isIn: [['pending','in_progress','completed','awaiting_kasie','awaiting_kadis_perawatan','awaiting_kadis','approved','rejected']] } },
   durationActual: { type: DataTypes.DECIMAL(6,2), allowNull: true, field: 'duration_actual' },
   scheduledDate:  { type: DataTypes.DATEONLY,     allowNull: true, field: 'scheduled_date' },
   orderNumber:    { type: DataTypes.STRING(30),   allowNull: true, field: 'order_number' },
@@ -19,11 +19,12 @@ const Spk = sequelize.define('Spk', {
   kadisArea:      { type: DataTypes.STRING(50),   allowNull: true, field: 'kadis_area' },
   taskListId:     { type: DataTypes.STRING(20),   allowNull: true, field: 'task_list_id' },
   evaluasi:         { type: DataTypes.TEXT,          allowNull: true },
-  equipmentStatus:  { type: DataTypes.ENUM('Running', 'Standby', 'Breakdown'), allowNull: true, field: 'equipment_status' },
+  equipmentStatus:  { type: DataTypes.STRING(50), allowNull: true, field: 'equipment_status', validate: { isIn: [['Running', 'Standby', 'Breakdown']] } },
   source: {
-    type: DataTypes.ENUM('mantis', 'manual_import'),
+    type: DataTypes.STRING(50),
     allowNull: false,
     defaultValue: 'mantis',
+    validate: { isIn: [['mantis', 'manual_import']] }
   },
   submittedBy:    { type: DataTypes.STRING(20),   allowNull: true, field: 'submitted_by' },
   submittedAt:    { type: DataTypes.DATE,          allowNull: true, field: 'submitted_at' },
@@ -41,11 +42,11 @@ const Spk = sequelize.define('Spk', {
     { fields: ['category'] },
     { fields: ['scheduled_date'] },
     { fields: ['submitted_by'] },
-    { fields: ['status', 'scheduled_date'] },  // composite: approval tab + date range
+    { fields: ['status', 'scheduled_date'] },
   ],
 });
 
-// ── SPK ↔ Equipment (junction) ───────────────────────────────────────────────
+
 const SpkEquipment = sequelize.define('SpkEquipment', {
   id:                { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   spkNumber:         { type: DataTypes.STRING(30), allowNull: false,  field: 'spk_number' },
@@ -63,7 +64,7 @@ const SpkEquipment = sequelize.define('SpkEquipment', {
   ],
 });
 
-// ── SPK Activities ────────────────────────────────────────────────────────────
+
 const SpkActivity = sequelize.define('SpkActivity', {
   id:             { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   spkNumber:      { type: DataTypes.STRING(30),  allowNull: false, field: 'spk_number' },

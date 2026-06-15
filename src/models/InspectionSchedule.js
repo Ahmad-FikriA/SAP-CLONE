@@ -19,9 +19,10 @@ const InspectionSchedule = sequelize.define(
       autoIncrement: true,
     },
     type: {
-      type: DataTypes.ENUM("rutin", "supervisi"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       comment: "Jenis flow inspeksi",
+      validate: { isIn: [["rutin", "supervisi"]] },
     },
     title: {
       type: DataTypes.STRING(255),
@@ -65,20 +66,17 @@ const InspectionSchedule = sequelize.define(
       comment: "Mekanik | Listrik | Sipil | Otomasi",
     },
     status: {
-      type: DataTypes.ENUM(
-        "scheduled",
-        "in_progress",
-        "completed",
-        "cancelled",
-      ),
+      type: DataTypes.STRING(30),
       allowNull: false,
       defaultValue: "scheduled",
+      validate: { isIn: [["scheduled", "in_progress", "completed", "cancelled"]] },
     },
     triggerSource: {
-      type: DataTypes.ENUM("self", "vendor", "user_darurat", "planner"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: "self",
       comment: "Siapa yang memicu pembuatan jadwal",
+      validate: { isIn: [["self", "vendor", "user_darurat", "planner"]] },
     },
     vendorInfo: {
       type: DataTypes.TEXT,

@@ -3,13 +3,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-/**
- * InspectionReport — laporan hasil inspeksi.
- *
- * Key field: `hasKerusakan` (boolean) — decision point di flow bisnis.
- * Ketika Kepala Dinas approve dan hasKerusakan = true,
- * maka dibuat InspectionFollowUp untuk Teknisi.
- */
+
 const InspectionReport = sequelize.define(
   "InspectionReport",
   {
@@ -66,16 +60,18 @@ const InspectionReport = sequelize.define(
       comment: "Detail kerusakan (jika hasKerusakan = true)",
     },
 
+
     signaturePath: {
       type: DataTypes.STRING(500),
       allowNull: true,
       comment: "Path file tanda tangan digital inspector",
     },
     status: {
-      type: DataTypes.ENUM("draft", "submitted", "approved", "rejected", "revisions_required"),
+      type: DataTypes.STRING(30),
       allowNull: false,
       defaultValue: "draft",
       comment: "draft | submitted | approved | rejected | revisions_required (returned for rework)",
+      validate: { isIn: [["draft", "submitted", "approved", "rejected", "revisions_required"]] },
     },
     submittedBy: {
       type: DataTypes.STRING(100),
@@ -118,9 +114,7 @@ const InspectionReport = sequelize.define(
   },
 );
 
-/**
- * InspectionReportPhoto — foto lampiran laporan inspeksi.
- */
+
 const InspectionReportPhoto = sequelize.define(
   "InspectionReportPhoto",
   {

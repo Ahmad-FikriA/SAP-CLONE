@@ -9,10 +9,7 @@ if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
 }
 const JWT_SECRET = process.env.JWT_SECRET || 'kti-mock-secret-dev';
 
-/**
- * Express middleware — verifies Authorization: Bearer <token>.
- * Attaches req.user = { userId, nik, role } on success.
- */
+
 async function verifyToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   let token = null;

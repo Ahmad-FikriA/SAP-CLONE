@@ -1,16 +1,6 @@
 'use strict';
 
-/**
- * backup_coords.js
- * ─────────────────────────────────────────────────────────────────────────────
- * Dumps every equipment row that has latitude/longitude/polygonFeatureName set
- * into  data/coords_backup.json
- *
- * Run BEFORE npm run seed:preventive to preserve your scanned coordinates.
- *   npm run backup:coords
- *
- * The seed will automatically read this file and restore the coords afterwards.
- */
+
 
 require('dotenv').config();
 const fs = require('fs');
@@ -32,7 +22,7 @@ async function main() {
   });
 
   if (rows.length === 0) {
-    console.log('  ⚠  No coordinates found in DB — nothing to back up.\n');
+    console.log('No coordinates found in DB — nothing to back up.\n');
     process.exit(0);
   }
 

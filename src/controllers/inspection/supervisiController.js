@@ -274,9 +274,6 @@ async function clearExpiredRadiusExemptions(jobId = null) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// JOBS
-// ─────────────────────────────────────────────────────────────────────────────
 
 // GET /api/inspection/supervisi/personnel
 async function listPersonnel(req, res) {
@@ -344,7 +341,6 @@ async function listPersonnel(req, res) {
 // GET /api/inspection/supervisi/jobs
 async function listJobs(req, res) {
   try {
-    // Konversi draft kedaluwarsa (visitDate < hari ini) → tidak_hadir
     await convertStaleDrafts();
     await clearExpiredRadiusExemptions();
     await recalculateViolationFlags();
@@ -414,7 +410,7 @@ async function listJobs(req, res) {
 
     const jobs = result.rows;
 
-    // Kumpulkan semua NIK unik (createdBy + semua submittedBy visit)
+
     const nikSet = new Set();
     for (const job of jobs) {
       if (job.createdBy) nikSet.add(job.createdBy);
@@ -442,7 +438,7 @@ async function listJobs(req, res) {
   }
 }
 
-// GET /api/inspection/supervisi/jobs/:id
+
 async function getJob(req, res) {
   try {
     const accessOptions = getSupervisiReadAccessOptions(req);
@@ -454,7 +450,6 @@ async function getJob(req, res) {
       });
     }
 
-    // Konversi draft kedaluwarsa untuk job ini sebelum fetch
     await convertStaleDrafts(parseInt(req.params.id));
     await clearExpiredRadiusExemptions(parseInt(req.params.id));
     await recalculateViolationFlags(parseInt(req.params.id));
@@ -473,7 +468,6 @@ async function getJob(req, res) {
       });
     }
 
-    // Inject nama pembuat dan nama pengirim visit
     const nikSet = new Set();
     if (job.createdBy) nikSet.add(job.createdBy);
     for (const visit of job.visits || []) {
@@ -489,7 +483,7 @@ async function getJob(req, res) {
   }
 }
 
-// POST /api/inspection/supervisi/jobs
+
 async function createJob(req, res) {
   try {
     if (!isSupervisiScheduler(req.user)) {
@@ -601,7 +595,7 @@ async function createJob(req, res) {
   }
 }
 
-// PUT /api/inspection/supervisi/jobs/:id
+
 async function updateJob(req, res) {
   try {
     if (!isSupervisiScheduler(req.user)) {
@@ -866,7 +860,8 @@ async function deleteJob(req, res) {
 // VISITS
 // ─────────────────────────────────────────────────────────────────────────────
 
-// GET /api/inspection/supervisi/jobs/:id/visits
+
+
 async function listVisits(req, res) {
   try {
     const accessOptions = getSupervisiReadAccessOptions(req);
@@ -912,7 +907,7 @@ async function listVisits(req, res) {
 // NOTE: visitDate is ALWAYS derived from the server clock — the client value is
 //       intentionally ignored to prevent device date/time manipulation.
 async function submitVisit(req, res) {
-  // multer sudah dijalankan di middleware sebelum controller ini
+
   try {
     if (!isSupervisiExecutor(req.user)) {
       return res.status(403).json({
@@ -940,7 +935,7 @@ async function submitVisit(req, res) {
       return res.status(400).json({ success: false, message: "Status harus 'hadir' atau 'tidak_hadir'." });
     }
 
-    // Validasi mandatory fields hanya untuk submit final (bukan draft)
+
     if (!isDraftBool) {
       if (status === "hadir" && !keterangan) {
         return res.status(400).json({ success: false, message: "Keterangan wajib diisi jika hadir." });
@@ -950,7 +945,7 @@ async function submitVisit(req, res) {
       }
     }
 
-    // Cek job ada
+
     const job = await SupervisiJob.findByPk(jobId);
     if (!job) return res.status(404).json({ success: false, message: "Job tidak ditemukan." });
     if (!canAccessSupervisiJob(req.user, job)) {
@@ -973,7 +968,7 @@ async function submitVisit(req, res) {
     }
     const existingVisit = await SupervisiVisit.findOne({ where: queryWhere });
 
-    // ── Geofence calculation ─────────────────────────────────────────────────
+    
     if (status === "hadir") {
       const existingLat = parseNullableFloat(existingVisit && existingVisit.visitLatitude);
       const existingLon = parseNullableFloat(existingVisit && existingVisit.visitLongitude);
@@ -1029,7 +1024,6 @@ async function submitVisit(req, res) {
     const documentPaths = filesToSupervisiPaths(
       (req.files && req.files.documents) || [],
     );
-
     function sanitizeStoredPaths(paths) {
       if (!Array.isArray(paths)) return paths;
       return paths.map((path) => {
@@ -1049,15 +1043,11 @@ async function submitVisit(req, res) {
       });
     }
 
-    // existingPhotos/existingDocuments: URL foto/dokumen yang MASIH ada di draft
-    // (sudah di-filter oleh user — foto yang dihapus di UI tidak ikut dikirim).
-    // Jika tidak dikirim sama sekali → fallback ke semua file lama dari server.
     const sentExistingPhotos = req.body.existingPhotos !== undefined;
     const sentExistingDocs   = req.body.existingDocuments !== undefined;
     const existingPhotoUrls  = sentExistingPhotos ? sanitizeStoredPaths(parseStringArray(req.body.existingPhotos) || []) : null;
     const existingDocUrls    = sentExistingDocs   ? sanitizeStoredPaths(parseStringArray(req.body.existingDocuments) || []) : null;
 
-    // Konversi draft kedaluwarsa milik job ini sebelum upsert
     await convertStaleDrafts(parseInt(jobId));
     await clearExpiredRadiusExemptions(parseInt(jobId));
 
@@ -1120,7 +1110,7 @@ async function submitVisit(req, res) {
       normalizeNullableString(req.user && req.user.nik) ||
       "Pelaksana";
 
-    // Kirim notifikasi ke supervisor HANYA untuk submit final (bukan draft)
+
     if (!isDraftBool) {
       await notifySupervisorVisitUpdate({
         job,
@@ -1130,7 +1120,6 @@ async function submitVisit(req, res) {
       });
     }
 
-    // Inject submitterName ke response visit
     const visitNikMap = await buildNikNameMap(visit.submittedBy ? [visit.submittedBy] : []);
     addCurrentUserNameFallback(visitNikMap, req.user);
     const visitData = typeof visit.toJSON === "function" ? visit.toJSON() : { ...visit };
@@ -1146,7 +1135,6 @@ async function submitVisit(req, res) {
       data: visitData,
     });
   } catch (err) {
-    // Handle unique constraint violation
     if (err.name === "SequelizeUniqueConstraintError") {
       return res.status(409).json({ success: false, message: "Kunjungan untuk hari ini sudah tercatat." });
     }
@@ -1154,11 +1142,9 @@ async function submitVisit(req, res) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PELANGGARAN
-// ─────────────────────────────────────────────────────────────────────────────
 
-// GET /api/inspection/supervisi/pelanggaran
+
+
 async function listPelanggaran(req, res) {
   try {
     const accessOptions = getSupervisiReadAccessOptions(req);
@@ -1222,8 +1208,7 @@ async function markMissedVisitsAsPelanggaran() {
     const todayStr = getAppDateString();
     const yesterdayStr = addDaysDateOnly(todayStr, -1);
 
-    // Hanya proses job active yang kemarin masih berada di rentang jadwal.
-    // amendBerakhir disertakan untuk kompatibilitas field amend legacy.
+
     const activeJobs = await SupervisiJob.findAll({
       where: {
         status: "active",
@@ -1260,7 +1245,7 @@ async function markMissedVisitsAsPelanggaran() {
 
       if (!jobStartStr || !effectiveEndStr) continue;
 
-      // Kumpulkan semua (visitDate, locationId) yang sudah ada
+
       const existingVisitKeys = new Set(
         (job.visits || []).map((v) => {
           const d = normalizeDateOnly(v.visitDate);
@@ -1268,11 +1253,11 @@ async function markMissedVisitsAsPelanggaran() {
         })
       );
 
-      // Tentukan lokasi-lokasi yang harus dikunjungi
       const locations =
         Array.isArray(job.locations) && job.locations.length > 0
           ? job.locations
-          : [{ id: null }]; // Single-location job (no locationId)
+          : [{ id: null }];
+
 
       // Scope cron: kemarin harus berada dalam range waktuMulai–effectiveEndDate.
       if (yesterdayStr < jobStartStr || yesterdayStr > effectiveEndStr) continue;
@@ -1304,7 +1289,7 @@ async function markMissedVisitsAsPelanggaran() {
               // Tambahkan ke set agar iterasi berikutnya tidak duplikat
               existingVisitKeys.add(key);
             } catch (createErr) {
-              // Abaikan duplicate key — bisa terjadi jika ada race condition
+
               if (createErr.name !== "SequelizeUniqueConstraintError") {
                 console.warn(`${LABEL} Failed to create missed visit for job ${job.id} date ${dateStr} loc ${locId}:`, createErr.message);
               }
@@ -1376,11 +1361,9 @@ async function markMissedVisitsAsPelanggaran() {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// VIOLATION REASON
-// ─────────────────────────────────────────────────────────────────────────────
 
-// PUT /api/inspection/supervisi/visits/:id/violation-reason
+
+
 async function submitViolationReason(req, res) {
   try {
     if (!isSupervisiExecutor(req.user)) {
@@ -1405,7 +1388,6 @@ async function submitViolationReason(req, res) {
       });
     }
 
-    // Cari visit beserta job-nya untuk validasi kepemilikan
     const visit = await SupervisiVisit.findByPk(visitId, {
       include: [
         {
@@ -1420,7 +1402,6 @@ async function submitViolationReason(req, res) {
       return res.status(404).json({ success: false, message: "Kunjungan tidak ditemukan." });
     }
 
-    // Pastikan visit ini memang pelanggaran
     if (!visit.isPelanggaran) {
       return res.status(400).json({
         success: false,
@@ -1428,7 +1409,7 @@ async function submitViolationReason(req, res) {
       });
     }
 
-    // Validasi: Eksekutor hanya bisa mengisi alasan untuk job-nya sendiri
+
     if (!canAccessSupervisiJob(req.user, visit.job)) {
       return res.status(403).json({
         success: false,

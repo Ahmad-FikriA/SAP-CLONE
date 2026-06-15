@@ -12,25 +12,14 @@ const K3Report = sequelize.define('K3Report', {
   },
   reportNumber: {
     type: DataTypes.STRING(30),
-    unique: true,
     allowNull: false,
     field: 'report_number',
   },
   kategori: {
-    type: DataTypes.ENUM(
-      'Kondisi Tidak Aman', 
-      'Tindakan Tidak Aman', 
-      'Near Miss', 
-      'First Aid Case', 
-      'Medical Treatment', 
-      'Lost Time Injury', 
-      'Permanent Disability', 
-      'Fatality', 
-      'Ide perbaikan K3',
-      'Lainnya'
-    ),
+    type: DataTypes.STRING(50),
     allowNull: false,
     field: 'kategori',
+    validate: { isIn: [['Kondisi Tidak Aman', 'Tindakan Tidak Aman', 'Near Miss', 'First Aid Case', 'Medical Treatment', 'Lost Time Injury', 'Permanent Disability', 'Fatality', 'Ide perbaikan K3', 'Lainnya']] },
   },
   deskripsi: {
     type: DataTypes.TEXT,
@@ -43,10 +32,18 @@ const K3Report = sequelize.define('K3Report', {
     field: 'lokasi_temuan',
   },
   foto: {
-    type: DataTypes.JSON,
+    type: DataTypes.TEXT,
     allowNull: true,
     field: 'foto',
-    comment: 'Array of photo URLs',
+    comment: 'Array of photo URLs (JSON string)',
+    get() {
+      const raw = this.getDataValue('foto');
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return raw; }
+    },
+    set(val) {
+      this.setDataValue('foto', val ? JSON.stringify(val) : null);
+    },
   },
   dilaporkanOleh: {
     type: DataTypes.STRING(30),
@@ -58,7 +55,10 @@ const K3Report = sequelize.define('K3Report', {
     }
   },
   status: {
-    type: DataTypes.ENUM(
+    type: DataTypes.STRING(60),
+    defaultValue: 'menunggu_validasi_kadis_hse',
+    field: 'status',
+    validate: { isIn: [[
       'menunggu_review_kadiv_pelapor',
       'menunggu_review_kadiv_pphse',
       'menunggu_validasi_kadiv_pphse',
@@ -75,14 +75,11 @@ const K3Report = sequelize.define('K3Report', {
       'disetujui',
       'ditolak',
       'selesai',
-      // ── Investigasi Statuses ──
       'menunggu_verifikasi_investigasi',
       'investigasi_ditolak_kadis_hse',
       'menunggu_validasi_kadiv',
       'investigasi_ditolak_kadiv'
-    ),
-    defaultValue: 'menunggu_validasi_kadis_hse',
-    field: 'status',
+    ]] },
   },
   catatanKadivPelapor: {
     type: DataTypes.TEXT,
@@ -100,9 +97,17 @@ const K3Report = sequelize.define('K3Report', {
     field: 'tindakan_perbaikan',
   },
   fotoPerbaikan: {
-    type: DataTypes.JSON,
+    type: DataTypes.TEXT,
     allowNull: true,
     field: 'foto_perbaikan',
+    get() {
+      const raw = this.getDataValue('fotoPerbaikan');
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return raw; }
+    },
+    set(val) {
+      this.setDataValue('fotoPerbaikan', val ? JSON.stringify(val) : null);
+    },
   },
   catatanRevisiPerbaikan: {
     type: DataTypes.TEXT,
@@ -110,9 +115,10 @@ const K3Report = sequelize.define('K3Report', {
     field: 'catatan_revisi_perbaikan',
   },
   jenisTindakan: {
-    type: DataTypes.ENUM('investigasi', 'perbaikan_langsung'),
+    type: DataTypes.STRING(50),
     allowNull: true,
     field: 'jenis_tindakan',
+    validate: { isIn: [['investigasi', 'perbaikan_langsung']] },
   },
   ditugaskanKepada: {
     type: DataTypes.STRING(36),
@@ -123,7 +129,7 @@ const K3Report = sequelize.define('K3Report', {
       key: 'id'
     }
   },
-  // ── Investigasi Fields ──────────────────────────────────────────────────────
+  
   investigasiCategory: {
     type: DataTypes.STRING(50),
     allowNull: true,
@@ -131,10 +137,18 @@ const K3Report = sequelize.define('K3Report', {
     comment: 'Kecelakaan, Penyakit Akibat Kerja, Kebakaran',
   },
   investigasiData: {
-    type: DataTypes.JSON,
+    type: DataTypes.TEXT,
     allowNull: true,
     field: 'investigasi_data',
     comment: 'Dynamic form data as key-value JSON',
+    get() {
+      const raw = this.getDataValue('investigasiData');
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return raw; }
+    },
+    set(val) {
+      this.setDataValue('investigasiData', val ? JSON.stringify(val) : null);
+    },
   },
   isDraftInvestigasi: {
     type: DataTypes.BOOLEAN,
@@ -143,10 +157,18 @@ const K3Report = sequelize.define('K3Report', {
     field: 'is_draft_investigasi',
   },
   fotoInvestigasi: {
-    type: DataTypes.JSON,
+    type: DataTypes.TEXT,
     allowNull: true,
     field: 'foto_investigasi',
     comment: 'Array of investigation photo URLs',
+    get() {
+      const raw = this.getDataValue('fotoInvestigasi');
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return raw; }
+    },
+    set(val) {
+      this.setDataValue('fotoInvestigasi', val ? JSON.stringify(val) : null);
+    },
   },
   dokumenInvestigasi: {
     type: DataTypes.STRING(255),
@@ -175,6 +197,9 @@ const K3Report = sequelize.define('K3Report', {
   tableName: 'k3_reports',
   underscored: true,
   timestamps: true,
+  indexes: [
+    { unique: true, fields: ['report_number'] }
+  ]
 });
 
 module.exports = K3Report;

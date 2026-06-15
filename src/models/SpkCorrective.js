@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── SPK Corrective ────────────────────────────────────────────────────────────
+
 const SpkCorrective = sequelize.define('SpkCorrective', {
   spkId: {
     type: DataTypes.STRING(30),
@@ -32,9 +32,10 @@ const SpkCorrective = sequelize.define('SpkCorrective', {
     field: 'created_date',
   },
   priority: {
-    type: DataTypes.ENUM('low', 'medium', 'high', 'urgent'),
+    type: DataTypes.STRING(20),
     allowNull: true,
     defaultValue: 'medium',
+    validate: { isIn: [['low', 'medium', 'high', 'urgent']] },
   },
   equipmentId: {
     type: DataTypes.STRING(20),
@@ -71,9 +72,10 @@ const SpkCorrective = sequelize.define('SpkCorrective', {
     field: 'job_result_description',
   },
   workCenter: {
-    type: DataTypes.ENUM('electrical', 'civil', 'automation', 'mechanical'),
+    type: DataTypes.STRING(50),
     allowNull: true,
     field: 'work_center',
+    validate: { isIn: [['electrical', 'civil', 'automation', 'mechanical']] },
   },
   ctrlKey: {
     type: DataTypes.STRING(20),
@@ -115,7 +117,7 @@ const SpkCorrective = sequelize.define('SpkCorrective', {
     allowNull: true,
     field: 'total_actual_hour',
   },
-  // Approval fields
+
   kadisPusatApprovedBy: {
     type: DataTypes.STRING(20),
     allowNull: true,
@@ -137,9 +139,10 @@ const SpkCorrective = sequelize.define('SpkCorrective', {
     field: 'kadis_pelapor_approved_at',
   },
   status: {
-    type: DataTypes.ENUM('draft', 'in_progress', 'awaiting_kadis_pusat', 'awaiting_kadis_pelapor', 'completed', 'rejected'),
+    type: DataTypes.STRING(50),
     allowNull: false,
     defaultValue: 'draft',
+    validate: { isIn: [['draft', 'in_progress', 'awaiting_kadis_pusat', 'awaiting_kadis_pelapor', 'completed', 'rejected']] },
   },
   rejectedBy: {
     type: DataTypes.STRING(20),

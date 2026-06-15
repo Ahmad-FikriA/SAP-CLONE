@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── Corrective Request ────────────────────────────────────────────────────────
+
 const CorrectiveRequest = sequelize.define('CorrectiveRequest', {
   id:                 { type: DataTypes.STRING(30),  primaryKey: true },
   notificationDate:   { type: DataTypes.DATEONLY,    allowNull: true,  field: 'notification_date' },
@@ -15,21 +15,23 @@ const CorrectiveRequest = sequelize.define('CorrectiveRequest', {
   requiredEnd:        { type: DataTypes.DATEONLY,    allowNull: true,  field: 'required_end' },
   reportedBy:         { type: DataTypes.STRING(100), allowNull: true,  field: 'reported_by' },
   longText:           { type: DataTypes.TEXT,        allowNull: true,  field: 'long_text' },
-  // Who submitted this request from the app
+
   submittedBy:        { type: DataTypes.STRING(20),  allowNull: true,  field: 'submitted_by' },
   submittedAt:        { type: DataTypes.DATE,        allowNull: true,  field: 'submitted_at' },
-  // Request status
+
   status:             {
-    type: DataTypes.ENUM('draft','submitted','approved','rejected'),
+    type: DataTypes.STRING(50),
     allowNull: false,
     defaultValue: 'draft',
+    validate: { isIn: [['draft','submitted','approved','rejected']] },
   },
-  // Approval fields (same pattern as LembarKerja)
+
   approvalStatus:     {
-    type: DataTypes.ENUM('pending','awaiting_supervisor','awaiting_manager','approved','rejected'),
+    type: DataTypes.STRING(50),
     allowNull: true,
     defaultValue: 'pending',
     field: 'approval_status',
+    validate: { isIn: [['pending','awaiting_supervisor','awaiting_manager','approved','rejected']] },
   },
   approvedBy:         { type: DataTypes.STRING(20),  allowNull: true, field: 'approved_by' },
   approvedAt:         { type: DataTypes.DATE,        allowNull: true, field: 'approved_at' },
@@ -41,7 +43,7 @@ const CorrectiveRequest = sequelize.define('CorrectiveRequest', {
   underscored: true,
 });
 
-// ── Corrective Request Images ─────────────────────────────────────────────────
+
 const CorrectiveRequestImage = sequelize.define('CorrectiveRequestImage', {
   id:         { type: DataTypes.INTEGER,     primaryKey: true, autoIncrement: true },
   requestId:  { type: DataTypes.STRING(30),  allowNull: false, field: 'request_id' },

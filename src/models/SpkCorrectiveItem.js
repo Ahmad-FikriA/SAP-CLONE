@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── SPK Corrective Item ───────────────────────────────────────────────────────
+
 const SpkCorrectiveItem = sequelize.define('SpkCorrectiveItem', {
   itemId: {
     type: DataTypes.INTEGER,
@@ -17,9 +17,10 @@ const SpkCorrectiveItem = sequelize.define('SpkCorrectiveItem', {
     field: 'spk_id',
   },
   itemType: {
-    type: DataTypes.ENUM('material', 'service', 'tool'),
+    type: DataTypes.STRING(30),
     allowNull: false,
     field: 'item_type',
+    validate: { isIn: [['material', 'service', 'tool']] },
   },
   itemName: {
     type: DataTypes.STRING(200),
@@ -42,7 +43,7 @@ const SpkCorrectiveItem = sequelize.define('SpkCorrectiveItem', {
   timestamps: false,
 });
 
-// ── SPK Corrective Photo ──────────────────────────────────────────────────────
+
 const SpkCorrectivePhoto = sequelize.define('SpkCorrectivePhoto', {
   photoId: {
     type: DataTypes.INTEGER,
@@ -56,10 +57,11 @@ const SpkCorrectivePhoto = sequelize.define('SpkCorrectivePhoto', {
     field: 'spk_id',
   },
   photoType: {
-    type: DataTypes.ENUM('before', 'after', 'during', 'documentation'),
+    type: DataTypes.STRING(30),
     allowNull: false,
     defaultValue: 'documentation',
     field: 'photo_type',
+    validate: { isIn: [['before', 'after', 'during', 'documentation']] },
   },
   photoPath: {
     type: DataTypes.STRING(500),

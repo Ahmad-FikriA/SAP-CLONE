@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const Plant = require('../../models/Plant');
 const Equipment = require('../../models/Equipment');
 
-// GET /api/plants  ?search=cidanau
+
 const getAll = async (req, res) => {
   const where = {};
   if (req.query.search) {
@@ -17,14 +17,14 @@ const getAll = async (req, res) => {
   res.json(rows);
 };
 
-// GET /api/plants/:plantId
+
 const getOne = async (req, res) => {
   const plant = await Plant.findByPk(req.params.plantId);
   if (!plant) return res.status(404).json({ error: 'Plant not found' });
   res.json(plant);
 };
 
-// POST /api/plants  body: { plantId, plantName, shortName?, city?, centerLat?, centerLon?, zoom? }
+
 const create = async (req, res) => {
   const { plantId, plantName } = req.body;
   if (!plantId || !plantName)
@@ -35,7 +35,7 @@ const create = async (req, res) => {
   res.status(201).json(plant);
 };
 
-// PUT /api/plants/:plantId
+
 const update = async (req, res) => {
   const plant = await Plant.findByPk(req.params.plantId);
   if (!plant) return res.status(404).json({ error: 'Plant not found' });
@@ -46,7 +46,6 @@ const update = async (req, res) => {
   res.json(plant);
 };
 
-// DELETE /api/plants/:plantId
 const remove = async (req, res) => {
   const eqCount = await Equipment.count({ where: { plantId: req.params.plantId } });
   if (eqCount > 0) {

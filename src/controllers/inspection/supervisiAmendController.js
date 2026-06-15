@@ -14,7 +14,7 @@ const {
   uploadAmendDocuments,
 } = require("./supervisiUpload");
 
-// POST /api/inspection/supervisi/jobs/:jobId/amends
+
 async function createAmend(req, res) {
   try {
     if (!isSupervisiScheduler(req.user)) {
@@ -70,7 +70,7 @@ async function createAmend(req, res) {
   }
 }
 
-// PUT /api/inspection/supervisi/jobs/:jobId/amends/:amendId
+
 async function updateAmend(req, res) {
   try {
     if (!isSupervisiScheduler(req.user)) {
@@ -119,7 +119,6 @@ async function updateAmend(req, res) {
   }
 }
 
-// DELETE /api/inspection/supervisi/jobs/:jobId/amends/:amendId
 async function deleteAmend(req, res) {
   try {
     if (!isSupervisiScheduler(req.user)) {
@@ -144,7 +143,7 @@ async function deleteAmend(req, res) {
   }
 }
 
-// GET /api/inspection/supervisi/jobs/:jobId/amends
+
 async function listAmends(req, res) {
   try {
     const jobId = parseInt(req.params.jobId, 10);

@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── General Task List (header) ───────────────────────────────────────────────
+
 const GeneralTaskList = sequelize.define('GeneralTaskList', {
     taskListId: {
         type: DataTypes.STRING(20),
@@ -16,7 +16,8 @@ const GeneralTaskList = sequelize.define('GeneralTaskList', {
         field: 'task_list_name',
     },
     category: {
-        type: DataTypes.ENUM('Mekanik', 'Listrik', 'Sipil', 'Otomasi'),
+        type: DataTypes.STRING(50),
+        validate: { isIn: [['Mekanik', 'Listrik', 'Sipil', 'Otomasi']] },
         allowNull: false,
     },
     workCenter: {
@@ -30,7 +31,7 @@ const GeneralTaskList = sequelize.define('GeneralTaskList', {
     timestamps: false,
 });
 
-// ── General Task List Activity (child) ──────────────────────────────────────
+
 const GeneralTaskListActivity = sequelize.define('GeneralTaskListActivity', {
     id: {
         type: DataTypes.INTEGER,

@@ -1,23 +1,18 @@
 'use strict';
 
-/**
- * Role-Based Access Control Middleware for Corrective Maintenance
- * Enforces access rules based on user roles and dinas
- */
+
 
 const Notification = require('../models/Notification');
 const SpkCorrective = require('../models/SpkCorrective');
 
-// Allowed roles for creating notifications (Kadis with dinas)
+
 const KADIS_ROLE = 'kadis';
 const KADIS_PUSAT_ROLE = 'kadis_pusat';
 
-// Roles that can work on SPK by dinas
+
 const WORK_CENTER_ROLES = ['teknisi', 'kasie'];
 
-/**
- * Check if user can create notification (must be Kadis or admin with dinas, or just admin)
- */
+
 const requireKadis = (req, res, next) => {
   const { role, dinas } = req.user;
   
@@ -32,13 +27,7 @@ const requireKadis = (req, res, next) => {
   next();
 };
 
-/**
- * Check if user can view specific notification
- * Rules:
- * 1. Kadis Pelapor (creator) - can view own
- * 2. Planner - can view all
- * 3. Kadis Pusat - can view all
- */
+
 const canViewNotification = async (req, res, next) => {
   try {
     const { userId, role, group } = req.user;
@@ -46,18 +35,18 @@ const canViewNotification = async (req, res, next) => {
     
     const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
     
-    // Planner, Admin, and Kadis Pusat can view all
+
     if (role === 'planner' || isPlannerGroup || role === 'admin' || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
-    // Kadis Pelapor can only view own, TAPI Kadis Pusat bisa lihat semua
+
     if (role === KADIS_ROLE) {
       const { dinas } = req.user;
       const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
       
       if (isKadisPusat) {
-         return next(); // Loloskan Kadis PP
+         return next();
       }
 
       const notification = await Notification.findByPk(id);
@@ -82,15 +71,13 @@ const canViewNotification = async (req, res, next) => {
   }
 };
 
-/**
- * Check if user can create SPK Corrective (must be Planner or admin)
- */
+
 const requirePlanner = (req, res, next) => {
   const { role, group } = req.user;
   
   if (role === 'admin') return next();
 
-  // Cek apakah user ada di grup perencanaan
+
   const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
 
   if (role !== 'planner' && !isPlannerGroup) {
@@ -102,15 +89,7 @@ const requirePlanner = (req, res, next) => {
   next();
 };
 
-/**
- * Check if user can view specific SPK Corrective
- * Rules:
- * 1. Teknisi/Kasie - can view only their dinas
- * 2. Planner - can view all
- * 3. Kadis Pusat - can view all
- * 4. Kadis Pelapor - can view only their own reports
- * 5. Admin - can view all
- */
+
 const canViewSpkCorrective = async (req, res, next) => {
   try {
     const { userId, role, dinas, group } = req.user;
@@ -118,12 +97,12 @@ const canViewSpkCorrective = async (req, res, next) => {
     
     const isPlannerGroup = group && group.toLowerCase().includes('perencanaan');
     
-    // Planner, Admin, and Kadis Pusat can view all
+
     if (role === 'planner' || isPlannerGroup || role === 'admin' || role === KADIS_PUSAT_ROLE) {
       return next();
     }
     
-    // Get SPK with notification info
+
     const spk = await SpkCorrective.findByPk(spkId, {
       include: [{
         model: require('../models/Notification'),
@@ -135,11 +114,11 @@ const canViewSpkCorrective = async (req, res, next) => {
       return res.status(404).json({ error: 'SPK Corrective not found' });
     }
     
-    // Kadis Pelapor - can view only their own, TAPI Kadis Pusat bisa lihat semua
+
     if (role === KADIS_ROLE) {
       const isKadisPusat = dinas && dinas.toLowerCase().includes('pusat perawatan');
       if (isKadisPusat) {
-        return next(); // Loloskan Kadis PP
+        return next();
       }
 
       if (spk.notification && spk.notification.kadisPelaporId === userId) {
@@ -150,7 +129,7 @@ const canViewSpkCorrective = async (req, res, next) => {
       });
     }
     
-    // Teknisi/Kasie - check group (spesialisasi)
+
     if (WORK_CENTER_ROLES.includes(role)) {
       const userGroup = (group || '').toLowerCase();
       const wc = (spk.workCenter || '').toLowerCase();
@@ -161,7 +140,7 @@ const canViewSpkCorrective = async (req, res, next) => {
       else if (wc.includes('electric') && (userGroup.includes('listrik') || userGroup.includes('elec'))) isMatch = true;
       else if (wc.includes('civil') && (userGroup.includes('sipil') || userGroup.includes('civil'))) isMatch = true;
       else if (wc.includes('automation') && (userGroup.includes('otomasi') || userGroup.includes('auto'))) isMatch = true;
-      // Temporary fallback for admins testing the flow or no group assigned
+
       else if (!group || userGroup === '') isMatch = true;
 
       if (isMatch) {
@@ -181,21 +160,12 @@ const canViewSpkCorrective = async (req, res, next) => {
   }
 };
 
-/**
- * Check if user can update specific SPK fields
- * Rules:
- * 1. Planner - can only set specific fields during creation
- * 2. Teknisi - can add items, photos, actual data
- * 3. Kasie - can only fill kasie_approval
- * 4. Kadis Pusat - can only fill kadis_pusat_approval
- * 5. Kadis Pelapor - can only fill kadis_pelapor_approval
- */
+
 const validateSpkUpdate = (allowedFields) => {
   return (req, res, next) => {
     const { role } = req.user;
     const updates = Object.keys(req.body);
     
-    // Check if any field is not in allowed list
     const invalidFields = updates.filter(field => !allowedFields.includes(field));
     
     if (invalidFields.length > 0) {
@@ -208,9 +178,7 @@ const validateSpkUpdate = (allowedFields) => {
   };
 };
 
-/**
- * Fields each role can update on SPK Corrective
- */
+
 const PLANNER_FIELDS = [
   'orderNumber', 'createdDate', 'priority', 'equipmentId', 'location',
   'requestedFinishDate', 'damageClassification', 'jobDescription',

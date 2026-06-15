@@ -15,7 +15,7 @@ function buildRecipientIds(user = {}) {
     .filter((value) => value.length > 0);
 }
 
-// GET /api/notifications?module=preventive&unreadOnly=true
+
 router.get('/', verifyToken, async (req, res) => {
   try {
     const { module: mod, unreadOnly } = req.query;
@@ -42,7 +42,7 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-// PATCH /api/notifications/read-all — MUST be before /:id/read
+
 router.patch('/read-all', verifyToken, async (req, res) => {
   try {
     const { module: mod } = req.query;
@@ -64,7 +64,7 @@ router.patch('/read-all', verifyToken, async (req, res) => {
   }
 });
 
-// PATCH /api/notifications/:id/read
+
 router.patch('/:id/read', verifyToken, async (req, res) => {
   try {
     const Model = getModel();

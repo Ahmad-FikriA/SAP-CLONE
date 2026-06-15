@@ -119,6 +119,7 @@ function hasSupervisiAccess(user, options = {}) {
 }
 
 function isSupervisiScheduler(user) {
+
   return getSupervisiAccess(user).kind === "scheduler";
 }
 

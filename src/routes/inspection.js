@@ -67,20 +67,24 @@ const {
   listAmends,
 } = require("../controllers/inspection/supervisiAmendController");
 
+const {
+  clearInspectionSupervisiData,
+} = require("../controllers/inspection/adminController");
 
-// All inspection routes require authentication
+
+
 router.use(verifyToken);
 
-// ── Schedules ────────────────────────────────────────────────────────────────
-router.get("/schedules/next-spk", getNextSpkNumber); // ⚠️ Harus sebelum /:id
-router.post("/schedules/recurring", createRecurringSchedules); // ⚠️ Harus sebelum /:id
+
+router.get("/schedules/next-spk", getNextSpkNumber);
+router.post("/schedules/recurring", createRecurringSchedules);
 router.get("/schedules", listSchedules);
 router.get("/schedules/:id", getSchedule);
 router.post("/schedules", createSchedule);
 router.put("/schedules/:id", updateSchedule);
 router.delete("/schedules/:id", deleteSchedule);
 
-// ── Reports ──────────────────────────────────────────────────────────────────
+
 router.get("/reports", listReports);
 router.get("/reports/:id", getReport);
 router.post("/reports", createReport);
@@ -88,7 +92,7 @@ router.put("/reports/:id", updateReport);
 router.put("/reports/:id/approve", approveReport);
 router.put("/reports/:id/reject", rejectReport);
 
-// ── Follow-ups ───────────────────────────────────────────────────────────────
+
 router.get("/follow-ups", listFollowUps);
 router.get("/follow-ups/:id", getFollowUp);
 router.post("/follow-ups", createFollowUp);
@@ -98,7 +102,8 @@ router.put("/follow-ups/:id/reject", rejectFollowUp);
 
 
 
-// ── Inspection Requests (User → Planner) ─────────────────────────────────────
+
+
 router.get("/requests", listRequests);
 router.get("/requests/:id", getRequest);
 router.post("/requests", createRequest);
@@ -124,5 +129,6 @@ router.post("/supervisi/jobs/:jobId/amends", uploadAmendDocuments, createAmend);
 router.put("/supervisi/jobs/:jobId/amends/:amendId", uploadAmendDocuments, updateAmend);
 router.delete("/supervisi/jobs/:jobId/amends/:amendId", deleteAmend);
 
+router.delete("/clear-dummy-data", clearInspectionSupervisiData);
 
 module.exports = router;

@@ -3,7 +3,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-// ── Notification (Corrective Request) ─────────────────────────────────────────
+
 const Notification = sequelize.define('Notification', {
   notificationId: {
     type: DataTypes.STRING(30),
@@ -70,29 +70,32 @@ const Notification = sequelize.define('Notification', {
     field: 'photo_2',
   },
   status: {
-    type: DataTypes.ENUM('draft', 'submitted', 'menunggu_review_awal_kadis_pp', 'approved', 'ditolak_kadis_pp_awal', 'spk_created', 'closed', 'rejected'),
+    type: DataTypes.STRING(50),
     allowNull: false,
     defaultValue: 'draft',
+    validate: { isIn: [['draft', 'submitted', 'menunggu_review_awal_kadis_pp', 'approved', 'ditolak_kadis_pp_awal', 'spk_created', 'closed', 'rejected']] },
   },
   approvalStatus: {
-    type: DataTypes.ENUM('pending', 'menunggu_review_awal_kadis_pp', 'ditolak_kadis_pp_awal', 'approved', 'rejected', 'spk_masuk', 'spk_issued', 'eksekusi', 'menunggu_review_kadis_pp', 'menunggu_review_kadis_pelapor', 'selesai'),
+    type: DataTypes.STRING(50),
     allowNull: true,
     defaultValue: 'pending',
     field: 'approval_status',
+    validate: { isIn: [['pending', 'menunggu_review_awal_kadis_pp', 'ditolak_kadis_pp_awal', 'approved', 'rejected', 'spk_masuk', 'spk_issued', 'eksekusi', 'menunggu_review_kadis_pp', 'menunggu_review_kadis_pelapor', 'selesai']] },
   },
-  // Work Center untuk routing ke teknisi yang tepat
+
   workCenter: {
-    type: DataTypes.ENUM('electrical', 'civil', 'automation', 'mechanical'),
+    type: DataTypes.STRING(50),
     allowNull: true,
     field: 'work_center',
+    validate: { isIn: [['electrical', 'civil', 'automation', 'mechanical']] },
   },
-  // Nomor SPK SAP yang diisi Planner saat menerima laporan
+
   sapOrderNumber: {
     type: DataTypes.STRING(30),
     allowNull: true,
     field: 'sap_order_number',
   },
-  // Kadis Pelapor - yang membuat laporan/notification ini
+
   kadisPelaporId: {
     type: DataTypes.STRING(20),
     allowNull: true,

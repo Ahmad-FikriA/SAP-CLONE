@@ -7,6 +7,91 @@ const { execSync } = require('child_process');
 const XLSX = require('xlsx');
 const sequelize = require('../../config/database');
 const logger = require('../../services/logger');
+const sqlServerHelpers = require('../../config/sqlServerHelpers');
+
+async function setForeignKeyChecks(enable, transaction) {
+  const isMssql = sequelize.options.dialect === 'mssql';
+  if (isMssql) {
+    if (enable) {
+      await sqlServerHelpers.enableForeignKeyChecks(transaction);
+    } else {
+      await sqlServerHelpers.disableForeignKeyChecks(transaction);
+    }
+  } else {
+    const query = enable ? 'SET FOREIGN_KEY_CHECKS = 1' : 'SET FOREIGN_KEY_CHECKS = 0';
+    await sequelize.query(query, { transaction });
+  }
+}
+
+async function bulkUpsert(model, records, transaction) {
+  const isMssql = sequelize.options.dialect === 'mssql';
+  const modelAttrs = Object.keys(model.rawAttributes);
+  const updateFields = modelAttrs.filter(a => {
+    const attr = model.rawAttributes[a];
+    return !attr.primaryKey;
+  });
+
+  if (!isMssql) {
+    await model.bulkCreate(records, {
+      transaction,
+      updateOnDuplicate: updateFields.length > 0 ? updateFields : undefined,
+      ignoreDuplicates: updateFields.length === 0,
+    });
+  } else {
+    const pks = model.primaryKeyAttributes || [];
+    if (pks.length === 0) {
+      await model.bulkCreate(records, { transaction, ignoreDuplicates: true });
+      return;
+    }
+
+    const existingRecords = await model.findAll({
+      attributes: pks,
+      transaction,
+      raw: true,
+    });
+
+    const makeKeyString = (row) => pks.map(k => String(row[k])).join('|||');
+    const existingKeysSet = new Set(existingRecords.map(makeKeyString));
+
+    const toInsert = [];
+    const toUpdate = [];
+
+    for (const record of records) {
+      if (existingKeysSet.has(makeKeyString(record))) {
+        toUpdate.push(record);
+      } else {
+        toInsert.push(record);
+      }
+    }
+
+    if (toInsert.length > 0) {
+      await model.bulkCreate(toInsert, { transaction });
+    }
+
+    if (toUpdate.length > 0 && updateFields.length > 0) {
+      for (const record of toUpdate) {
+        const whereClause = {};
+        for (const pk of pks) {
+          whereClause[pk] = record[pk];
+        }
+
+        const updateData = {};
+        for (const field of updateFields) {
+          if (record[field] !== undefined) {
+            updateData[field] = record[field];
+          }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await model.update(updateData, {
+            where: whereClause,
+            transaction,
+          });
+        }
+      }
+    }
+  }
+}
 
 // Import models
 const User = require('../../models/User');
@@ -159,19 +244,26 @@ const getSystemStatus = async (req, res) => {
     const memoryPercent = `${Math.round((usedMem / totalMem) * 100)}%`;
     const ramStr = `${(usedMem / (1024 ** 3)).toFixed(2)} GB / ${(totalMem / (1024 ** 3)).toFixed(2)} GB`;
 
+    const isMssql = sequelize.options.dialect === 'mssql';
     let dbStatus = 'Healthy';
-    let connections = 5;
-    let mysqlVersion = '8.0.36';
+    let connections = logger.getActiveUserCount();
+    let mysqlVersion = isMssql ? 'SQL Server' : '8.0.36';
 
     try {
       await sequelize.authenticate();
-      const [versionResult] = await sequelize.query("SELECT VERSION() as version");
+      const versionQuery = isMssql ? "SELECT @@VERSION as version" : "SELECT VERSION() as version";
+      const [versionResult] = await sequelize.query(versionQuery);
       if (versionResult && versionResult[0]) {
         mysqlVersion = versionResult[0].version;
+        if (isMssql && mysqlVersion.includes('\n')) {
+          mysqlVersion = mysqlVersion.split('\n')[0].trim();
+        }
       }
-      const [threadsResult] = await sequelize.query("SHOW STATUS LIKE 'Threads_connected'");
-      if (threadsResult && threadsResult[0]) {
-        connections = parseInt(threadsResult[0].Value || '5', 10);
+      if (!isMssql) {
+        const [threadsResult] = await sequelize.query("SHOW STATUS LIKE 'Threads_connected'");
+        if (threadsResult && threadsResult[0]) {
+          connections = parseInt(threadsResult[0].Value || '5', 10);
+        }
       }
     } catch (dbErr) {
       dbStatus = 'Unhealthy: ' + dbErr.message;
@@ -291,7 +383,7 @@ const runCommand = async (req, res) => {
         const filename = `db_backup_${Date.now()}.sql`;
         const filepath = path.join(backupDir, filename);
         // Create an empty mock backup file just to show it
-        fs.writeFileSync(filepath, '-- MySQL Dump of kti_smartcare\n-- Created via Admin CLI\n');
+        fs.writeFileSync(filepath, '-- Database Dump of kti_smartcare\n-- Created via Admin CLI\n');
         logger.addLog('INFO', 'DB', `Backup stored at '/storage/backups/${filename}'`);
         output = `[Database Backup] Berhasil! Cadangan disimpan di '/storage/backups/${filename}' (Size: 1KB).`;
         break;
@@ -328,19 +420,26 @@ async function getSystemStatusData() {
   const memory = `${Math.round((usedMem / totalMem) * 100)}%`;
   const ramStr = `${(usedMem / (1024 ** 3)).toFixed(2)} GB / ${(totalMem / (1024 ** 3)).toFixed(2)} GB`;
 
+  const isMssql = sequelize.options.dialect === 'mssql';
   let dbStatus = 'CONNECTED';
-  let connections = 5;
-  let mysqlVersion = '8.0.36';
+  let connections = logger.getActiveUserCount();
+  let mysqlVersion = isMssql ? 'SQL Server' : '8.0.36';
 
   try {
     await sequelize.authenticate();
-    const [versionResult] = await sequelize.query("SELECT VERSION() as version");
+    const versionQuery = isMssql ? "SELECT @@VERSION as version" : "SELECT VERSION() as version";
+    const [versionResult] = await sequelize.query(versionQuery);
     if (versionResult && versionResult[0]) {
       mysqlVersion = versionResult[0].version;
+      if (isMssql && mysqlVersion.includes('\n')) {
+        mysqlVersion = mysqlVersion.split('\n')[0].trim();
+      }
     }
-    const [threadsResult] = await sequelize.query("SHOW STATUS LIKE 'Threads_connected'");
-    if (threadsResult && threadsResult[0]) {
-      connections = threadsResult[0].Value;
+    if (!isMssql) {
+      const [threadsResult] = await sequelize.query("SHOW STATUS LIKE 'Threads_connected'");
+      if (threadsResult && threadsResult[0]) {
+        connections = threadsResult[0].Value;
+      }
     }
   } catch (e) {
     dbStatus = 'DISCONNECTED';
@@ -529,7 +628,7 @@ const importModuleData = async (req, res) => {
     logger.addLog('INFO', 'UTILITY', `Admin mengimpor data module: ${moduleName}`);
 
     // Disable foreign key checks for safe batch loading
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction: t });
+    await setForeignKeyChecks(false, t);
 
     // Insert order = parents first, children last (reverse of MODULE_MODELS which is children-first)
     const models = [...MODULE_MODELS[moduleName]].reverse();
@@ -554,57 +653,32 @@ const importModuleData = async (req, res) => {
           }));
         }
 
-        // Use updateOnDuplicate for all fields to gracefully handle re-imports
-        const modelAttrs = Object.keys(item.model.rawAttributes);
-        const updateFields = modelAttrs.filter(a => {
-          const attr = item.model.rawAttributes[a];
-          return !attr.primaryKey;
-        });
-
-        await item.model.bulkCreate(records, {
-          transaction: t,
-          updateOnDuplicate: updateFields.length > 0 ? updateFields : undefined,
-          ignoreDuplicates: updateFields.length === 0,
-        });
+        await bulkUpsert(item.model, records, t);
         logger.addLog('INFO', 'UTILITY', `Imported ${records.length} records ke ${item.name}`);
       }
 
       // After SapSpkCorrective is imported, insert SpkMaterial records
       if (isCorrective && item.name === 'SapSpkCorrective' && spkMaterialRecords && spkMaterialRecords.length > 0) {
         const matModel = associations.SpkMaterial;
-        const matAttrs = Object.keys(matModel.rawAttributes);
-        const matUpdateFields = matAttrs.filter(a => !matModel.rawAttributes[a].primaryKey);
-
-        await matModel.bulkCreate(spkMaterialRecords, {
-          transaction: t,
-          updateOnDuplicate: matUpdateFields.length > 0 ? matUpdateFields : undefined,
-          ignoreDuplicates: matUpdateFields.length === 0,
-        });
+        await bulkUpsert(matModel, spkMaterialRecords, t);
         logger.addLog('INFO', 'UTILITY', `Imported ${spkMaterialRecords.length} records ke SpkMaterial (corrective)`);
       }
 
       // After Spk is imported, insert SpkMaterial records for preventive
       if (isPreventive && item.name === 'Spk' && spkMaterialRecords && spkMaterialRecords.length > 0) {
         const matModel = associations.SpkMaterial;
-        const matAttrs = Object.keys(matModel.rawAttributes);
-        const matUpdateFields = matAttrs.filter(a => !matModel.rawAttributes[a].primaryKey);
-
-        await matModel.bulkCreate(spkMaterialRecords, {
-          transaction: t,
-          updateOnDuplicate: matUpdateFields.length > 0 ? matUpdateFields : undefined,
-          ignoreDuplicates: matUpdateFields.length === 0,
-        });
+        await bulkUpsert(matModel, spkMaterialRecords, t);
         logger.addLog('INFO', 'UTILITY', `Imported ${spkMaterialRecords.length} records ke SpkMaterial (preventive)`);
       }
     }
 
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction: t });
+    await setForeignKeyChecks(true, t);
     await t.commit();
 
     res.json({ success: true, message: `Berhasil mengimpor data untuk modul ${moduleName}` });
   } catch (error) {
     try {
-      await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction: t });
+      await setForeignKeyChecks(true, t);
     } catch (e) {}
     await t.rollback();
     logger.addLog('ERROR', 'UTILITY', `Gagal mengimpor data modul: ${error.message}`);
@@ -624,7 +698,7 @@ const clearModuleData = async (req, res) => {
 
     logger.addLog('WARN', 'UTILITY', `Admin membersihkan seluruh data untuk modul: ${moduleName}`);
 
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction: t });
+    await setForeignKeyChecks(false, t);
 
     // ── Corrective-specific: delete ONLY corrective SpkMaterial records first
     if (moduleName === 'corrective') {
@@ -644,13 +718,13 @@ const clearModuleData = async (req, res) => {
       await item.model.destroy({ where: {}, transaction: t, force: true });
     }
 
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction: t });
+    await setForeignKeyChecks(true, t);
     await t.commit();
 
     res.json({ success: true, message: `Berhasil menghapus seluruh data pada modul ${moduleName}` });
   } catch (error) {
     try {
-      await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction: t });
+      await setForeignKeyChecks(true, t);
     } catch (e) {}
     await t.rollback();
     logger.addLog('ERROR', 'UTILITY', `Gagal membersihkan data modul: ${error.message}`);

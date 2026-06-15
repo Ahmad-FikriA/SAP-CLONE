@@ -1,20 +1,25 @@
 'use strict';
 
 const sequelize = require('./config/database');
+const { DataTypes } = require('sequelize');
 const { detectKadisFromFuncLoc } = require('./services/spkImportService');
 
 async function migrate() {
   try {
-    // 1. Add the column (safe to run if already exists — catches the error)
-    try {
-      await sequelize.query('ALTER TABLE spk ADD COLUMN kadis_area VARCHAR(50) NULL');
-      console.log('✅ Kolom kadis_area ditambahkan ke tabel spk');
-    } catch (e) {
-      if (e.message.includes('Duplicate column')) {
-        console.log('ℹ️  Kolom kadis_area sudah ada, skip ALTER TABLE');
-      } else {
-        throw e;
-      }
+    await sequelize.authenticate();
+    const qi = sequelize.getQueryInterface();
+
+    // 1. Add the column (safe — checks existence first)
+    const tableDesc = await qi.describeTable('spk');
+
+    if (tableDesc.kadis_area) {
+      console.log('Kolom kadis_area sudah ada, skip ALTER TABLE');
+    } else {
+      await qi.addColumn('spk', 'kadis_area', {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      });
+      console.log('Kolom kadis_area ditambahkan ke tabel spk');
     }
 
     // 2. Backfill: join spk → spk_equipment, take the first functional_location per spk
@@ -30,7 +35,7 @@ async function migrate() {
       WHERE s.kadis_area IS NULL
     `);
 
-    console.log(`🔄 Memproses ${rows.length} SPK untuk backfill kadis_area...`);
+    console.log(`Memproses ${rows.length} SPK untuk backfill kadis_area...`);
 
     const counts = {};
     let nullCount = 0;
@@ -39,8 +44,8 @@ async function migrate() {
       const kadisArea = detectKadisFromFuncLoc(row.functional_location);
       if (kadisArea) {
         await sequelize.query(
-          'UPDATE spk SET kadis_area = ? WHERE spk_number = ?',
-          { replacements: [kadisArea, row.spk_number] }
+          'UPDATE spk SET kadis_area = :kadisArea WHERE spk_number = :spkNumber',
+          { replacements: { kadisArea, spkNumber: row.spk_number } }
         );
         counts[kadisArea] = (counts[kadisArea] || 0) + 1;
       } else {
@@ -48,14 +53,14 @@ async function migrate() {
       }
     }
 
-    console.log('✅ Backfill selesai:');
+    console.log('Backfill selesai:');
     for (const [area, count] of Object.entries(counts)) {
       console.log(`   ${area}: ${count} SPK`);
     }
     if (nullCount > 0) console.log(`   (tidak teridentifikasi / tanpa equipment): ${nullCount} SPK`);
 
   } catch (e) {
-    console.error('❌ Migrasi gagal:', e.message);
+    console.error('Migrasi gagal:', e.message);
     process.exit(1);
   } finally {
     await sequelize.close();

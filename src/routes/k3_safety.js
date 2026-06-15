@@ -9,10 +9,10 @@ const k3SafetyCtrl = require('../controllers/k3_safety/k3SafetyController');
 
 const router = express.Router();
 
-// ── Multer Config for K3 Safety Photos ────────────────
+
 const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'k3_safety');
 
-// Ensure directory exists
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -40,21 +40,21 @@ const uploadK3Photos = multer({
   },
 });
 
-// ── Multer Config for Investigasi (photos + document) ────────────────
+
 const uploadInvestigasi = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB per file
-    files: 3, // Max 2 photos + 1 document
+    fileSize: 5 * 1024 * 1024,
+    files: 3,
   },
   fileFilter: (req, file, cb) => {
-    // Accept images for fotoInvestigasi
+
     if (file.fieldname === 'fotoInvestigasi') {
       if (!file.mimetype.startsWith('image/')) {
         return cb(new Error('Foto harus berupa file gambar'), false);
       }
     }
-    // Accept docs for dokumenInvestigasi
+
     if (file.fieldname === 'dokumenInvestigasi') {
       const allowedMimes = [
         'application/pdf',
@@ -71,9 +71,9 @@ const uploadInvestigasi = multer({
   },
 });
 
-// ── K3 Safety Routes ────────────────────────────────────────────────────────────
 
-// POST /api/k3-safety
+
+
 router.post(
   '/', 
   verifyToken, 
@@ -90,25 +90,22 @@ router.get('/stats', verifyToken, k3SafetyCtrl.getStats);
 // GET /api/k3-safety
 router.get('/', verifyToken, k3SafetyCtrl.getAll);
 
-// PUT /api/k3-safety/:id/validasi-awal
+
 router.put('/:id/validasi-awal', verifyToken, k3SafetyCtrl.validasiAwal);
 
-// PUT /api/k3-safety/:id/perbaikan
+
 router.put('/:id/perbaikan', verifyToken, uploadK3Photos.array('fotoPerbaikan', 2), k3SafetyCtrl.actionPerbaikan);
 
-// PUT /api/k3-safety/:id/validasi-hasil
+
 router.put('/:id/validasi-hasil', verifyToken, k3SafetyCtrl.validasiHasil);
 
-// PUT /api/k3-safety/:id/validasi-akhir
+
 router.put('/:id/validasi-akhir', verifyToken, k3SafetyCtrl.validasiAkhir);
 
-// DELETE /api/k3-safety/:id
 router.delete('/:id', verifyToken, k3SafetyCtrl.deleteReport);
 
-// DELETE /api/k3-safety
 router.delete('/', verifyToken, k3SafetyCtrl.deleteAllReports);
 
-// ── Investigasi Routes ──────────────────────────────────────────────────────────
 
 // PUT /api/k3-safety/:id/revert-step
 router.put('/:id/revert-step', verifyToken, k3SafetyCtrl.revertStep);
@@ -125,10 +122,10 @@ router.put(
   k3SafetyCtrl.submitInvestigasi
 );
 
-// PUT /api/k3-safety/:id/verifikasi-investigasi
+
 router.put('/:id/verifikasi-investigasi', verifyToken, k3SafetyCtrl.verifikasiInvestigasi);
 
-// PUT /api/k3-safety/:id/validasi-investigasi-kadiv
+
 router.put('/:id/validasi-investigasi-kadiv', verifyToken, k3SafetyCtrl.validasiInvestigasiKadiv);
 
 module.exports = router;

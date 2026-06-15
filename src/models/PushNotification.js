@@ -29,8 +29,16 @@ const PushNotification = sequelize.define(
       allowNull: false,
     },
     data: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
+      get() {
+        const raw = this.getDataValue('data');
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch { return raw; }
+      },
+      set(val) {
+        this.setDataValue('data', val ? JSON.stringify(val) : null);
+      },
     },
     recipientId: {
       type: DataTypes.STRING(20),

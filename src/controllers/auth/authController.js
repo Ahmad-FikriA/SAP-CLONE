@@ -121,9 +121,9 @@ const registerFcmToken = async (req, res) => {
     if (!fcmToken) {
       return res.status(400).json({ error: 'fcmToken required' });
     }
-    const userId = req.user.userId; // set by verifyToken middleware
+    const userId = req.user.userId;
     
-    // Explicitly update to ensure model hooks/fields are processed correctly
+
     const user = await User.findByPk(userId);
     if (user) {
       user.fcmToken = fcmToken;

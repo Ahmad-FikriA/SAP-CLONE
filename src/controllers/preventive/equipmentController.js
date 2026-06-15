@@ -22,8 +22,7 @@ const GROUP_TO_CATEGORY = {
   Otomasi:  'Otomasi',
 };
 
-// GET /api/equipment
-// Query: ?category=Mekanik  ?search=pompa  ?limit=50  ?offset=0  ?funcLocId=A-A1-01
+
 const getAll = async (req, res) => {
   const VALID_CAT = ['Mekanik', 'Listrik', 'Sipil', 'Otomasi'];
   const where = {};
@@ -71,7 +70,7 @@ const getAll = async (req, res) => {
   res.json({ total: count, limit, offset, data: rows });
 };
 
-// POST /api/equipment
+
 const create = async (req, res) => {
   const { equipmentId, equipmentName } = req.body;
   if (!equipmentId || !equipmentName) {
@@ -93,14 +92,14 @@ const create = async (req, res) => {
   res.status(201).json(eq);
 };
 
-// GET /api/equipment/:equipmentId
+
 const getOne = async (req, res) => {
   const eq = await Equipment.findByPk(req.params.equipmentId);
   if (!eq) return res.status(404).json({ error: 'Equipment not found' });
 
   const result = eq.toJSON();
 
-  // Resolve polygon from plant GeoJSON if feature name is set
+
   if (result.polygonFeatureName && result.plantId) {
     try {
       const geojsonPath = path.join(MAPS_DIR, `${result.plantId}.geojson`);
@@ -111,21 +110,21 @@ const getOne = async (req, res) => {
             && f.geometry?.type === 'Polygon'
         );
         if (feature) {
-          // GeoJSON is [lon, lat] — convert to [lat, lon] for mobile
+
           result.boundaryPolygon = feature.geometry.coordinates[0].map(
             ([lon, lat]) => [lat, lon]
           );
         }
       }
     } catch (_) {
-      // GeoJSON read failure is non-fatal — omit boundaryPolygon
+
     }
   }
 
   res.json(result);
 };
 
-// PUT /api/equipment/:equipmentId
+
 const update = async (req, res) => {
   try {
     const eq = await Equipment.findByPk(req.params.equipmentId);
@@ -150,8 +149,7 @@ const update = async (req, res) => {
   }
 };
 
-// PUT /api/equipment/:equipmentId/rename-id
-// Renames the primary key and cascades to all referencing tables in one transaction.
+
 const renameId = async (req, res) => {
   const oldId = req.params.equipmentId;
   const newId = String(req.body.newId || '').trim();
@@ -164,20 +162,23 @@ const renameId = async (req, res) => {
   const conflict = await Equipment.findByPk(newId);
   if (conflict) return res.status(409).json({ error: `Equipment ID "${newId}" already exists` });
 
+  const sequelize = require('../../config/database');
+  const { disableForeignKeyChecksForTables, enableForeignKeyChecksForTables } = require('../../config/sqlServerHelpers');
+  const fkTables = ['equipment', 'spk_equipment', 'notifications', 'equipment_interval_mappings'];
   await sequelize.transaction(async (t) => {
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction: t });
+    await disableForeignKeyChecksForTables(fkTables, t);
     await sequelize.query('UPDATE equipment SET equipment_id = ? WHERE equipment_id = ?',                       { replacements: [newId, oldId], transaction: t });
     await sequelize.query('UPDATE spk_equipment SET equipment_id = ? WHERE equipment_id = ?',                  { replacements: [newId, oldId], transaction: t });
     await sequelize.query('UPDATE notifications SET equipment_id = ? WHERE equipment_id = ?',                  { replacements: [newId, oldId], transaction: t });
     await sequelize.query('UPDATE equipment_interval_mappings SET equipment_id = ? WHERE equipment_id = ?',    { replacements: [newId, oldId], transaction: t });
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction: t });
+    await enableForeignKeyChecksForTables(fkTables, t);
   });
 
   const updated = await Equipment.findByPk(newId);
   res.json(updated);
 };
 
-// POST /api/equipment/bulk-delete
+
 const bulkDelete = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || !ids.length) {
@@ -187,15 +188,13 @@ const bulkDelete = async (req, res) => {
   res.json({ message: `Deleted ${count} equipment(s)` });
 };
 
-// DELETE /api/equipment/:equipmentId
 const remove = async (req, res) => {
   const count = await Equipment.destroy({ where: { equipmentId: req.params.equipmentId } });
   if (!count) return res.status(404).json({ error: 'Equipment not found' });
   res.json({ message: 'Deleted' });
 };
 
-// POST /api/equipment/bulk-update
-// Body: { ids: ["EQ001","EQ002"], plantId: "I-22L001", plantName: "PS I Cidanau" }
+
 const bulkUpdate = async (req, res) => {
   const { ids, ...fields } = req.body;
   if (!Array.isArray(ids) || !ids.length)
@@ -207,12 +206,7 @@ const bulkUpdate = async (req, res) => {
   res.json({ message: `Updated ${count} equipment(s)` });
 };
 
-// POST /api/equipment/import-excel
-// Expects multipart/form-data field "file" (.xlsx).
-// Header row columns (case-insensitive, spaces/underscores ignored):
-//   equipment_id | equipment_name | category | func_loc_id | functional_location
-//   plant_id | plant_name
-// Rows are upserted — safe to re-import after updates.
+
 const importExcel = async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded. Send field "file" as multipart/form-data.' });
 
@@ -222,12 +216,10 @@ const importExcel = async (req, res) => {
   const workbook  = XLSX.read(req.file.buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
 
-  // Normalise header names (lowercase, strip spaces/underscores/dashes)
+
   function norm(s) { return String(s || '').toLowerCase().replace(/[\s_\.\-]/g, ''); }
 
-  // SAP exports often have 1-2 title rows before the real header.
-  // Scan raw rows until we find one that looks like a real header
-  // (contains a cell that normalises to a known equipment field name).
+
   const KNOWN_HEADERS = new Set(['equipment', 'equipmentid', 'equipid', 'equipmentname', 'name', 'description', 'descriptionoftechnicalobject']);
   const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', header: 1 });
   let headerRowIdx = 0;
@@ -247,8 +239,7 @@ const importExcel = async (req, res) => {
     if (['category', 'cat', 'kategori', 'pg', 'plannergroup'].includes(n))                       map.category           = k;
     if (['funclocid', 'funcloc', 'funclocation', 'funclocation', 'functionallocationid'].includes(n)) map.funcLocId       = k;
     if (['functionallocation'].includes(n))                                                       map.functionalLocation = k;
-    // SAP "Location" column = plant section ID (e.g. I-22L001) — use as plantId
-    // SAP "Plant" column = company code (e.g. KTI1) — lower priority, only use if no Location
+
     if (n === 'location')                                                                          map.plantId            = k;
     else if (['plantid', 'werkid'].includes(n))                                                   map.plantId            = map.plantId || k;
     if (n === 'plant' && !map.plantId)                                                            map.plantId            = k;
@@ -262,7 +253,7 @@ const importExcel = async (req, res) => {
     });
   }
 
-  // SAP PG column uses numeric codes; also accept text values
+
   const VALID_CATEGORIES = {
     mekanik: 'Mekanik', mechanical: 'Mekanik', '221': 'Mekanik',
     listrik: 'Listrik', electrical: 'Listrik', '222': 'Listrik',
@@ -293,7 +284,7 @@ const importExcel = async (req, res) => {
     try {
       const [, created] = await Equipment.upsert({ equipmentId, ...vals });
       imported++;
-      if (!created) skipped++; // counted as updated — subtract from "new" mentally
+      if (!created) skipped++;
     } catch (err) {
       errors.push('Row skipped: ' + equipmentId + ' — ' + err.message);
       skipped++;
@@ -308,7 +299,7 @@ const importExcel = async (req, res) => {
   });
 };
 
-// GET /api/equipment/:equipmentId/measurement-history
+
 const getMeasurementHistory = async (req, res) => {
   const { equipmentId } = req.params;
 
@@ -370,10 +361,7 @@ const getMeasurementHistory = async (req, res) => {
   res.json(rows);
 };
 
-// POST /api/equipment/sync-sipil
-// Reads data/sipil_funcloc_mappings.json and upserts every entry into:
-//   1. equipment table  (category=Sipil, equipmentId=funcLocId)
-//   2. sipil_funcloc_mappings table (for SPK importer interval/taskList resolution)
+
 const syncSipilFuncloc = async (req, res) => {
   if (!fs.existsSync(SIPIL_FUNCLOC_JSON)) {
     return res.status(404).json({ error: 'sipil_funcloc_mappings.json not found in data/' });

@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const sequelize = require('../../config/database');
 const PreventiveWeekSchedule = require('../../models/PreventiveWeekSchedule');
 
-// All valid intervals in order
+
 const INTERVALS = [
   { key: '1wk',  weeks: 1  },
   { key: '2wk',  weeks: 2  },
@@ -16,14 +16,11 @@ const INTERVALS = [
   { key: '24wk', weeks: 24 },
 ];
 
-/**
- * Compute the Monday (weekStart) and Sunday (weekEnd) of ISO week W in a given year.
- * ISO week 1 is the week containing January 4th.
- */
+
 function getISOWeekDateRange(week, year) {
-  // Use UTC throughout so toISOString() never shifts the date
+
   const jan4 = new Date(Date.UTC(year, 0, 4));
-  const jan4Day = jan4.getUTCDay() || 7; // convert 0 (Sun) → 7
+  const jan4Day = jan4.getUTCDay() || 7;
   const week1Mon = new Date(jan4);
   week1Mon.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
 
@@ -39,7 +36,7 @@ function getISOWeekDateRange(week, year) {
   };
 }
 
-// GET /api/preventive-schedule?year=2026&week=15
+
 const getForWeek = async (req, res) => {
   const week = parseInt(req.query.week, 10);
   const year = parseInt(req.query.year, 10);
@@ -54,7 +51,7 @@ const getForWeek = async (req, res) => {
     order: [['interval', 'ASC']],
   });
 
-  // Sort by the canonical interval order
+
   const intervalOrder = INTERVALS.map(i => i.key);
   const activeIntervals = rows
     .map(r => r.interval)
@@ -65,8 +62,7 @@ const getForWeek = async (req, res) => {
   res.json({ year, week, weekStart, weekEnd, activeIntervals });
 };
 
-// GET /api/preventive-schedule/year?year=2026
-// Returns full schedule for a year: { week: N, intervals: ['1wk', ...] }[]
+
 const getForYear = async (req, res) => {
   const year = parseInt(req.query.year, 10);
   if (!year) return res.status(400).json({ error: 'year is required' });
@@ -77,7 +73,7 @@ const getForYear = async (req, res) => {
     order: [['weekNumber', 'ASC'], ['interval', 'ASC']],
   });
 
-  // Group by week
+
   const byWeek = {};
   for (const r of rows) {
     if (!byWeek[r.weekNumber]) byWeek[r.weekNumber] = [];
@@ -107,7 +103,7 @@ const generateFromFormula = async (req, res) => {
   const year = parseInt(req.body.year, 10);
   if (!year) return res.status(400).json({ error: 'year is required' });
 
-  const overwrite = req.body.overwrite !== false; // default true
+  const overwrite = req.body.overwrite !== false;
 
   if (overwrite) {
     await PreventiveWeekSchedule.destroy({ where: { year } });
@@ -123,14 +119,16 @@ const generateFromFormula = async (req, res) => {
     }
   }
 
-  await PreventiveWeekSchedule.bulkCreate(toInsert, {
-    ignoreDuplicates: true,
-  });
+  for (const item of toInsert) {
+    await PreventiveWeekSchedule.findOrCreate({
+      where: { year: item.year, weekNumber: item.weekNumber, interval: item.interval },
+      defaults: item,
+    });
+  }
 
   res.json({ message: `Generated schedule for ${year}`, count: toInsert.length, year });
 };
 
-// DELETE /api/preventive-schedule?year=2026
 const clearYear = async (req, res) => {
   const year = parseInt(req.query.year, 10);
   if (!year) return res.status(400).json({ error: 'year is required' });
@@ -139,8 +137,7 @@ const clearYear = async (req, res) => {
   res.json({ message: `Cleared ${count} schedule entries for ${year}`, year });
 };
 
-// POST /api/preventive-schedule/toggle
-// Body: { year, week, interval }  →  toggles the cell on/off
+
 const toggleCell = async (req, res) => {
   const year     = parseInt(req.body.year, 10);
   const week     = parseInt(req.body.week, 10);

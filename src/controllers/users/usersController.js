@@ -7,7 +7,7 @@ const { Spk } = require('../../models/Spk');
 
 const SAFE = { attributes: { exclude: ['password'] } };
 
-// GET /api/users
+
 const getAll = async (req, res) => {
   try {
     const where = {};
@@ -21,7 +21,7 @@ const getAll = async (req, res) => {
   }
 };
 
-// POST /api/users
+
 const create = async (req, res) => {
   try {
     const { id, nik, password, name, role, email, dinas, divisi, group, permissions } = req.body;
@@ -40,7 +40,7 @@ const create = async (req, res) => {
   }
 };
 
-// PUT /api/users/:id
+
 const update = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -54,7 +54,9 @@ const update = async (req, res) => {
   }
 };
 
-// POST /api/users/bulk-delete
+
+
+
 const bulkDelete = async (req, res) => {
   try {
     const { ids } = req.body;
@@ -69,7 +71,7 @@ const bulkDelete = async (req, res) => {
   }
 };
 
-// DELETE /api/users/:id
+
 const remove = async (req, res) => {
   try {
     const count = await User.destroy({ where: { id: req.params.id } });
@@ -81,7 +83,7 @@ const remove = async (req, res) => {
   }
 };
 
-// GET /api/users/stats
+
 const getStats = async (req, res) => {
   try {
     const users = await User.findAll({

@@ -2,13 +2,9 @@
 
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
+const { isTableNotFoundError } = require("../config/sqlServerHelpers");
 
-/**
- * SupervisiJob — pekerjaan supervisi yang dibuat oleh Planner.
- *
- * Dinas Inspeksi wajib melakukan kunjungan SETIAP HARI selama range
- * waktuMulai–waktuBerakhir. Setiap hari dicatat di SupervisiVisit.
- */
+
 const SupervisiJob = sequelize.define(
   "SupervisiJob",
   {
@@ -73,15 +69,24 @@ const SupervisiJob = sequelize.define(
       comment: "Tanggal akhir amend",
     },
     amendDocuments: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
-      comment: "Array path dokumen amend",
+      comment: "Array path dokumen amend (JSON string)",
+      get() {
+        const raw = this.getDataValue('amendDocuments');
+        if (!raw) return [];
+        if (typeof raw !== 'string') return raw;
+        try { return JSON.parse(raw); } catch { return []; }
+      },
+      set(val) {
+        this.setDataValue('amendDocuments', val ? (typeof val === 'string' ? val : JSON.stringify(val)) : '[]');
+      },
     },
     status: {
-      type: DataTypes.ENUM("draft", "active", "completed", "cancelled"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: "draft",
+      validate: { isIn: [["draft", "active", "completed", "cancelled"]] },
     },
     cancelReason: {
       type: DataTypes.TEXT,
@@ -110,11 +115,18 @@ const SupervisiJob = sequelize.define(
       comment: "Nama area atau lokasi proyek",
     },
     locations: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
-      comment:
-        "Array of locations: [{ id, namaArea, latitude, longitude, radius }]",
+      comment: "Array of locations: [{ id, namaArea, latitude, longitude, radius }] (JSON string)",
+      get() {
+        const raw = this.getDataValue('locations');
+        if (!raw) return [];
+        if (typeof raw !== 'string') return raw;
+        try { return JSON.parse(raw); } catch { return []; }
+      },
+      set(val) {
+        this.setDataValue('locations', val ? (typeof val === 'string' ? val : JSON.stringify(val)) : '[]');
+      },
     },
     radiusExemptionStartDate: {
       type: DataTypes.DATEONLY,
@@ -161,23 +173,15 @@ async function ensureSupervisiJobSchema() {
   try {
     table = await queryInterface.describeTable(tableName);
   } catch (err) {
-    const code = err?.original?.code || err?.parent?.code || err?.code;
-    const message = String(err?.message || "");
-
-    if (
-      code === "ER_NO_SUCH_TABLE" ||
-      code === "ER_BAD_TABLE_ERROR" ||
-      message.includes("doesn't exist")
-    ) {
+    if (isTableNotFoundError(err)) {
       return;
     }
-
     throw err;
   }
 
   if (!table.locations) {
     await queryInterface.addColumn(tableName, "locations", {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
       comment: "Array of locations",
     });
@@ -209,9 +213,8 @@ async function ensureSupervisiJobSchema() {
 
   if (!table.amendDocuments) {
     await queryInterface.addColumn(tableName, "amendDocuments", {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
       comment: "Array path dokumen amend",
     });
   }
@@ -253,7 +256,6 @@ async function ensureSupervisiJobSchema() {
     await queryInterface.addColumn(tableName, "cancelReason", {
       type: DataTypes.TEXT,
       allowNull: true,
-      comment: "Alasan pembatalan pekerjaan",
     });
   }
 
@@ -261,7 +263,6 @@ async function ensureSupervisiJobSchema() {
     await queryInterface.addColumn(tableName, "radiusExemptionStartDate", {
       type: DataTypes.DATEONLY,
       allowNull: true,
-      comment: "Tanggal mulai pengecualian kewajiban submit dalam radius",
     });
   }
 
@@ -269,7 +270,6 @@ async function ensureSupervisiJobSchema() {
     await queryInterface.addColumn(tableName, "radiusExemptionEndDate", {
       type: DataTypes.DATEONLY,
       allowNull: true,
-      comment: "Tanggal akhir pengecualian kewajiban submit dalam radius",
     });
   }
 
@@ -277,7 +277,6 @@ async function ensureSupervisiJobSchema() {
     await queryInterface.addColumn(tableName, "radiusExemptionReason", {
       type: DataTypes.TEXT,
       allowNull: true,
-      comment: "Alasan planner menonaktifkan kewajiban radius",
     });
   }
 
@@ -285,7 +284,6 @@ async function ensureSupervisiJobSchema() {
     await queryInterface.addColumn(tableName, "radiusExemptionBy", {
       type: DataTypes.STRING(100),
       allowNull: true,
-      comment: "NIK planner yang terakhir mengubah pengecualian radius",
     });
   }
 
@@ -293,35 +291,34 @@ async function ensureSupervisiJobSchema() {
     await queryInterface.addColumn(tableName, "radiusExemptionUpdatedAt", {
       type: DataTypes.DATE,
       allowNull: true,
-      comment: "Waktu perubahan pengecualian radius",
     });
   }
 
-  await queryInterface.changeColumn(tableName, "nilaiPekerjaan", {
-    type: DataTypes.DECIMAL(24, 2),
-    allowNull: true,
-    comment: "Nilai kontrak pekerjaan (Rupiah)",
-  });
-  await queryInterface.changeColumn(tableName, "pelaksana", {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    comment: "Nama vendor / kontraktor pelaksana pekerjaan",
-  });
-  await queryInterface.changeColumn(tableName, "waktuMulai", {
-    type: DataTypes.DATEONLY,
-    allowNull: true,
-    comment: "Tanggal mulai pekerjaan",
-  });
-  await queryInterface.changeColumn(tableName, "waktuBerakhir", {
-    type: DataTypes.DATEONLY,
-    allowNull: true,
-    comment: "Tanggal berakhir pekerjaan",
-  });
-  await queryInterface.changeColumn(tableName, "status", {
-    type: DataTypes.ENUM("draft", "active", "completed", "cancelled"),
-    allowNull: false,
-    defaultValue: "draft",
-  });
+  try {
+    await queryInterface.changeColumn(tableName, "nilaiPekerjaan", {
+      type: DataTypes.DECIMAL(24, 2),
+      allowNull: true,
+    });
+    await queryInterface.changeColumn(tableName, "pelaksana", {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    });
+    await queryInterface.changeColumn(tableName, "waktuMulai", {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    });
+    await queryInterface.changeColumn(tableName, "waktuBerakhir", {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    });
+    await queryInterface.changeColumn(tableName, "status", {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "draft",
+    });
+  } catch (err) {
+    console.warn("[SupervisiJob] changeColumn warning:", err.message);
+  }
 }
 
 module.exports = SupervisiJob;

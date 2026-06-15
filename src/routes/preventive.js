@@ -19,7 +19,7 @@ const preventiveScheduleController = require('../controllers/preventive/preventi
 const spkImportController = require('../controllers/preventive/spkImportController');
 const historicalImportController = require('../controllers/preventive/historicalImportController');
 
-// ── SPK ─────────────────────────────────────────────────────────────────────
+
 const spkRouter = express.Router();
 spkRouter.get('/', verifyToken, spkController.getAll);
 spkRouter.post('/bulk-delete', verifyToken, spkController.bulkDelete);
@@ -44,7 +44,7 @@ spkRouter.post('/:spkNumber/reject-kadis-perawatan', verifyToken, spkController.
 spkRouter.post('/:spkNumber/reject-kadis', verifyToken, spkController.rejectKadis);
 spkRouter.post('/:spkNumber/sync', verifyToken, spkController.sync);
 
-// ── Equipment ────────────────────────────────────────────────────────────────
+
 const equipmentRouter = express.Router();
 equipmentRouter.get('/', verifyToken, equipmentController.getAll);
 equipmentRouter.post('/sync-sipil', verifyToken, equipmentController.syncSipilFuncloc);
@@ -58,7 +58,7 @@ equipmentRouter.post('/', verifyToken, equipmentController.create);
 equipmentRouter.put('/:equipmentId', verifyToken, equipmentController.update);
 equipmentRouter.delete('/:equipmentId', verifyToken, equipmentController.remove);
 
-// ── Plants ───────────────────────────────────────────────────────────────────
+
 const plantRouter = express.Router();
 plantRouter.get('/', verifyToken, plantController.getAll);
 plantRouter.post('/', verifyToken, plantController.create);
@@ -66,26 +66,27 @@ plantRouter.get('/:plantId', verifyToken, plantController.getOne);
 plantRouter.put('/:plantId', verifyToken, plantController.update);
 plantRouter.delete('/:plantId', verifyToken, plantController.remove);
 
-// ── Maps ─────────────────────────────────────────────────────────────────────
+
 const mapsRouter = express.Router();
 mapsRouter.get('/', verifyToken, mapsController.getAll);
 mapsRouter.get('/:plantId', verifyToken, mapsController.getOne);
 mapsRouter.put('/:plantId', verifyToken, mapsController.save);
 
-// ── Submissions ───────────────────────────────────────────────────────────────
+
 const submissionsRouter = express.Router();
 submissionsRouter.get('/', verifyToken, submissionsController.getAll);
+submissionsRouter.get('/export', verifyToken, submissionsController.exportExcel);
 submissionsRouter.get('/export-iw49', verifyToken, submissionsController.exportIW49);
 submissionsRouter.post('/bulk-delete', verifyToken, submissionsController.bulkDelete);
 submissionsRouter.get('/:id', verifyToken, submissionsController.getOne);
 submissionsRouter.delete('/:id', verifyToken, submissionsController.remove);
 
-// ── Functional Locations ─────────────────────────────────────────────────────
+
 const funcLocRouter = express.Router();
 funcLocRouter.get('/', verifyToken, funcLocController.getAll);
 funcLocRouter.get('/:funcLocId', verifyToken, funcLocController.getOne);
 
-// ── General Task Lists ───────────────────────────────────────────────────────
+
 const taskListRouter = express.Router();
 taskListRouter.get('/',                 verifyToken, taskListController.getAll);
 taskListRouter.post('/import-excel',    verifyToken, excelUpload.single('file'), taskListController.importExcel);
@@ -94,7 +95,7 @@ taskListRouter.get('/:taskListId',      verifyToken, taskListController.getOne);
 taskListRouter.put('/:taskListId',      verifyToken, taskListController.update);
 taskListRouter.delete('/:taskListId',   verifyToken, taskListController.remove);
 
-// Equipment Interval Mappings
+
 
 const mappingRouter = express.Router();
 mappingRouter.get('/',                                              verifyToken, equipmentMappingController.getAll);
@@ -103,7 +104,7 @@ mappingRouter.post('/import-excel', verifyToken, excelUpload.single('file'), equ
 mappingRouter.post('/',                                             verifyToken, equipmentMappingController.create);
 mappingRouter.delete('/:id',                                        verifyToken, equipmentMappingController.remove);
 
-// ── Preventive Week Schedule ─────────────────────────────────────────────────
+
 const scheduleRouter = express.Router();
 scheduleRouter.get('/year',       verifyToken, preventiveScheduleController.getForYear);
 scheduleRouter.get('/',           verifyToken, preventiveScheduleController.getForWeek);

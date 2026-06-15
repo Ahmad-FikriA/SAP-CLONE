@@ -5,14 +5,10 @@ const InspectionSchedule = require("../../models/InspectionSchedule");
 const { buildAccessProfile } = require("../../services/accessProfile");
 const { notify } = require("../../services/notificationService");
 
-// NIK Planner & Approver yang menerima notifikasi request baru
+
 const INSPECTION_PLANNER_NIK = "10000262";
 
-/**
- * InspectionRequest Controller
- * Handles permintaan kunjungan inspeksi dari role User.
- * Planner bisa review, approve (→ buat jadwal otomatis), atau reject.
- */
+
 
 function normalizeNik(value) {
   return String(value || "").trim();
@@ -47,8 +43,6 @@ function canViewAllRequests(user) {
 function canReviewRequests(user) {
   return canViewAllRequests(user);
 }
-
-// GET /api/inspection/requests
 async function listRequests(req, res) {
   try {
     const where = {};
@@ -56,10 +50,10 @@ async function listRequests(req, res) {
     const hasGlobalAccess = canViewAllRequests(req.user);
     const requestedByQuery = normalizeNik(req.query.requestedBy);
 
-    // Filter by status
+    console.log(`[listRequests] nik=${requesterNik} hasGlobalAccess=${hasGlobalAccess} requestedByQuery="${requestedByQuery}" status="${req.query.status || ''}"`);
     if (req.query.status) where.status = req.query.status;
 
-    // Filter by requestedBy (User lihat punya sendiri)
+
     if (requestedByQuery) {
       if (!hasGlobalAccess && requestedByQuery !== requesterNik) {
         return res.status(403).json({
@@ -89,7 +83,7 @@ async function listRequests(req, res) {
   }
 }
 
-// GET /api/inspection/requests/:id
+
 async function getRequest(req, res) {
   try {
     const requesterNik = normalizeNik(req.user?.nik);
@@ -116,7 +110,7 @@ async function getRequest(req, res) {
   }
 }
 
-// POST /api/inspection/requests
+
 async function createRequest(req, res) {
   try {
     const {
@@ -138,7 +132,7 @@ async function createRequest(req, res) {
       });
     }
 
-    // Validate kategori based on jenis
+
     const validRutinKategories = ["sipil", "mekanik", "elektrik", "otomasi"];
     
     if (jenisInspeksi === "rutin" && !validRutinKategories.includes(kategoriInspeksi)) {
@@ -151,8 +145,7 @@ async function createRequest(req, res) {
     const requesterNik = normalizeNik(req.user?.nik);
     const requestedByBody = normalizeNik(requestedBy);
 
-    // Ambil requesterNik yang valid dari token JWT (paling aman).
-    // Jika tidak ada, gunakan body payload (untuk backward compatibility).
+
     const finalRequestedBy = requesterNik || requestedByBody || "unknown";
 
     const request = await InspectionRequest.create({
@@ -168,7 +161,7 @@ async function createRequest(req, res) {
       status: "pending",
     });
 
-    // Kirim FCM push notification ke Planner
+
     notify({
       module: 'inspection',
       type: 'request_created',
@@ -191,8 +184,7 @@ async function createRequest(req, res) {
   }
 }
 
-// PUT /api/inspection/requests/:id/approve
-// Body: { notes?, scheduledDate?, assignedTo?, title?, nomorPoJo? }
+
 async function approveRequest(req, res) {
   try {
     if (!canReviewRequests(req.user)) {
@@ -223,16 +215,12 @@ async function approveRequest(req, res) {
         ? notes.trim()
         : null;
 
-    // Tentukan tanggal jadwal: dari req.body atau dari tanggalDiinginkan user
     const finalDate =
       scheduledDate ||
       request.tanggalDiinginkan ||
       new Date().toISOString().split("T")[0];
-
     // Tentukan assignedTo
     const finalAssignedTo = assignedTo || "dinas_inspeksi";
-
-    // Auto-create InspectionSchedule
     const schedule = await InspectionSchedule.create({
       type: "rutin",
       title: title || request.judul,
@@ -246,7 +234,6 @@ async function approveRequest(req, res) {
       status: "scheduled",
     });
 
-    // Update request
     await request.update({
       status: "approved",
       approvedBy: req.user?.nik,
@@ -255,7 +242,7 @@ async function approveRequest(req, res) {
       scheduleId: schedule.id,
     });
 
-    // Notifikasi ke pemohon bahwa request-nya disetujui
+
     notify({
       module: 'inspection',
       type: 'request_approved',
@@ -278,8 +265,7 @@ async function approveRequest(req, res) {
   }
 }
 
-// PUT /api/inspection/requests/:id/reject
-// Body: { notes }
+
 async function rejectRequest(req, res) {
   try {
     if (!canReviewRequests(req.user)) {
@@ -316,7 +302,7 @@ async function rejectRequest(req, res) {
       notes: req.body.notes,
     });
 
-    // Notifikasi ke pemohon bahwa request-nya ditolak
+
     notify({
       module: 'inspection',
       type: notification.type,
@@ -339,8 +325,7 @@ async function rejectRequest(req, res) {
   }
 }
 
-// PUT /api/inspection/requests/:id/cancel
-// Body: { notes }
+
 async function cancelRequest(req, res) {
   try {
     const request = await InspectionRequest.findByPk(req.params.id);
@@ -375,7 +360,7 @@ async function cancelRequest(req, res) {
           : "[Dibatalkan User]",
     });
 
-    // Notifikasi ke Planner bahwa request dibatalkan
+
     notify({
       module: 'inspection',
       type: 'request_cancelled',

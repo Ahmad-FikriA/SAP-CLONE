@@ -2,6 +2,8 @@
 
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
+const { isTableNotFoundError } = require("../config/sqlServerHelpers");
+
 
 /**
  * SupervisiVisit — rekaman kunjungan harian Dinas Inspeksi.
@@ -30,9 +32,10 @@ const SupervisiVisit = sequelize.define(
       comment: "Tanggal kunjungan",
     },
     status: {
-      type: DataTypes.ENUM("hadir", "tidak_hadir"),
+      type: DataTypes.STRING(20),
       allowNull: false,
       comment: "Hadir atau tidak hadir",
+      validate: { isIn: [["hadir", "tidak_hadir"]] },
     },
     keterangan: {
       type: DataTypes.TEXT,
@@ -45,16 +48,30 @@ const SupervisiVisit = sequelize.define(
       comment: "Alasan tidak hadir (wajib jika tidak_hadir)",
     },
     photos: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
-      comment: "Array path foto / video hasil kunjungan",
+      comment: "Array path foto / video hasil kunjungan (JSON string)",
+      get() {
+        const raw = this.getDataValue('photos');
+        if (!raw) return [];
+        try { return JSON.parse(raw); } catch { return []; }
+      },
+      set(val) {
+        this.setDataValue('photos', val ? JSON.stringify(val) : '[]');
+      },
     },
     documents: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
-      comment: "Array path dokumen pendukung (PDF/Word/Excel)",
+      comment: "Array path dokumen pendukung (PDF/Word/Excel) (JSON string)",
+      get() {
+        const raw = this.getDataValue('documents');
+        if (!raw) return [];
+        try { return JSON.parse(raw); } catch { return []; }
+      },
+      set(val) {
+        this.setDataValue('documents', val ? JSON.stringify(val) : '[]');
+      },
     },
     submittedBy: {
       type: DataTypes.STRING(100),
@@ -107,7 +124,6 @@ const SupervisiVisit = sequelize.define(
     timestamps: true,
     indexes: [
       {
-        // Satu visit per hari per job per lokasi
         unique: true,
         fields: ["jobId", "visitDate", "locationId"],
       },
@@ -123,25 +139,16 @@ async function ensureSupervisiVisitSchema() {
   try {
     table = await queryInterface.describeTable(tableName);
   } catch (err) {
-    const code = err?.original?.code || err?.parent?.code || err?.code;
-    const message = String(err?.message || "");
-
-    if (
-      code === "ER_NO_SUCH_TABLE" ||
-      code === "ER_BAD_TABLE_ERROR" ||
-      message.includes("doesn't exist")
-    ) {
+    if (isTableNotFoundError(err)) {
       return;
     }
-
     throw err;
   }
 
   if (!table.documents) {
     await queryInterface.addColumn(tableName, "documents", {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: [],
       comment: "Array path dokumen pendukung (PDF/Word/Excel)",
     });
   }
@@ -189,34 +196,28 @@ async function ensureSupervisiVisitSchema() {
     });
   }
 
-  await queryInterface.changeColumn(tableName, "status", {
-    type: DataTypes.ENUM("hadir", "tidak_hadir"),
-    allowNull: false,
-    comment: "Hadir atau tidak hadir",
-  });
-
-  // ── Migrasi Unique Index untuk multi-lokasi ───────────────────────────────
-  // Index lama: UNIQUE(jobId, visitDate) — hanya allow 1 visit per hari.
-  // Index baru:  UNIQUE(jobId, visitDate, locationId) — allow 1 visit per hari PER LOKASI.
-  // Jika index lama masih ada, hapus dulu, lalu buat yang baru.
   try {
     const [indexes] = await sequelize.query(
-      `SHOW INDEX FROM \`${tableName}\` WHERE Key_name != 'PRIMARY'`,
+      `SELECT i.name AS index_name, c.name AS column_name
+       FROM sys.indexes i
+       INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+       INNER JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+       WHERE i.object_id = OBJECT_ID('${tableName}') AND i.name != 'PK__supervisi_visits'`
     );
 
-    // Cari index dengan kolom (jobId, visitDate) tapi TIDAK punya locationId
-    const oldIndexNames = new Set();
     const indexCols = {};
     for (const row of indexes) {
-      const name = row.Key_name;
+      const name = row.index_name;
       if (!indexCols[name]) indexCols[name] = [];
-      indexCols[name].push(row.Column_name);
+      indexCols[name].push(row.column_name);
     }
+
+    const oldIndexNames = new Set();
     for (const [name, cols] of Object.entries(indexCols)) {
       const hasJobId = cols.includes("jobId");
       const hasVisitDate = cols.includes("visitDate");
       const hasLocationId = cols.includes("locationId");
-      // Old-style: (jobId, visitDate) saja OR (jobId, visitDate, locationId) belum ada
+
       if (hasJobId && hasVisitDate && !hasLocationId) {
         oldIndexNames.add(name);
       }
@@ -224,12 +225,9 @@ async function ensureSupervisiVisitSchema() {
 
     for (const name of oldIndexNames) {
       console.log(`[SupervisiVisit] Dropping old index: ${name}`);
-      await sequelize.query(
-        `ALTER TABLE \`${tableName}\` DROP INDEX \`${name}\``,
-      );
+      await sequelize.query(`DROP INDEX [${name}] ON [${tableName}]`);
     }
 
-    // Cek apakah index baru sudah ada
     const newIndexExists = Object.values(indexCols).some((cols) => {
       return (
         cols.includes("jobId") &&
@@ -241,7 +239,7 @@ async function ensureSupervisiVisitSchema() {
     if (!newIndexExists) {
       console.log(`[SupervisiVisit] Creating new multi-location unique index.`);
       await sequelize.query(
-        `ALTER TABLE \`${tableName}\` ADD UNIQUE INDEX \`supervisi_visits_job_date_location_unique\` (\`jobId\`, \`visitDate\`, \`locationId\`)`,
+        `CREATE UNIQUE INDEX [supervisi_visits_job_date_location_unique] ON [${tableName}] ([jobId], [visitDate], [locationId])`
       );
     }
   } catch (idxErr) {

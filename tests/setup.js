@@ -83,11 +83,12 @@ const expectSuccess = (response, expectedStatus = 200) => {
  */
 const expectArray = (response, minLength = 0) => {
   const body = expectSuccess(response);
-  expect(Array.isArray(body)).toBe(true);
+  const data = (body && (body.success === true || body.status === 'success') && Array.isArray(body.data)) ? body.data : (body && Array.isArray(body.data) ? body.data : body);
+  expect(Array.isArray(data)).toBe(true);
   if (minLength > 0) {
-    expect(body.length).toBeGreaterThanOrEqual(minLength);
+    expect(data.length).toBeGreaterThanOrEqual(minLength);
   }
-  return body;
+  return data;
 };
 
 /**
@@ -105,14 +106,15 @@ const expectObject = (response, statusOrFields = 200, requiredFields = []) => {
   }
   
   const body = expectSuccess(response, expectedStatus);
-  expect(typeof body).toBe('object');
-  expect(Array.isArray(body)).toBe(false);
+  const data = (body && (body.success === true || body.status === 'success') && body.data && typeof body.data === 'object' && !Array.isArray(body.data)) ? body.data : body;
+  expect(typeof data).toBe('object');
+  expect(Array.isArray(data)).toBe(false);
   
   fields.forEach(field => {
-    expect(body).toHaveProperty(field);
+    expect(data).toHaveProperty(field);
   });
   
-  return body;
+  return data;
 };
 
 /**

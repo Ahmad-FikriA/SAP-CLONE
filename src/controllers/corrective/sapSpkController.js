@@ -10,12 +10,12 @@ const Material = require("../../models/Material");
 const SpkMaterial = require("../../models/SpkMaterial");
 const NotificationService = require("../../services/notificationService");
 
-// 1. Get SAP SPK List
+
+/* ── SAP SPK Corrective Controller ── */
 const getSapSpkList = async (req, res) => {
   try {
     const where = {};
     const { role, group, dinas } = req.user || {};
-
     const userRole = (role || "").toLowerCase();
     const isKadisPP = userRole === "kadis" && dinas && dinas.toLowerCase().includes("pusat perawatan");
     
@@ -232,7 +232,6 @@ const uploadExcel = async (req, res) => {
     } catch (err) {
       return res.status(400).json({ status: "error", message: err.message });
     }
-
     if (fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
@@ -286,7 +285,7 @@ const uploadExcel = async (req, res) => {
   }
 };
 
-// 2b. Bulk Insert SPK (Confirm Upload)
+
 const bulkInsertSapSpk = async (req, res) => {
   try {
     const { spks } = req.body;
@@ -409,7 +408,11 @@ const claimSapSpk = async (req, res) => {
     await spk.update(updates);
     await Notification.update({ approvalStatus: "eksekusi" }, { where: { sapOrderNumber: order_number } });
 
-    res.status(200).json({ status: "success", message: "SPK berhasil diklaim", data: spk });
+    res.status(200).json({
+      status: "success",
+      message: "SPK berhasil diklaim. Silakan lanjutkan eksekusi.",
+      data: spk,
+    });
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });
   }
@@ -430,6 +433,13 @@ const executeSapSpk = async (req, res) => {
       return res.status(403).json({ status: "error", message: "Bukan executor SPK ini" });
     }
 
+    if (spk.status !== "eksekusi") {
+      return res.status(400).json({
+        status: "error",
+        message: `SPK tidak dalam status eksekusi (status saat ini: ${spk.status})`,
+      });
+    }
+
     if (reason_of_var && !REASON_OF_VARIANCE_CODES[reason_of_var]) {
       return res.status(400).json({ status: "error", message: "Kode reason of variance tidak valid" });
     }
@@ -446,7 +456,11 @@ const executeSapSpk = async (req, res) => {
       status: "menunggu_review_kadis_pp",
     };
 
-    if (req.file) updates.photo_after = req.file.filename;
+    if (req.file) {
+      updates.photo_after = req.file.filename;
+    } else if (req.files && req.files.photoAfter && req.files.photoAfter[0]) {
+      updates.photo_after = req.files.photoAfter[0].filename;
+    }
 
     await spk.update(updates);
     await Notification.update({ approvalStatus: "menunggu_review_kadis_pp" }, { where: { sapOrderNumber: order_number } });
@@ -551,6 +565,7 @@ const updateSapSpk = async (req, res) => {
   }
 };
 
+
 const approveKadisPp = async (req, res) => {
   const { order_number } = req.params;
   try {
@@ -587,11 +602,8 @@ const rejectKadisPp = async (req, res) => {
   try {
     const spk = await SapSpkCorrective.findByPk(order_number);
     if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
-
     await spk.update({ status: "eksekusi", rejected_by: req.user.name || req.user.nik, rejected_at: new Date(), rejection_note });
     await Notification.update({ approvalStatus: "eksekusi" }, { where: { sapOrderNumber: order_number } });
-
-    // Push notification to target technician executor privately
     if (spk.execution_nik) {
       await NotificationService.notify({
         module: "corrective",
@@ -613,9 +625,34 @@ const approveKadisPelapor = async (req, res) => {
   const { order_number } = req.params;
   try {
     const spk = await SapSpkCorrective.findByPk(order_number);
-    await spk.update({ status: "selesai", kadis_pelapor_approved_by: req.user.name || req.user.nik, kadis_pelapor_approved_at: new Date() });
-    await Notification.update({ approvalStatus: "selesai" }, { where: { sapOrderNumber: order_number } });
-    res.json({ status: "success", message: "SPK Selesai" });
+    if (!spk) return res.status(404).json({ status: "error", message: "SPK not found" });
+    if (spk.status !== "menunggu_review_kadis_pelapor") {
+      return res.status(400).json({ status: "error", message: `Status SPK saat ini: ${spk.status}. Harus menunggu_review_kadis_pelapor.` });
+    }
+
+    await spk.update({
+      status: "selesai",
+      kadis_pelapor_approved_by: req.user.name || req.user.nik,
+      kadis_pelapor_approved_at: new Date(),
+    });
+
+    await Notification.update(
+      { approvalStatus: "selesai" },
+      { where: { sapOrderNumber: order_number } }
+    );
+
+    if (spk.execution_nik) {
+      await NotificationService.notify({
+        module: "corrective",
+        type: "spk_completed",
+        recipientIds: [spk.execution_nik],
+        title: "SPK Selesai",
+        body: `SPK ${spk.order_number} telah disetujui sepenuhnya oleh pelapor.`,
+        data: { spkId: spk.order_number },
+      });
+    }
+
+    res.json({ status: "success", message: "SPK selesai sepenuhnya.", data: spk });
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });
   }
