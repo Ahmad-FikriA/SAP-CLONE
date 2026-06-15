@@ -256,7 +256,7 @@ const exportExcel = async (req, res) => {
   try {
     const { from, to, month, year, week, category } = req.query;
 
-    
+
     const where = {};
     if (from || to) {
       where.submittedAt = {};
@@ -288,7 +288,7 @@ const exportExcel = async (req, res) => {
       }
     }
 
-    
+
     const submissions = await Submission.findAll({
       where,
       include: [{
@@ -301,7 +301,7 @@ const exportExcel = async (req, res) => {
       return res.status(404).json({ error: 'Tidak ada data untuk filter yang dipilih' });
     }
 
-    
+
     const spkNumbers = [...new Set(submissions.map(s => s.spkNumber))];
     const spks = await Spk.findAll({
       where: { spkNumber: spkNumbers, status: 'approved', ...(category ? { category } : {}) },
@@ -335,7 +335,7 @@ const exportExcel = async (req, res) => {
     });
     const spkMap = new Map(spks.map(s => [s.spkNumber, s.toJSON()]));
 
-    
+
     const userIds = new Set();
     for (const spk of spks) {
       const j = spk.toJSON();
@@ -350,7 +350,7 @@ const exportExcel = async (req, res) => {
     const userMap = new Map(users.map(u => [u.id, u.name]));
     const resolveName = (id) => (id ? (userMap.get(id) || id) : '-');
 
-    
+
     const wb = new ExcelJS.Workbook();
     wb.creator = 'KTI SmartCare';
     wb.created = new Date();
@@ -421,7 +421,7 @@ const exportExcel = async (req, res) => {
 
       let row = 1;
 
-      
+
       ws.mergeCells(row, 1, row, 6);
       const spkCell = ws.getCell(row, 1);
       spkCell.value = `No. SPK: ${sj.spkNumber}  |  Kategori: ${spk.category}  |  Pelaksana: ${resolveName(spk.submittedBy)}  |  Work Start: ${fmtTs(sj.workStart)}  |  Work Finish: ${fmtTs(sj.submittedAt)}`;
@@ -451,7 +451,7 @@ const exportExcel = async (req, res) => {
       ws.getRow(row).height = 32;
       row++;
 
-      
+
       for (const grp of equipGroups) {
 
         const equipOrderCell = ws.getCell(row, COL.ORDER);
@@ -522,7 +522,7 @@ const exportExcel = async (req, res) => {
 
       row++;
 
-      
+
 
       ws.mergeCells(row, 1, row, 2);
       ws.getCell(row, 1).value = `Tanggal: ${fmtDate(sj.submittedAt)}`;
@@ -615,7 +615,7 @@ const exportExcel = async (req, res) => {
       return res.status(404).json({ error: 'Tidak ada data SPK yang disetujui untuk filter yang dipilih' });
     }
 
-    
+
     const parts = ['LK_Preventive'];
     if (category) parts.push(category);
     if (week && year) parts.push(`${year}-W${String(week).padStart(2, '0')}`);
@@ -623,7 +623,7 @@ const exportExcel = async (req, res) => {
     else if (year) parts.push(year);
     const filename = parts.join('_') + '.xlsx';
 
-    
+
 
     const buffer = await wb.xlsx.writeBuffer();
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -730,7 +730,7 @@ const exportIW49 = async (req, res) => {
       }
     }
 
-    
+
     const wb = new ExcelJS.Workbook();
     wb.creator = 'KTI SmartCare';
     wb.created = new Date();
@@ -827,9 +827,9 @@ const exportIW49 = async (req, res) => {
           'HR',                       // Norm. Duration Unit
           durationPlanHr,             // Duration Plan (hr) — same, 1-person baseline
           'HR',                       // Unit for Work
-          postingDate,                // Posting Date
           durationActualHr,           // Duration Actual (hr)
           durationActualHr,           // Actual Work (hr)
+          postingDate,                // Posting Date
           ar.resultComment || '',     // Confirmation Text
           '',                         // Reason of Variance
           workStartDate,              // Work Start
@@ -908,7 +908,7 @@ const exportIW49 = async (req, res) => {
       return res.status(404).json({ error: 'Tidak ada data SPK yang disetujui untuk filter yang dipilih' });
     }
 
-    
+
     const parts = ['IW49_Confirmation'];
     if (category) parts.push(category);
     if (week && year) parts.push(`${year}-W${String(week).padStart(2, '0')}`);
