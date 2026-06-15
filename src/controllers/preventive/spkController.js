@@ -177,7 +177,7 @@ const ABNORMAL_COUNT_ATTR = [
     FROM submission_activity_results sar
     INNER JOIN submissions s ON s.id = sar.submission_id
     WHERE s.spk_number = Spk.spk_number
-      AND sar.is_normal = false
+      AND sar.is_normal = 0
   )`),
   'abnormalCount'
 ];
@@ -265,7 +265,7 @@ const getAll = async (req, res) => {
         FROM submission_activity_results sar
         INNER JOIN submissions s ON s.id = sar.submission_id
         WHERE s.spk_number = Spk.spk_number
-          AND sar.is_normal = false
+          AND sar.is_normal = 0
       )`)
     );
   }
@@ -499,7 +499,7 @@ const bulkDelete = async (req, res) => {
     if (filters.hasAbnormal) {
       where[Op.and] = where[Op.and] || [];
       where[Op.and].push(sequelize.literal(
-        `EXISTS (SELECT 1 FROM submission_activity_results sar INNER JOIN submissions s ON s.id = sar.submission_id WHERE s.spk_number = Spk.spk_number AND sar.is_normal = false)`
+        `EXISTS (SELECT 1 FROM submission_activity_results sar INNER JOIN submissions s ON s.id = sar.submission_id WHERE s.spk_number = Spk.spk_number AND sar.is_normal = 0)`
       ));
     }
 
