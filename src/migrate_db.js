@@ -51,6 +51,7 @@ const migrate = async () => {
       "src/migrate_rejection.js",
       "src/migrate_spk_source.js",
       "src/migrate_indexes.js",
+      "src/migrate_spk_activities_confirmation.js",
     ];
 
     for (const script of migrations) {
