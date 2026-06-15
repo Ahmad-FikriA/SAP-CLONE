@@ -44,12 +44,12 @@ const getAll = async (req, res) => {
     const cat = scopedCategory ?? requestedCat;
     where[Op.or] = [
       { category: cat },
-      sequelize.literal(`JSON_CONTAINS(extra_categories, '"${cat}"')`),
+      { extraCategories: { [Op.like]: `%"${cat}"%` } },
     ];
   } else if (scopedCategory) {
     where[Op.or] = [
       { category: scopedCategory },
-      sequelize.literal(`JSON_CONTAINS(extra_categories, '"${scopedCategory}"')`),
+      { extraCategories: { [Op.like]: `%"${scopedCategory}"%` } },
     ];
   }
   if (req.query.plantId) where.plantId = req.query.plantId;
